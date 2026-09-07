@@ -3,7 +3,7 @@
 ## 이 저장소
 
 크루 단위 플로깅 앱. 옛 모노레포 `gachijupging` 에서 갈라져 나왔고, 그쪽은 읽기 전용 보존이다.
-배포 산출물은 `app`(React Native, Android) · `backend`(Spring Boot) 둘이고, `design-system` 은 앱이 의존하는 패키지, `infra` 는 배포 설정이다.
+배포 산출물은 app(React Native, Android) · backend(Spring Boot) · ai(FastAPI) 셋이고, design-system 은 앱이 의존하는 패키지다. 서버 구성은 미결이다.
 
 ## 문서 (정본은 docs/)
 
@@ -53,6 +53,8 @@ LLM 이 자주 내는 실수를 줄이기 위한 행동 지침이다. 프로젝�
 - 코드 규약 상세는 `backend/docs/02-컨벤션.md`
 
 ## app (React Native, Android)
+
+앱 골격은 아직 없다. 화면은 docs/화면설계/ 가 확정된 뒤 만든다.
 
 - 화면은 `docs/화면.md` 번호(예: 4-3)로 부르고, 데이터는 `docs/openapi.yaml` 의 `example` 을 목으로 쓴다
 - UI 는 `design-system` 컴포넌트만. 색·간격·반경을 직접 쓰지 않는다. `Screen` 으로 감싸고, 누르는 것엔 `useRipple()`

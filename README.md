@@ -8,7 +8,8 @@
 app/             React Native 앱 — 1차는 Android
 backend/         Spring Boot 3.5 · Java 21 · Flyway (옛 모노레포에서 복사, 끌 것을 끈 상태)
 design-system/   토큰 · 컴포넌트 · 캐릭터 에셋. 앱이 의존한다
-infra/           EC2 compose(nginx · backend · acme · redis) · 배포 스크립트
+ai/              추론 서버(FastAPI)·모델 학습. 담당자 영역. 가중치·데이터셋은 git 밖
+infra/           (미결) 서버 구성이 정해지면 여기에
 docs/            아래 문서 지도
 CONTEXT.md       용어집. 코드·문서·대화의 말은 여기 것을 쓴다
 ```
@@ -27,12 +28,13 @@ CONTEXT.md       용어집. 코드·문서·대화의 말은 여기 것을 쓴�
 | 커밋·브랜치·PR·이슈 | [`docs/컨벤션.md`](docs/컨벤션.md) |
 | 옛 백엔드 도메인별 유지·개명·끔 | [`docs/백엔드정리.md`](docs/백엔드정리.md) |
 | 배포·환경 변수·장애 | [`docs/운영.md`](docs/운영.md) |
+| 옛 앱 참고 자료 | docs/legacy/ |
 
 ## 진행 순서
 
 1. 계약(`openapi.yaml` · `소켓.md`) — 완료
 2. 앱 프론트를 계약의 `example` 로 완성
-3. 백엔드 정리·구현
+3. 백엔드 — 가져온 3영역 잇기 + 나머지 새로 쓰기
 4. 연결 · 테스트 · 마무리
 
 ## 처음 세팅
@@ -45,16 +47,7 @@ git config --global core.longpaths true
 
 공통: Docker Desktop(WSL2). 기본 브랜치는 `dev`.
 
-**앱** — Node 22 LTS + Android Studio(SDK 36). `app/` 에서 `npm install`, `npm run android`. 카카오맵 네이티브 모듈이 있어 Expo Go 는 못 쓰고 개발 빌드로 돈다.
-
-**백엔드** — JDK 21. 로컬 DB·Redis 는 `infra/docker-compose.dev.yml`:
-
-```bash
-docker compose -f infra/docker-compose.dev.yml up -d
-cd backend && ./gradlew bootRun
-```
-
-JWT 키는 `infra/scripts/gen-jwt-key.ps1` 로 만들어 `.env` 에 넣는다.
+**백엔드** — JDK 21. 로컬 DB 는 Supabase 개발 프로젝트 또는 로컬 PostGIS — 방식 미결
 
 **디자인 시스템** — `design-system/` 에서 `npm run web` 이 카탈로그를 브라우저에 띄운다.
 
