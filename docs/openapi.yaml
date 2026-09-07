@@ -1452,7 +1452,7 @@ components:
     Item:
       type: object
       properties:
-        id: { type: integer }
+        id: { type: string, format: uuid, description: 앱이 만든 ItemInput.id 그대로 }
         photoId: { type: string, nullable: true }
         category: { $ref: '#/components/schemas/Category' }
         quantity: { type: integer }
@@ -1467,6 +1467,7 @@ components:
         byCategory:
           type: object
           additionalProperties: { type: integer }
+        items: { type: array, items: { $ref: '#/components/schemas/Item' }, description: 이번 요청으로 만들어진 줍기. 되돌리기(DELETE)에 쓴다 }
     ActivityCard:
       type: object
       properties:
