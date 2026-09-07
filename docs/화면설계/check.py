@@ -25,7 +25,7 @@ def check(path: pathlib.Path) -> int:
         if len(cells) < 5 or cells[0] == "구역":
             continue
         for tok in re.findall(r"`([^`]+)`", cells[2]):
-            if tok.startswith("/"):
+            if re.match(r"^(GET|POST|PUT|PATCH|DELETE)? ?/", tok):
                 p = tok.split(" ")[-1]
                 if p not in PATHS: errors += 1; print(f"{path}:{base_line+i}: 계약에 없는 경로 {p}")
             elif tok.split(".")[-1] not in FIELDS and not tok.startswith(("GET", "POST", "PUT", "PATCH", "DELETE")):
