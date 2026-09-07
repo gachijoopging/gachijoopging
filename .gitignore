@@ -1,0 +1,22 @@
+# 의존성
+node_modules/
+
+# Expo / Metro 산출물
+.expo/
+dist/
+web-build/
+*.tsbuildinfo
+
+# 생성물 — preview.mjs 가 tokens/ 에서 다시 만듭니다
+preview.html
+
+# 로컬 설정과 비밀값
+.env
+.env.local
+*.jks
+*.keystore
+local.properties
+
+# OS
+.DS_Store
+Thumbs.db

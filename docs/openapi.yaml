@@ -1,0 +1,1649 @@
+openapi: 3.0.3
+
+info:
+  title: 가치줍깅 크루판 API
+  version: 3.0.0
+  description: |
+    앱과 백엔드 사이 HTTP 계약의 유일한 정본. 실시간(채팅·위치)은 `소켓.md`.
+    화면마다 필요한 데이터는 `화면.md`, 테이블은 `ERD.md`, 결정은 `기능범위.md`, 용어는 `../CONTEXT.md`.
+
+    ### 공통 규약 (옛 계약 2.3 을 이어받음)
+    - 성공은 `{ "data": … }` 봉투, 오류는 `{ "code", "message", "requestId" }`
+    - 시간은 ISO-8601 UTC `Z` 고정. 날짜만 필요한 곳은 `YYYY-MM-DD`
+    - 앱이 UUID 를 만드는 리소스(미디어·활동·게시물·댓글·채팅·신고)는 같은 id 재전송 시 200 으로 흡수(멱등)
+    - 목록은 `{ items, nextCursor }`. limit 기본 20·최대 50. 예외(배열 그대로): 크루원 목록 · 차단 목록 · 활동 중인 크루원 · 알림 처리 대기
+    - 차단·공개 범위 필터링은 서버 책임
+    - 카테고리 7종: CIGARETTE·CAN·PLASTIC·PAPER·GLASS·VINYL·GENERAL
+    - 입력 상한: 게시물 1000자 · 댓글 500자 · 채팅 500자 · 소개 200자 · 공지 제목 100자·본문 3000자 · 크루 이름 2~20자 · 닉네임 2~12자. 초과는 422
+    - 모든 `example` 은 앱 목 데이터의 원본이다. 진행 순서 2단계는 이 예시로 화면을 완성한다
+
+    ### 권한
+    - `bearerAuth` 필수. 예외는 `/auth/*` 일부
+    - 크루 범위 경로(`/crew/...`)는 **호출자의 소속 크루** 를 대상으로 한다. 크루 id 를 경로에 넣지 않는다 — 한 사람 한 크루(Q22)
+    - 크루장 전용은 summary 에 `[크루장]`. 크루원이 부르면 403 FORBIDDEN
+    - 소속 크루가 없는 사용자가 `/crew/...` 를 부르면 403 NO_CREW → 앱은 크루 만들기/가입하기(1-6)로
+
+    ### 토큰
+    - accessToken 1시간 · refreshToken 30일 · refresh 회전. 옛 계약과 같다
+
+servers:
+  - url: https://{host}/api/v1
+    variables:
+      host:
+        default: www.gachi-joopging.site
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: auth
+  - name: me
+  - name: crew
+  - name: members
+  - name: activities
+  - name: media
+  - name: posts
+  - name: notices
+  - name: chat
+  - name: notifications
+  - name: reports
+  - name: stats
+
+paths:
+  # ───────────────────────── auth ─────────────────────────
+  /auth/signup:
+    post:
+      tags: [auth]
+      security: []
+      summary: 이메일 회원가입
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password, nickname]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string, minLength: 8 }
+                nickname: { type: string, minLength: 2, maxLength: 12 }
+      responses:
+        '201': { $ref: '#/components/responses/TokenPair' }
+        '409': { $ref: '#/components/responses/Error' }
+  /auth/login:
+    post:
+      tags: [auth]
+      security: []
+      summary: 이메일 로그인
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string }
+                password: { type: string }
+      responses:
+        '200': { $ref: '#/components/responses/TokenPair' }
+        '401': { $ref: '#/components/responses/Error' }
+  /auth/kakao:
+    post:
+      tags: [auth]
+      security: []
+      summary: 카카오 로그인
+      requestBody: { $ref: '#/components/requestBodies/SocialToken' }
+      responses:
+        '200': { $ref: '#/components/responses/TokenPair' }
+  /auth/google:
+    post:
+      tags: [auth]
+      security: []
+      summary: 구글 로그인
+      requestBody: { $ref: '#/components/requestBodies/SocialToken' }
+      responses:
+        '200': { $ref: '#/components/responses/TokenPair' }
+  /auth/refresh:
+    post:
+      tags: [auth]
+      security: []
+      summary: 토큰 회전
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties: { refreshToken: { type: string } }
+      responses:
+        '200': { $ref: '#/components/responses/TokenPair' }
+        '401': { $ref: '#/components/responses/Error' }
+  /auth/logout:
+    post:
+      tags: [auth]
+      summary: 이 기기의 refreshToken 무효화
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties: { refreshToken: { type: string } }
+      responses:
+        '204': { description: 완료 }
+  /auth/password-reset:
+    post:
+      tags: [auth]
+      security: []
+      summary: 재설정 메일 발송
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [email], properties: { email: { type: string } } }
+      responses:
+        '204': { description: 존재 여부와 무관하게 204 }
+  /auth/password-reset/confirm:
+    post:
+      tags: [auth]
+      security: []
+      summary: 코드로 새 비밀번호 설정
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, code, newPassword]
+              properties:
+                email: { type: string }
+                code: { type: string }
+                newPassword: { type: string, minLength: 8 }
+      responses:
+        '204': { description: 완료 }
+        '422': { $ref: '#/components/responses/Error' }
+
+  # ───────────────────────── me ─────────────────────────
+  /users/me:
+    get:
+      tags: [me]
+      summary: 내 정보 + 소속 상태 — 앱 진입 분기(1-6/1-9/탭)의 근거
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/Me' }
+              example:
+                data:
+                  id: 6f1c…
+                  nickname: 관열
+                  intro: 한강 서쪽 담당
+                  photoUrl: https://cdn…/p/6f1c.jpg
+                  email: kwan@example.com
+                  hasPassword: true
+                  linked: { kakao: true, google: false }
+                  settings: { shareLocationDefault: true, notifyActivityStart: true }
+                  membership:
+                    status: MEMBER
+                    crew: { id: c001, name: 한강줍깅크루, isLeader: true }
+    patch:
+      tags: [me]
+      summary: 프로필·설정 수정
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                nickname: { type: string }
+                intro: { type: string, maxLength: 200 }
+                photoMediaId: { type: string, format: uuid, nullable: true }
+                shareLocationDefault: { type: boolean }
+                notifyActivityStart: { type: boolean }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { type: object, properties: { data: { $ref: '#/components/schemas/Me' } } }
+        '409': { $ref: '#/components/responses/Error' }
+    delete:
+      tags: [me]
+      summary: 회원 탈퇴 — 크루장은 위임 뒤에만(403 LEADER_MUST_DELEGATE)
+      responses:
+        '204': { description: 완료 }
+        '403': { $ref: '#/components/responses/Error' }
+  /users/me/social:
+    put:
+      tags: [me]
+      summary: 이메일 계정에 소셜 연결 — 옛 계약 유지
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [provider, token]
+              properties:
+                provider: { type: string, enum: [KAKAO, GOOGLE] }
+                token: { type: string }
+      responses:
+        '204': { description: 완료 }
+  /users/me/devices:
+    put:
+      tags: [me]
+      summary: 푸시 토큰 등록
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [pushToken, platform]
+              properties:
+                pushToken: { type: string }
+                platform: { type: string, enum: [ANDROID] }
+      responses:
+        '204': { description: 완료 }
+  /users/me/blocked:
+    get:
+      tags: [me]
+      summary: 차단 목록 (배열)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: '#/components/schemas/UserBrief' } }
+  /users/{userId}/block:
+    put:
+      tags: [me]
+      summary: 차단
+      parameters: [{ $ref: '#/components/parameters/UserId' }]
+      responses: { '204': { description: 완료 } }
+    delete:
+      tags: [me]
+      summary: 차단 해제
+      parameters: [{ $ref: '#/components/parameters/UserId' }]
+      responses: { '204': { description: 완료 } }
+  /users/{userId}/follow:
+    put:
+      tags: [me]
+      summary: 팔로우 — 활동 시작 알림 대상 지정. 상대에게 보이지 않음
+      parameters: [{ $ref: '#/components/parameters/UserId' }]
+      responses: { '204': { description: 완료 } }
+    delete:
+      tags: [me]
+      summary: 팔로우 해제
+      parameters: [{ $ref: '#/components/parameters/UserId' }]
+      responses: { '204': { description: 완료 } }
+
+  # ───────────────────────── crew (소속) ─────────────────────────
+  /crews:
+    post:
+      tags: [crew]
+      summary: 크루 만들기 — 이름만. 호출자가 크루장. 이미 소속이면 409
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties: { name: { type: string, minLength: 2, maxLength: 20 } }
+      responses:
+        '201':
+          description: 생성
+          content:
+            application/json:
+              schema: { type: object, properties: { data: { $ref: '#/components/schemas/Crew' } } }
+        '409': { $ref: '#/components/responses/Error' }
+  /crews/preview:
+    get:
+      tags: [crew]
+      summary: 초대 코드로 크루 이름 미리 보기 (1-8)
+      parameters:
+        - in: query
+          name: inviteCode
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id: { type: string }
+                      name: { type: string }
+                      memberCount: { type: integer }
+                      photoUrl: { type: string, nullable: true }
+              example: { data: { id: c001, name: 한강줍깅크루, memberCount: 18, photoUrl: null } }
+        '404': { $ref: '#/components/responses/Error' }
+  /crews/join-requests:
+    post:
+      tags: [crew]
+      summary: 초대 코드로 가입 신청 — 대기 중이면 200 으로 흡수
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [inviteCode], properties: { inviteCode: { type: string } } }
+      responses:
+        '201':
+          description: 신청됨
+          content:
+            application/json:
+              schema: { type: object, properties: { data: { $ref: '#/components/schemas/JoinRequest' } } }
+        '404': { $ref: '#/components/responses/Error' }
+  /crews/join-requests/mine:
+    get:
+      tags: [crew]
+      summary: 내 신청 상태 (1-9 승인 대기)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { type: object, properties: { data: { $ref: '#/components/schemas/JoinRequest', nullable: true } } }
+    delete:
+      tags: [crew]
+      summary: 신청 취소
+      responses: { '204': { description: 완료 } }
+
+  /crew:
+    get:
+      tags: [crew]
+      summary: 내 크루 정보 (3-1, 3-2)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { type: object, properties: { data: { $ref: '#/components/schemas/Crew' } } }
+              example:
+                data:
+                  id: c001
+                  name: 한강줍깅크루
+                  intro: 매주 토요일 아침 여의도
+                  photoUrl: null
+                  leader: { id: 6f1c…, nickname: 관열, photoUrl: null }
+                  memberCount: 18
+                  goalCount: 300
+                  inviteCode: HG-7K2P
+                  pendingJoinRequests: 2
+                  pinnedNotice: { id: n01, title: 9월 정기 활동 안내, createdAt: 2026-09-01T09:00:00Z }
+                  unreadChat: 5
+                  isLeader: true
+    patch:
+      tags: [crew]
+      summary: "[크루장] 이름·소개·사진·목표 수정 (3-10)"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                intro: { type: string, maxLength: 200 }
+                photoMediaId: { type: string, format: uuid, nullable: true }
+                goalCount: { type: integer, minimum: 1 }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { type: object, properties: { data: { $ref: '#/components/schemas/Crew' } } }
+  /crew/invite-code:
+    post:
+      tags: [crew]
+      summary: "[크루장] 초대 코드 재발급 — 옛 코드 즉시 무효"
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { type: object, properties: { data: { type: object, properties: { inviteCode: { type: string } } } } }
+  /crew/leave:
+    post:
+      tags: [crew]
+      summary: 크루 나가기 — 크루장은 403 LEADER_MUST_DELEGATE
+      responses:
+        '204': { description: 완료 }
+        '403': { $ref: '#/components/responses/Error' }
+  /crew/members:
+    get:
+      tags: [members]
+      summary: 크루원 목록 (배열)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: '#/components/schemas/Member' } }
+              example:
+                data:
+                  - { id: 6f1c…, nickname: 관열, photoUrl: null, isLeader: true, totalItems: 412, joinedAt: 2026-09-01T00:00:00Z, following: false }
+                  - { id: 8a2d…, nickname: 상혁, photoUrl: null, isLeader: false, totalItems: 380, joinedAt: 2026-09-02T00:00:00Z, following: true }
+  /crew/members/{userId}:
+    get:
+      tags: [members]
+      summary: 타인 프로필 (5-4) — 차단한 사람은 404
+      parameters: [{ $ref: '#/components/parameters/UserId' }]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { type: object, properties: { data: { $ref: '#/components/schemas/MemberProfile' } } }
+    delete:
+      tags: [members]
+      summary: "[크루장] 추방"
+      parameters: [{ $ref: '#/components/parameters/UserId' }]
+      responses: { '204': { description: 완료 } }
+  /crew/members/{userId}/activities:
+    get:
+      tags: [members]
+      summary: 그 크루원의 활동 목록 (5-4 기록 탭). 본인이면 내 기록
+      parameters:
+        - { $ref: '#/components/parameters/UserId' }
+        - { $ref: '#/components/parameters/Cursor' }
+        - { $ref: '#/components/parameters/Limit' }
+      responses:
+        '200': { $ref: '#/components/responses/ActivityPage' }
+  /crew/members/{userId}/posts:
+    get:
+      tags: [members]
+      summary: 그 크루원의 크루 공개 게시물 (5-4 게시물 탭). 본인이면 나만 보기 포함
+      parameters:
+        - { $ref: '#/components/parameters/UserId' }
+        - { $ref: '#/components/parameters/Cursor' }
+        - { $ref: '#/components/parameters/Limit' }
+      responses:
+        '200': { $ref: '#/components/responses/PostPage' }
+  /crew/leader:
+    put:
+      tags: [members]
+      summary: "[크루장] 위임"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [userId], properties: { userId: { type: string } } }
+      responses: { '204': { description: 완료 } }
+  /crew/join-requests:
+    get:
+      tags: [members]
+      summary: "[크루장] 대기 중인 가입 신청 (배열)"
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: '#/components/schemas/JoinRequest' } }
+  /crew/join-requests/{requestId}:
+    post:
+      tags: [members]
+      summary: "[크루장] 승인·거절"
+      parameters:
+        - in: path
+          name: requestId
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [decision], properties: { decision: { type: string, enum: [APPROVE, REJECT] } } }
+      responses: { '204': { description: 완료 } }
+
+  # ───────────────────────── activities ─────────────────────────
+  /activities:
+    post:
+      tags: [activities]
+      summary: 활동 시작 — 진행 중이 있으면 그것을 200 으로 돌려준다
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id, startedAt, locationShared]
+              properties:
+                id: { type: string, format: uuid, description: 앱 생성 }
+                startedAt: { type: string, format: date-time }
+                locationShared: { type: boolean }
+      responses:
+        '201':
+          description: 시작
+          content:
+            application/json:
+              schema: { type: object, properties: { data: { $ref: '#/components/schemas/Activity' } } }
+  /activities/current:
+    get:
+      tags: [activities]
+      summary: 내 진행 중 활동 — 앱 재실행 때 이어받기 (4-1)
+      responses:
+        '200':
+          description: 없으면 data null
+          content:
+            application/json:
+              schema: { type: object, properties: { data: { $ref: '#/components/schemas/Activity', nullable: true } } }
+  /activities/{id}/pause:
+    post:
+      tags: [activities]
+      summary: 일시정지 — 거리·시간만 멈춤 (Q30)
+      parameters: [{ $ref: '#/components/parameters/ActivityId' }]
+      responses: { '204': { description: 완료 } }
+  /activities/{id}/resume:
+    post:
+      tags: [activities]
+      summary: 재개
+      parameters: [{ $ref: '#/components/parameters/ActivityId' }]
+      responses: { '204': { description: 완료 } }
+  /activities/{id}/items:
+    post:
+      tags: [activities]
+      summary: 줍기 추가 — 빠른 줍기(photoId 없음) 또는 AI 확인 뒤 저장(photoId 있음). 여러 건 한 번에
+      parameters: [{ $ref: '#/components/parameters/ActivityId' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [items]
+              properties:
+                photoId: { type: string, format: uuid, nullable: true, description: 4-5 에서 온 경우 }
+                items:
+                  type: array
+                  minItems: 1
+                  items: { $ref: '#/components/schemas/ItemInput' }
+            example:
+              photoId: null
+              items: [{ category: CIGARETTE, quantity: 3 }]
+      responses:
+        '200':
+          description: 갱신된 요약
+          content:
+            application/json:
+              schema: { type: object, properties: { data: { $ref: '#/components/schemas/ActivitySummary' } } }
+  /activities/{id}/items/{itemId}:
+    patch:
+      tags: [activities]
+      summary: 줍기 카테고리·수량 수정
+      parameters:
+        - { $ref: '#/components/parameters/ActivityId' }
+        - in: path
+          name: itemId
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                category: { $ref: '#/components/schemas/Category' }
+                quantity: { type: integer, minimum: 1 }
+      responses:
+        '200':
+          description: 갱신된 요약
+          content:
+            application/json:
+              schema: { type: object, properties: { data: { $ref: '#/components/schemas/ActivitySummary' } } }
+    delete:
+      tags: [activities]
+      summary: 줍기 삭제
+      parameters:
+        - { $ref: '#/components/parameters/ActivityId' }
+        - in: path
+          name: itemId
+          required: true
+          schema: { type: integer }
+      responses: { '204': { description: 완료 } }
+  /activities/{id}/live:
+    post:
+      tags: [activities]
+      summary: 배경 위치 보고 — 소켓이 끊긴 배경 상태 전용. 평소엔 소켓 /app/crew/live
+      parameters: [{ $ref: '#/components/parameters/ActivityId' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [distanceM, itemCount, elapsedSec, paused]
+              properties:
+                location:
+                  type: object
+                  nullable: true
+                  properties: { lng: { type: number }, lat: { type: number } }
+                distanceM: { type: integer }
+                itemCount: { type: integer }
+                elapsedSec: { type: integer }
+                paused: { type: boolean }
+      responses: { '204': { description: 완료 } }
+  /activities/{id}/end:
+    post:
+      tags: [activities]
+      summary: 종료 — 경로·거리·시간·걸음수를 한 번에. 이후 수정 불가 항목
+      parameters: [{ $ref: '#/components/parameters/ActivityId' }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [endedAt, durationSec, pausedSec, distanceM, route]
+              properties:
+                endedAt: { type: string, format: date-time }
+                durationSec: { type: integer, minimum: 0 }
+                pausedSec: { type: integer, minimum: 0 }
+                distanceM: { type: integer, minimum: 0, description: 필터·걸음수 보정 뒤 값 }
+                steps: { type: integer, nullable: true }
+                route:
+                  type: array
+                  description: 필터 통과한 점만. [lng, lat]
+                  items: { type: array, items: { type: number }, minItems: 2, maxItems: 2 }
+      responses:
+        '200':
+          description: 종료된 활동
+          content:
+            application/json:
+              schema: { type: object, properties: { data: { $ref: '#/components/schemas/Activity' } } }
+  /activities/{id}:
+    get:
+      tags: [activities]
+      summary: 활동 기록 상세 (5-3) — 남의 것은 locationShared 일 때만 route 포함
+      parameters: [{ $ref: '#/components/parameters/ActivityId' }]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { type: object, properties: { data: { $ref: '#/components/schemas/Activity' } } }
+              example:
+                data:
+                  id: a100
+                  user: { id: 8a2d…, nickname: 상혁, photoUrl: null }
+                  status: ENDED
+                  startedAt: 2026-09-05T09:02:00Z
+                  endedAt: 2026-09-05T09:48:00Z
+                  durationSec: 2520
+                  pausedSec: 240
+                  distanceM: 3120
+                  steps: 4100
+                  locationShared: true
+                  itemCount: 27
+                  byCategory: { CIGARETTE: 14, PLASTIC: 6, CAN: 3, PAPER: 2, VINYL: 2 }
+                  route: [[126.93, 37.52], [126.931, 37.521]]
+                  photos:
+                    - { id: p1, url: https://cdn…/a100/p1.jpg, thumbUrl: https://cdn…/a100/p1_t.jpg, takenAt: 2026-09-05T09:10:00Z }
+                  items:
+                    - { id: 1, photoId: p1, category: PLASTIC, quantity: 2, source: AI, aiConfidence: 0.91, unclassified: false, bbox: { x: 0.2, y: 0.3, w: 0.2, h: 0.25 } }
+                    - { id: 2, photoId: null, category: CIGARETTE, quantity: 5, source: MANUAL, aiConfidence: null, unclassified: false, bbox: null }
+    delete:
+      tags: [activities]
+      summary: 내 활동 삭제 — 크루 합산(crew_daily_stats)은 줄어든다. 본인 것만
+      parameters: [{ $ref: '#/components/parameters/ActivityId' }]
+      responses: { '204': { description: 완료 } }
+  /crew/live:
+    get:
+      tags: [activities]
+      summary: 활동 중인 크루원 (2-2, 4-3 초기 로드). 이후 갱신은 소켓 (배열)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: '#/components/schemas/LiveMember' } }
+              example:
+                data:
+                  - { user: { id: 8a2d…, nickname: 상혁, photoUrl: null }, activityId: a101, startedAt: 2026-09-07T08:30:00Z, elapsedSec: 900, distanceM: 1200, itemCount: 9, paused: false, location: { lng: 126.93, lat: 37.52 } }
+                  - { user: { id: 9b3e…, nickname: 지수, photoUrl: null }, activityId: a102, startedAt: 2026-09-07T08:40:00Z, elapsedSec: 300, distanceM: 400, itemCount: 2, paused: true, location: null }
+
+  # ───────────────────────── media ─────────────────────────
+  /media:
+    post:
+      tags: [media]
+      summary: 사진 업로드 + AI 추론 — 옛 계약 그대로. 추론 실패는 200 + inference.status=UNAVAILABLE
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [mediaId, file, purpose]
+              properties:
+                mediaId: { type: string, format: uuid }
+                file: { type: string, format: binary }
+                purpose: { type: string, enum: [ACTIVITY, POST, PROFILE, CREW], description: ACTIVITY 만 추론 }
+                activityId: { type: string, format: uuid, description: ACTIVITY 일 때 }
+                takenAt: { type: string, format: date-time }
+                lat: { type: number }
+                lng: { type: number }
+      responses:
+        '200':
+          description: 저장됨
+          content:
+            application/json:
+              schema: { type: object, properties: { data: { $ref: '#/components/schemas/MediaResult' } } }
+              example:
+                data:
+                  mediaId: m001
+                  photoId: p1
+                  url: https://cdn…/a100/p1.jpg
+                  thumbUrl: https://cdn…/a100/p1_t.jpg
+                  inference:
+                    status: OK
+                    modelVersion: yolo26s-1024-v1
+                    inferenceMs: 180
+                    items:
+                      - { category: PLASTIC, aiConfidence: 0.91, bbox: { x: 0.2, y: 0.3, w: 0.2, h: 0.25 } }
+                      - { category: PLASTIC, aiConfidence: 0.62, bbox: { x: 0.6, y: 0.4, w: 0.15, h: 0.2 } }
+                      - { category: CAN, aiConfidence: 0.88, bbox: { x: 0.1, y: 0.7, w: 0.1, h: 0.15 } }
+
+  # ───────────────────────── posts ─────────────────────────
+  /crew/posts:
+    get:
+      tags: [posts]
+      summary: 피드 (5-1). scope=CREW 는 크루 전체, MINE 은 나만 보기 포함 내 글
+      parameters:
+        - in: query
+          name: scope
+          schema: { type: string, enum: [CREW, MINE], default: CREW }
+        - in: query
+          name: before
+          schema: { type: string, format: date }
+          description: 달력에서 고른 날짜. 그날 이전(포함)부터
+        - { $ref: '#/components/parameters/Cursor' }
+        - { $ref: '#/components/parameters/Limit' }
+      responses:
+        '200': { $ref: '#/components/responses/PostPage' }
+    post:
+      tags: [posts]
+      summary: 게시물 작성 (5-6)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id, text, visibility, mediaIds]
+              properties:
+                id: { type: string, format: uuid }
+                text: { type: string, maxLength: 1000 }
+                visibility: { type: string, enum: [CREW, PRIVATE] }
+                mediaIds: { type: array, items: { type: string, format: uuid }, maxItems: 10 }
+      responses:
+        '201':
+          description: 생성
+          content:
+            application/json:
+              schema: { type: object, properties: { data: { $ref: '#/components/schemas/Post' } } }
+  /posts/{postId}:
+    get:
+      tags: [posts]
+      summary: 게시물 상세 + 댓글 (5-2)
+      parameters: [{ $ref: '#/components/parameters/PostId' }]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    allOf:
+                      - $ref: '#/components/schemas/Post'
+                      - type: object
+                        properties:
+                          comments: { type: array, items: { $ref: '#/components/schemas/Comment' } }
+    delete:
+      tags: [posts]
+      summary: 삭제 — 작성자 또는 크루장(Q39). 크루장이 지우면 작성자에게 POST_REMOVED 알림
+      parameters: [{ $ref: '#/components/parameters/PostId' }]
+      responses: { '204': { description: 완료 } }
+  /posts/{postId}/like:
+    put:
+      tags: [posts]
+      summary: 좋아요
+      parameters: [{ $ref: '#/components/parameters/PostId' }]
+      responses: { '204': { description: 완료 } }
+    delete:
+      tags: [posts]
+      summary: 좋아요 취소
+      parameters: [{ $ref: '#/components/parameters/PostId' }]
+      responses: { '204': { description: 완료 } }
+  /posts/{postId}/comments:
+    post:
+      tags: [posts]
+      summary: 댓글 작성
+      parameters: [{ $ref: '#/components/parameters/PostId' }]
+      requestBody: { $ref: '#/components/requestBodies/CommentInput' }
+      responses:
+        '201':
+          description: 생성
+          content:
+            application/json:
+              schema: { type: object, properties: { data: { $ref: '#/components/schemas/Comment' } } }
+  /comments/{commentId}:
+    delete:
+      tags: [posts]
+      summary: 댓글 삭제 — 작성자 또는 크루장
+      parameters: [{ $ref: '#/components/parameters/CommentId' }]
+      responses: { '204': { description: 완료 } }
+
+  # ───────────────────────── notices ─────────────────────────
+  /crew/notices:
+    get:
+      tags: [notices]
+      summary: 공지 목록 (3-5). 고정이 먼저
+      parameters:
+        - { $ref: '#/components/parameters/Cursor' }
+        - { $ref: '#/components/parameters/Limit' }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      items: { type: array, items: { $ref: '#/components/schemas/Notice' } }
+                      nextCursor: { type: string, nullable: true }
+    post:
+      tags: [notices]
+      summary: "[크루장] 공지 작성 (3-12)"
+      requestBody: { $ref: '#/components/requestBodies/NoticeInput' }
+      responses:
+        '201':
+          description: 생성
+          content:
+            application/json:
+              schema: { type: object, properties: { data: { $ref: '#/components/schemas/Notice' } } }
+  /notices/{noticeId}:
+    get:
+      tags: [notices]
+      summary: 공지 상세 + 댓글 (3-6)
+      parameters: [{ $ref: '#/components/parameters/NoticeId' }]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    allOf:
+                      - $ref: '#/components/schemas/Notice'
+                      - type: object
+                        properties:
+                          body: { type: string }
+                          comments: { type: array, items: { $ref: '#/components/schemas/Comment' } }
+    patch:
+      tags: [notices]
+      summary: "[크루장] 수정·고정"
+      parameters: [{ $ref: '#/components/parameters/NoticeId' }]
+      requestBody: { $ref: '#/components/requestBodies/NoticeInput' }
+      responses: { '204': { description: 완료 } }
+    delete:
+      tags: [notices]
+      summary: "[크루장] 삭제"
+      parameters: [{ $ref: '#/components/parameters/NoticeId' }]
+      responses: { '204': { description: 완료 } }
+  /notices/{noticeId}/comments:
+    post:
+      tags: [notices]
+      summary: 공지 댓글
+      parameters: [{ $ref: '#/components/parameters/NoticeId' }]
+      requestBody: { $ref: '#/components/requestBodies/CommentInput' }
+      responses:
+        '201':
+          description: 생성
+          content:
+            application/json:
+              schema: { type: object, properties: { data: { $ref: '#/components/schemas/Comment' } } }
+  /notice-comments/{commentId}:
+    delete:
+      tags: [notices]
+      summary: 공지 댓글 삭제 — 작성자 또는 크루장
+      parameters: [{ $ref: '#/components/parameters/CommentId' }]
+      responses: { '204': { description: 완료 } }
+
+  # ───────────────────────── chat (이력만, 실시간은 소켓) ─────────────────────────
+  /crew/chat/messages:
+    get:
+      tags: [chat]
+      summary: 메시지 이력 — beforeSeq 는 거꾸로, afterSeq 는 재연결 뒤 빈 구간 채우기. 실시간은 소켓.md
+      parameters:
+        - in: query
+          name: beforeSeq
+          schema: { type: integer }
+        - in: query
+          name: afterSeq
+          schema: { type: integer }
+        - { $ref: '#/components/parameters/Limit' }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      items: { type: array, items: { $ref: '#/components/schemas/ChatMessage' } }
+                      hasMore: { type: boolean }
+  /crew/chat/read:
+    put:
+      tags: [chat]
+      summary: 읽음 위치 갱신
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [lastSeq], properties: { lastSeq: { type: integer } } }
+      responses: { '204': { description: 완료 } }
+
+  # ───────────────────────── notifications ─────────────────────────
+  /notifications:
+    get:
+      tags: [notifications]
+      summary: 알림 목록 (2-3). 크루장은 pending 에 처리 대기가 따로 온다
+      parameters:
+        - { $ref: '#/components/parameters/Cursor' }
+        - { $ref: '#/components/parameters/Limit' }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      pending:
+                        type: object
+                        description: 크루장만. 크루원은 둘 다 0
+                        properties:
+                          joinRequests: { type: integer }
+                          reports: { type: integer }
+                      items: { type: array, items: { $ref: '#/components/schemas/Notification' } }
+                      nextCursor: { type: string, nullable: true }
+              example:
+                data:
+                  pending: { joinRequests: 2, reports: 1 }
+                  items:
+                    - { id: 501, type: ACTIVITY_STARTED, title: 상혁 님이 줍깅을 시작했어요, detail: 여의도 근처, unread: true, target: { type: LIVE, id: a101 }, createdAt: 2026-09-07T08:30:05Z }
+                    - { id: 500, type: COMMENT, title: 지수 님이 댓글을 남겼어요, detail: "오늘 많이 주우셨네요!", unread: false, target: { type: POST, id: po77 }, createdAt: 2026-09-06T21:10:00Z }
+                  nextCursor: null
+  /notifications/read:
+    post:
+      tags: [notifications]
+      summary: 읽음 처리 — ids 없으면 전체
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object, properties: { ids: { type: array, items: { type: integer } } } }
+      responses: { '204': { description: 완료 } }
+  /notifications/unread-count:
+    get:
+      tags: [notifications]
+      summary: 홈 벨 배지
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { type: object, properties: { data: { type: object, properties: { count: { type: integer } } } } }
+
+  # ───────────────────────── reports ─────────────────────────
+  /reports:
+    post:
+      tags: [reports]
+      summary: 신고 (6-1) — 크루장에게 REPORT 알림
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id, targetType, targetId, reason]
+              properties:
+                id: { type: string, format: uuid }
+                targetType: { type: string, enum: [USER, POST, COMMENT, NOTICE_COMMENT, CHAT_MESSAGE] }
+                targetId: { type: string }
+                reason: { type: string, enum: [SPAM, HATE, INAPPROPRIATE_PHOTO, PRIVACY, OTHER] }
+                memo: { type: string, maxLength: 500 }
+      responses:
+        '201': { description: 접수 }
+        '409': { $ref: '#/components/responses/Error' }
+  /crew/reports:
+    get:
+      tags: [reports]
+      summary: "[크루장] 대기 중인 신고 (6-2)"
+      parameters:
+        - { $ref: '#/components/parameters/Cursor' }
+        - { $ref: '#/components/parameters/Limit' }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      items: { type: array, items: { $ref: '#/components/schemas/Report' } }
+                      nextCursor: { type: string, nullable: true }
+  /crew/reports/{reportId}:
+    post:
+      tags: [reports]
+      summary: "[크루장] 처리 — DELETE 는 대상 게시물·댓글·채팅을 지운다. USER 신고는 DISMISS 또는 별도 추방"
+      parameters:
+        - in: path
+          name: reportId
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [result], properties: { result: { type: string, enum: [DELETE, DISMISS] } } }
+      responses: { '204': { description: 완료 } }
+
+  # ───────────────────────── stats ─────────────────────────
+  /crew/home:
+    get:
+      tags: [stats]
+      summary: 홈 한 번에 (2-1)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { type: object, properties: { data: { $ref: '#/components/schemas/Home' } } }
+              example:
+                data:
+                  crew: { id: c001, name: 한강줍깅크루 }
+                  last7d:
+                    crewItems: 168
+                    myItems: 23
+                    daily: [12, 30, 0, 41, 25, 38, 22]
+                  character:
+                    windowDays: 14
+                    items: 312
+                    goalCount: 300
+                    stage: 5
+                  live: { count: 2, users: [{ id: 8a2d…, nickname: 상혁, photoUrl: null }, { id: 9b3e…, nickname: 지수, photoUrl: null }] }
+                  unreadNotifications: 3
+  /crew/stats:
+    get:
+      tags: [stats]
+      summary: 크루 기록 (3-4)
+      parameters:
+        - in: query
+          name: range
+          schema: { type: string, enum: [WEEK, MONTH, ALL], default: MONTH }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { type: object, properties: { data: { $ref: '#/components/schemas/CrewStats' } } }
+              example:
+                data:
+                  range: MONTH
+                  totals: { items: 1430, distanceM: 128000, durationSec: 96000, activities: 62 }
+                  byCategory: { CIGARETTE: 620, PLASTIC: 310, CAN: 190, PAPER: 120, VINYL: 110, GLASS: 40, GENERAL: 40 }
+                  series: [{ date: 2026-09-01, items: 40 }, { date: 2026-09-02, items: 0 }, { date: 2026-09-03, items: 77 }]
+                  ranking:
+                    - { rank: 1, user: { id: 6f1c…, nickname: 관열, photoUrl: null }, items: 412, distanceM: 30100 }
+                    - { rank: 2, user: { id: 8a2d…, nickname: 상혁, photoUrl: null }, items: 380, distanceM: 28800 }
+  /crew/calendar:
+    get:
+      tags: [stats]
+      summary: 활동 달력 한 달 (3-9)
+      parameters:
+        - in: query
+          name: month
+          required: true
+          schema: { type: string, pattern: '^\d{4}-\d{2}$' }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      days:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            date: { type: string, format: date }
+                            items: { type: integer }
+                            activities:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  activityId: { type: string }
+                                  user: { $ref: '#/components/schemas/UserBrief' }
+                                  items: { type: integer }
+                                  distanceM: { type: integer }
+  /crew/export:
+    get:
+      tags: [stats]
+      summary: "[크루장] CSV — 활동 한 회가 한 행 (Q34)"
+      parameters:
+        - in: query
+          name: from
+          required: true
+          schema: { type: string, format: date }
+        - in: query
+          name: to
+          required: true
+          schema: { type: string, format: date }
+      responses:
+        '200':
+          description: |
+            `text/csv; charset=utf-8` (BOM 포함 — 엑셀). 열: 날짜, 크루원, 시작, 종료, 거리(m), 시간(초), 총개수, 담배꽁초, 캔, 플라스틱, 종이, 유리, 비닐, 일반
+          content:
+            text/csv:
+              schema: { type: string }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    Cursor:
+      in: query
+      name: cursor
+      schema: { type: string }
+    Limit:
+      in: query
+      name: limit
+      schema: { type: integer, default: 20, maximum: 50 }
+    UserId:
+      in: path
+      name: userId
+      required: true
+      schema: { type: string }
+    ActivityId:
+      in: path
+      name: id
+      required: true
+      schema: { type: string, format: uuid }
+    PostId:
+      in: path
+      name: postId
+      required: true
+      schema: { type: string, format: uuid }
+    CommentId:
+      in: path
+      name: commentId
+      required: true
+      schema: { type: string, format: uuid }
+    NoticeId:
+      in: path
+      name: noticeId
+      required: true
+      schema: { type: string, format: uuid }
+
+  requestBodies:
+    SocialToken:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [token]
+            properties:
+              token: { type: string, description: 카카오 accessToken / 구글 idToken }
+              nickname: { type: string, description: 첫 가입일 때만 }
+    CommentInput:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [id, text]
+            properties:
+              id: { type: string, format: uuid }
+              text: { type: string, maxLength: 500 }
+    NoticeInput:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              title: { type: string, maxLength: 100 }
+              body: { type: string, maxLength: 3000 }
+              pinned: { type: boolean }
+
+  responses:
+    Error:
+      description: |
+        공통 오류. TOKEN_EXPIRED 401 · INVALID_CREDENTIALS 401 · FORBIDDEN 403 · NO_CREW 403 ·
+        LEADER_MUST_DELEGATE 403 · NOT_FOUND 404 · CONFLICT 409 · ALREADY_IN_CREW 409 ·
+        VALIDATION 422 · RATE_LIMITED 429 · INTERNAL 500. message 는 개발자용
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [code, message, requestId]
+            properties:
+              code: { type: string }
+              message: { type: string }
+              requestId: { type: string }
+    TokenPair:
+      description: 토큰 쌍
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data:
+                type: object
+                properties:
+                  accessToken: { type: string }
+                  refreshToken: { type: string }
+                  isNew: { type: boolean, description: 소셜 첫 가입이면 true → 닉네임 화면 }
+    ActivityPage:
+      description: 활동 목록
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data:
+                type: object
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/ActivityCard' } }
+                  nextCursor: { type: string, nullable: true }
+    PostPage:
+      description: 게시물 목록
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              data:
+                type: object
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/Post' } }
+                  nextCursor: { type: string, nullable: true }
+          example:
+            data:
+              items:
+                - id: po77
+                  author: { id: 8a2d…, nickname: 상혁, photoUrl: null }
+                  text: 오늘 여의도 3km. 꽁초가 유난히 많았다
+                  visibility: CREW
+                  media: [{ url: https://cdn…/po77/1.jpg, thumbUrl: https://cdn…/po77/1_t.jpg }]
+                  likeCount: 6
+                  liked: true
+                  commentCount: 2
+                  createdAt: 2026-09-06T11:00:00Z
+              nextCursor: eyJ…
+
+  schemas:
+    Category:
+      type: string
+      enum: [CIGARETTE, CAN, PLASTIC, PAPER, GLASS, VINYL, GENERAL]
+    UserBrief:
+      type: object
+      properties:
+        id: { type: string }
+        nickname: { type: string, description: 탈퇴했으면 "탈퇴한 크루원" }
+        photoUrl: { type: string, nullable: true }
+    Me:
+      type: object
+      properties:
+        id: { type: string }
+        nickname: { type: string }
+        intro: { type: string }
+        photoUrl: { type: string, nullable: true }
+        email: { type: string, nullable: true }
+        hasPassword: { type: boolean }
+        linked:
+          type: object
+          properties: { kakao: { type: boolean }, google: { type: boolean } }
+        settings:
+          type: object
+          properties:
+            shareLocationDefault: { type: boolean }
+            notifyActivityStart: { type: boolean }
+        membership:
+          type: object
+          properties:
+            status: { type: string, enum: [NONE, PENDING, MEMBER], description: NONE→1-6 · PENDING→1-9 · MEMBER→탭 }
+            crew:
+              type: object
+              nullable: true
+              properties:
+                id: { type: string }
+                name: { type: string }
+                isLeader: { type: boolean }
+    Crew:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        intro: { type: string }
+        photoUrl: { type: string, nullable: true }
+        leader: { $ref: '#/components/schemas/UserBrief' }
+        memberCount: { type: integer }
+        goalCount: { type: integer }
+        inviteCode: { type: string }
+        pendingJoinRequests: { type: integer, description: "크루장만 값. 크루원은 0" }
+        pinnedNotice:
+          type: object
+          nullable: true
+          properties:
+            id: { type: string }
+            title: { type: string }
+            createdAt: { type: string, format: date-time }
+        unreadChat: { type: integer }
+        isLeader: { type: boolean }
+    JoinRequest:
+      type: object
+      properties:
+        id: { type: string }
+        crew: { type: object, properties: { id: { type: string }, name: { type: string } } }
+        user: { $ref: '#/components/schemas/UserBrief' }
+        status: { type: string, enum: [PENDING, APPROVED, REJECTED, CANCELED] }
+        createdAt: { type: string, format: date-time }
+    Member:
+      allOf:
+        - $ref: '#/components/schemas/UserBrief'
+        - type: object
+          properties:
+            isLeader: { type: boolean }
+            totalItems: { type: integer }
+            joinedAt: { type: string, format: date-time }
+            following: { type: boolean }
+    MemberProfile:
+      allOf:
+        - $ref: '#/components/schemas/Member'
+        - type: object
+          properties:
+            intro: { type: string }
+            totalDistanceM: { type: integer }
+            totalActivities: { type: integer }
+            blocked: { type: boolean }
+            activeDays:
+              type: array
+              description: 최근 6개월 활동한 날짜 — 프로필 달력
+              items: { type: string, format: date }
+    ItemInput:
+      type: object
+      required: [category, quantity]
+      properties:
+        category: { $ref: '#/components/schemas/Category' }
+        quantity: { type: integer, minimum: 1 }
+        aiPredictedCategory: { $ref: '#/components/schemas/Category' }
+        aiConfidence: { type: number, nullable: true }
+        bbox: { $ref: '#/components/schemas/Bbox' }
+    Bbox:
+      type: object
+      nullable: true
+      properties:
+        x: { type: number }
+        y: { type: number }
+        w: { type: number }
+        h: { type: number }
+    Item:
+      type: object
+      properties:
+        id: { type: integer }
+        photoId: { type: string, nullable: true }
+        category: { $ref: '#/components/schemas/Category' }
+        quantity: { type: integer }
+        source: { type: string, enum: [AI, MANUAL] }
+        aiConfidence: { type: number, nullable: true }
+        unclassified: { type: boolean }
+        bbox: { $ref: '#/components/schemas/Bbox' }
+    ActivitySummary:
+      type: object
+      properties:
+        itemCount: { type: integer }
+        byCategory:
+          type: object
+          additionalProperties: { type: integer }
+    ActivityCard:
+      type: object
+      properties:
+        id: { type: string }
+        startedAt: { type: string, format: date-time }
+        durationSec: { type: integer }
+        distanceM: { type: integer }
+        itemCount: { type: integer }
+        thumbUrl: { type: string, nullable: true }
+    Activity:
+      type: object
+      properties:
+        id: { type: string }
+        user: { $ref: '#/components/schemas/UserBrief' }
+        status: { type: string, enum: [IN_PROGRESS, ENDED] }
+        startedAt: { type: string, format: date-time }
+        endedAt: { type: string, format: date-time, nullable: true }
+        durationSec: { type: integer }
+        pausedSec: { type: integer }
+        distanceM: { type: integer }
+        steps: { type: integer, nullable: true }
+        locationShared: { type: boolean }
+        itemCount: { type: integer }
+        byCategory: { type: object, additionalProperties: { type: integer } }
+        route:
+          type: array
+          nullable: true
+          description: 남의 활동이고 locationShared=false 면 null
+          items: { type: array, items: { type: number } }
+        photos:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string }
+              url: { type: string }
+              thumbUrl: { type: string }
+              takenAt: { type: string, format: date-time }
+        items: { type: array, items: { $ref: '#/components/schemas/Item' } }
+    LiveMember:
+      type: object
+      properties:
+        user: { $ref: '#/components/schemas/UserBrief' }
+        activityId: { type: string }
+        startedAt: { type: string, format: date-time }
+        elapsedSec: { type: integer }
+        distanceM: { type: integer }
+        itemCount: { type: integer }
+        paused: { type: boolean }
+        location:
+          type: object
+          nullable: true
+          description: 위치 공유를 끈 사람은 null
+          properties: { lng: { type: number }, lat: { type: number } }
+    MediaResult:
+      type: object
+      properties:
+        mediaId: { type: string }
+        photoId: { type: string, nullable: true, description: purpose=ACTIVITY 일 때 activity_photos.id }
+        url: { type: string }
+        thumbUrl: { type: string }
+        inference:
+          type: object
+          nullable: true
+          properties:
+            status: { type: string, enum: [OK, UNAVAILABLE] }
+            modelVersion: { type: string }
+            inferenceMs: { type: integer }
+            items:
+              type: array
+              items:
+                type: object
+                properties:
+                  category: { $ref: '#/components/schemas/Category' }
+                  aiConfidence: { type: number }
+                  bbox: { $ref: '#/components/schemas/Bbox' }
+    Post:
+      type: object
+      properties:
+        id: { type: string }
+        author: { $ref: '#/components/schemas/UserBrief' }
+        text: { type: string }
+        visibility: { type: string, enum: [CREW, PRIVATE] }
+        media:
+          type: array
+          items:
+            type: object
+            properties: { url: { type: string }, thumbUrl: { type: string } }
+        likeCount: { type: integer }
+        liked: { type: boolean }
+        commentCount: { type: integer }
+        createdAt: { type: string, format: date-time }
+    Comment:
+      type: object
+      properties:
+        id: { type: string }
+        author: { $ref: '#/components/schemas/UserBrief' }
+        text: { type: string }
+        createdAt: { type: string, format: date-time }
+    Notice:
+      type: object
+      properties:
+        id: { type: string }
+        title: { type: string }
+        preview: { type: string, description: 본문 첫 줄 }
+        pinned: { type: boolean }
+        commentCount: { type: integer }
+        createdAt: { type: string, format: date-time }
+    ChatMessage:
+      type: object
+      properties:
+        seq: { type: integer }
+        id: { type: string }
+        author: { $ref: '#/components/schemas/UserBrief' }
+        text: { type: string }
+        createdAt: { type: string, format: date-time }
+    Notification:
+      type: object
+      properties:
+        id: { type: integer }
+        type:
+          type: string
+          enum: [JOIN_REQUEST, JOIN_APPROVED, JOIN_REJECTED, NOTICE, COMMENT, CHAT, ACTIVITY_STARTED, REPORT, POST_REMOVED]
+        title: { type: string }
+        detail: { type: string }
+        unread: { type: boolean }
+        target:
+          type: object
+          description: 이동 대상. JOIN_REQUESTS→3-8 · REPORTS→6-2 · POST→5-2 · NOTICE→3-6 · CHAT→3-7 · LIVE→4-3 · CREW→1-6/탭
+          properties:
+            type: { type: string, enum: [JOIN_REQUESTS, REPORTS, POST, NOTICE, CHAT, LIVE, CREW] }
+            id: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+    Report:
+      type: object
+      properties:
+        id: { type: string }
+        reporter: { $ref: '#/components/schemas/UserBrief' }
+        targetType: { type: string }
+        targetId: { type: string }
+        targetPreview: { type: string, description: 게시물·댓글 본문 앞부분 또는 사용자 닉네임 }
+        reason: { type: string }
+        memo: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+    Home:
+      type: object
+      properties:
+        crew: { type: object, properties: { id: { type: string }, name: { type: string } } }
+        last7d:
+          type: object
+          properties:
+            crewItems: { type: integer }
+            myItems: { type: integer }
+            daily: { type: array, items: { type: integer }, minItems: 7, maxItems: 7, description: 6일 전 → 오늘 }
+        character:
+          type: object
+          properties:
+            windowDays: { type: integer }
+            items: { type: integer }
+            goalCount: { type: integer }
+            stage: { type: integer, minimum: 1, maximum: 5, description: 1 축 처짐 · 2 보통 · 3 신남 · 4 반짝 · 5 파티. 서버가 items/goalCount 로 계산 }
+        live:
+          type: object
+          properties:
+            count: { type: integer }
+            users: { type: array, items: { $ref: '#/components/schemas/UserBrief' }, maxItems: 5 }
+        unreadNotifications: { type: integer }
+    CrewStats:
+      type: object
+      properties:
+        range: { type: string }
+        totals:
+          type: object
+          properties:
+            items: { type: integer }
+            distanceM: { type: integer }
+            durationSec: { type: integer }
+            activities: { type: integer }
+        byCategory: { type: object, additionalProperties: { type: integer } }
+        series:
+          type: array
+          items: { type: object, properties: { date: { type: string, format: date }, items: { type: integer } } }
+        ranking:
+          type: array
+          items:
+            type: object
+            properties:
+              rank: { type: integer }
+              user: { $ref: '#/components/schemas/UserBrief' }
+              items: { type: integer }
+              distanceM: { type: integer }

@@ -1,0 +1,66 @@
+import { Text as RNText, type TextProps, type TextStyle } from 'react-native';
+import { fontSize, lineHeight, fontFamily } from '../../tokens/typography.ts';
+import { useTheme } from '../theme.tsx';
+
+export type TextVariant = keyof typeof fontSize;
+export type TextTone =
+  | 'ink'
+  | 'muted'
+  | 'faint'
+  | 'hint'
+  | 'onLime'
+  | 'onDark'
+  | 'onPhoto'
+  | 'error'
+  | 'green';
+
+/** counter·display·title·metric·label 은 원본에서 굵게 씁니다. */
+const BOLD: TextVariant[] = ['counter', 'display', 'title', 'metric', 'label'];
+
+export type TxtProps = TextProps & {
+  variant?: TextVariant;
+  tone?: TextTone;
+  bold?: boolean;
+};
+
+/**
+ * 기본은 시스템 글자 크기를 그대로 따릅니다(상한 없음).
+ *
+ * 예전에는 여기서 1.4 로 잘랐는데, 그건 안전판이 아니라 저시력 사용자의 설정을
+ * 무시하는 것이었습니다 — 실제로 배율 1.3 에서 이미 고정 폭 라벨이 두 줄로 쪼개졌고,
+ * 상한은 그걸 막지 못했습니다. 잘리는 원인은 배율이 아니라 고정 크기입니다.
+ *
+ * 컨테이너를 minHeight/minWidth 로 두면 글자가 커져도 자랍니다. 정말 자랄 수 없는
+ * 자리(고정 높이 배지 등)에서만 `maxFontSizeMultiplier` 를 직접 넘기세요.
+ */
+
+export function Txt({
+  variant = 'body',
+  tone = 'ink',
+  bold,
+  style,
+  ...rest
+}: TxtProps) {
+  const { colors } = useTheme();
+  const toneColor: Record<TextTone, string> = {
+    ink: colors.ink,
+    muted: colors.inkMuted,
+    faint: colors.inkFaint,
+    hint: colors.inkHint,
+    onLime: colors.onLime,
+    onDark: colors.onDark,
+    onPhoto: colors.onPhoto,
+    error: colors.error,
+    green: colors.greenStrong,
+  };
+  const isBold = bold ?? BOLD.includes(variant);
+  const base: TextStyle = {
+    fontSize: fontSize[variant],
+    lineHeight: lineHeight[variant],
+    fontFamily: isBold ? fontFamily.bold : fontFamily.regular,
+    color: toneColor[tone],
+  };
+  return (
+    <RNText style={[base, style]} {...rest} />
+  );
+}
