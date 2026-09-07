@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  카드 안에서 통째로 눌리는 줄(작성자 줄, 설정 항목, 동네 선택 등)용.
+
+  이 줄들은 배경이 투명해서 ?attr/selectableItemBackground 를 그대로 쓰면
+  누를 때 딱딱한 회색 사각형이 나타납니다. 프로토타입에는 없는 모양이라
+  타일 반지름(18dp)으로 둥글려 줍니다.
+-->
+<ripple xmlns:android="http://schemas.android.com/apk/res/android"
+    android:color="?attr/colorControlHighlight">
+
+    <item android:id="@android:id/mask">
+        <shape android:shape="rectangle">
+            <solid android:color="#FFFFFFFF" />
+            <corners android:radius="@dimen/radius_tile" />
+        </shape>
+    </item>
+</ripple>

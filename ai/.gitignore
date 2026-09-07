@@ -1,0 +1,33 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+
+# 모델 가중치·데이터셋은 커밋하지 않는다.
+# 추론은 서버에서만 하므로 weights는 배포 산출물이 아니다. 체크포인트와 수집 이미지는 GB로 간다.
+*.pt
+*.pth
+*.onnx
+# 서빙 weights 한 개만 예외로 추적한다 — clone 만으로 서버가 뜨게 하기 위해서다.
+# 20.4MB 라 히스토리에 남겨도 감당되지만, **이 예외는 파일 하나에만 준다.**
+# 다음 버전(-v2 …)을 올릴 때는 이 줄을 새 이름으로 바꾼다. 줄을 늘리면 체크포인트가
+# 쌓여 clone 비용이 계속 커지고, 그때는 LFS 나 릴리스 첨부로 옮길 시점이다.
+!weights/yolo26s-1024-v1.pt
+# 데이터셋 이미지는 GB 단위라 커밋하지 않는다. 다만 아래 두 파일은
+# **결정 기록**이라 반드시 추적한다 — 이미지는 다시 받을 수 있지만
+# 이 둘은 잃으면 복구할 수 없거나 재현이 안 된다.
+#   _split.json      검증셋 동결의 정본. 없으면 build_dataset.py 가 조용히 새로 뽑는다
+#   substituted.txt  원본이 거부돼 장변 1024 로 받은 127장 목록. ⑫ 평가에서 원인 추적에 쓴다
+# git 은 무시된 디렉터리에 들어가지 않으므로 부정 패턴만으로는 안 되고
+# 디렉터리를 단계별로 열어야 한다.
+datasets/*
+!datasets/trash/
+datasets/trash/*
+!datasets/trash/_split.json
+!datasets/taco/
+datasets/taco/*
+!datasets/taco/substituted.txt
+runs/
+.env

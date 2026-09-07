@@ -1,0 +1,24 @@
+<!--
+  Label Studio labeling config - 7 categories.
+
+  ASCII ONLY. Do not put Korean in this file, not even in file paths.
+  label_studio_sdk reads it with io.open() and no encoding=, so a Korean
+  Windows box decodes it as cp949 and crashes (verified 2026-08-02).
+  Rationale and setup steps live in the work-assignment doc under ai/docs/.
+
+  Label order == class index. Source of truth is app/classes.py; changing the
+  order here silently reinterprets every trained weight's output.
+  hotkey 1..7 matches that order.
+-->
+<View>
+  <Image name="image" value="$image" zoom="true" zoomControl="true" rotateControl="false"/>
+  <RectangleLabels name="label" toName="image">
+    <Label value="CIGARETTE" category="0" background="#e6194b" hotkey="1"/>
+    <Label value="CAN"       category="1" background="#3cb44b" hotkey="2"/>
+    <Label value="PLASTIC"   category="2" background="#4363d8" hotkey="3"/>
+    <Label value="PAPER"     category="3" background="#f58231" hotkey="4"/>
+    <Label value="GLASS"     category="4" background="#911eb4" hotkey="5"/>
+    <Label value="VINYL"     category="5" background="#42d4f4" hotkey="6"/>
+    <Label value="GENERAL"   category="6" background="#9a6324" hotkey="7"/>
+  </RectangleLabels>
+</View>

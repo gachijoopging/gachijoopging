@@ -1,0 +1,504 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  프로토타입의 인라인 CSS 를 재사용 가능한 스타일로 정리한 파일.
+  모든 화면 레이아웃은 여기 정의된 스타일만 조합해서 만듭니다.
+-->
+<resources>
+
+    <!-- ===================== 타이포 ===================== -->
+
+    <style name="TextAppearance.Gachi.Display" parent="Font.Gachi.Display">
+        <item name="android:textSize">@dimen/text_display</item>
+        <item name="android:textColor">@color/gachi_ink</item>
+        <item name="android:includeFontPadding">false</item>
+    </style>
+
+    <!-- 홈 카운터 (font-size:42px) -->
+    <style name="TextAppearance.Gachi.Counter" parent="Font.Gachi.Display">
+        <item name="android:textSize">@dimen/text_counter</item>
+        <item name="android:textColor">@color/gachi_ink</item>
+        <item name="android:includeFontPadding">false</item>
+    </style>
+
+    <style name="TextAppearance.Gachi.Title" parent="Font.Gachi.Display">
+        <item name="android:textSize">@dimen/text_title</item>
+        <item name="android:textColor">@color/gachi_ink</item>
+    </style>
+
+    <style name="TextAppearance.Gachi.Section" parent="Font.Gachi.Display">
+        <item name="android:textSize">@dimen/text_section</item>
+        <item name="android:textColor">@color/gachi_ink</item>
+    </style>
+
+    <!-- 통계 타일 숫자 (19px) -->
+    <style name="TextAppearance.Gachi.Metric" parent="Font.Gachi.Display">
+        <item name="android:textSize">@dimen/text_metric</item>
+        <item name="android:textColor">@color/gachi_ink</item>
+    </style>
+
+    <style name="TextAppearance.Gachi.Body" parent="Font.Gachi.Body">
+        <item name="android:textSize">@dimen/text_body</item>
+        <item name="android:textColor">@color/gachi_ink</item>
+        <item name="android:lineSpacingMultiplier">1.55</item>
+    </style>
+
+    <style name="TextAppearance.Gachi.Label" parent="Font.Gachi.Body">
+        <item name="android:textSize">@dimen/text_label</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">@color/gachi_ink_muted</item>
+    </style>
+
+    <!-- 실사용(77곳 중 63곳이 normal 오버라이드) 기준으로 normal 이 기본. 굵은 캡션은 CaptionStrong. -->
+    <style name="TextAppearance.Gachi.Caption" parent="Font.Gachi.Body">
+        <item name="android:textSize">@dimen/text_caption</item>
+        <item name="android:textColor">@color/gachi_ink_muted</item>
+    </style>
+
+    <style name="TextAppearance.Gachi.CaptionStrong" parent="Font.Gachi.Body">
+        <item name="android:textSize">@dimen/text_caption</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">@color/gachi_ink_muted</item>
+    </style>
+
+    <style name="TextAppearance.Gachi.Micro" parent="Font.Gachi.Body">
+        <item name="android:textSize">@dimen/text_micro</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">@color/gachi_ink_hint</item>
+    </style>
+
+    <!-- ===================== 텍스트 위젯 ===================== -->
+
+    <style name="Gachi.Text" parent="Widget.AppCompat.TextView">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:textAppearance">@style/TextAppearance.Gachi.Body</item>
+    </style>
+
+    <style name="Gachi.Text.Body">
+        <item name="android:textAppearance">@style/TextAppearance.Gachi.Body</item>
+    </style>
+
+    <style name="Gachi.Text.ScreenTitle">
+        <item name="android:textAppearance">@style/TextAppearance.Gachi.Title</item>
+    </style>
+
+    <style name="Gachi.Text.ScreenSubtitle">
+        <item name="android:textAppearance">@style/TextAppearance.Gachi.Caption</item>
+    </style>
+
+    <style name="Gachi.Text.PageTitle">
+        <item name="android:textAppearance">@style/TextAppearance.Gachi.Display</item>
+    </style>
+
+    <style name="Gachi.Text.Section">
+        <item name="android:textAppearance">@style/TextAppearance.Gachi.Section</item>
+    </style>
+
+    <!-- 섹션 제목의 큰/작은 변형 — 레이아웃 인라인 19sp/15sp 군집을 흡수 -->
+    <style name="Gachi.Text.Section.Lg">
+        <item name="android:textSize">@dimen/text_metric</item>
+    </style>
+
+    <style name="Gachi.Text.Section.Sm">
+        <item name="android:textSize">15sp</item>
+    </style>
+
+    <style name="Gachi.Text.Metric">
+        <item name="android:textAppearance">@style/TextAppearance.Gachi.Metric</item>
+    </style>
+
+    <style name="Gachi.Text.Label">
+        <item name="android:textAppearance">@style/TextAppearance.Gachi.Label</item>
+        <item name="android:paddingStart">@dimen/space_sm</item>
+        <item name="android:paddingEnd">@dimen/space_sm</item>
+    </style>
+
+    <style name="Gachi.Text.Caption">
+        <item name="android:textAppearance">@style/TextAppearance.Gachi.Caption</item>
+    </style>
+
+    <style name="Gachi.Text.Caption.Strong">
+        <item name="android:textAppearance">@style/TextAppearance.Gachi.CaptionStrong</item>
+    </style>
+
+    <style name="Gachi.Text.Micro">
+        <item name="android:textAppearance">@style/TextAppearance.Gachi.Micro</item>
+    </style>
+
+    <!-- 카드 안 굵은 항목명 — 실사용 다수(19곳)가 13sp 라 본문 토큰에 정렬 -->
+    <style name="Gachi.Text.ItemName">
+        <item name="android:textSize">@dimen/text_body</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">@color/gachi_ink</item>
+        <item name="android:maxLines">1</item>
+        <item name="android:ellipsize">end</item>
+    </style>
+
+    <!-- ===================== 컨테이너 ===================== -->
+
+    <!-- background:#fdfdf3; border-radius:26px; box-shadow -->
+    <style name="Gachi.Card" parent="">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:background">@drawable/bg_card</item>
+        <item name="android:elevation">3dp</item>
+        <!-- 검정 그림자가 연두 배경 위에서 회색으로 뜨는 걸 막는다. -->
+        <item name="android:outlineAmbientShadowColor">@color/gachi_shadow</item>
+        <item name="android:outlineSpotShadowColor">@color/gachi_shadow</item>
+        <item name="android:padding">@dimen/space_lg</item>
+        <item name="android:orientation">vertical</item>
+    </style>
+
+    <style name="Gachi.Card.Tight">
+        <item name="android:background">@drawable/bg_card_sm</item>
+        <item name="android:padding">@dimen/space_md</item>
+    </style>
+
+    <!-- background:rgba(232,239,199,0.55~0.7) -->
+    <style name="Gachi.Tile" parent="">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:background">@drawable/bg_tile</item>
+        <item name="android:padding">@dimen/space_md</item>
+        <item name="android:orientation">vertical</item>
+    </style>
+
+    <!-- ===================== 버튼 ===================== -->
+
+    <!-- linear-gradient(100deg,#c9e345,#f4f04b) 알약 CTA -->
+    <style name="Gachi.Button.Primary" parent="Widget.AppCompat.Button.Borderless">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:background">@drawable/bg_button_primary</item>
+        <!-- 사각 리플이 알약 모서리 밖으로 새지 않게 마스크 씌운 것을 쓴다. -->
+        <item name="android:foreground">@drawable/ripple_pill</item>
+        <item name="android:textAppearance">@style/TextAppearance.Gachi.Section</item>
+        <item name="android:textColor">@color/gachi_on_lime</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:minHeight">0dp</item>
+        <item name="android:minWidth">0dp</item>
+        <item name="android:paddingTop">@dimen/space_lg</item>
+        <item name="android:paddingBottom">@dimen/space_lg</item>
+        <item name="android:paddingStart">@dimen/space_2xl</item>
+        <item name="android:paddingEnd">@dimen/space_2xl</item>
+        <item name="android:stateListAnimator">@null</item>
+        <item name="android:elevation">4dp</item>
+        <!-- 프로토타입: box-shadow 0 10px 22px rgba(166,190,30,0.5) -->
+        <item name="android:outlineAmbientShadowColor">@color/gachi_shadow_lime</item>
+        <item name="android:outlineSpotShadowColor">@color/gachi_shadow_lime</item>
+    </style>
+
+    <style name="Gachi.Button.Primary.Compact">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:paddingTop">@dimen/space_md</item>
+        <item name="android:paddingBottom">@dimen/space_md</item>
+        <item name="android:paddingStart">@dimen/space_lg</item>
+        <item name="android:paddingEnd">@dimen/space_lg</item>
+        <item name="android:textSize">13sp</item>
+    </style>
+
+    <!-- inset 테두리 고스트 버튼 -->
+    <style name="Gachi.Button.Ghost" parent="Gachi.Button.Primary">
+        <item name="android:background">@drawable/bg_button_ghost</item>
+        <item name="android:textColor">@color/gachi_ink_muted</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:elevation">0dp</item>
+        <item name="android:paddingTop">@dimen/space_lg</item>
+        <item name="android:paddingBottom">@dimen/space_lg</item>
+    </style>
+
+    <style name="Gachi.Button.Ghost.Compact">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:paddingTop">@dimen/space_md</item>
+        <item name="android:paddingBottom">@dimen/space_md</item>
+        <item name="android:paddingStart">@dimen/space_lg</item>
+        <item name="android:paddingEnd">@dimen/space_lg</item>
+        <item name="android:textSize">12sp</item>
+    </style>
+
+    <!-- 위험 동작 (#ffd9d2 / #a5372a) -->
+    <style name="Gachi.Button.Danger" parent="Gachi.Button.Primary">
+        <item name="android:background">@drawable/bg_button_danger</item>
+        <item name="android:textColor">@color/gachi_danger_ink</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:elevation">0dp</item>
+        <item name="android:paddingTop">@dimen/space_md</item>
+        <item name="android:paddingBottom">@dimen/space_md</item>
+    </style>
+
+    <!-- 짙은 초록 알약 (#3d431f / #f2f4dd) -->
+    <style name="Gachi.Button.Deep" parent="Gachi.Button.Primary">
+        <item name="android:background">@drawable/bg_button_deep</item>
+        <!-- 짙은 초록 알약은 라임이 아니라 자기 색 계열 그림자. -->
+        <item name="android:outlineAmbientShadowColor">@color/gachi_shadow_deep</item>
+        <item name="android:outlineSpotShadowColor">@color/gachi_shadow_deep</item>
+        <item name="android:textColor">@color/gachi_on_dark</item>
+        <item name="android:textSize">13sp</item>
+        <item name="android:paddingTop">@dimen/space_md</item>
+        <item name="android:paddingBottom">@dimen/space_md</item>
+    </style>
+
+    <!-- 원형 아이콘 버튼 (터치 48dp, 보이는 원 46dp, 흰 배경 + 그림자) -->
+    <style name="Gachi.IconButton" parent="">
+        <item name="android:layout_width">@dimen/icon_button</item>
+        <item name="android:layout_height">@dimen/icon_button</item>
+        <item name="android:background">@drawable/bg_circle_surface_46</item>
+        <item name="android:foreground">@drawable/ripple_circle</item>
+        <item name="android:elevation">3dp</item>
+        <item name="android:outlineAmbientShadowColor">@color/gachi_shadow</item>
+        <item name="android:outlineSpotShadowColor">@color/gachi_shadow</item>
+        <item name="android:padding">@dimen/space_lg</item>
+        <item name="android:scaleType">fitCenter</item>
+        <item name="android:tint">@color/gachi_ink</item>
+    </style>
+
+    <!-- 카드 안 ⋯ / ✕ 같은 소형 원형 버튼 (터치 48dp, 보이는 원 32dp) -->
+    <style name="Gachi.IconButton.Small">
+        <item name="android:layout_width">48dp</item>
+        <item name="android:layout_height">48dp</item>
+        <item name="android:background">@drawable/bg_circle_neutral_32</item>
+        <item name="android:elevation">0dp</item>
+        <item name="android:padding">@dimen/space_lg</item>
+        <item name="android:tint">@color/gachi_neutral_ink</item>
+    </style>
+
+    <!-- 텍스트만 있는 보조 링크 -->
+    <style name="Gachi.Button.Link" parent="Widget.AppCompat.Button.Borderless">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:background">@drawable/ripple_pill</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">@color/gachi_green_text</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:minWidth">0dp</item>
+        <item name="android:minHeight">0dp</item>
+        <item name="android:padding">@dimen/space_sm</item>
+    </style>
+
+    <style name="Gachi.Button.Link.Danger">
+        <item name="android:textColor">@color/gachi_danger_ink</item>
+    </style>
+
+    <style name="Gachi.Button.Link.Faint">
+        <item name="android:textColor">@color/gachi_ink_faint</item>
+    </style>
+
+    <!-- ===================== 칩 / 탭 ===================== -->
+
+    <!-- 선택형 세그먼트 탭 (피드 전체/친구 등) -->
+    <style name="Gachi.Tab" parent="">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:background">@drawable/bg_tab_selector</item>
+        <item name="android:textColor">@color/selector_tab_text</item>
+        <item name="android:textSize">13sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:minWidth">0dp</item>
+        <item name="android:minHeight">0dp</item>
+        <item name="android:paddingTop">@dimen/space_md</item>
+        <item name="android:paddingBottom">@dimen/space_md</item>
+        <item name="android:paddingStart">@dimen/space_xl</item>
+        <item name="android:paddingEnd">@dimen/space_xl</item>
+        <item name="android:stateListAnimator">@null</item>
+    </style>
+
+    <!-- 선택형 필터 칩 (분류, 공개범위, 시간 필터) -->
+    <style name="Gachi.Chip.Choice" parent="">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:background">@drawable/bg_chip_selector</item>
+        <item name="android:textColor">@color/selector_chip_text</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:minWidth">0dp</item>
+        <item name="android:minHeight">0dp</item>
+        <item name="android:paddingTop">@dimen/space_sm</item>
+        <item name="android:paddingBottom">@dimen/space_sm</item>
+        <item name="android:paddingStart">@dimen/space_lg</item>
+        <item name="android:paddingEnd">@dimen/space_lg</item>
+        <item name="android:stateListAnimator">@null</item>
+    </style>
+
+    <!-- 정보 표시용 정적 칩 -->
+    <style name="Gachi.Chip.Static" parent="">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:background">@drawable/bg_chip_neutral</item>
+        <item name="android:textSize">@dimen/text_label</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">@color/gachi_ink_muted</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:paddingTop">@dimen/space_sm</item>
+        <item name="android:paddingBottom">@dimen/space_sm</item>
+        <item name="android:paddingStart">@dimen/space_lg</item>
+        <item name="android:paddingEnd">@dimen/space_lg</item>
+    </style>
+
+    <style name="Gachi.Chip.Static.Warn">
+        <item name="android:background">@drawable/bg_chip_warn</item>
+        <item name="android:textColor">@color/gachi_warn_ink</item>
+    </style>
+
+    <style name="Gachi.Chip.Static.Info">
+        <item name="android:background">@drawable/bg_chip_info</item>
+        <item name="android:textColor">@color/gachi_info_ink</item>
+    </style>
+
+    <style name="Gachi.Chip.Static.Danger">
+        <item name="android:background">@drawable/bg_chip_danger</item>
+        <item name="android:textColor">@color/gachi_danger_ink</item>
+    </style>
+
+    <style name="Gachi.Chip.Static.Deep">
+        <item name="android:background">@drawable/bg_chip_deep</item>
+        <item name="android:textColor">@color/gachi_on_dark</item>
+    </style>
+
+    <!-- ===================== 상태 배너 ===================== -->
+
+    <style name="Gachi.Banner" parent="">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:background">@drawable/bg_banner_warn</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:orientation">horizontal</item>
+        <item name="android:paddingTop">@dimen/space_md</item>
+        <item name="android:paddingBottom">@dimen/space_md</item>
+        <item name="android:paddingStart">@dimen/space_lg</item>
+        <item name="android:paddingEnd">@dimen/space_lg</item>
+    </style>
+
+    <style name="Gachi.Banner.Text" parent="">
+        <item name="android:layout_width">0dp</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_weight">1</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:lineSpacingMultiplier">1.4</item>
+    </style>
+
+    <!-- ===================== 입력 ===================== -->
+
+    <style name="Gachi.Input" parent="Widget.AppCompat.EditText">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:background">@drawable/bg_input</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:textColor">@color/gachi_ink</item>
+        <item name="android:textColorHint">@color/gachi_ink_hint</item>
+        <item name="android:paddingTop">@dimen/space_md</item>
+        <item name="android:paddingBottom">@dimen/space_md</item>
+        <item name="android:paddingStart">@dimen/space_lg</item>
+        <item name="android:paddingEnd">@dimen/space_lg</item>
+        <item name="android:textCursorDrawable">@null</item>
+        <item name="android:inputType">text</item>
+        <item name="android:maxLines">1</item>
+    </style>
+
+    <style name="Gachi.Input.Multiline">
+        <item name="android:minHeight">110dp</item>
+        <item name="android:gravity">top|start</item>
+        <item name="android:inputType">textMultiLine|textCapSentences</item>
+        <item name="android:maxLines">10</item>
+        <item name="android:lineSpacingMultiplier">1.55</item>
+    </style>
+
+    <!-- 알약형 검색창 -->
+    <style name="Gachi.Input.Search">
+        <item name="android:background">@color/gachi_transparent</item>
+        <item name="android:textSize">13sp</item>
+        <item name="android:paddingTop">0dp</item>
+        <item name="android:paddingBottom">0dp</item>
+        <item name="android:paddingStart">0dp</item>
+        <item name="android:paddingEnd">0dp</item>
+        <item name="android:layout_width">0dp</item>
+    </style>
+
+    <!-- 오류 안내 문구 -->
+    <style name="Gachi.Text.FieldError" parent="Gachi.Text">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">@color/gachi_error</item>
+        <item name="android:paddingStart">@dimen/space_sm</item>
+        <item name="android:paddingEnd">@dimen/space_sm</item>
+        <item name="android:visibility">gone</item>
+    </style>
+
+    <!-- ===================== 기타 ===================== -->
+
+    <!-- 원형 이모지 아바타 -->
+    <style name="Gachi.Avatar" parent="">
+        <item name="android:layout_width">@dimen/avatar_md</item>
+        <item name="android:layout_height">@dimen/avatar_md</item>
+        <item name="android:background">@drawable/bg_circle_avatar</item>
+        <item name="android:gravity">center</item>
+        <item name="android:textSize">19sp</item>
+        <item name="android:includeFontPadding">false</item>
+    </style>
+
+    <style name="Gachi.Avatar.Small">
+        <item name="android:layout_width">@dimen/avatar_sm</item>
+        <item name="android:layout_height">@dimen/avatar_sm</item>
+        <item name="android:textSize">14sp</item>
+    </style>
+
+    <style name="Gachi.Avatar.Large">
+        <item name="android:layout_width">@dimen/avatar_lg</item>
+        <item name="android:layout_height">@dimen/avatar_lg</item>
+        <item name="android:textSize">36sp</item>
+        <item name="android:elevation">3dp</item>
+        <item name="android:outlineAmbientShadowColor">@color/gachi_shadow</item>
+        <item name="android:outlineSpotShadowColor">@color/gachi_shadow</item>
+    </style>
+
+    <!-- 점선 구분선 -->
+    <style name="Gachi.Divider" parent="">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">2dp</item>
+        <item name="android:background">@drawable/divider_dashed</item>
+        <item name="android:layerType">software</item>
+    </style>
+
+    <!-- 바텀시트 손잡이 -->
+    <style name="Gachi.SheetHandle" parent="">
+        <item name="android:layout_width">44dp</item>
+        <item name="android:layout_height">5dp</item>
+        <item name="android:layout_gravity">center_horizontal</item>
+        <item name="android:background">@drawable/bg_sheet_handle</item>
+    </style>
+
+    <!-- 스위치 토글 -->
+    <style name="Gachi.Switch" parent="Widget.Material3.CompoundButton.MaterialSwitch">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="thumbTint">@color/selector_switch_thumb</item>
+        <item name="trackTint">@color/selector_switch_track</item>
+        <item name="trackDecorationTint">@color/gachi_transparent</item>
+        <item name="android:clickable">false</item>
+        <item name="android:focusable">false</item>
+    </style>
+
+    <!-- 라디오 도트 -->
+    <style name="Gachi.RadioDot" parent="">
+        <item name="android:layout_width">22dp</item>
+        <item name="android:layout_height">22dp</item>
+        <item name="android:background">@drawable/bg_radio_dot</item>
+        <item name="android:duplicateParentState">true</item>
+    </style>
+
+    <!-- 선택형 목록 행 (공개범위, 신고사유 등) -->
+    <style name="Gachi.SelectRow" parent="">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:background">@drawable/bg_select_row</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:orientation">horizontal</item>
+        <item name="android:padding">@dimen/space_lg</item>
+        <item name="android:clickable">true</item>
+        <item name="android:focusable">true</item>
+    </style>
+</resources>

@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 기록 카드 안의 3분할 요약 (구분선 없음) -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:baselineAligned="false"
+    android:orientation="horizontal">
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/m1"
+            style="@style/Gachi.Text.Section" />
+
+        <TextView
+            android:id="@+id/m1Key"
+            style="@style/Gachi.Text.Micro"
+            android:textColor="@color/gachi_ink_muted" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/m2"
+            style="@style/Gachi.Text.Section" />
+
+        <TextView
+            style="@style/Gachi.Text.Micro"
+            android:text="@string/metric_key_time"
+            android:textColor="@color/gachi_ink_muted" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/m3"
+            style="@style/Gachi.Text.Section" />
+
+        <TextView
+            style="@style/Gachi.Text.Micro"
+            android:text="@string/metric_key_distance"
+            android:textColor="@color/gachi_ink_muted" />
+    </LinearLayout>
+</LinearLayout>

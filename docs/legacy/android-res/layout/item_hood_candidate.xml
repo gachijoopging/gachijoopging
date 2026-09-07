@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/row"
+    style="@style/Gachi.SelectRow"
+    android:layout_marginBottom="@dimen/space_sm"
+    android:padding="@dimen/space_md">
+
+    <ImageView
+        android:layout_width="18dp"
+        android:layout_height="18dp"
+        android:importantForAccessibility="no"
+        android:src="@drawable/ic_pin" />
+
+    <TextView
+        android:id="@+id/name"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/space_md"
+        android:layout_weight="1"
+        android:ellipsize="end"
+        android:maxLines="2"
+        android:textColor="@color/gachi_ink"
+        android:textSize="@dimen/text_body"
+        android:textStyle="bold" />
+
+    <ImageView
+        android:id="@+id/check"
+        android:layout_width="20dp"
+        android:layout_height="20dp"
+        android:importantForAccessibility="no"
+        android:src="@drawable/ic_check"
+        app:tint="@color/gachi_green_strong"
+        android:visibility="gone" />
+</LinearLayout>

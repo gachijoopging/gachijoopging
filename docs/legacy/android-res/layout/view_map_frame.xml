@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  지도 영역.
+  카카오맵 JS 키가 없는 프로토타입처럼 기본은 플레이스홀더를 깔고,
+  마커/경로/컨트롤은 overlay 컨테이너에 올립니다.
+  키가 있으면 MapView 를 켜고 플레이스홀더를 숨깁니다 (MapHost 가 처리).
+-->
+<site.gachijoopging.app.ui.common.ClipOutlineFrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/mapFrame"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_card">
+
+    <com.kakao.vectormap.MapView
+        android:id="@+id/mapView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="gone" />
+
+    <ImageView
+        android:id="@+id/mapPlaceholder"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:contentDescription="@string/cd_map"
+        android:scaleType="centerCrop"
+        android:src="@drawable/img_map_placeholder" />
+
+    <!--
+      지도 위를 통째로 덮는 투명 탭 영역. 기본은 gone 이고, 필요한 화면에서만 켭니다.
+
+      MapView 가 터치를 먼저 먹기 때문에 부모(mapFrame)에 클릭 리스너를 달아도
+      호출되지 않습니다. 프로토타입도 같은 문제를 지도 위에 투명 버튼을 덮어서 풀었습니다.
+        <button onClick="{{ on.mapFull }}" style="position:absolute;inset:0;z-index:2">
+      z-index 2 = 지도(아래) 위, 마커(3~4) 아래. 그래서 mapView 뒤·mapOverlay 앞에 둡니다.
+    -->
+    <View
+        android:id="@+id/mapTapCatcher"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:contentDescription="@string/cd_map_full"
+        android:focusable="true"
+        android:visibility="gone" />
+
+    <FrameLayout
+        android:id="@+id/mapOverlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <!--
+      「내 위치로」. 기본은 gone 이고 MapHost.setMyLocationClick() 을 부른 화면에서만 켭니다
+      — 이 레이아웃은 홈·활동·기록 등 6개 화면이 함께 쓰기 때문입니다.
+      mapTapCatcher(전체화면 펼치기)보다 뒤에 둬야 버튼이 터치를 먼저 받습니다.
+    -->
+    <ImageButton
+        android:id="@+id/mapMyLocation"
+        style="@style/Gachi.IconButton"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_gravity="bottom|end"
+        android:layout_margin="@dimen/space_sm"
+        android:background="@drawable/bg_circle_surface_40"
+        android:contentDescription="@string/cd_map_my_location"
+        android:padding="@dimen/space_md"
+        android:src="@drawable/ic_my_location"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/mapHint"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|center_horizontal"
+        android:layout_marginBottom="@dimen/space_sm"
+        android:background="@drawable/bg_chip_surface"
+        android:fontFamily="monospace"
+        android:paddingStart="@dimen/space_sm"
+        android:paddingTop="@dimen/space_xs"
+        android:paddingEnd="@dimen/space_sm"
+        android:paddingBottom="@dimen/space_xs"
+        android:text="@string/map_placeholder_hint"
+        android:textColor="@color/gachi_ink_muted"
+        android:textSize="@dimen/text_caption" />
+</site.gachijoopging.app.ui.common.ClipOutlineFrameLayout>

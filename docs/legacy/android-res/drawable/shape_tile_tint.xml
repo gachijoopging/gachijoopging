@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 원시 도형: 틴트 채움 + 타일 라운드. (bg_banner_tint · bg_tile) -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@color/gachi_tint" />
+    <corners android:radius="@dimen/radius_tile" />
+</shape>

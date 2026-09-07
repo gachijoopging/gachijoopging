@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 뒤로 갈 때 오른쪽으로 빠지는 화면. -->
+<set xmlns:android="http://schemas.android.com/apk/res/android">
+    <translate
+        android:duration="250"
+        android:fromXDelta="0"
+        android:interpolator="@interpolator/emphasized_accelerate"
+        android:toXDelta="100%p" />
+    <alpha
+        android:duration="250"
+        android:fromAlpha="1"
+        android:interpolator="@interpolator/emphasized_accelerate"
+        android:toAlpha="0" />
+</set>

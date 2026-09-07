@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  가치줍깅 컬러 토큰 — 프로토타입(가치줍깅 새싹팝 프로토타입.dc.html)의 CSS 값을 1:1 이식.
+-->
+<resources>
+
+    <!--
+      배경.
+      bg 는 원래 #E8EFC7 이었는데 서피스(#FDFDF3)와 대비가 1.17:1 뿐이라 카드 경계가
+      그림자 하나에만 의존했고, 화면 전체가 층 없이 한 겹으로 읽혔습니다.
+      #DCE6A6 으로 내려 1.29:1 을 확보합니다. 색상(H≈70°)과 채도는 그대로 두어
+      브랜드 톤은 유지합니다.
+
+      더 내리지 못하는 이유: 아래 ink_muted/faint/hint 의 "두 배경 모두 4.5:1" 불변식이
+      상한을 잡습니다. 이 값에서 hint 가 4.70:1 로 아슬아슬하게 통과합니다.
+      카드 대비를 1.4:1 이상으로 더 올리려면 잉크 스케일 자체를 재설계해야 합니다.
+    -->
+    <color name="gachi_bg">#DCE6A6</color>
+    <color name="gachi_surface">#FDFDF3</color>
+    <color name="gachi_surface_85">#D9FDFDF3</color>
+    <color name="gachi_surface_70">#B3FDFDF3</color>
+    <!-- 시작 화면 태그라인 글로우 텍스트 그림자 -->
+    <color name="gachi_surface_40">#66FDFDF3</color>
+    <!-- gachi_bg 의 60% — 본체 색이 바뀌면 함께 따라와야 합니다. -->
+    <color name="gachi_tint">#99DCE6A6</color>
+    <color name="gachi_camera_bg">#22260F</color>
+    <color name="gachi_camera_frame">#1F2410</color>
+    <!-- 카메라 프리뷰 위 어둡게 깔리는 막 (#141808 의 28%) -->
+    <color name="gachi_camera_scrim_28">#47141808</color>
+
+    <!-- 공용 -->
+    <color name="gachi_white">#FFFFFF</color>
+
+    <!--
+      텍스트. muted/faint/hint 는 서피스(#FDFDF3)와 연두 배경(#DCE6A6) 모두에서
+      WCAG 4.5:1 이상을 지키도록 올리브 색상(H≈70°)만 유지한 채 어둡게 조정했습니다.
+
+      배경을 #E8EFC7 → #DCE6A6 으로 내리면서 hint 도 #666A4E → #5A5E42 로 함께 내렸습니다.
+      배경이 어두워지면 그 위의 어두운 글자는 대비를 잃기 때문입니다. 이전 값 그대로 두면
+      새 배경에서 4.10:1 로 불변식이 깨집니다.
+
+      현재 대비 (배경 #DCE6A6 / 서피스 #FDFDF3):
+        ink    11.20 / 13.87
+        muted   4.91 /  6.09
+        faint   4.78 /  5.92
+        hint    5.15 /  6.64   ← 여유를 둬서 이후 배경 미세조정에도 버팁니다
+    -->
+    <color name="gachi_ink">#262A0E</color>
+    <color name="gachi_ink_muted">#5C6142</color>
+    <color name="gachi_ink_faint">#5F6449</color>
+    <color name="gachi_ink_hint">#5A5E42</color>
+    <!-- 잉크 65% — 사진 자리표시 문구 등 반투명 텍스트 -->
+    <color name="gachi_ink_65">#A6262A0E</color>
+    <color name="gachi_on_dark">#F2F4DD</color>
+    <!-- 시작 화면 사진/스크림 위 밝은 텍스트와 그 그림자 (#1E280A 의 70%) -->
+    <color name="gachi_on_photo">#F4F7E6</color>
+    <color name="gachi_ink_shadow_70">#B31E280A</color>
+
+    <!-- 브랜드 -->
+    <color name="gachi_deep">#3D431F</color>
+    <color name="gachi_lime">#C9E345</color>
+    <!-- 라임 반투명 변형 (알파 % 표기 규칙은 gachi_surface_85 참고) -->
+    <color name="gachi_lime_35">#59C9E345</color>
+    <color name="gachi_lime_28">#47C9E345</color>
+    <color name="gachi_yellow">#F4F04B</color>
+    <!--
+      딥 채움(bg_circle_deep 등) 위에 얹히는 아이콘 색.
+      라이트에서는 노랑 그대로지만, 야간에는 딥 자체가 밝아지므로 어두운 잉크로 뒤집힙니다.
+      그래서 gachi_yellow 와 값이 같더라도 이름을 나눠 둡니다 (values-night/colors.xml 참고).
+    -->
+    <color name="gachi_on_deep">#F4F04B</color>
+    <!--
+      라임/노랑 채움(주 버튼·촬영 버튼·시작 버튼) 위에 얹히는 글자와 아이콘.
+
+      라임은 야간에도 밝은 채로 남는 브랜드 색이라, 그 위의 글자는 두 테마 모두
+      어두워야 합니다. 예전에는 gachi_ink 를 썼는데 야간에 잉크가 밝아지면서
+      '밝은 라임 위 밝은 글자'가 되어 버렸습니다 — 그래서 이름을 나눕니다.
+      values-night 에도 같은 값으로 들어 있습니다(의도적으로 뒤집지 않음).
+    -->
+    <color name="gachi_on_lime">#262A0E</color>
+    <color name="gachi_green_text">#5C6C14</color>
+    <color name="gachi_green_strong">#4B6414</color>
+
+    <!-- 활동 경로 선 — 지도 위에서 눈에 띄되 마커보다 뒤로 보이는 톤 -->
+    <color name="gachi_route">#7FA018</color>
+    <color name="gachi_kakao">#FEE500</color>
+    <color name="gachi_kakao_ink">#3A1D1D</color>
+
+    <!--
+      그림자 색.
+      안드로이드 elevation 그림자는 기본이 검정이라, 연두색 배경 위에 얹히면
+      채도가 빠진 회색 때처럼 보입니다. 프로토타입의 box-shadow 는 전부 올리브/라임
+      계열이라 그 색을 그대로 씁니다 (API 28+ outlineSpotShadowColor 로 적용).
+        rgba(101,114,28,.12~.20) -> gachi_shadow
+        rgba(166,190,30,.40~.50) -> gachi_shadow_lime
+        rgba(61,67,31,.15~.40)   -> gachi_shadow_deep
+      알파는 플랫폼이 곱해 주므로 여기서는 불투명 색만 지정합니다.
+    -->
+    <color name="gachi_shadow">#65721C</color>
+    <color name="gachi_shadow_lime">#A6BE1E</color>
+    <color name="gachi_shadow_deep">@color/gachi_deep</color>
+
+    <!-- 선 / 구분 -->
+    <color name="gachi_border">#DEE3BD</color>
+    <color name="gachi_border_dashed">#EDF0D6</color>
+    <color name="gachi_border_dotted">#C3CC93</color>
+    <color name="gachi_handle">#DDE3C2</color>
+    <color name="gachi_track">#EDF0D6</color>
+
+    <!-- 중립 칩 -->
+    <color name="gachi_neutral">#ECEEE4</color>
+    <color name="gachi_neutral_ink">#5C6157</color>
+    <color name="gachi_soft_chip">#F2F5DD</color>
+
+    <!-- 상태 -->
+    <color name="gachi_warn_bg">#FFE9CD</color>
+    <color name="gachi_warn_bg_soft">#FFF6EA</color>
+    <color name="gachi_warn_border">#FFE0C2</color>
+    <color name="gachi_warn_ink">#8C5316</color>
+    <color name="gachi_danger_bg">#FFD9D2</color>
+    <color name="gachi_danger_ink">#A5372A</color>
+    <!--
+      정보 상태 (H≈197°). 하늘색은 "알려주는 상태" 전용입니다 —
+      배너(bg_banner_info), 연동됨 배지, 댓글 하이라이트.
+      액션 버튼이나 장식에 쓰면 브랜드 밖 색이 이유 없이 튑니다.
+    -->
+    <color name="gachi_info_bg">#DBF3FD</color>
+    <color name="gachi_info_ink">#1F6C8C</color>
+    <color name="gachi_error">#C44343</color>
+
+    <!--
+      악센트 (H≈33°).
+
+      팔레트의 나머지가 전부 올리브 색상환 57~75° 안에 있어서, 화면에 채도 대비가
+      생기는 자리는 여기 하나뿐입니다. 그래서 역할을 좁게 고정합니다 —
+      "사용자 본인의 성취/달성 수치" 에만 씁니다.
+
+        쓰는 곳:  홈의 '내가 주운 쓰레기' 타일, 읽지 않음 표시(bg_unread_dot),
+                 활동 진행 표시(bg_dot_orange)
+        안 쓰는 곳: 장식용 원, 일반 아이콘 배경, 카테고리 구분
+
+      한 화면에 악센트는 한 번만 등장해야 강조로 읽힙니다. 두 개 이상 필요하다고
+      느껴지면 그건 위계 문제이지 색 문제가 아닙니다.
+    -->
+    <color name="gachi_orange">#F09A3E</color>
+
+    <!-- 아바타 배경 팔레트 -->
+    <color name="gachi_avatar_me">#E4F0C3</color>
+    <color name="gachi_avatar_pink">#FFD9E2</color>
+    <color name="gachi_avatar_sky">#DBF3FD</color>
+    <color name="gachi_avatar_sand">#FFE9CD</color>
+    <color name="gachi_avatar_lilac">#E9E4FD</color>
+    <color name="gachi_avatar_leaf">#E8EFC7</color>
+
+    <!-- 오버레이 -->
+    <!-- 카메라 프리뷰 위 안내 문구의 텍스트 그림자 (검정 50%) -->
+    <color name="gachi_black_50">#80000000</color>
+    <color name="gachi_scrim">#73262A0E</color>
+    <color name="gachi_photo_badge">#B8262A0E</color>
+
+    <color name="gachi_transparent">#00000000</color>
+</resources>

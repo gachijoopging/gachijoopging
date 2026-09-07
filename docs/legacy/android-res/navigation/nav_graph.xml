@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  화면설계서 M01~M33 ↔ Fragment 매핑.
+  화면 간 값 전달은 액티비티 스코프 AppViewModel(selectedPostId 등)을 씁니다.
+-->
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/startFragment">
+
+    <!-- ===== 온보딩 / 인증 ===== -->
+    <fragment
+        android:id="@+id/startFragment"
+        android:name="site.gachijoopging.app.ui.auth.StartFragment"
+        android:label="M01 시작" />
+
+    <fragment
+        android:id="@+id/loginFragment"
+        android:name="site.gachijoopging.app.ui.auth.LoginFragment"
+        android:label="M02 이메일 로그인" />
+
+    <fragment
+        android:id="@+id/signupFragment"
+        android:name="site.gachijoopging.app.ui.auth.SignupFragment"
+        android:label="M02-1 이메일 회원가입" />
+
+    <fragment
+        android:id="@+id/nicknameFragment"
+        android:name="site.gachijoopging.app.ui.auth.NicknameFragment"
+        android:label="M03 프로필 설정" />
+
+    <fragment
+        android:id="@+id/hoodFragment"
+        android:name="site.gachijoopging.app.ui.auth.HoodFragment"
+        android:label="M04 우리 동네 설정" />
+
+    <fragment
+        android:id="@+id/locationGateFragment"
+        android:name="site.gachijoopging.app.ui.auth.LocationGateFragment"
+        android:label="위치 권한 게이트" />
+
+    <fragment
+        android:id="@+id/pwResetFragment"
+        android:name="site.gachijoopging.app.ui.auth.PasswordResetFragment"
+        android:label="M31 비밀번호 재설정" />
+
+    <fragment
+        android:id="@+id/pwResetConfirmFragment"
+        android:name="site.gachijoopging.app.ui.auth.PasswordResetConfirmFragment"
+        android:label="M31 비밀번호 재설정 완료" />
+
+    <fragment
+        android:id="@+id/inviteRedeemFragment"
+        android:name="site.gachijoopging.app.ui.meet.InviteRedeemFragment"
+        android:label="초대 링크 처리" />
+
+    <!-- ===== 메인 탭 ===== -->
+    <fragment
+        android:id="@+id/homeFragment"
+        android:name="site.gachijoopging.app.ui.home.HomeFragment"
+        android:label="M05 홈" />
+
+    <fragment
+        android:id="@+id/feedFragment"
+        android:name="site.gachijoopging.app.ui.feed.FeedFragment"
+        android:label="M07 피드" />
+
+    <fragment
+        android:id="@+id/meetFragment"
+        android:name="site.gachijoopging.app.ui.meet.MeetFragment"
+        android:label="M06 모이깅" />
+
+    <fragment
+        android:id="@+id/profileFragment"
+        android:name="site.gachijoopging.app.ui.profile.ProfileFragment"
+        android:label="M08 프로필" />
+
+    <!-- ===== 활동 ===== -->
+    <fragment
+        android:id="@+id/activeFragment"
+        android:name="site.gachijoopging.app.ui.activity.ActiveFragment"
+        android:label="M09 줍깅 활동중" />
+
+    <fragment
+        android:id="@+id/captureFragment"
+        android:name="site.gachijoopging.app.ui.activity.CaptureFragment"
+        android:label="M10 쓰레기 촬영" />
+
+    <fragment
+        android:id="@+id/aiClassifyFragment"
+        android:name="site.gachijoopging.app.ui.activity.AiClassifyFragment"
+        android:label="M11 AI 분류 확인" />
+
+    <fragment
+        android:id="@+id/endFragment"
+        android:name="site.gachijoopging.app.ui.activity.ActivityEndFragment"
+        android:label="M14 활동 종료" />
+
+    <!-- ===== 피드 ===== -->
+    <fragment
+        android:id="@+id/publishFragment"
+        android:name="site.gachijoopging.app.ui.feed.PublishFragment"
+        android:label="M13 게시글 작성" />
+
+    <fragment
+        android:id="@+id/postDetailFragment"
+        android:name="site.gachijoopging.app.ui.feed.PostDetailFragment"
+        android:label="M18 게시글 상세" />
+
+    <!-- ===== 모이깅 ===== -->
+    <fragment
+        android:id="@+id/meetFindFragment"
+        android:name="site.gachijoopging.app.ui.meet.MeetFindFragment"
+        android:label="M15 모임 구하기" />
+
+    <fragment
+        android:id="@+id/meetManageFragment"
+        android:name="site.gachijoopging.app.ui.meet.MeetManageFragment"
+        android:label="M16 모임 관리" />
+
+    <fragment
+        android:id="@+id/callFragment"
+        android:name="site.gachijoopging.app.ui.meet.GroupCallFragment"
+        android:label="M17 그룹 음성 통화" />
+
+    <fragment
+        android:id="@+id/meetCreateFragment"
+        android:name="site.gachijoopging.app.ui.meet.MeetCreateFragment"
+        android:label="M27 모임 생성" />
+
+    <fragment
+        android:id="@+id/meetEditFragment"
+        android:name="site.gachijoopging.app.ui.meet.MeetEditFragment"
+        android:label="M28 모임 정보 수정" />
+
+    <fragment
+        android:id="@+id/chatFragment"
+        android:name="site.gachijoopging.app.ui.meet.ChatFragment"
+        android:label="M33 단체 채팅방" />
+
+    <!-- ===== 프로필 / 기록 / 설정 ===== -->
+    <fragment
+        android:id="@+id/settingsFragment"
+        android:name="site.gachijoopging.app.ui.profile.SettingsFragment"
+        android:label="M23 설정" />
+
+    <fragment
+        android:id="@+id/editProfileFragment"
+        android:name="site.gachijoopging.app.ui.profile.EditProfileFragment"
+        android:label="M24 프로필 편집" />
+
+    <fragment
+        android:id="@+id/recordDetailFragment"
+        android:name="site.gachijoopging.app.ui.profile.RecordDetailFragment"
+        android:label="M25 기록 상세" />
+
+    <fragment
+        android:id="@+id/groupRecordFragment"
+        android:name="site.gachijoopging.app.ui.profile.GroupRecordFragment"
+        android:label="M26 모임 기록 상세" />
+
+    <fragment
+        android:id="@+id/blocklistFragment"
+        android:name="site.gachijoopging.app.ui.profile.BlocklistFragment"
+        android:label="M30 차단 관리" />
+
+    <!-- ===== 소셜 ===== -->
+    <fragment
+        android:id="@+id/searchFragment"
+        android:name="site.gachijoopging.app.ui.social.UserSearchFragment"
+        android:label="M19 사용자 검색" />
+
+    <fragment
+        android:id="@+id/userProfileFragment"
+        android:name="site.gachijoopging.app.ui.social.UserProfileFragment"
+        android:label="M20 타인 프로필" />
+
+    <fragment
+        android:id="@+id/friendsFragment"
+        android:name="site.gachijoopging.app.ui.social.FriendsFragment"
+        android:label="M21 친구" />
+
+    <fragment
+        android:id="@+id/notificationFragment"
+        android:name="site.gachijoopging.app.ui.social.NotificationFragment"
+        android:label="M22 알림" />
+
+    <fragment
+        android:id="@+id/reportFragment"
+        android:name="site.gachijoopging.app.ui.social.ReportFragment"
+        android:label="M32 신고하기" />
+
+</navigation>

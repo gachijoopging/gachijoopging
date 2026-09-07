@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- radial-gradient 두 겹 + #e8efc7 바탕 (프로토타입 화면 공통 배경) -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@color/gachi_bg" />
+        </shape>
+    </item>
+    <item
+        android:bottom="420dp"
+        android:left="130dp"
+        android:right="-130dp"
+        android:top="-90dp">
+        <shape android:shape="oval">
+            <gradient
+                android:centerColor="#40F4F04B"
+                android:endColor="#00F4F04B"
+                android:gradientRadius="180dp"
+                android:startColor="#80F4F04B"
+                android:type="radial" />
+        </shape>
+    </item>
+    <item
+        android:bottom="180dp"
+        android:left="-160dp"
+        android:right="150dp"
+        android:top="160dp">
+        <shape android:shape="oval">
+            <gradient
+                android:centerColor="#4DFFFFFF"
+                android:endColor="#00FFFFFF"
+                android:gradientRadius="200dp"
+                android:startColor="#8CFFFFFF"
+                android:type="radial" />
+        </shape>
+    </item>
+</layer-list>

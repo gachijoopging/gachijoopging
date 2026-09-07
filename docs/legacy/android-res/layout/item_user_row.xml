@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 사용자 목록 한 줄 (검색·친구·차단 공통) -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="@dimen/space_sm"
+    android:background="@drawable/bg_card_sm"
+    android:elevation="2dp"
+    android:outlineAmbientShadowColor="@color/gachi_shadow"
+    android:outlineSpotShadowColor="@color/gachi_shadow"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingStart="@dimen/space_lg"
+    android:paddingTop="@dimen/space_md"
+    android:paddingEnd="@dimen/space_lg"
+    android:paddingBottom="@dimen/space_md">
+
+    <LinearLayout
+        android:id="@+id/profileArea"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:background="@drawable/ripple_tile"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/face"
+            style="@style/Gachi.Avatar" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/space_md"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/name"
+                style="@style/Gachi.Text.ItemName" />
+
+            <TextView
+                android:id="@+id/meta"
+                style="@style/Gachi.Text.Caption" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <androidx.appcompat.widget.AppCompatButton
+        android:id="@+id/actionButton"
+        style="@style/Gachi.Button.Ghost.Compact"
+        android:layout_marginStart="@dimen/space_sm" />
+</LinearLayout>

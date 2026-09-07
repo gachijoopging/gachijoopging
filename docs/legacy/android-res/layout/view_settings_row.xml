@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  설정 목록 한 줄.
+
+  아이콘은 원래 이모지를 담은 TextView, 화살표는 '→' 문자였습니다. 앱에 벡터 아이콘이
+  49개 있는데 이 화면만 문자를 쓰고 있어서 선 굵기도 크기도 다른 화면과 어긋났고,
+  이모지는 OS 버전마다 모양이 달라져 브랜드 통제도 되지 않습니다.
+  둘 다 ImageView + 벡터로 바꾸고, 다른 카드 아이콘과 같은 '틴트 원 + 딥 아이콘' 처리를 씁니다.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/rowRoot"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/ripple_tile"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingStart="@dimen/space_lg"
+    android:paddingTop="@dimen/space_md"
+    android:paddingEnd="@dimen/space_lg"
+    android:paddingBottom="@dimen/space_md">
+
+    <!-- 라벨이 의미를 전달하므로 아이콘은 장식 처리 -->
+    <ImageView
+        android:id="@+id/rowIcon"
+        android:layout_width="36dp"
+        android:layout_height="36dp"
+        android:background="@drawable/bg_circle_tint"
+        android:importantForAccessibility="no"
+        android:padding="@dimen/space_sm"
+        app:tint="@color/gachi_deep" />
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/space_md"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/rowTitle"
+            style="@style/Gachi.Text.ItemName" />
+
+        <TextView
+            android:id="@+id/rowDesc"
+            style="@style/Gachi.Text.Caption" />
+    </LinearLayout>
+
+    <ImageView
+        android:id="@+id/rowArrow"
+        android:layout_width="20dp"
+        android:layout_height="20dp"
+        android:importantForAccessibility="no"
+        android:src="@drawable/ic_chevron_right"
+        app:tint="@color/gachi_ink_hint" />
+
+    <com.google.android.material.materialswitch.MaterialSwitch
+        android:id="@+id/rowSwitch"
+        style="@style/Gachi.Switch"
+        android:visibility="gone" />
+</LinearLayout>

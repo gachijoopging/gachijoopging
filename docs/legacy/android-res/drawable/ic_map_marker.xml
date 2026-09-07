@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 카카오맵 라벨용 수거 지점 핀 (이웃) -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="28dp"
+    android:height="34dp"
+    android:viewportWidth="40"
+    android:viewportHeight="48">
+    <path
+        android:fillColor="#FF3D431F"
+        android:pathData="M20 47 C20 47 4 29 4 18 a16 16 0 1 1 32 0 C36 29 20 47 20 47 Z"
+        android:strokeColor="#FFFDFDF3"
+        android:strokeWidth="3" />
+    <path
+        android:fillColor="#FFF4F04B"
+        android:pathData="M20 11 a7 7 0 1 0 0.1 0 z" />
+</vector>

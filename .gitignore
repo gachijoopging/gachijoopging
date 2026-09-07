@@ -12,6 +12,8 @@ preview.html
 
 # 로컬 설정과 비밀값
 .env
+.env.*
+!.env.example
 .env.local
 *.jks
 *.keystore

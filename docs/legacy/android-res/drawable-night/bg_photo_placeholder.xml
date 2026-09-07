@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  사진 자리표시의 야간 변형. 라이트의 밝은 연두 그라디언트를 그대로 두면
+  어두운 카드 안에서 사진보다 자리표시가 더 밝게 튑니다. 같은 색상(H≈95°)을
+  유지한 채 명도만 낮춰, 아직 채워지지 않은 자리로 읽히게 합니다.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <gradient
+        android:angle="315"
+        android:centerColor="#FF2C3A1C"
+        android:centerX="0.6"
+        android:endColor="#FF243016"
+        android:startColor="#FF3A4A24"
+        android:type="linear" />
+    <corners android:radius="20dp" />
+</shape>

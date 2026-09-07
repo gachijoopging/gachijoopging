@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  지도 위 「지금 내가 있는 자리」 점.
+
+  수거 지점 핀(ic_map_marker)과 헷갈리지 않게 핀이 아니라 원으로 그리고,
+  색은 자취 선과 같은 gachi_route 를 쓴다 — 활동 중 지도에서 선의 끝이 곧 이 점이다.
+  밝은 지도 타일 위에서 묻히지 않도록 밝은 테두리를 두른다.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="28dp"
+    android:height="28dp"
+    android:viewportWidth="28"
+    android:viewportHeight="28">
+    <path
+        android:fillColor="@color/gachi_surface"
+        android:pathData="M14 1 a13 13 0 1 0 0 26 a13 13 0 1 0 0 -26"
+        android:strokeColor="@color/gachi_ink_muted"
+        android:strokeWidth="1" />
+    <path
+        android:fillColor="@color/gachi_route"
+        android:pathData="M14 6 a8 8 0 1 0 0 16 a8 8 0 1 0 0 -16" />
+</vector>

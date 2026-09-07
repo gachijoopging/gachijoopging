@@ -1,0 +1,248 @@
+spring:
+  application:
+    name: gachijoopging-server
+
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+
+  jpa:
+    hibernate:
+      # 스키마의 정본은 Flyway 마이그레이션이다 (02-컨벤션 §13)
+      ddl-auto: validate
+    # 트랜잭션 경계는 코어 Service 다 (02-컨벤션 §10).
+    # 영속성 컨텍스트를 뷰 렌더링까지 열어두면 그 경계가 무의미해진다
+    open-in-view: false
+
+  flyway:
+    enabled: true
+
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT:6379}
+
+  # ── 메일 (Gmail SMTP — 비밀번호 재설정 발송) ──────────────────────────
+  # host 가 있어야 JavaMailSender 가 자동구성된다. 이 블록이 없으면 @Profile("prod")
+  # SmtpPasswordResetMailSender 가 주입할 빈이 없어 prod 기동 자체가 죽는다
+  # 자격증명이 비어 있어도 빈은 만들어진다 — 그때는 발송만 실패하고 로그로 남는다
+  # (SmtpPasswordResetMailSender 가 MailException 을 삼키는 것과 같은 정책).
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      "[mail.smtp.auth]": true
+      "[mail.smtp.starttls.enable]": true
+      # 발송이 202 응답 경로 뒤에서 돈다 — SMTP 가 매달리면 스레드가 같이 매달리므로 짧게 끊는다
+      "[mail.smtp.connectiontimeout]": 5000
+      "[mail.smtp.timeout]": 5000
+      "[mail.smtp.writetimeout]": 5000
+
+  servlet:
+    multipart:
+      # 계약상 한도는 20MB 이고 그 판정은 MediaImageValidator 가 한다 (422 + 봉투).
+      # 여기를 20MB 로 맞추면 스프링이 먼저 끊어 우리 에러 봉투가 나가지 못한다 — 그래서 조금 위에 둔다.
+      max-file-size: 21MB
+      max-request-size: 22MB
+
+app:
+  jwt:
+    # 키는 환경변수로만 들어온다 (02-컨벤션 §14). 이름은 infra/.env.example 을 따른다.
+    # 값이 없으면 기동에서 바로 죽는 것이 맞다 — 기본값을 두면 아무 키로나 서명하는 서버가 뜬다.
+    active-kid: ${JWT_ACTIVE_KID}
+    private-key-pem: ${JWT_PRIVATE_KEY_PEM}
+    public-key-pem: ${JWT_PUBLIC_KEY_PEM}
+    # 회전 중이 아니면 비어 있다. 둘은 반드시 짝이다 (JwtVerifier 가 기동에서 검사한다).
+    # 기본값을 #{null} 로 쓰지 않는다 — yml 의 placeholder 기본값은 SpEL 로 평가되지 않아
+    # 두 글자 그대로가 값이 되고, 검증기가 "회전 중" 으로 오해해 그 문자열을 키로 읽으려 든다.
+    previous-kid: ${JWT_PREVIOUS_KID:}
+    previous-public-key-pem: ${JWT_PREVIOUS_PUBLIC_KEY_PEM:}
+    # openapi.yaml 의 TokenPair — accessToken 수명 1시간
+    access-token-ttl: 1h
+
+  kakao-local:
+    base-url: https://dapi.kakao.com
+    # REST API 키다 — 네이티브 앱 키를 넣으면 카카오가 타입 불일치로 거절한다.
+    # 기본값을 두지 않는다: 값이 없으면 기동에서 죽는 편이, 좌표 조회가 전부
+    # 실패하는 서버가 뜨는 것보다 낫다 (02-컨벤션 §14).
+    rest-api-key: ${KAKAO_REST_API_KEY}
+    # 없으면 카카오가 죽지 않고 멈추기만 해도 모임 생성·동네 조회가 무한정 매달린다.
+    # 자동완성은 사용자가 타이핑 중에 기다리는 값이라 길게 잡을 이유가 없다.
+    timeout: 3s
+
+  # 소셜 로그인. 위 kakao-local 과 다른 API 이고 다른 자격증명이다 —
+  # 그쪽은 서버가 보관한 REST 키로 지도를 조회하고, 이쪽은 앱이 받아 온 사용자
+  # 액세스 토큰을 카카오에 되물어 검증한다. 그래서 REST 키가 아니라 앱 ID 가 필요하다.
+  kakao-auth:
+    base-url: https://kapi.kakao.com
+    # ⚠️ 값이 비어 있는 것이 지금의 정상 상태다. 카카오 콘솔에서 받아야 하고 아직 정해지지 않았다.
+    #
+    # 함께 죽을 이유가 없다. 다만 app.ai 와 달리 **비었을 때 통과시키지 않는다**:
+    # KakaoAuthClient 가 카카오를 부르지 않고 그 경로만 거부한다(fail closed).
+    # 이 값은 access_token_info 의 app_id 와 대조해 **다른 카카오 앱에서 발급된 토큰**을
+    # 걸러내는 데 쓰인다. 대조를 건너뛰면 남의 앱 토큰으로 그 사용자로 로그인된다.
+    app-id: ${KAKAO_APP_ID:}
+    # 로그인 요청이 카카오 응답을 기다린다 — 멈추기만 해도 스레드가 붙잡힌다.
+    timeout: 3s
+
+  google-auth:
+    # ⚠️ 비어 있는 것이 지금의 정상 상태다. 구글 콘솔에서 OAuth 클라이언트를 만들어야 나온다.
+    # 비었을 때의 동작은 위 kakao-auth 와 같다(기동은 되고 그 경로만 거부).
+    # idToken 의 aud 와 대조한다 — 서명은 진짜 구글 것이라 이 대조 없이는 타 앱 토큰이 통과한다.
+    client-id: ${GOOGLE_CLIENT_ID:}
+    # 구글이 정한 고정 주소이고 비밀이 아니라 환경변수로 두지 않는다
+    # (accounts.google.com 의 OpenID 설정 문서가 가리키는 jwks_uri).
+    jwks-uri: https://www.googleapis.com/oauth2/v3/certs
+    timeout: 3s
+
+  meet:
+    # openapi.yaml — "거절 후 재요청 10분 쿨다운". 남은 초가 Retry-After 로 나간다.
+    reject-cooldown: 10m
+
+  invite:
+    # 초대 링크의 앞부분 (openapi.yaml POST /meets/{id}/invite-link). 공개 도메인이라 비밀이 아니다.
+    # 기본값을 두는 이유는 값이 없어도 서버가 뜨는 편이 낫기 때문이다 — 틀린 주소로 나간 링크는
+    base-url: ${INVITE_BASE_URL:https://www.gachi-joopging.site/invite}
+    # openapi.yaml — "7일 만료".
+    token-ttl: 7d
+
+  media:
+    # 사진은 오브젝트 스토리지가 아니라 로컬 디스크에 두고 Nginx 가 직접 서빙한다 (결정 33).
+    # 이름은 infra/docker-compose.yml 의 APP_MEDIA_* 와 짝이다 — 바꾸면 컨테이너가 값을 못 받는다.
+    root: ${MEDIA_ROOT:/data/uploads}
+    # 사진을 서빙하는 공개 오리진. 여기에 서명 경로가 붙어 절대 URL 이 된다.
+    # 앱은 이 값을 알 방법이 없다 — BuildConfig.API_BASE_URL 은 Retrofit 의 base 일 뿐이고
+    # Glide 는 그것을 모른다. 상대 경로를 내보내면 아바타·글 사진·활동 섬네일이 전부 안 그려진다.
+    #
+    # PUBLIC_BASE_URL 은 infra/.env.example 이 이미 갖고 있고 compose 의 env_file: [.env] 가
+    # 이 컨테이너에 그대로 넣는다 — 새로 만드는 환경변수가 아니다.
+    # 기본값을 두는 이유는 app.invite.base-url 과 같다: 값이 없어도 서버가 뜨는 편이 낫다.
+    base-url: ${PUBLIC_BASE_URL:https://www.gachi-joopging.site}
+    # Nginx 의 secure_link_md5 와 공유하는 비밀이다. 기본값을 두지 않는 이유는 JWT 키와 같다 —
+    # 한쪽만 다른 서버가 뜨면 모든 사진 URL 이 403 이 되는데, 그 사실이 배포 뒤에야 드러난다.
+    secure-link-secret: ${MEDIA_SECURE_LINK_SECRET}
+    signed-url-ttl: 6h
+
+  ai:
+    # ⚠️ 값이 비어 있는 것이 지금의 정상 상태다. 선행 (Spring → AI 서버 노출 경로)이
+    # 끝나지 않아 배포 환경에 주소가 없다. 비어 있으면 AiInferenceClient 가 호출하지 않고
+    # inference.status=UNAVAILABLE 을 낸다 — 여기서 기동을 막으면 AI 와 무관한 경로까지 함께 죽는다.
+    base-url: ${AI_BASE_URL:}
+    secret: ${AI_SECRET:}
+    # 앱은 촬영 직후 이 응답을 기다린다. 길게 잡을수록 사용자가 화면 앞에 서 있는 시간이 길어진다
+    # (ai/README.md §1 — 2~3초).
+    timeout: 3s
+
+  password-reset-mail:
+    # 앱의 딥링크 파서가 이 형식을 그대로 읽는다 (openapi.yaml) — 바꾸면 앱을 함께 고쳐야 한다
+    link-base: https://www.gachi-joopging.site/reset-password
+    subject: 가치줍깅 비밀번호 재설정
+    from: ${MAIL_USERNAME:no-reply@gachi-joopging.site}
+
+  fcm:
+    # ⚠️ 값이 비어 있는 것이 지금의 정상 상태다. Firebase 콘솔의 서비스 계정 키가 아직 팀에 없다
+    # ( "선행 자격증명"). 비어 있으면 FirebaseFcmClient 가 초기화를 건너뛰고 발송만
+    # 생략한다 — 알림 행은 그대로 남으므로(02-컨벤션 §10-나) 여기서 기동을 막으면 알림과 무관한
+    # 경로까지 함께 죽는다. app.ai 가 같은 이유로 같은 모양이다.
+    # 값은 서비스 계정 JSON 본문이다 (파일 경로가 아니다) — JWT 개인키를 PEM 본문으로 넣는 것과 같다.
+    credentials: ${FCM_CREDENTIALS:}
+
+  livekit:
+    # ⚠️ 시크릿이 비어 있는 것이 지금의 정상 상태다. infra/.env.example 의 LIVEKIT_API_SECRET 이
+    # 아직 비어 있고(운영에서 generate-keys 로 만들어 넣는다), 여기서 기동을 막으면 음성과 무관한
+    # 비어 있으면 LiveKitWebhookVerifier 가 모든 웹훅을 거부하고 토큰 발급도 거부한다 (fail closed).
+    #
+    # 이름은 infra/docker-compose.yml 의 APP_LIVEKIT_* 와 짝이다 — 바꾸면 컨테이너가 값을 못 받는다.
+    url: ${LIVEKIT_URL:}
+    # 키의 "이름"이라 시크릿이 아니다. infra/livekit/livekit.yaml 의 webhook.api_key 와 같아야 하고,
+    # 다르면 서명 검증이 에러 로그도 없이 실패한다 — 그래서 기본값을 그 파일과 미리 맞춰 둔다.
+    api-key: ${LIVEKIT_API_KEY:gachikey}
+    api-secret: ${LIVEKIT_API_SECRET:}
+    # 앱 accessToken(1시간)보다 길다. 음성은 한 번 붙으면 모임이 끝날 때까지 이어지는데, 그보다 짧으면
+    # 통화 중에 재발급이 필요해진다. 비밀이 아니라 정책 수치라 환경변수로 두지 않는다.
+    token-ttl: 6h
+    # 서버 → LiveKit RoomService(강퇴). 위 url 과 다른 값이다 — 그쪽은 앱에 주는 wss 시그널링
+    # 주소이고, nginx 의 /livekit 프록시는 경로를 그대로 넘겨 /livekit/twirp/... 가 되므로
+    # LiveKit 이 404 를 낸다. 운영은 LiveKit 이 network_mode: host 라 호스트 게이트웨이로 간다
+    # (infra/docker-compose.yml 의 x-spring extra_hosts).
+    # 비어 있으면 강퇴를 건너뛴다 — 나가기·해산 자체는 성공해야 한다.
+    api-url: ${LIVEKIT_API_URL:}
+    # 없으면 LiveKit 이 죽지 않고 멈추기만 해도 나가기 요청 스레드가 무한정 붙잡힌다.
+    api-timeout: 3s
+
+  turn:
+    # 비어 있으면 CloudflareTurnClient 가 호출을 건너뛰고 voice-token 의 iceServers 가 빈
+    # 배열로 나간다 — 앱은 직결(UDP 3478·TCP 8443)만 시도한다. app.ai 와 같은 이유로
+    # 기동을 막지 않는다.
+    key-id: ${CF_TURN_KEY_ID:}
+    api-token: ${CF_TURN_API_TOKEN:}
+    # 통화 입장 직전에 불린다 — CF 가 느려도 입장을 이 이상 지연시키지 않는다.
+    timeout: 2s
+
+  notification:
+    # THANKS 묶음 창 (03-데이터 §2). 기준은 묶음의 최초 created_at 이다 — 최신 갱신 시각으로 재면
+    # 고마워요가 들어오는 동안 묶음이 무한히 연장돼 한 행이 영원히 산다
+    thanks-bundle-window: 1h
+
+  nickname:
+    # 금지 닉네임은 테이블이 아니라 설정이다 (03-데이터 §2). 사칭·운영 혼동을 막는 최소한만 둔다
+    banned:
+      - 관리자
+      - 운영자
+      - 어드민
+      - admin
+      - 가치줍깅
+
+live:
+  # presence 임계값 — 근거는 03-데이터 §2 live·§6·§7(확정). 30초는 앱의 발신 주기라 서버가 읽지 않는다
+  presence:
+    freshness: 2m
+    cleanup-threshold: 5m
+    move-threshold-meters: 20
+
+management:
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  endpoints:
+    web:
+      exposure:
+        # prometheus 는 infra/prometheus/prometheus.yml 의 job=spring 이 긁는다
+        #. nginx 가 /actuator 를 프록시하지 않아 외부에는 열리지 않는다 —
+        # 스크레이프는 docker 의 frontend 네트워크에서 컨테이너로 직접 붙는다.
+        include: health,prometheus
+  health:
+    mail:
+      # 끄지 않으면 헬스체크마다 smtp.gmail.com 으로 실제 SMTP 접속을 연다. 자격증명이 비어
+      # 있거나 SMTP 가 막히면 집계가 DOWN 이 되어 /actuator/health 가 503 을 낸다 — 위
+      # spring.mail 주석의 정책과 어긋난다. 메일은 발송만 실패하고 로그로 남기는 물건이지
+      # 서버 전체를 DOWN 으로 표시할 물건이 아니다 (SmtpPasswordResetMailSender 가
+      # MailException 을 삼키는 것과 같은 이유). 배포 판정은 readiness 그룹이 하므로
+      # 이 값과 무관하다 — infra/docker-compose.yml 의 healthcheck 는 /actuator/health/readiness 다.
+      enabled: false
+
+---
+# 로컬 개발 — infra/docker-compose.dev.yml 이 띄우는 Postgres·Redis 를 가리킨다.
+# 여기 적힌 값은 그 compose 파일에 이미 평문으로 들어 있는 개발 전용 값이다.
+# 운영 시크릿은 환경변수로만 들어오고 yml 에 적지 않는다 (02-컨벤션 §14).
+spring:
+  config:
+    activate:
+      on-profile: local
+  datasource:
+    url: jdbc:postgresql://localhost:5432/gachijoopging
+    username: gachijoopging
+    password: gachijoopging
+  data:
+    redis:
+      host: localhost
+app:
+  media:
+    # 로컬 개발 전용 값이다. 운영은 openssl rand -base64 32 로 만들어 환경변수로 넣는다
+    # (infra/.env.example). 로컬에는 Nginx 가 없어 서명을 검증하는 쪽이 아예 없다.
+    root: ${MEDIA_ROOT:./build/uploads}
+    secure-link-secret: local-dev-secret
