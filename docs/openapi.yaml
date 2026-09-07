@@ -1104,6 +1104,7 @@ paths:
                   last7d:
                     crewItems: 168
                     myItems: 23
+                    myByCategory: { CIGARETTE: 14, PLASTIC: 6, CAN: 3 }
                     daily: [12, 30, 0, 41, 25, 38, 22]
                   character:
                     windowDays: 14
@@ -1609,6 +1610,7 @@ components:
           properties:
             crewItems: { type: integer }
             myItems: { type: integer }
+            myByCategory: { type: object, additionalProperties: { type: integer }, description: 최근 7일 내가 주운 것의 카테고리별 수량. 0 인 카테고리는 생략 }
             daily: { type: array, items: { type: integer }, minItems: 7, maxItems: 7, description: 6일 전 → 오늘 }
         character:
           type: object
