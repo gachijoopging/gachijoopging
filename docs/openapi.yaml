@@ -1,7 +1,7 @@
 openapi: 3.0.3
 
 info:
-  title: 가치줍깅 크루판 API
+  title: 가치줍깅 API
   version: 3.0.0
   description: |
     앱과 백엔드 사이 HTTP 계약의 유일한 정본. 실시간(채팅·위치)은 `소켓.md`.
