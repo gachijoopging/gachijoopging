@@ -330,7 +330,9 @@ paths:
                       name: { type: string }
                       memberCount: { type: integer }
                       photoUrl: { type: string, nullable: true }
-              example: { data: { id: c001, name: 한강줍깅크루, memberCount: 18, photoUrl: null } }
+                      intro: { type: string }
+                      leader: { $ref: '#/components/schemas/UserBrief' }
+              example: { data: { id: c001, name: 한강줍깅크루, memberCount: 18, photoUrl: null, intro: 매주 토요일 아침 여의도, leader: { id: u001, nickname: 관열, photoUrl: null } } }
         '404': { $ref: '#/components/responses/Error' }
   /crews/join-requests:
     post:
@@ -348,6 +350,7 @@ paths:
             application/json:
               schema: { type: object, properties: { data: { $ref: '#/components/schemas/JoinRequest' } } }
         '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
   /crews/join-requests/mine:
     get:
       tags: [crew]
@@ -1585,7 +1588,7 @@ components:
         unread: { type: boolean }
         target:
           type: object
-          description: 이동 대상. JOIN_REQUESTS→3-8 · REPORTS→6-2 · POST→5-2 · NOTICE→3-6 · CHAT→3-7 · LIVE→4-3 · CREW→1-6/탭
+          description: 이동 대상. JOIN_REQUESTS→3-8 · REPORTS→6-2 · POST→5-2 · NOTICE→3-6 · CHAT→3-7 · LIVE→2-2 · CREW→1-6/탭
           properties:
             type: { type: string, enum: [JOIN_REQUESTS, REPORTS, POST, NOTICE, CHAT, LIVE, CREW] }
             id: { type: string, nullable: true }
