@@ -10,7 +10,7 @@ info:
     ### 공통 규약 (옛 계약 2.3 을 이어받음)
     - 성공은 `{ "data": … }` 봉투, 오류는 `{ "code", "message", "requestId" }`
     - 시간은 ISO-8601 UTC `Z` 고정. 날짜만 필요한 곳은 `YYYY-MM-DD`
-    - 앱이 UUID 를 만드는 리소스(미디어·활동·게시물·댓글·채팅·신고)는 같은 id 재전송 시 200 으로 흡수(멱등)
+    - 앱이 UUID 를 만드는 리소스(미디어·활동·줍기·게시물·댓글·채팅·신고)는 같은 id 재전송 시 200 으로 흡수(멱등)
     - 목록은 `{ items, nextCursor }`. limit 기본 20·최대 50. 예외(배열 그대로): 크루원 목록 · 차단 목록 · 활동 중인 크루원 · 알림 처리 대기
     - 차단·공개 범위 필터링은 서버 책임
     - 카테고리 7종: CIGARETTE·CAN·PLASTIC·PAPER·GLASS·VINYL·GENERAL
@@ -540,6 +540,12 @@ paths:
           content:
             application/json:
               schema: { type: object, properties: { data: { $ref: '#/components/schemas/Activity' } } }
+        '200':
+          description: 진행 중인 활동이 이미 있어 그것을 돌려준다
+          content:
+            application/json:
+              schema: { type: object, properties: { data: { $ref: '#/components/schemas/Activity' } } }
+        '403': { $ref: '#/components/responses/Error' }
   /activities/current:
     get:
       tags: [activities]
@@ -1427,8 +1433,9 @@ components:
               items: { type: string, format: date }
     ItemInput:
       type: object
-      required: [category, quantity]
+      required: [id, category, quantity]
       properties:
+        id: { type: string, format: uuid, description: 앱이 만든다. 같은 id 재전송은 200 으로 흡수(멱등) }
         category: { $ref: '#/components/schemas/Category' }
         quantity: { type: integer, minimum: 1 }
         aiPredictedCategory: { $ref: '#/components/schemas/Category' }
