@@ -128,7 +128,7 @@
     'use strict'
 
     const initialScreen = new URLSearchParams(location.search).get('screen') || '1-1'
-    const state = { currentScreenId: initialScreen, history: [initialScreen], role: '크루원', viewState: '기본', sheet: null, invitePreview: false, resetSent: false, pickupCount: 1 }
+    const state = { currentScreenId: initialScreen, history: [initialScreen], role: '크루원', viewState: '기본', sheet: null, invitePreview: false, resetSent: false, pickupCount: 1, profileTab: '기록', feedTab: '전체' }
     const mock = { crew: '한강줍깅크루', leader: '관열', member: '민지', post: '오늘 아침 한강을 걸으며 플로깅했어요.', activity: '여의도 한강공원 아침 활동' }
     const app = document.getElementById('app')
     const reviewPanel = document.getElementById('review-panel')
@@ -188,7 +188,7 @@
       const screen = element('section', { className: 'screen' }, [header, statePanel(), ...children])
       return screen
     }
-    function tabs(labels) { return element('div', { className: 'tabs' }, labels.map((label, index) => element('button', { text: label, type: 'button', ariaPressed: index === 0, onClick: () => {} }))) }
+    function tabs(labels, selected = labels[0], onChange = () => {}) { return element('div', { className: 'tabs' }, labels.map((label) => element('button', { text: label, type: 'button', ariaPressed: selected === label, onClick: () => onChange(label) }))) }
     function metrics() { return element('div', { className: 'metrics' }, [['거리', '2.8km'], ['시간', '41분'], ['줍기', '17개']].map(([label, value]) => element('div', { className: 'metric' }, [text('strong', value), text('span', label, 'caption')]))) }
     function mapPlaceholder(label = '활동 경로 미리보기') { return element('div', { className: 'map-placeholder', text: label }) }
     function confirmSheet(title, body, action, label = '확인') { openSheet('confirm', { title, body, action, label }) }
@@ -442,11 +442,14 @@
       ])])
     }
     function renderMyProfile() {
+      const profileContent = state.profileTab === '기록'
+        ? stack([listRow('9월 5일(금) 오후 6:02', '27개 · 42분 · 3.1km', () => navigate('5-3')), listRow('9월 3일(수) 오전 7:10', '줍기 기록 없음 · 18분 · 1.2km', () => navigate('5-3'))])
+        : element('div', { className: 'photo-grid' }, ['활동 사진', '한강 줍깅', '나만 보기', '게시물', '사진', '글'].map((value) => element('button', { text: value, type: 'button', onClick: () => navigate('5-2') })))
       return page('내 정보', '', [stack([
         element('div', { className: 'split' }, [text('span', ''), button('설정', () => navigate('5-7'), 'ghost')]),
         card([element('div', { className: 'split' }, [element('div', { className: 'button-row' }, [avatar('새싹', 'lg'), stack([element('div', { className: 'button-row' }, [text('strong', '새싹'), state.role === '크루장' ? badge('크루장') : null]), text('p', '한강을 좋아하는 플로거예요.', 'caption'), button(`${mock.crew} ›`, () => navigate('3-2'), 'ghost')])]), button('프로필 수정', () => navigate('5-8'), 'ghost')])]),
         element('div', { className: 'metrics' }, [['12', '활동'], ['38.4km', '거리'], ['412', '개수']].map(([value, label]) => element('div', { className: 'metric' }, [text('strong', value), text('span', label, 'caption')]))),
-        tabs(['기록', '게시물']), listRow('9월 5일(금) 오후 6:02', '27개 · 42분 · 3.1km', () => navigate('5-3')), listRow('9월 3일(수) 오전 7:10', '줍기 기록 없음 · 18분 · 1.2km', () => navigate('5-3')),
+        tabs(['기록', '게시물'], state.profileTab, (tab) => { state.profileTab = tab; renderApp() }), profileContent,
       ])])
     }
     function renderPostEditor() {
