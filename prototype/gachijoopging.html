@@ -415,9 +415,12 @@
       ])])
     }
     function renderFeed() {
+      const posts = state.feedTab === '전체'
+        ? [postCard('민지', mock.post, { time: '10분 전' }), postCard('관열', '오늘 여의도에서 주운 기록을 남겨요.', { time: '어제', photo: false, private: true })]
+        : [postCard('관열', '오늘 여의도에서 주운 기록을 남겨요.', { time: '어제', photo: false, private: true })]
       return page('피드', '', [stack([
-        element('div', { className: 'split' }, [tabs(['전체', '내 게시물']), element('div', { className: 'button-row' }, [button('날짜', () => openSheet('info', { title: '날짜 선택', body: '9월 6일 이전 게시물을 보는 날짜 필터예요.' }), 'ghost'), button('+ 글쓰기', () => navigate('5-6'))])]),
-        postCard('민지', mock.post, { time: '10분 전' }), postCard('관열', '오늘 여의도에서 주운 기록을 남겨요.', { time: '어제', photo: false, private: true }),
+        element('div', { className: 'split' }, [tabs(['전체', '내 게시물'], state.feedTab, (tab) => { state.feedTab = tab; renderApp() }), element('div', { className: 'button-row' }, [button('날짜', () => openSheet('info', { title: '날짜 선택', body: '9월 6일 이전 게시물을 보는 날짜 필터예요.' }), 'ghost'), button('+ 글쓰기', () => navigate('5-6'))])]),
+        ...posts,
       ])])
     }
     function renderPostDetail() {
