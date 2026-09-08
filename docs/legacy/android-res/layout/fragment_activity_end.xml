@@ -1,0 +1,249 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- M14 활동 종료 -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_screen"
+    android:orientation="vertical"
+    android:paddingStart="@dimen/screen_h_padding"
+    android:paddingTop="@dimen/screen_top_padding"
+    android:paddingEnd="@dimen/screen_h_padding">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <TextView
+            style="@style/Gachi.Text.PageTitle"
+            android:text="@string/end_title"
+            android:textSize="22sp" />
+
+        <TextView
+            android:id="@+id/metaLabel"
+            style="@style/Gachi.Text.Caption.Strong"
+            android:layout_marginTop="1dp" />
+    </LinearLayout>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:clipToPadding="false"
+        android:paddingTop="@dimen/space_md"
+        android:paddingBottom="@dimen/plain_scroll_padding"
+        android:scrollbars="none">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="248dp">
+
+                <include
+                    android:id="@+id/map"
+                    layout="@layout/view_map_frame" />
+
+                <TextView
+                    android:id="@+id/routeLabel"
+                    style="@style/Gachi.Chip.Static"
+                    android:layout_gravity="top|start"
+                    android:layout_margin="@dimen/space_md"
+                    android:drawablePadding="5dp"
+                    android:drawableStart="@drawable/ic_pin_small"
+                    android:drawableTint="@color/gachi_ink_muted"
+                    android:gravity="center_vertical"
+                    android:background="@drawable/bg_chip_surface"
+                    android:paddingStart="@dimen/space_md"
+                    android:paddingTop="@dimen/space_sm"
+                    android:paddingEnd="@dimen/space_md"
+                    android:paddingBottom="@dimen/space_sm"
+                    android:textSize="@dimen/text_micro" />
+            </FrameLayout>
+
+            <TextView
+                android:id="@+id/personalChip"
+                style="@style/Gachi.Chip.Static"
+                android:layout_marginTop="@dimen/space_md"
+                android:background="@drawable/bg_chip_surface"
+                android:text="@string/end_personal_chip"
+                android:visibility="gone" />
+
+            <include
+                android:id="@+id/metrics"
+                layout="@layout/view_metric_row"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_md" />
+
+            <LinearLayout
+                android:id="@+id/groupNote"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_md"
+                android:background="@drawable/bg_tile_round"
+                android:orientation="horizontal"
+                android:paddingStart="@dimen/space_lg"
+                android:paddingTop="@dimen/space_lg"
+                android:paddingEnd="@dimen/space_lg"
+                android:paddingBottom="@dimen/space_lg"
+                android:visibility="gone">
+
+                <ImageView
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:background="@drawable/bg_thumb_square"
+                    android:importantForAccessibility="no"
+                    android:padding="@dimen/space_sm"
+                    android:src="@drawable/ic_people" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/space_md"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        style="@style/Gachi.Text.Section"
+                        android:text="@string/end_group_note_title"
+                        android:textSize="@dimen/text_body" />
+
+                    <TextView
+                        style="@style/Gachi.Text.Caption"
+                        android:layout_marginTop="@dimen/space_xs"
+                        android:lineSpacingMultiplier="1.5"
+                        android:text="@string/end_group_note_desc" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <com.google.android.flexbox.FlexboxLayout
+                android:id="@+id/categoryRow"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_md"
+                app:flexWrap="wrap" />
+
+            <LinearLayout
+                android:id="@+id/membersCard"
+                style="@style/Gachi.Card"
+                android:layout_marginTop="@dimen/space_md"
+                android:visibility="gone">
+
+                <TextView
+                    style="@style/Gachi.Text.Caption.Strong"
+                    android:text="@string/end_members" />
+
+                <LinearLayout
+                    android:id="@+id/memberStack"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_sm"
+                    android:orientation="horizontal" />
+
+                <TextView
+                    style="@style/Gachi.Text.Caption"
+                    android:layout_marginTop="@dimen/space_md"
+                    android:text="@string/end_members_note" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/zeroBanner"
+                style="@style/Gachi.Chip.Static.Info"
+                android:layout_width="match_parent"
+                android:layout_marginTop="@dimen/space_md"
+                android:background="@drawable/bg_banner_info"
+                android:lineSpacingMultiplier="1.4"
+                android:paddingStart="@dimen/space_lg"
+                android:paddingTop="@dimen/space_md"
+                android:paddingEnd="@dimen/space_lg"
+                android:paddingBottom="@dimen/space_md"
+                android:text="@string/end_zero"
+                android:textSize="@dimen/text_label"
+                android:visibility="gone" />
+
+            <LinearLayout
+                android:id="@+id/unclassBanner"
+                style="@style/Gachi.Banner"
+                android:layout_marginTop="@dimen/space_md"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/unclassText"
+                    style="@style/Gachi.Banner.Text"
+                    android:textColor="@color/gachi_warn_ink" />
+
+                <androidx.appcompat.widget.AppCompatButton
+                    android:id="@+id/unclassCta"
+                    style="@style/Gachi.Button.Ghost.Compact"
+                    android:layout_marginStart="@dimen/space_sm"
+                    android:background="@drawable/bg_chip_warn_solid"
+                    android:paddingStart="@dimen/space_md"
+                    android:paddingTop="@dimen/space_sm"
+                    android:paddingEnd="@dimen/space_md"
+                    android:paddingBottom="@dimen/space_sm"
+                    android:text="@string/end_unclass_cta"
+                    android:textColor="@color/gachi_warn_bg" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/syncChip"
+                style="@style/Gachi.Chip.Static.Warn"
+                android:layout_marginTop="@dimen/space_md"
+                android:text="@string/end_sync_blocked"
+                android:visibility="gone" />
+
+            <LinearLayout
+                android:id="@+id/shareCard"
+                style="@style/Gachi.Card"
+                android:layout_marginTop="@dimen/space_lg"
+                android:padding="@dimen/space_xl">
+
+                <TextView
+                    style="@style/Gachi.Text.Section"
+                    android:drawablePadding="8dp"
+                    android:drawableStart="@drawable/ic_check_small"
+                    android:drawableTint="@color/gachi_green_strong"
+                    android:gravity="center_vertical"
+                    android:text="@string/end_share_title"
+                    android:textSize="@dimen/text_subtitle" />
+
+                <TextView
+                    android:id="@+id/shareBlocked"
+                    style="@style/Gachi.Text.Caption.Strong"
+                    android:layout_marginTop="@dimen/space_sm"
+                    android:text="@string/end_share_blocked"
+                    android:visibility="gone" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/space_md"
+                    android:orientation="horizontal">
+
+                    <androidx.appcompat.widget.AppCompatButton
+                        android:id="@+id/noShareButton"
+                        style="@style/Gachi.Button.Ghost"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:text="@string/end_no_share"
+                        android:textSize="@dimen/text_body" />
+
+                    <androidx.appcompat.widget.AppCompatButton
+                        android:id="@+id/shareButton"
+                        style="@style/Gachi.Button.Primary"
+                        android:layout_width="0dp"
+                        android:layout_marginStart="@dimen/space_sm"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_button_cta"
+                        android:text="@string/end_share"
+                        android:textSize="@dimen/text_body" />
+                </LinearLayout>
+            </LinearLayout>
+        </LinearLayout>
+    </ScrollView>
+</LinearLayout>

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 뒤로 갈 때 되돌아오는 화면. push_exit 의 역방향이라 시차가 이어진다. -->
+<set xmlns:android="http://schemas.android.com/apk/res/android">
+    <translate
+        android:duration="250"
+        android:fromXDelta="-20%p"
+        android:interpolator="@interpolator/emphasized_decelerate"
+        android:toXDelta="0" />
+    <alpha
+        android:duration="140"
+        android:fromAlpha="0"
+        android:interpolator="@interpolator/standard_easing"
+        android:toAlpha="1" />
+</set>

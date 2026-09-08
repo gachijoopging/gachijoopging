@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  하위 화면으로 들어갈 때 뒤로 밀리는 화면.
+  20%만 움직여서 새 화면보다 느리게 보이는 시차(parallax)를 만든다.
+-->
+<set xmlns:android="http://schemas.android.com/apk/res/android">
+    <translate
+        android:duration="250"
+        android:fromXDelta="0"
+        android:interpolator="@interpolator/standard_easing"
+        android:toXDelta="-20%p" />
+    <alpha
+        android:duration="250"
+        android:fromAlpha="1"
+        android:interpolator="@interpolator/emphasized_accelerate"
+        android:toAlpha="0" />
+</set>

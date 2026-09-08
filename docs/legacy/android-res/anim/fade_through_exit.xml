@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- fade through 의 나가는 쪽. 짧게 사라져서 들어오는 화면에 자리를 내준다. -->
+<set xmlns:android="http://schemas.android.com/apk/res/android">
+    <alpha
+        android:duration="90"
+        android:fromAlpha="1"
+        android:interpolator="@interpolator/emphasized_accelerate"
+        android:toAlpha="0" />
+</set>

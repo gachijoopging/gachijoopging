@@ -1,0 +1,40 @@
+# ※ 모노레포 구조상 backend/ 가 정본입니다 (Dockerfile과 같은 위치).
+#
+# 빌드 컨텍스트를 줄이는 것 외에, .env가 이미지에 딸려 들어가는 사고를
+# 막는 역할이 큽니다 (결정 22 — 시크릿은 .env, git 제외).
+
+.git
+.gitignore
+.github
+
+# 시크릿 — 절대 이미지에 들어가면 안 됨
+.env
+.env.*
+!.env.example
+**/*.pem
+**/*.key
+**/*.p12
+**/*.jks
+
+# 빌드 산출물 (컨테이너 안에서 새로 빌드한다)
+build/
+*/build/
+.gradle/
+out/
+bin/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# 문서·프로토타입 — 런타임에 불필요
+docs/
+*.md
+*.dc.html
+screenshots/
+scraps/
+
+# 로컬 업로드 데이터
+uploads/
+data/

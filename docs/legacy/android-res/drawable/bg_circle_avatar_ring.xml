@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 겹치는 아바타 스택용 흰 테두리 -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="oval">
+    <solid android:color="@color/gachi_avatar_leaf" />
+    <stroke android:width="2.5dp" android:color="@color/gachi_surface" />
+</shape>

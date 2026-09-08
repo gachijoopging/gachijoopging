@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 공개 범위 선택 행 (M27 / M28) -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/row"
+    style="@style/Gachi.SelectRow"
+    android:layout_marginBottom="@dimen/space_sm">
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/name"
+            style="@style/Gachi.Text.ItemName" />
+
+        <TextView
+            android:id="@+id/desc"
+            style="@style/Gachi.Text.Caption" />
+    </LinearLayout>
+
+    <View
+        android:id="@+id/dot"
+        style="@style/Gachi.RadioDot" />
+</LinearLayout>

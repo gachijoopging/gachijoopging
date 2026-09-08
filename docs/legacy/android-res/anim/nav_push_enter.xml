@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 하위 화면으로 들어갈 때: 오른쪽에서 밀려 들어온다. -->
+<set xmlns:android="http://schemas.android.com/apk/res/android">
+    <translate
+        android:duration="250"
+        android:fromXDelta="100%p"
+        android:interpolator="@interpolator/emphasized_decelerate"
+        android:toXDelta="0" />
+    <alpha
+        android:duration="140"
+        android:fromAlpha="0"
+        android:interpolator="@interpolator/standard_easing"
+        android:toAlpha="1" />
+</set>

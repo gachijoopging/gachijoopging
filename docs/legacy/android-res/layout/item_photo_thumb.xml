@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:layout_marginEnd="@dimen/space_sm">
+
+    <site.gachijoopging.app.ui.common.ClipOutlineFrameLayout
+        android:id="@+id/thumb"
+        android:layout_width="64dp"
+        android:layout_height="64dp"
+        android:layout_margin="@dimen/space_xs"
+        android:background="@drawable/bg_select_row">
+
+        <ImageView
+            android:id="@+id/thumbImage"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:importantForAccessibility="no"
+            android:scaleType="centerCrop"
+            android:visibility="gone" />
+
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_gravity="center"
+            android:importantForAccessibility="no"
+            android:src="@drawable/ic_photo"
+            app:tint="@color/gachi_ink_65" />
+
+        <TextView
+            android:id="@+id/coverBadge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="top|start"
+            android:layout_margin="@dimen/space_xs"
+            android:background="@drawable/bg_chip_deep"
+            android:paddingStart="@dimen/space_sm"
+            android:paddingTop="@dimen/space_xs"
+            android:paddingEnd="@dimen/space_sm"
+            android:paddingBottom="@dimen/space_xs"
+            android:text="@string/rd_cover_badge"
+            android:textColor="@color/gachi_yellow"
+            android:textSize="@dimen/text_label"
+            android:textStyle="bold"
+            android:visibility="gone" />
+    </site.gachijoopging.app.ui.common.ClipOutlineFrameLayout>
+
+    <!-- 보이는 20dp 배지는 오른쪽 위 그대로 두고 터치 영역만 48dp 로 확장 -->
+    <ImageButton
+        android:id="@+id/deleteButton"
+        style="@style/Gachi.IconButton.Small"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_gravity="top|end"
+        android:background="@drawable/bg_circle_danger_badge"
+        android:contentDescription="@string/cd_photo_delete"
+        android:paddingStart="@dimen/space_3xl"
+        android:paddingTop="@dimen/space_xs"
+        android:paddingEnd="@dimen/space_xs"
+        android:paddingBottom="@dimen/space_3xl"
+        android:src="@drawable/ic_close" />
+</FrameLayout>

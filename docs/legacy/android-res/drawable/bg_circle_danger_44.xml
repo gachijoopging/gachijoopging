@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 48dp 터치 영역 안에 44dp 원만 보이게 하는 인셋 배경 (수거 항목 삭제 버튼) -->
+<inset xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/bg_circle_danger"
+    android:insetLeft="2dp"
+    android:insetTop="2dp"
+    android:insetRight="2dp"
+    android:insetBottom="2dp" />

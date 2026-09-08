@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  스피너 회전. 등속(linear)이라야 도는 속도가 일정해 보인다 —
+  가감속을 넣으면 매 바퀴 멈칫하는 것처럼 읽힌다.
+-->
+<objectAnimator xmlns:android="http://schemas.android.com/apk/res/android"
+    android:duration="900"
+    android:interpolator="@android:anim/linear_interpolator"
+    android:propertyName="rotation"
+    android:repeatCount="infinite"
+    android:valueFrom="0"
+    android:valueTo="360" />

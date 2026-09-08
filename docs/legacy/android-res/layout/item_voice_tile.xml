@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout
+    android:clipChildren="false"
+    android:clipToPadding="false" xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="@dimen/space_xs">
+
+    <LinearLayout
+        android:id="@+id/card"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bg_card_tight"
+        android:elevation="3dp"
+        android:outlineAmbientShadowColor="@color/gachi_shadow"
+        android:outlineSpotShadowColor="@color/gachi_shadow"
+        android:gravity="center_horizontal"
+        android:orientation="vertical"
+        android:paddingStart="@dimen/space_md"
+        android:paddingTop="@dimen/space_xl"
+        android:paddingEnd="@dimen/space_md"
+        android:paddingBottom="@dimen/space_xl">
+
+        <TextView
+            android:id="@+id/face"
+            style="@style/Gachi.Avatar"
+            android:layout_width="52dp"
+            android:layout_height="52dp"
+            android:textSize="24sp" />
+
+        <TextView
+            android:id="@+id/name"
+            style="@style/Gachi.Text.ItemName"
+            android:layout_marginTop="@dimen/space_sm" />
+
+        <TextView
+            android:id="@+id/state"
+            style="@style/Gachi.Chip.Static"
+            android:layout_marginTop="@dimen/space_sm"
+            android:background="@drawable/bg_chip_neutral"
+            android:paddingStart="@dimen/space_md"
+            android:paddingTop="@dimen/space_xs"
+            android:paddingEnd="@dimen/space_md"
+            android:paddingBottom="@dimen/space_xs"
+            android:textColor="@color/gachi_neutral_ink" />
+    </LinearLayout>
+
+    <ImageButton
+        android:id="@+id/moreButton"
+        style="@style/Gachi.IconButton.Small"
+        android:layout_gravity="top|end"
+        android:layout_margin="@dimen/space_xs"
+        android:background="@drawable/bg_circle_tint_32"
+        android:contentDescription="@string/cd_more"
+        android:padding="@dimen/space_lg"
+        android:src="@drawable/ic_more" />
+</FrameLayout>

@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 지도 마커 탭 → 수거 지점 상세 (M05 hpOn / M09 act.markerOn) -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingStart="@dimen/space_xl"
+    android:paddingTop="@dimen/space_lg"
+    android:paddingEnd="@dimen/space_xl"
+    android:paddingBottom="@dimen/space_2xl">
+
+    <View style="@style/Gachi.SheetHandle" />
+
+    <TextView
+        android:id="@+id/title"
+        style="@style/Gachi.Text.Section.Lg"
+        android:layout_marginTop="@dimen/space_md" />
+
+    <TextView
+        android:id="@+id/spot"
+        style="@style/Gachi.Text.Caption"
+        android:layout_marginTop="@dimen/space_xs" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_md"
+        android:background="@drawable/bg_tile"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="@dimen/space_md"
+        android:paddingTop="@dimen/space_md"
+        android:paddingEnd="@dimen/space_md"
+        android:paddingBottom="@dimen/space_md">
+
+        <LinearLayout
+            android:id="@+id/avatarStack"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/space_md"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                style="@style/Gachi.Text.ItemName"
+                android:text="@string/home_point_together" />
+
+            <TextView
+                android:id="@+id/contribSummary"
+                style="@style/Gachi.Text.Caption" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="@dimen/space_md"
+        android:layout_weight="1"
+        android:minHeight="120dp"
+        android:scrollbars="none">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <TextView
+                style="@style/Gachi.Text.Micro"
+                android:layout_marginBottom="@dimen/space_sm"
+                android:paddingStart="@dimen/space_xs"
+                android:text="@string/home_point_mine" />
+
+            <TextView
+                android:id="@+id/mineEmpty"
+                style="@style/Gachi.Text.Caption"
+                android:layout_marginBottom="@dimen/space_sm"
+                android:paddingStart="@dimen/space_xs"
+                android:text="@string/home_point_mine_empty"
+                android:visibility="gone" />
+
+            <LinearLayout
+                android:id="@+id/mineList"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
+
+            <androidx.appcompat.widget.AppCompatButton
+                android:id="@+id/toggleOthers"
+                style="@style/Gachi.Button.Ghost"
+                android:layout_marginTop="@dimen/space_xs"
+                android:background="@drawable/bg_soft_button"
+                android:foreground="@drawable/ripple_soft"
+                android:paddingTop="@dimen/space_md"
+                android:paddingBottom="@dimen/space_md"
+                android:textColor="@color/gachi_green_strong"
+                android:textSize="@dimen/text_label"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/othersLabel"
+                style="@style/Gachi.Text.Micro"
+                android:layout_marginTop="@dimen/space_md"
+                android:layout_marginBottom="@dimen/space_sm"
+                android:paddingStart="@dimen/space_xs"
+                android:text="@string/home_point_others"
+                android:visibility="gone" />
+
+            <LinearLayout
+                android:id="@+id/othersList"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone" />
+        </LinearLayout>
+    </ScrollView>
+
+    <androidx.appcompat.widget.AppCompatButton
+        android:id="@+id/closeButton"
+        style="@style/Gachi.Button.Primary"
+        android:layout_marginTop="@dimen/space_md"
+        android:paddingTop="@dimen/space_lg"
+        android:paddingBottom="@dimen/space_lg"
+        android:text="@string/action_close" />
+</LinearLayout>

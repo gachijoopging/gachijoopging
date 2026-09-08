@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 모든 서브 화면 상단: [뒤로] 제목 / 부제 -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/headerRoot"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="center_vertical"
+    android:orientation="horizontal">
+
+    <ImageButton
+        android:id="@+id/backButton"
+        style="@style/Gachi.IconButton"
+        android:contentDescription="@string/cd_back"
+        android:src="@drawable/ic_back" />
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/space_md"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/headerTitle"
+            style="@style/Gachi.Text.ScreenTitle"
+            android:layout_width="match_parent"
+            android:ellipsize="end"
+            android:maxLines="1"
+            tools:text="모임 만들기" />
+
+        <TextView
+            android:id="@+id/headerSubtitle"
+            style="@style/Gachi.Text.ScreenSubtitle"
+            android:layout_width="match_parent"
+            android:layout_marginTop="1dp"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:visibility="gone" />
+    </LinearLayout>
+
+    <ImageButton
+        android:id="@+id/headerAction"
+        style="@style/Gachi.IconButton"
+        android:layout_marginStart="@dimen/space_sm"
+        android:contentDescription="@string/cd_more"
+        android:src="@drawable/ic_more"
+        android:visibility="gone" />
+</LinearLayout>

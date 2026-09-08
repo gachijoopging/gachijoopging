@@ -12,6 +12,8 @@ preview.html
 
 # 로컬 설정과 비밀값
 .env
+.env.*
+!.env.example
 .env.local
 *.jks
 *.keystore
@@ -20,3 +22,6 @@ local.properties
 # OS
 .DS_Store
 Thumbs.db
+
+# 작업 스펙·계획 (옛 저장소 관례). 남아야 할 결정은 docs/기능범위.md·docs/adr 로
+docs/superpowers/

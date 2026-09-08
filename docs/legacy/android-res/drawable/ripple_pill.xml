@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  알약(999dp) 모양 컴포넌트용 누름 효과.
+
+  ?attr/selectableItemBackground 를 foreground 로 쓰면 리플이 뷰의 사각 영역
+  전체에 그려집니다. foreground 는 배경 shape 의 둥근 outline 으로 잘리지 않기
+  때문에, 알약 버튼을 누르면 네 모서리에 회색 사각형이 삐져나옵니다.
+  mask 를 같은 반지름으로 깔아 리플을 모양대로 잘라 냅니다.
+
+  정사각형 뷰에 쓰면 GradientDrawable 이 반지름을 min(w,h)/2 로 자동 clamp 하므로
+  원형 버튼에도 그대로 맞습니다.
+-->
+<ripple xmlns:android="http://schemas.android.com/apk/res/android"
+    android:color="?attr/colorControlHighlight">
+
+    <item android:id="@android:id/mask">
+        <shape android:shape="rectangle">
+            <solid android:color="#FFFFFFFF" />
+            <corners android:radius="@dimen/radius_pill" />
+        </shape>
+    </item>
+</ripple>

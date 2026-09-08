@@ -1,0 +1,37 @@
+[project]
+name = "gachijoopging-ai"
+version = "0.1.0"
+description = "가치줍깅 AI 추론 서버 (YOLO26s 단일 스테이지 7클래스)"
+requires-python = ">=3.11,<3.12"
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "python-multipart", # multipart/form-data 파싱. 없으면 UploadFile 이 런타임에 터진다
+    "python-dotenv",    # ai/.env 자동 로드 (시크릿은 커밋하지 않는다)
+    "torch",
+    "torchvision",
+    "ultralytics",
+    "pillow",
+]
+
+[dependency-groups]
+dev = ["ruff"]
+
+# torch·torchvision은 PyPI 대신 PyTorch 공식 CUDA 인덱스에서 받는다.
+# PyPI 휠은 Windows에서 CPU 전용이라 그대로 설치하면 torch.cuda.is_available()가 False가 된다.
+# cu130 = 서빙 노트북 드라이버(591.44 / CUDA 13.1) 기준. 바꾸면 uv.lock 재생성 필요.
+[tool.uv.sources]
+torch = [{ index = "pytorch-cu130" }]
+torchvision = [{ index = "pytorch-cu130" }]
+
+[[tool.uv.index]]
+name = "pytorch-cu130"
+url = "https://download.pytorch.org/whl/cu130"
+explicit = true
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]

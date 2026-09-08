@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 수거 지점 상세 / 수거 목록의 한 줄 -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="@dimen/space_sm"
+    android:background="@drawable/bg_tile"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingStart="@dimen/space_md"
+    android:paddingTop="@dimen/space_md"
+    android:paddingEnd="@dimen/space_md"
+    android:paddingBottom="@dimen/space_md">
+
+    <TextView
+        android:id="@+id/thumb"
+        android:layout_width="42dp"
+        android:layout_height="42dp"
+        android:background="@drawable/bg_thumb_square"
+        android:gravity="center"
+        android:textSize="@dimen/text_title" />
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/space_md"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/name"
+            style="@style/Gachi.Text.ItemName" />
+
+        <TextView
+            android:id="@+id/meta"
+            style="@style/Gachi.Text.Caption"
+            android:layout_marginTop="@dimen/space_xs" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/whoChip"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bg_chip_surface"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="@dimen/space_xs"
+        android:paddingTop="@dimen/space_xs"
+        android:paddingEnd="@dimen/space_md"
+        android:paddingBottom="@dimen/space_xs">
+
+        <TextView
+            android:id="@+id/whoFace"
+            style="@style/Gachi.Avatar.Small"
+            android:layout_width="22dp"
+            android:layout_height="22dp"
+            android:textSize="@dimen/text_label" />
+
+        <TextView
+            android:id="@+id/whoName"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/space_xs"
+            android:textColor="@color/gachi_deep"
+            android:textSize="@dimen/text_label"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/needClassChip"
+        style="@style/Gachi.Chip.Static.Warn"
+        android:paddingStart="@dimen/space_md"
+        android:paddingTop="@dimen/space_xs"
+        android:paddingEnd="@dimen/space_md"
+        android:paddingBottom="@dimen/space_xs"
+        android:text="@string/pickup_need_class_chip"
+        android:textSize="@dimen/text_micro"
+        android:visibility="gone" />
+</LinearLayout>

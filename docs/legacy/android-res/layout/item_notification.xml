@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/row"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="@dimen/space_sm"
+    android:background="@drawable/bg_card_sm"
+    android:elevation="2dp"
+    android:outlineAmbientShadowColor="@color/gachi_shadow"
+    android:outlineSpotShadowColor="@color/gachi_shadow"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingStart="@dimen/space_lg"
+    android:paddingTop="@dimen/space_md"
+    android:paddingEnd="@dimen/space_lg"
+    android:paddingBottom="@dimen/space_md">
+
+    <!-- 라벨이 의미를 전달하므로 아이콘은 장식 처리 -->
+    <ImageView
+        android:id="@+id/face"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:background="@drawable/bg_circle_tint"
+        android:importantForAccessibility="no"
+        android:padding="@dimen/space_sm"
+        app:tint="@color/gachi_deep" />
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/space_md"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/title"
+                style="@style/Gachi.Text.ItemName"
+                android:layout_width="0dp"
+                android:layout_weight="1" />
+
+            <View
+                android:id="@+id/unreadDot"
+                android:layout_width="7dp"
+                android:layout_height="7dp"
+                android:layout_marginStart="@dimen/space_sm"
+                android:background="@drawable/bg_dot_orange" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/detail"
+            style="@style/Gachi.Text.Caption"
+            android:layout_width="match_parent"
+            android:layout_marginTop="@dimen/space_xs" />
+    </LinearLayout>
+
+    <ImageView
+        android:layout_width="20dp"
+        android:layout_height="20dp"
+        android:layout_marginStart="@dimen/space_sm"
+        android:importantForAccessibility="no"
+        android:src="@drawable/ic_chevron_right"
+        app:tint="@color/gachi_ink_hint" />
+</LinearLayout>

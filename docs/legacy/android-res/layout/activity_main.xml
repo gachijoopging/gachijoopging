@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  프로토타입의 390x844 목업 프레임 = 실제 단말 화면.
+  하단 알약 내비게이션은 화면 위에 떠 있고, 홈/피드/모이깅/프로필에서만 보입니다.
+-->
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/gachi_bg"
+    android:clipChildren="false"
+    android:clipToPadding="false">
+
+    <androidx.fragment.app.FragmentContainerView
+        android:id="@+id/navHost"
+        android:name="androidx.navigation.fragment.NavHostFragment"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:defaultNavHost="true"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:navGraph="@navigation/nav_graph" />
+
+    <include
+        android:id="@+id/bottomNav"
+        layout="@layout/view_bottom_nav"
+        android:layout_width="0dp"
+        android:layout_height="@dimen/bottom_nav_height"
+        android:layout_marginStart="@dimen/space_lg"
+        android:layout_marginEnd="@dimen/space_lg"
+        android:layout_marginBottom="@dimen/space_lg"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <!-- 프로토타입의 toast: 하단 내비 위에 뜨는 알약 -->
+    <TextView
+        android:id="@+id/toast"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="100dp"
+        android:background="@drawable/bg_toast"
+        android:elevation="12dp"
+        android:outlineAmbientShadowColor="@color/gachi_shadow"
+        android:outlineSpotShadowColor="@color/gachi_shadow"
+        android:ellipsize="end"
+        android:fontFamily="@font/pretendard"
+        android:textStyle="bold"
+        android:maxLines="1"
+        android:maxWidth="320dp"
+        android:paddingStart="@dimen/space_xl"
+        android:paddingTop="@dimen/space_md"
+        android:paddingEnd="@dimen/space_xl"
+        android:paddingBottom="@dimen/space_md"
+        android:textColor="@color/gachi_on_dark"
+        android:textSize="@dimen/text_body"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

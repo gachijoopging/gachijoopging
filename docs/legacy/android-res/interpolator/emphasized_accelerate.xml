@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Material 3 emphasized accelerate — cubic-bezier(0.3, 0.0, 0.8, 0.15).
+  화면에서 '나가는' 요소용. 천천히 떨어졌다가 빠르게 사라진다.
+-->
+<pathInterpolator xmlns:android="http://schemas.android.com/apk/res/android"
+    android:controlX1="0.3"
+    android:controlY1="0"
+    android:controlX2="0.8"
+    android:controlY2="0.15" />

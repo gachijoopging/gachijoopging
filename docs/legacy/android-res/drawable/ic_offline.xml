@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 연결 끊김 — 전파 호와 사선. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="@color/gachi_ink">
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M2.5 8.5 a13 13 0 0 1 19 0 M6 12 a8.5 8.5 0 0 1 12 0 M9.5 15.5 a4 4 0 0 1 5 0 M12 19.2 V19.3 M3.5 3.5 L20.5 20.5"
+        android:strokeColor="#FF262A0E"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

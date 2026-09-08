@@ -1,0 +1,158 @@
+plugins {
+    id 'java'
+    id 'jacoco'
+    id 'org.springframework.boot' version '3.5.4'
+    id 'io.spring.dependency-management' version '1.1.7'
+    id 'com.diffplug.spotless' version '6.25.0'
+}
+
+group = 'site.gachijoopging.server'
+version = '0.0.1-SNAPSHOT'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+// 런타임 좌표가 300 개를 넘어, 잠금이 없으면 같은 커밋이 시점에 따라 다른 트리로 빌드된다.
+dependencyLocking {
+    lockAllConfigurations()
+}
+
+// 부트 3.5.4 가 물고 오는 1.21.3 은 Docker Engine 29 에 붙지 못한다. 엔진 29 의 최소 API 는
+// 1.40 인데 1.21.3 의 docker-java 는 1.32 로 /info 를 호출해 400 을 받고, Testcontainers 는
+// 그것을 "Could not find a valid Docker environment" 로 보고한다 — docker CLI 는 멀쩡히
+// 동작하므로 원인이 도커가 아니라 클라이언트에 있다는 것이 드러나지 않는다.
+ext['testcontainers.version'] = '1.21.4'
+
+// 부트가 관리하지 않는 것만 여기 적는다. 나머지는 BOM 이 정한 버전을 따른다.
+def archunitVersion = '1.3.0'
+def springdocVersion = '2.8.17'
+def firebaseAdminVersion = '9.4.3'
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    // actuator 만으로는 /actuator/prometheus 가 없다 — 이 레지스트리가 있어야 그 엔드포인트가 생긴다
+    // infra/prometheus/prometheus.yml 의 job=spring 이 긁는 경로다.
+    runtimeOnly 'io.micrometer:micrometer-registry-prometheus'
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    // Redis 는 live 도메인의 presence 전용이다 (01-구조 §2)
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+
+    // 앱 accessToken 은 RS256 + 헤더 kid 다 (결정 9). 발급은 JwtIssuer, 검증은 JwtVerifier.
+    implementation 'com.auth0:java-jwt:4.5.1'
+    // 구글 idToken 검증용 JWKS. 구글은 우리처럼 PEM 을 주지 않고
+    // https://www.googleapis.com/oauth2/v3/certs 로 공개키를 kid 별로 내주며 주기적으로 회전한다.
+    // java-jwt 에는 JWKS 를 읽는 기능이 없어 같은 벤더의 이 라이브러리를 쓴다 — 캐시와 호출 제한이
+    // 들어 있어, 직접 만들면 요청마다 구글을 부르거나 회전을 놓친다.
+    implementation 'com.auth0:jwks-rsa:0.22.2'
+    // 비밀번호 재설정 메일 (Gmail SMTP — infra/.env.example 의 MAIL_USERNAME/MAIL_PASSWORD)
+    implementation 'org.springframework.boot:spring-boot-starter-mail'
+
+    // /media 썸네일. EXIF Orientation 을 기본으로 적용해 준다 (0.4.3+) — ImageIO 는 EXIF 를 읽지
+    // 않아 세로로 찍은 사진의 썸네일이 눕는다. 의존성 없는 단일 jar 다.
+    implementation 'net.coobird:thumbnailator:0.4.20'
+
+    // 조합 조회와 도메인 간 읽기 JOIN 은 QueryDSL 이다 (backend/CLAUDE.md, 03-데이터 §5.7).
+    // 차단·친구·공개범위처럼 여러 조회가 공유하는 조건을 BooleanExpression 한 벌로 두기 위한 것이라,
+    // 도메인 간 읽기 조건을 한 곳에서 재사용할 수 있어야 한다.
+    implementation 'com.querydsl:querydsl-jpa::jakarta'
+    annotationProcessor 'com.querydsl:querydsl-apt::jakarta'
+    annotationProcessor 'jakarta.annotation:jakarta.annotation-api'
+    annotationProcessor 'jakarta.persistence:jakarta.persistence-api'
+
+    implementation 'org.flywaydb:flyway-core'
+    runtimeOnly 'org.flywaydb:flyway-database-postgresql'
+    runtimeOnly 'org.postgresql:postgresql'
+
+    // meets.place_point 는 geometry(Point,4326) 다 (03-데이터 §2). 정본이 PostGIS·JPA·QueryDSL 셋을
+    // 동시에 요구하는데, 이것 없이는 JPA 가 geometry 컬럼의 타입을 몰라 ddl-auto: validate 가 기동에서
+    // 죽는다.
+    implementation 'org.hibernate.orm:hibernate-spatial'
+
+    // 알림 푸시 (01-구조 §7 — domain/notification/client). 부트의 dependency-management 가 관리하지 않는
+    // 아티팩트라 버전을 직접 적는다.
+    implementation "com.google.firebase:firebase-admin:${firebaseAdminVersion}"
+
+    // 계약 검증용이다 (02-컨벤션 §12). -ui 가 아니라 -api 를 쓴다 — Swagger UI 를 띄울 이유가 없고,
+    // /v3/api-docs 는 SecurityConfig 의 anyRequest().authenticated() 에 걸려 운영에서 잠긴다.
+    // 2.8.x 가 부트 3.0~3.5 대역이다. 3.x 는 부트 4 계열이라 올리지 않는다.
+    implementation "org.springdoc:springdoc-openapi-starter-webmvc-api:${springdocVersion}"
+
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.security:spring-security-test'
+    testImplementation 'org.testcontainers:junit-jupiter'
+    testImplementation 'org.testcontainers:postgresql'
+    // 01-구조 §5 의 R1~R4 를 강제한다 (02-컨벤션 §12)
+    testImplementation "com.tngtech.archunit:archunit-junit5:${archunitVersion}"
+    testCompileOnly 'org.projectlombok:lombok'
+    testAnnotationProcessor 'org.projectlombok:lombok'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.compilerArgs << '-parameters'
+}
+
+tasks.withType(Test).configureEach {
+    systemProperty 'file.encoding', 'UTF-8'
+}
+
+// 통합 테스트는 기본 test 에서 뺀다. backend:test 러너에 도커가 없어 Testcontainers 를 쓸 수
+// 없기 때문이다 — 넣으면 backend:test 가 통째로 깨진다. CI 는 backend:dockerTest 잡이
+// GitLab services 로 DB·Redis 를 띄워 따로 돌린다(02-컨벤션 §12).
+tasks.named('test') {
+    useJUnitPlatform {
+        excludeTags 'docker'
+    }
+}
+
+tasks.register('dockerTest', Test) {
+    group = 'verification'
+    description = 'DB·Redis 가 필요한 통합 테스트(@Tag("docker")). 로컬은 Testcontainers, CI 는 GitLab services 로 돈다.'
+    testClassesDirs = sourceSets.test.output.classesDirs
+    classpath = sourceSets.test.runtimeClasspath
+    useJUnitPlatform {
+        includeTags 'docker'
+    }
+    shouldRunAfter tasks.named('test')
+}
+
+// 커버리지가 test 와 dockerTest 두 잡에 나뉘어 쌓이므로 기본값(test 의 exec 하나)을 쓰면
+// 통합 테스트로만 덮이는 코드 — PostGIS 쿼리·advisory lock·멱등 동시성 — 이 0% 로 나온다.
+// 실패가 아니라 미달로 보여서 원인이 드러나지 않는다.
+//
+// 임계값(violationRules)은 첫 리포트로 baseline 을 본 뒤에 정한다 (02-컨벤션 §12).
+tasks.named('jacocoTestReport') {
+    mustRunAfter tasks.named('test'), tasks.named('dockerTest')
+    executionData.setFrom(fileTree(layout.buildDirectory).include('jacoco/*.exec'))
+    reports {
+        xml.required = true
+        html.required = true
+    }
+}
+
+tasks.named('jar') {
+    enabled = false
+}
+
+spotless {
+    java {
+        googleJavaFormat()
+        removeUnusedImports()
+        trimTrailingWhitespace()
+        endWithNewline()
+    }
+}

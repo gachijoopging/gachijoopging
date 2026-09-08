@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 피드 게시글 카드 -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="@dimen/space_md"
+    android:background="@drawable/bg_card"
+    android:elevation="3dp"
+    android:outlineAmbientShadowColor="@color/gachi_shadow"
+    android:outlineSpotShadowColor="@color/gachi_shadow"
+    android:orientation="vertical"
+    android:padding="@dimen/space_lg">
+
+    <LinearLayout
+        android:id="@+id/authorRow"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/ripple_tile"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="@dimen/space_xs"
+        android:paddingTop="@dimen/space_xs"
+        android:paddingEnd="@dimen/space_xs"
+        android:paddingBottom="@dimen/space_md">
+
+        <TextView
+            android:id="@+id/face"
+            style="@style/Gachi.Avatar"
+            android:layout_width="38dp"
+            android:layout_height="38dp"
+            android:textSize="18sp" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/space_md"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/name"
+                style="@style/Gachi.Text.ItemName"
+                tools:text="새싹이" />
+
+            <TextView
+                android:id="@+id/meta"
+                style="@style/Gachi.Text.Caption"
+                android:layout_marginTop="1dp"
+                tools:text="10분 전 · 역삼동" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- 사진 있는 글 -->
+    <site.gachijoopging.app.ui.common.ClipOutlineFrameLayout
+        android:id="@+id/photoFrame"
+        android:layout_width="match_parent"
+        android:layout_height="190dp"
+        android:background="@drawable/bg_photo_placeholder">
+
+        <ImageView
+            android:id="@+id/photo"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:contentDescription="@string/cd_post_photo"
+            android:scaleType="centerCrop"
+            android:visibility="gone" />
+
+        <ImageView
+            android:id="@+id/photoEmoji"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_gravity="center"
+            android:importantForAccessibility="no"
+            android:src="@drawable/ic_photo"
+            app:tint="@color/gachi_ink_65" />
+
+        <TextView
+            android:id="@+id/photoBadge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom|end"
+            android:layout_margin="@dimen/space_md"
+            android:background="@drawable/bg_pill_overlay"
+            android:paddingStart="@dimen/space_md"
+            android:paddingTop="@dimen/space_xs"
+            android:paddingEnd="@dimen/space_md"
+            android:paddingBottom="@dimen/space_xs"
+            android:textColor="@color/gachi_on_dark"
+            android:textSize="@dimen/text_label"
+            android:textStyle="bold"
+            android:visibility="gone" />
+    </site.gachijoopging.app.ui.common.ClipOutlineFrameLayout>
+
+    <TextView
+        android:id="@+id/text"
+        style="@style/Gachi.Text.Body"
+        android:layout_width="match_parent"
+        android:paddingStart="@dimen/space_xs"
+        android:paddingTop="@dimen/space_md"
+        android:paddingEnd="@dimen/space_xs"
+        android:paddingBottom="@dimen/space_xs" />
+
+    <!-- 사진 없는 글 -->
+    <LinearLayout
+        android:id="@+id/textOnlyBox"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bg_tile"
+        android:orientation="vertical"
+        android:paddingStart="@dimen/space_lg"
+        android:paddingTop="@dimen/space_md"
+        android:paddingEnd="@dimen/space_lg"
+        android:paddingBottom="@dimen/space_md"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/textOnly"
+            style="@style/Gachi.Text.Body"
+            android:layout_width="match_parent"
+            android:ellipsize="end"
+            android:maxLines="3" />
+
+        <TextView
+            style="@style/Gachi.Text.Caption.Strong"
+            android:layout_marginTop="@dimen/space_sm"
+            android:text="@string/feed_view_all"
+            android:textColor="@color/gachi_green_text" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:paddingStart="@dimen/space_xs"
+        android:paddingTop="@dimen/space_md"
+        android:paddingEnd="@dimen/space_xs">
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/thanksButton"
+            style="@style/Gachi.Chip.Choice"
+            app:drawableTint="@color/selector_chip_text"
+            android:drawableStart="@drawable/ic_heart_small"
+            android:drawablePadding="6dp" />
+
+        <!--
+          '고마워요' 와 나란히 놓이는 같은 층위의 액션이라 같은 칩 스타일을 씁니다.
+          이전에는 bg_chip_info(하늘색)로 덮어써서, 올리브 칩 바로 옆에 브랜드 밖 색이
+          붙어 있었습니다. 하늘색은 정보 상태 전용입니다 (colors.xml 참고).
+        -->
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/commentButton"
+            style="@style/Gachi.Chip.Choice"
+            app:drawableTint="@color/selector_chip_text"
+            android:layout_marginStart="@dimen/space_sm"
+            android:drawableStart="@drawable/ic_comment_small"
+            android:drawablePadding="6dp" />
+    </LinearLayout>
+</LinearLayout>

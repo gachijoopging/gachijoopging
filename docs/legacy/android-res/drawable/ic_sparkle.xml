@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- AI 힌트용 반짝임 — 이모지(✨) 대체. 채움형이라 틴트가 그대로 색이 된다. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="@color/gachi_ink">
+    <path
+        android:fillColor="#FF262A0E"
+        android:pathData="M11 2.5 Q12 9 18.5 10 Q12 11 11 17.5 Q10 11 3.5 10 Q10 9 11 2.5 Z M18 14.5 Q18.4 17.6 21.5 18 Q18.4 18.4 18 21.5 Q17.6 18.4 14.5 18 Q17.6 17.6 18 14.5 Z" />
+</vector>
