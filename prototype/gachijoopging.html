@@ -127,8 +127,7 @@
   <script>
     'use strict'
 
-    const initialScreen = new URLSearchParams(location.search).get('screen') || '1-1'
-    const state = { currentScreenId: initialScreen, history: [initialScreen], role: '크루원', viewState: '기본', sheet: null, invitePreview: false, resetSent: false, pickupCount: 1, profileTab: '기록', feedTab: '전체' }
+    const state = { currentScreenId: '1-1', history: ['1-1'], role: '크루원', viewState: '기본', sheet: null, invitePreview: false, resetSent: false, pickupCount: 1, profileTab: '기록', feedTab: '전체' }
     const mock = { crew: '한강줍깅크루', leader: '관열', member: '민지', post: '오늘 아침 한강을 걸으며 플로깅했어요.', activity: '여의도 한강공원 아침 활동' }
     const app = document.getElementById('app')
     const reviewPanel = document.getElementById('review-panel')
