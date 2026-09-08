@@ -52,13 +52,17 @@ erDiagram
 | email | text | UNIQUE, null 가능(소셜 전용) |
 | password_hash | text | |
 | kakao_id · google_sub | text | 각각 UNIQUE |
-| nickname | text | UNIQUE NOT NULL |
+| nickname | text | UNIQUE. 미완료 소셜 가입은 null, 저장 완료 후 필수. API profileComplete는 이 값의 설정 여부로 파생 |
 | intro | text | NOT NULL DEFAULT '' |
 | photo_media_id | uuid | → media |
 | share_location_default | boolean | NOT NULL DEFAULT true — 활동 시작 시트의 초기값 |
 | notify_activity_start | boolean | NOT NULL DEFAULT true — 팔로우 알림 전체 스위치 |
 | status | text | ACTIVE · DELETED |
 | created_at · updated_at · deleted_at | timestamptz | |
+
+약관·개인정보의 필수/선택 동의는 가입 완료 전 필요하나 실제 전문·버전·동의 저장/조회 계약은 미정이다. 닉네임 완료 상태로 동의 완료를 대신하지 않으며 동의 테이블·필드는 별도 설계 의존성으로 남긴다.
+
+비밀번호 재설정 성공 시 모든 기기의 access/refresh 세션을 무효화하고 재로그인을 요구한다. 소셜 전용 계정에 새 비밀번호를 만드는 기능은 없다. 세션 무효화의 실제 저장/검증 방식은 구현에서 결정한다.
 
 **refresh_tokens** · **password_reset_tokens** · **devices** — 옛 것 그대로. `devices.platform` 은 `ANDROID`(iOS 는 이후).
 
@@ -88,7 +92,9 @@ erDiagram
 | joined_at | timestamptz | NOT NULL |
 | | | PK (crew_id, user_id) |
 
-추방·탈퇴로 크루원이 0명이 되면 크루를 소프트 삭제한다. 추방된 사람도 다시 가입 신청할 수 있고 승인은 크루장 몫이다.
+혼자 남은 크루장은 해산 확인 후 크루 나가기·회원 탈퇴가 가능하며 크루를 소프트 삭제한다. 다른 크루원이 있으면 먼저 위임한다. 진행 중 활동이나 계정별 로컬 미동기화 활동이 있으면 나가기·회원 탈퇴·로그아웃을 막는다. 크루 탈퇴 후에도 본인의 이전 크루 활동은 소속 없이 조회 가능하다.
+
+거절·추방된 사람도 현재 유효한 초대 코드로 다시 신청할 수 있다. 코드 재발급은 옛 코드의 신규 신청만 막고 기존 PENDING 신청은 보존한다.
 
 **crew_join_requests**
 
@@ -110,7 +116,7 @@ erDiagram
 | follower_id · followee_id | → users, PK (둘), CHECK 자기 자신 아님 |
 | created_at | |
 
-**blocks** — 옛 것 그대로.
+**blocks** — 한 방향. 차단자의 개인 게시물·댓글·채팅·위치 조회에서 대상만 숨긴다. 상대방 조회에 대칭 적용하지 않는다. 공식 공지와 필요한 크루장 관리 정보는 유지한다.
 
 ### 활동
 
@@ -126,8 +132,10 @@ erDiagram
 | ended_at | timestamptz | ENDED 면 NOT NULL |
 | duration_sec | int | 일시정지 제외한 누적(Q30) |
 | paused_sec | int | 일시정지 누적 |
+| paused | boolean | NOT NULL DEFAULT false. 재실행 상태 복원; 종료 시 false |
+| paused_at | timestamptz | 일시정지 시작 시각. 재개·종료 시 null |
 | distance_m | int | 필터·걸음수 보정 뒤 값(Q31) |
-| steps | int | Health Connect 걸음수. 없으면 null. 보정 근거를 남긴다 |
+| steps | int | 선택 측정값, 미측정 null. 일시정지 걸음수 제외. 권한 부재·비보행 활동도 저장하며 사용할 수 없는 0/null로 GPS 보정하지 않음 |
 | route | geometry(LineString, 4326) | |
 | location_shared | boolean | NOT NULL — 시작 시트의 선택(Q16) |
 | item_count | int | 줍기 수량 합 |
@@ -141,10 +149,10 @@ erDiagram
 
 | 컬럼 | 타입 | 제약 |
 |---|---|---|
-| id | bigint | PK |
+| id | uuid | PK. 앱의 ItemInput.id 그대로; 동일 UUID 재전송 멱등 |
 | activity_id | uuid | NOT NULL → activities |
 | photo_id | uuid | → activity_photos, **null 가능** |
-| bbox_x·y·w·h | real | photo_id 있을 때만. CHECK (photo_id IS NULL) = (bbox_x IS NULL) |
+| bbox_x·y·w·h | real | 좌표는 전부 null 또는 전부 설정. 설정 시 photo_id 필수. 사진 업로드 후 수동 분류는 bbox 없이 허용 |
 | ai_predicted_category | text | 7종 |
 | ai_confidence | real | |
 | final_category | text | 7종 NOT NULL |
@@ -152,7 +160,7 @@ erDiagram
 | unclassified | boolean | NOT NULL |
 | source | text | AI · MANUAL |
 
-`pickup_point_id` 는 동네 지도용이라 뺀다.
+`pickup_point_id` 는 동네 지도용이라 뺀다. 빠른 줍기는 앱이 UUID를 즉시 영속 저장 후 전송한다. 되돌리기는 미전송 건 취소 또는 저장된 UUID 삭제다. 종료 전에 줍기 큐를 먼저 처리하고, 같은 활동 UUID 종료 재전송은 기존 결과 반환 및 집계 중복 방지. 이전 종료 동기화 전 새 활동을 시작하지 않는다.
 
 **live_locations** — 활동 중인 크루원의 현재 위치(Q16). 활동 종료 때 행을 지운다. 갱신이 5초마다라 Redis 로 옮겨도 된다. 우선 테이블로 두고 부하가 보이면 바꾼다.
 
@@ -161,10 +169,12 @@ erDiagram
 | user_id | PK → users |
 | activity_id | → activities |
 | crew_id | 조회 키 |
-| point | geometry(Point, 4326) |
+| point | geometry(Point, 4326). 대상이 IN_PROGRESS이고 location_shared=true인 경우만 제공 |
 | paused | boolean |
 | distance_m · item_count · elapsed_sec | 목록 화면(2-2) 표시용 |
 | updated_at | |
+
+조회자는 활동 중일 필요 없다. 일시정지 중에도 위치 공유·줍기는 가능하되 거리·시간·걸음수 누적은 멈춘다.
 
 ### 피드
 
@@ -193,8 +203,9 @@ erDiagram
 | author_id | uuid | NOT NULL |
 | title | text | ≤ 100 |
 | body | text | ≤ 3000 |
-| pinned | boolean | NOT NULL DEFAULT false |
 | created_at · updated_at · deleted_at | timestamptz | |
+
+삭제되지 않은 최신 공지 한 건을 자동 노출한다. 수동 고정 컬럼은 없으며 API `pinned`/`pinnedNotice`는 최신 공지 여부/내용을 파생한다.
 
 **notice_comments** — `comments` 와 같은 모양, `notice_id`.
 
@@ -212,9 +223,11 @@ erDiagram
 | reason | SPAM · HATE · INAPPROPRIATE_PHOTO · PRIVACY · OTHER |
 | memo | |
 | status | PENDING · RESOLVED |
-| result | DELETE · DISMISS (Q39). 사용자 신고는 추방으로 이어지므로 결과 없이 RESOLVED |
+| result | DELETE · DISMISS (Q39). 사용자 추방 시 해당 크루·대상의 PENDING USER 신고를 모두 RESOLVED 처리(결과 null). USER 무조치는 DISMISS |
 | resolved_by · resolved_at | |
 | | UNIQUE (reporter_id, target_type, target_id) |
+
+신고 처리·추방 시 각 신고자에게 결과 `REPORT_RESOLVED` 알림을 보낸다. 결과 설명은 title/detail에 담고 알림 목록으로 이동한다.
 
 ### 알림
 
@@ -224,7 +237,7 @@ erDiagram
 |---|---|
 | id | PK |
 | user_id | 받는 사람 |
-| type | JOIN_REQUEST · JOIN_APPROVED · JOIN_REJECTED · NOTICE · COMMENT · CHAT · ACTIVITY_STARTED · REPORT · POST_REMOVED |
+| type | JOIN_REQUEST · JOIN_APPROVED · JOIN_REJECTED · NOTICE · COMMENT · CHAT · ACTIVITY_STARTED · REPORT · REPORT_RESOLVED · POST_REMOVED |
 | title · detail | |
 | unread | |
 | target_type · target_id | 이동 대상(2-3 의 규칙) |
@@ -232,7 +245,7 @@ erDiagram
 
 ## 회원 탈퇴 때 (Q32)
 
-`users.status = DELETED`, 닉네임·이메일·소셜 식별자·사진을 지운다. `activities` 는 행을 지우되 크루 합산은 `activities` 가 아닌 곳에서 세지 않으므로 **삭제 전 크루별·일별 합산을 `crew_daily_stats`(crew_id, date, item_count, distance_m, by_category) 에 적립**해 둔다. 이 표는 홈 카드·캐릭터·크루 기록의 집계 원본이기도 해서 활동 종료마다 갱신한다. `posts` · `comments` 는 남기고 작성자 표시만 "탈퇴한 크루원" 으로.
+`users.status = DELETED`, 닉네임·이메일·소셜 식별자·사진을 지운다. `activities` 는 행을 지우되 크루 합산을 보존하기 위해 **크루별·일별 합산을 `crew_daily_stats`(crew_id, date, item_count, distance_m, duration_sec, activity_count, by_category) 에 적립**해 둔다. 이 표는 홈 카드·캐릭터·크루 기록의 집계 원본이며 활동 종료 시 멱등 갱신한다. 회원 탈퇴 시 이미 반영된 활동을 재가산하지 않고 보존한다. 시간·활동 횟수도 삭제 후 보존한다. 날짜는 KST, 주간은 이번 월요일부터, 월간은 이번 달 1일부터이며 ALL 추이는 월별이다. 순위는 줍기 수량 기준 공동 순위, 달력은 사람 수 대신 활동 횟수다. `posts` · `comments` 는 남기고 작성자 표시만 "탈퇴한 크루원" 으로.
 
 ## 만들지 않는 옛 테이블
 

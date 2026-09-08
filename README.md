@@ -6,7 +6,7 @@
 
 ```
 app/             React Native 앱 — 1차는 Android
-backend/         Spring Boot 3.5 · Java 21 · Flyway (옛 모노레포에서 복사, 끌 것을 끈 상태)
+backend/         Spring Boot 3.5 · Java 21 · Flyway (global·auth·media 이관, 나머지는 새로 작성)
 design-system/   토큰 · 컴포넌트 · 캐릭터 에셋. 앱이 의존한다
 ai/              추론 서버(FastAPI)·모델 학습. 담당자 영역. 가중치·데이터셋은 git 밖
 infra/           (미결) 서버 구성이 정해지면 여기에
@@ -32,7 +32,7 @@ CONTEXT.md       용어집. 코드·문서·대화의 말은 여기 것을 쓴�
 
 ## 진행 순서
 
-1. 계약(`openapi.yaml` · `소켓.md`) — 완료
+1. 계약(`openapi.yaml` · `소켓.md`) — 화면 합의 반영, 동의 저장 계약은 준비 중
 2. 앱 프론트를 계약의 `example` 로 완성
 3. 백엔드 — 가져온 3영역 잇기 + 나머지 새로 쓰기
 4. 연결 · 테스트 · 마무리
@@ -56,4 +56,4 @@ git config --global core.longpaths true
 - 로컬은 되는데 CI 만 깨진다 → 대소문자
 - `.sh` 가 EC2 에서 안 돈다 → CRLF 또는 실행 권한
 - 로그인은 되는데 목록이 비었다 → 앱이 보는 서버 주소(`www` 인지, localhost 인지)
-- 배포 뒤 502 → `deploy.sh` 를 안 썼다. `docs/운영.md`
+- 배포 구성·장애 대응 → `docs/운영.md` (신규 서버 구성 방식은 미결)
