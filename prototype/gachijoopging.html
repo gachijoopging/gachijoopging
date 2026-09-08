@@ -264,7 +264,7 @@
       return page('크루 가입하기', '', [stack(content)])
     }
     function renderPending() { return page('가입 신청 대기', '', [stack([text('div', '⌛', 'brand'), text('h2', '크루장 승인을 기다리고 있어요', 'display'), card([text('strong', mock.crew), text('p', '가입 신청을 보냈어요', 'subtle')]), banner('크루장이 승인하면 크루원이 돼요. 앱을 닫아도 신청은 그대로 남아요.'), button('신청 취소', () => confirmSheet('가입 신청을 취소할까요?', '다시 가입하려면 초대 코드를 입력해야 해요.', () => navigate('1-6', { replace: true }), '신청 취소'), 'ghost'), button('승인 상태 확인', () => navigate('2-1', { replace: true }), 'soft')])], { back: false }) }
-    function renderLocationPermission() { return page('위치 권한이 필요해요', '', [stack([text('h2', '활동 경로와 거리를 기록해요', 'display'), text('p', '위치 공유를 켜면 크루원에게 내 위치를 보여요. 다른 탭은 지금도 이용할 수 있어요.', 'subtle'), button('위치 권한 허용', back), button('나중에', back, 'ghost')])]) }
+    function renderLocationPermission() { return page('위치 권한이 필요해요', '', [stack([text('h2', '활동 경로와 거리를 기록해요', 'display'), text('p', '위치 공유를 켜면 크루원에게 내 위치를 보여요. 다른 탭은 지금도 이용할 수 있어요.', 'subtle'), banner('활동을 시작할 때만 정확한 위치를 요청해요.'), button('위치 권한 허용', back), button('나중에', back, 'ghost')])]) }
     function renderHome() {
       const spark = element('div', { className: 'spark', ariaLabel: '최근 7일 줍기 추이' }, [12, 30, 4, 41, 25, 38, 22].map((value) => element('span', { className: '', text: '' }, [])))
       ;[12, 30, 4, 41, 25, 38, 22].forEach((value, index) => { spark.children[index].style.height = `${Math.max(4, value)}px` })
