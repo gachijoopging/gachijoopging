@@ -31,11 +31,11 @@
     button, input, select { min-height: var(--min-touch); }
     button { cursor: pointer; }
     button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 3px solid var(--deep); outline-offset: 2px; }
-    .prototype-frame { display: grid; grid-template-columns: minmax(0, 390px) 260px; gap: 24px; width: min(100% - 32px, 700px); margin: 24px auto; align-items: start; }
-    #app { min-height: 844px; overflow: hidden; background: var(--surface); border: 1px solid var(--border); border-radius: 34px; box-shadow: var(--shadow-overlay); }
+    .prototype-frame { display: grid; grid-template-columns: minmax(0, 430px) 260px; gap: 24px; width: min(100% - 32px, 730px); margin: 24px auto; align-items: start; }
+    #app { min-height: 932px; overflow: hidden; background: var(--surface); border: 1px solid var(--border); border-radius: 34px; box-shadow: var(--shadow-overlay); }
     #review-panel { position: sticky; top: 24px; min-height: 160px; padding: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--card-radius); box-shadow: var(--shadow-card); }
     #sheet-root:empty { display: none; }
-    .screen { display: flex; min-height: 844px; flex-direction: column; gap: 20px; overflow-x: hidden; padding: var(--screen-padding); }
+    .screen { display: flex; min-height: 932px; flex-direction: column; gap: 24px; overflow-x: hidden; padding: var(--screen-padding); }
     .screen-header, .list-row, .nav, .split, .button-row, .meta { display: flex; align-items: center; }
     .screen-header { justify-content: space-between; gap: 8px; }
     .screen-header h1 { margin: 0; font-size: 20px; }
@@ -81,7 +81,7 @@
     .review-select { width: 100%; margin-top: 8px; padding: 8px; border: 1px solid var(--border); border-radius: 12px; color: var(--ink); background: var(--surface); }
     .review-button { margin-top: 8px; }
     .sheet-scrim { position: fixed; inset: 0; z-index: 10; display: grid; align-items: end; background: rgba(38, 42, 14, 0.45); }
-    .sheet { width: min(100%, 390px); margin: 0 auto; padding: 24px 20px; background: var(--surface); border-radius: var(--sheet-radius) var(--sheet-radius) 0 0; box-shadow: var(--shadow-overlay); }
+    .sheet { width: min(100%, 430px); margin: 0 auto; padding: 28px 24px; background: var(--surface); border-radius: var(--sheet-radius) var(--sheet-radius) 0 0; box-shadow: var(--shadow-overlay); }
     .screen-list { max-height: 55vh; overflow-y: auto; }
     .calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
     .calendar button { min-width: 0; border: 1px solid var(--border); border-radius: 10px; color: var(--ink); background: var(--surface); }
@@ -252,8 +252,19 @@
       if (state.resetSent) return page('비밀번호 재설정', '계정 복구', [stack([text('h2', '재설정 요청을 접수했어요', 'display'), text('p', '계정이 있으면 메일로 받은 코드를 확인해 주세요.', 'subtle'), button('코드 입력하기', () => openSheet('password-code')), button('메일 다시 보내기', () => {}, 'ghost')])])
       return page('비밀번호 재설정', '계정 복구', [stack([text('h2', '가입한 이메일을 알려 주세요', 'display'), field('이메일', 'you@example.com', 'email'), button('재설정 메일 보내기', () => { state.resetSent = true; renderApp() })])])
     }
-    function renderCrewChoice() { return page('크루 시작하기', '', [stack([element('span', { className: 'chip', text: '크루 시작하기' }), text('h2', '함께 줍는 크루를 선택해 주세요', 'display'), listRow('새 크루 만들기', '이름만 정하면 바로 시작해요.', () => navigate('1-7')), listRow('초대 코드로 가입하기', '크루장에게 받은 코드를 입력해요.', () => navigate('1-8')), text('p', '크루장이 승인하면 크루원이 돼요.', 'subtle'), button('내 활동 기록 보기', () => navigate('5-5'), 'ghost')])]) }
-    function renderCrewCreate() { return page('새 크루 만들기', '', [stack([field('크루 이름', mock.crew), card([text('strong', '크루를 만들면 내가 크루장이 돼요.'), text('p', '초대 코드는 자동으로 만들어져요. 소개와 목표는 나중에 정할 수 있어요.', 'caption')]), button('크루 만들기', () => navigate('2-1', { replace: true }))])]) }
+    function renderCrewChoice() {
+      return page('크루 시작하기', '', [stack([
+        element('span', { className: 'chip', text: '크루 시작하기' }), text('h2', '함께 줍는 크루를 선택해 주세요', 'display'), text('p', '한 사람은 크루 하나에만 소속될 수 있어요.', 'subtle'),
+        card([text('strong', '＋  새 크루 만들기'), text('p', '이름만 정하면 바로 시작해요.', 'caption'), button('새 크루 만들기 ›', () => navigate('1-7'), 'ghost')]),
+        card([text('strong', '#  초대 코드로 가입하기'), text('p', '크루장에게 받은 코드를 입력해요.', 'caption'), button('초대 코드 입력 ›', () => navigate('1-8'), 'ghost')]),
+        banner('크루장이 승인하면 크루원이 돼요.'), button('내 활동 기록 보기', () => navigate('5-5'), 'ghost'),
+      ])])
+    }
+    function renderCrewCreate() {
+      return page('새 크루 만들기', '', [stack([
+        field('크루 이름', mock.crew), text('p', '2~20자로 입력해 주세요.', 'caption'), banner('크루를 만들면 내가 크루장이 돼요. 초대 코드는 자동으로 만들어져요. 소개·사진·목표는 나중에 정할 수 있어요.'), button('크루 만들기', () => navigate('2-1', { replace: true })),
+      ])])
+    }
     function renderInviteCode() {
       const content = state.invitePreview ? [
         element('span', { className: 'chip', text: '크루 가입하기' }), text('h2', '이 크루가 맞나요?', 'display'), text('p', '크루장이 승인하면 크루원이 돼요.', 'subtle'),
