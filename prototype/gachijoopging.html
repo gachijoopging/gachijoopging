@@ -278,8 +278,12 @@
         ]),
       ])])
     }
-    function renderActiveMembers() { return page('활동 중인 크루원', '', [stack([mapPlaceholder('위치 공유를 켠 활동 중인 크루원'), listRow('민지', '활동 중 · 1.2km', () => navigate('5-4')), listRow('도윤', '일시정지 중 · 0.8km', () => navigate('5-4'))])]) }
-    function renderNotifications() { return page('알림', '', [stack([listRow('가입 신청이 도착했어요', '한강줍깅크루 · 방금 전', () => navigate('3-8')), listRow('게시물에 댓글이 달렸어요', '민지 · 10분 전', () => navigate('5-2')), listRow('크루 채팅 새 메시지', '도윤 · 1시간 전', () => navigate('3-7')), leaderOnly(listRow('신고 처리가 필요해요', '처리 대기 1건', () => navigate('6-2')))])]) }
+    function memberLiveRow(name, detail, paused = false) {
+      return card([element('div', { className: 'split' }, [element('div', { className: 'button-row' }, [avatar(name), stack([element('div', { className: 'button-row' }, [text('strong', name), paused ? badge('일시정지 중') : null]), text('p', detail, 'caption')])]), button('프로필 ›', () => navigate('5-4'), 'ghost')])])
+    }
+    function renderActiveMembers() { return page('활동 중인 크루원', '2명', [stack([mapPlaceholder('민지 1.2km · 도윤 0.8km'), memberLiveRow('민지', '활동 중 · 1.2km · 줍기 9개'), memberLiveRow('도윤', '0.8km · 줍기 4개', true)])]) }
+    function notificationRow(icon, title, detail, onClick, unread = true) { return element('button', { className: 'list-row', type: 'button', onClick }, [element('div', { className: 'button-row' }, [element('span', { className: 'avatar', text: icon }), stack([text('strong', title), text('p', detail, 'caption')])]), unread ? element('span', { className: 'dot' }) : null]) }
+    function renderNotifications() { return page('알림', '', [stack([leaderOnly(card([text('strong', '처리 대기'), notificationRow('✓', '가입 신청이 도착했어요', '한강줍깅크루 · 방금 전', () => navigate('3-8')), notificationRow('!', '신고 처리가 필요해요', '처리 대기 1건', () => navigate('6-2'))])), notificationRow('💬', '게시물에 댓글이 달렸어요', '민지 · 10분 전', () => navigate('5-2')), notificationRow('✉', '크루 채팅 새 메시지', '도윤 · 1시간 전', () => navigate('3-7')), notificationRow('🌱', '민지님이 활동을 시작했어요', '활동 중인 크루원 보기', () => navigate('2-2'), false)])]) }
 
     function renderCrewHome() {
       return page('모이깅', '', [stack([
