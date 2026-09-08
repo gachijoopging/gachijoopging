@@ -602,7 +602,7 @@
       } else if (state.sheet.kind === 'password-code') {
         dialog.append(text('h2', '새 비밀번호 설정', 'section-title'), field('인증 코드', ''), field('새 비밀번호', '', 'password'), button('비밀번호 변경', () => { state.resetSent = false; closeSheet(); navigate('1-2', { replace: true }) }))
       } else if (state.sheet.kind === 'activity-start') {
-        dialog.append(text('h2', '활동 시작', 'section-title'), text('p', '위치 공유를 선택하고 바로 시작해요.', 'subtle'), button('위치 권한 안내', () => navigate('1-10'), 'ghost'), button('활동 시작', () => navigate('4-3')))
+        dialog.append(text('h2', '활동을 시작할까요?', 'section-title'), card([text('strong', '크루원에게 위치 공유'), text('p', '켜면 활동 중 내 위치와 경로가 크루원 지도에 보여요. 꺼도 내 기록에는 경로가 남아요.', 'subtle'), button('위치 공유 켬', () => {}, 'soft')]), banner('위치를 잡고 있어요…'), listRow('걸음수 측정 안 됨', '연결 · 선택', () => {}), text('p', '나를 팔로우한 크루원에게 시작 알림이 가요.', 'caption'), button('위치 권한 안내', () => navigate('1-10'), 'ghost'), button('줍깅 시작', () => navigate('4-3')))
       } else if (state.sheet.kind === 'quick-pickup') {
         dialog.append(text('h2', '이번 활동 줍기 17개', 'section-title'), text('p', '하나 담기 또는 수량을 입력하세요', 'subtle'), categoryGrid(), banner(`플라스틱 ${state.pickupCount}개 담았어요 · 저장됨`), button('되돌리기', () => { state.pickupCount = 0; renderSheet() }, 'ghost'), button('닫기', closeSheet))
       } else if (state.sheet.kind === 'camera-preview') {
