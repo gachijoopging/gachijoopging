@@ -31,11 +31,11 @@
     button, input, select { min-height: var(--min-touch); }
     button { cursor: pointer; }
     button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 3px solid var(--deep); outline-offset: 2px; }
-    .prototype-frame { display: grid; grid-template-columns: minmax(0, 430px) 260px; gap: 24px; width: min(100% - 32px, 730px); margin: 24px auto; align-items: start; }
-    #app { min-height: 932px; overflow: hidden; background: var(--surface); border: 1px solid var(--border); border-radius: 34px; box-shadow: var(--shadow-overlay); }
+    .prototype-frame { display: grid; grid-template-columns: minmax(0, 360px) 260px; gap: 24px; width: min(100% - 32px, 660px); margin: 24px auto; align-items: start; }
+    #app { min-height: 760px; overflow: hidden; background: var(--surface); border: 1px solid var(--border); border-radius: 34px; box-shadow: var(--shadow-overlay); }
     #review-panel { position: sticky; top: 24px; min-height: 160px; padding: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--card-radius); box-shadow: var(--shadow-card); }
     #sheet-root:empty { display: none; }
-    .screen { display: flex; min-height: 932px; flex-direction: column; gap: 24px; overflow-x: hidden; padding: var(--screen-padding); }
+    .screen { display: flex; min-height: 760px; flex-direction: column; gap: 20px; overflow-x: hidden; padding: var(--screen-padding); }
     .screen-header, .list-row, .nav, .split, .button-row, .meta { display: flex; align-items: center; }
     .screen-header { justify-content: space-between; gap: 8px; }
     .screen-header h1 { margin: 0; font-size: 20px; }
@@ -81,7 +81,7 @@
     .review-select { width: 100%; margin-top: 8px; padding: 8px; border: 1px solid var(--border); border-radius: 12px; color: var(--ink); background: var(--surface); }
     .review-button { margin-top: 8px; }
     .sheet-scrim { position: fixed; inset: 0; z-index: 10; display: grid; align-items: end; background: rgba(38, 42, 14, 0.45); }
-    .sheet { width: min(100%, 430px); margin: 0 auto; padding: 28px 24px; background: var(--surface); border-radius: var(--sheet-radius) var(--sheet-radius) 0 0; box-shadow: var(--shadow-overlay); }
+    .sheet { width: min(100%, 360px); margin: 0 auto; padding: 24px 20px; background: var(--surface); border-radius: var(--sheet-radius) var(--sheet-radius) 0 0; box-shadow: var(--shadow-overlay); }
     .screen-list { max-height: 55vh; overflow-y: auto; }
     .calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
     .calendar button { min-width: 0; border: 1px solid var(--border); border-radius: 10px; color: var(--ink); background: var(--surface); }
