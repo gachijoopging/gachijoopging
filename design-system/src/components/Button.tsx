@@ -14,7 +14,7 @@ import { useTheme, useRipple, pressedOpacity, depth } from '../theme.tsx';
 import { Txt, type TextVariant } from './Text.tsx';
 import { Icon, type IconName } from './Icon.tsx';
 
-export type ButtonVariant = 'primary' | 'soft' | 'kakao' | 'ghost';
+export type ButtonVariant = 'primary' | 'soft' | 'kakao' | 'ghost' | 'deep' | 'danger' | 'ghostDanger' | 'translucent';
 export type ButtonSize = 'lg' | 'md' | 'sm';
 
 /**
@@ -79,6 +79,14 @@ export function Button({
       borderWidth: borderWidth.hairline,
       borderColor: colors.border,
     },
+    deep: { backgroundColor: colors.deep },
+    danger: { backgroundColor: colors.error },
+    ghostDanger: {
+      backgroundColor: colors.transparent,
+      borderWidth: borderWidth.hairline,
+      borderColor: colors.error,
+    },
+    translucent: { backgroundColor: colors.surface85 },
   };
 
   const inkFor: Record<ButtonVariant, string> = {
@@ -86,6 +94,10 @@ export function Button({
     soft: colors.ink,
     kakao: colors.kakaoInk,
     ghost: colors.ink,
+    deep: colors.onDark,
+    danger: colors.onError,
+    ghostDanger: colors.error,
+    translucent: colors.ink,
   };
   // 원본에는 비활성 드로어블이 없습니다(bg_button_cta 가 존재하지 않는 파일을
   // 가리킵니다). track 채움 + muted 잉크로 새로 정의합니다.

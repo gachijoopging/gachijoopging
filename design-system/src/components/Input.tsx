@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { TextInput, View, type TextInputProps, type ViewStyle } from 'react-native';
 import { radius } from '../../tokens/radius.ts';
 import { space, size as sizes } from '../../tokens/spacing.ts';
@@ -13,6 +13,7 @@ export type FieldProps = Omit<TextInputProps, 'style'> & {
   error?: string;
   hint?: string;
   multiline?: boolean;
+  endAdornment?: ReactNode;
   style?: ViewStyle;
 };
 
@@ -28,6 +29,7 @@ export function Field({
   error,
   hint,
   multiline = false,
+  endAdornment,
   editable = true,
   style,
   onFocus,
@@ -52,6 +54,8 @@ export function Field({
     paddingVertical: multiline ? space.md : 0,
     minHeight: multiline ? 96 : sizes.iconButton,
     justifyContent: 'center',
+    flexDirection: 'row',
+    alignItems: multiline ? 'flex-start' : 'center',
   };
 
   return (
@@ -83,9 +87,11 @@ export function Field({
             textAlignVertical: multiline ? 'top' : 'center',
             minHeight: multiline ? 72 : undefined,
             paddingVertical: 0,
+            flex: 1,
           }}
           {...rest}
         />
+        {endAdornment ? <View style={{ marginLeft: space.sm }}>{endAdornment}</View> : null}
       </View>
       {error ? (
         <Txt variant="caption" tone="error">

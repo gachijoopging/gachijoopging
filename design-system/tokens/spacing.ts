@@ -47,6 +47,7 @@ export const size = {
   /** 최소 터치 영역. 보이는 원은 46 이고 2 는 인셋입니다 */
   iconButton: 48,
   avatarLg: 74,
+  avatarXl: 96,
   avatarMd: 42,
   avatarSm: 30,
   bottomNavHeight: 68,

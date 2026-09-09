@@ -20,8 +20,23 @@ test('declares offline token CSS', () => {
   assert.match(html, /--yellow:\s*#F4F04B/)
 })
 
+test('uses the reusable design-system visual primitives', () => {
+  assert.match(html, /@font-face\s*\{[\s\S]*?Pretendard-Regular\.ttf/)
+  assert.match(html, /font-family:\s*'Pretendard'/)
+  assert.match(html, /--surface-raised:\s*#FFFFFF/)
+  assert.match(html, /\.button--deep\s*\{/)
+  assert.match(html, /\.button--translucent\s*\{/)
+  assert.match(html, /\.field--error\s*\{/)
+  assert.match(html, /function field\(labelText, value = '', type = 'text', error = ''\)/)
+  assert.match(html, /field-error/)
+  assert.match(html, /state\.viewState === '오류' \? '인증 코드를 확인해 주세요\.' : ''/)
+  for (const primitive of ['button', 'iconButton', 'card', 'field', 'listRow', 'banner']) {
+    assert.match(html, new RegExp(`function ${primitive}\\(`))
+  }
+})
+
 test('registers every approved screen exactly once', () => {
-  const entries = [...html.matchAll(/id:\s*'([1-6]-\d+)'[\s\S]*?spec:\s*'(docs\/화면설계\/[^']+\.md)'/g)]
+  const entries = [...html.matchAll(/id:\s*'([1-6]-\d+)'[\s\S]*?spec:\s*'(docs\/screens\/[^']+\.md)'/g)]
   assert.equal(entries.length, 43)
   assert.equal(new Set(entries.map(([, id]) => id)).size, 43)
   assert.equal(new Set(entries.map(([, , spec]) => spec)).size, 43)
@@ -31,6 +46,15 @@ test('defines five tab roots', () => {
   for (const id of ['2-1', '5-1', '4-1', '3-1', '5-5']) {
     assert.match(html, new RegExp(`id: '${id}'`))
   }
+})
+
+test('uses a raised plogging action and shared overlay treatment', () => {
+  assert.match(html, /className: 'nav-start-action'/)
+  assert.match(html, /text: '줍깅 시작'/)
+  assert.match(html, /onClick: \(\) => openSheet\('activity-start'\)/)
+  assert.match(html, /\.nav-start-action\s*\{[\s\S]*?margin-top:\s*-\d+px/)
+  assert.match(html, /\.sheet-scrim\s*\{[\s\S]*?backdrop-filter:\s*blur\(/)
+  assert.match(html, /\.sheet\s*\{[\s\S]*?background:\s*var\(--surface-raised\)/)
 })
 
 test('defines every registered screen renderer', () => {
@@ -52,6 +76,9 @@ test('uses modal semantics and minimum touch targets', () => {
   assert.match(html, /setAttribute\('role', 'dialog'\)/)
   assert.match(html, /--min-touch:\s*48px/)
   assert.match(html, /min-height:\s*var\(--min-touch\)/)
+  assert.match(html, /\.tabs button\s*\{[^}]*min-height:\s*var\(--min-touch\)/)
+  assert.match(html, /event\.key === 'Escape'/)
+  assert.match(html, /event\.key !== 'Tab'/)
 })
 
 test('has valid inline JavaScript', () => {
