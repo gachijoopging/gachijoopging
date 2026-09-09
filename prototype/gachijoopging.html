@@ -83,11 +83,12 @@
     .nav { position: sticky; bottom: 0; justify-content: space-around; min-height: var(--nav-height); margin: auto -20px -20px; padding: 8px; background: var(--surface); border-top: 1px solid var(--border); }
     .nav button { min-width: 48px; color: var(--ink-muted); background: transparent; border: 0; }
     .nav button[aria-current="page"] { color: var(--deep); font-weight: 800; }
+    .nav-start-action { position: relative; z-index: 1; min-width: 84px !important; margin-top: -28px; padding: 12px 10px; border: 1px solid var(--surface) !important; border-radius: 999px; color: var(--ink) !important; background: linear-gradient(90deg, var(--lime), var(--yellow)) !important; box-shadow: var(--shadow-overlay); font-size: 12px; font-weight: 800; }
     .review-title { margin: 0 0 8px; font-size: 16px; }
     .review-select { width: 100%; margin-top: 8px; padding: 8px; border: 1px solid var(--border); border-radius: 12px; color: var(--ink); background: var(--surface); }
     .review-button { margin-top: 8px; }
-    .sheet-scrim { position: fixed; inset: 0; z-index: 10; display: grid; align-items: end; background: rgba(38, 42, 14, 0.45); }
-    .sheet { width: min(100%, 360px); margin: 0 auto; padding: 24px 20px; background: var(--surface); border-radius: var(--sheet-radius) var(--sheet-radius) 0 0; box-shadow: var(--shadow-overlay); }
+    .sheet-scrim { position: fixed; inset: 0; z-index: 10; display: grid; align-items: end; background: rgba(38, 42, 14, 0.45); backdrop-filter: blur(3px); }
+    .sheet { display: grid; gap: 12px; width: min(100%, 360px); max-height: calc(100vh - 24px); margin: 0 auto; padding: 24px 20px; overflow-y: auto; background: var(--surface-raised); border-radius: var(--sheet-radius) var(--sheet-radius) 0 0; box-shadow: var(--shadow-overlay); }
     .screen-list { max-height: 55vh; overflow-y: auto; }
     .calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
     .calendar button { min-width: 0; border: 1px solid var(--border); border-radius: 10px; color: var(--ink); background: var(--surface); }
@@ -608,7 +609,11 @@
       stateSelect.addEventListener('change', () => { state.viewState = stateSelect.value; renderApp() })
       reviewPanel.append(role, stateSelect, button('전체 화면', () => openSheet('screens'), 'ghost'))
     }
-    function renderBottomNav() { return element('nav', { className: 'nav', ariaLabel: '하단 탭' }, tabRoots.map(([label, id]) => element('button', { text: label, type: 'button', ariaCurrent: state.currentScreenId === id ? 'page' : null, onClick: () => navigate(id) }))) }
+    function renderBottomNav() {
+      return element('nav', { className: 'nav', ariaLabel: '하단 탭' }, tabRoots.map(([label, id]) => id === '4-1'
+        ? element('button', { className: 'nav-start-action', text: '줍깅 시작', type: 'button', ariaLabel: '줍깅 시작', onClick: () => openSheet('activity-start') })
+        : element('button', { text: label, type: 'button', ariaCurrent: state.currentScreenId === id ? 'page' : null, onClick: () => navigate(id) })))
+    }
     function renderSheet() {
       sheetRoot.replaceChildren()
       if (!state.sheet) return

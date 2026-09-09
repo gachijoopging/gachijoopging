@@ -45,6 +45,15 @@ test('defines five tab roots', () => {
   }
 })
 
+test('uses a raised plogging action and shared overlay treatment', () => {
+  assert.match(html, /className: 'nav-start-action'/)
+  assert.match(html, /text: '줍깅 시작'/)
+  assert.match(html, /onClick: \(\) => openSheet\('activity-start'\)/)
+  assert.match(html, /\.nav-start-action\s*\{[\s\S]*?margin-top:\s*-\d+px/)
+  assert.match(html, /\.sheet-scrim\s*\{[\s\S]*?backdrop-filter:\s*blur\(/)
+  assert.match(html, /\.sheet\s*\{[\s\S]*?background:\s*var\(--surface-raised\)/)
+})
+
 test('defines every registered screen renderer', () => {
   const entries = [...html.matchAll(/render:\s*(render\w+)/g)]
   assert.equal(entries.length, 43)
