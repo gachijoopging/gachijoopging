@@ -19,6 +19,7 @@ import { Icon, type IconName } from './Icon.tsx';
  */
 export type ChipTone =
   | 'lime'
+  | 'deep'
   | 'soft'
   | 'surface'
   | 'neutral'
@@ -43,6 +44,7 @@ function ChipBase({ label, tone = 'soft', icon, selected, onPress }: ChipProps) 
 
   const tones: Record<ChipTone, { bg: string; ink: string; border?: string }> = {
     lime: { bg: colors.lime, ink: colors.onLime },
+    deep: { bg: colors.deep, ink: colors.onDark },
     soft: { bg: colors.softChip, ink: colors.ink },
     surface: { bg: colors.surface, ink: colors.ink, border: colors.border },
     neutral: { bg: colors.neutral, ink: colors.neutralInk },

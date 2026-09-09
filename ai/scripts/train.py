@@ -5,14 +5,14 @@
     uv run python scripts/train.py --no-general   # GENERAL 뺀 변형 (⑫ A/B 의 B)
 
 **설정을 CLI 인자로 노출하지 않는다.** 아래 `TRAIN` 을 고쳐야 바뀌고, 그러면 diff 가 남아
-"변경점을 `실험기록.md` §4 에 적는다"는 약속이 지켜진다. `imgsz` 는 추론과 반드시 같아야 하는
+"변경점을 `experiment-log.md` §4 에 적는다"는 약속이 지켜진다. `imgsz` 는 추론과 반드시 같아야 하는
 **유일한 절대 조건**이라 특히 그렇다 — 인자로 열어 두면 서빙에 올릴 수 없는 run 이 만들어진다.
 
 두 플래그는 이 규칙의 예외가 아니다. **설정이 아니라 이름 붙은 변형을 고르고**, 고르는 축
-둘(에폭·데이터셋)은 `실험기록.md` §2·§3 이 이미 열로 갖고 있어 기록에서 사라지지 않는다.
+둘(에폭·데이터셋)은 `experiment-log.md` §2·§3 이 이미 열로 갖고 있어 기록에서 사라지지 않는다.
 
 **프리플라이트는 "에러 없이 조용히 틀리는" 것만 잡는다.** 하나라도 걸리면 학습을 시작하지
-않는다. 본학습은 **약 40분**이라(⑩ 실측 — `실험기록.md` §6) 태우는 비용이 근거는 아니다.
+않는다. 본학습은 **약 40분**이라(⑩ 실측 — `experiment-log.md` §6) 태우는 비용이 근거는 아니다.
 근거는 **클래스 순서가 어긋난 run 은 지표가 정상으로 보인다**는 것 — 결과만 봐서는 알 수 없다.
 """
 
@@ -34,7 +34,7 @@ from app.classes import CLASSES  # noqa: E402  (클래스 순서는 학습·서�
 
 AI_DIR = Path(__file__).resolve().parent.parent
 
-# `실험기록.md` §1 고정 설정. **여기는 사본이고 정본은 그쪽이다** —
+# `experiment-log.md` §1 고정 설정. **여기는 사본이고 정본은 그쪽이다** —
 # 바꿀 때는 그 파일 §4 의 해당 run "변경점" 에 이유를 함께 적는다.
 TRAIN: dict[str, int] = {
     "imgsz": 1024,
@@ -50,12 +50,12 @@ DATA_YAML = AI_DIR / "datasets" / "trash" / "data.yaml"
 # ⑫ A/B 의 B. `scripts/make_no_general.py` 가 만들고 **이름은 7개 그대로다** —
 # 다른 것은 `GENERAL` 라벨 줄이 없다는 것뿐이라 이미지 수 검사·클래스 검사가 그대로 산다.
 NOGEN_YAML = AI_DIR / "datasets" / "trash_nogen" / "data.yaml"
-# ⑩ 실측 피크 62.3 GiB (63,841 MiB) + 약간의 여유. `진행상황.md` §3.5.
+# ⑩ 실측 피크 62.3 GiB (63,841 MiB) + 약간의 여유. `progress.md` §3.5.
 # 작은 배치에서 뽑은 선형 추정(배치 1당 734MB → 46 GiB)은 34% 낮았다 — 그 값을 쓰지 않는다.
 # 문턱을 실측 피크에 딱 맞추면 안 된다: 모자라면 ultralytics 가 배치를 자동으로 줄여
 # (`trainer.py:523`) `batch=64` 라고 기록된 run 이 실제로는 다른 배치가 된다.
 NEED_GIB = 66
-EXPECTED_IMAGES = {"train": 1369, "val": 131}  # ⑨ 가 만든 수 (`진행상황.md` §3.3)
+EXPECTED_IMAGES = {"train": 1369, "val": 131}  # ⑨ 가 만든 수 (`progress.md` §3.3)
 
 _passed = 0
 _failed: list[str] = []
@@ -120,7 +120,7 @@ def preflight(data_yaml: Path) -> None:
     try:
         gib = free_gib(device)
         check(f"GPU {device} 여유 VRAM", gib >= NEED_GIB, f"{gib:.0f} GiB / 필요 {NEED_GIB}")
-        # `실험기록.md` §1 이 "학습 직전에 nvidia-smi 로 다시 확인" 이라고 적은 것을 여기서 한다.
+        # `experiment-log.md` §1 이 "학습 직전에 nvidia-smi 로 다시 확인" 이라고 적은 것을 여기서 한다.
         # 공유 머신이라 남의 프로세스가 언제든 들어온다.
     except (OSError, subprocess.CalledProcessError) as e:
         check(f"GPU {device} 조회", False, f"{type(e).__name__}: {e}")
@@ -137,7 +137,7 @@ def main() -> int:
 
     settings = TRAIN | ({"epochs": SMOKE_EPOCHS} if args.smoke else {})
     # 학습 **설정**은 여전히 CLI 로 안 연다 (위 docstring). 여기서 고르는 것은 데이터셋과
-    # run 이름뿐이고, 둘 다 `실험기록.md` §2·§3 이 이미 열로 갖고 있는 축이다.
+    # run 이름뿐이고, 둘 다 `experiment-log.md` §2·§3 이 이미 열로 갖고 있는 축이다.
     data_yaml = NOGEN_YAML if args.no_general else DATA_YAML
     run_name = ("smoke" if args.smoke else "train") + ("_nogen" if args.no_general else "")
 
@@ -167,7 +167,7 @@ def main() -> int:
     YOLO(str(WEIGHTS)).train(
         data=str(data_yaml),
         project=str(AI_DIR / "runs" / "detect"),  # 절대 경로여야 CWD 와 무관하게 여기 쓴다
-        name=run_name,  # run id = 이 디렉터리 이름 (`실험기록.md` §3)
+        name=run_name,  # run id = 이 디렉터리 이름 (`experiment-log.md` §3)
         **settings,
     )
     return 0

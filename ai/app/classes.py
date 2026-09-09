@@ -1,7 +1,7 @@
 """7종 카테고리.
 
 `CLASSES` 의 **순서가 곧 클래스 인덱스**이고 학습·서빙이 공유한다
-(`docs/openapi.yaml`, `진행상황.md` §3.1). 순서를 바꾸면 이미 학습한 weights 의
+(`docs/openapi.yaml`, `progress.md` §3.1). 순서를 바꾸면 이미 학습한 weights 의
 출력이 전부 다른 카테고리로 해석된다 — 에러 없이 조용히 틀린다.
 """
 
