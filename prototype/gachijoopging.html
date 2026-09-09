@@ -1,0 +1,670 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>가치줍깅 프로토타입</title>
+  <style>
+    @font-face { font-family: 'Pretendard'; src: url('../design-system/assets/fonts/Pretendard-Regular.ttf') format('truetype'); font-weight: 400; font-style: normal; font-display: swap; }
+    @font-face { font-family: 'Pretendard'; src: url('../design-system/assets/fonts/Pretendard-Bold.ttf') format('truetype'); font-weight: 700 900; font-style: normal; font-display: swap; }
+    :root {
+      --bg: #DCE6A6;
+      --surface: #FDFDF3;
+      --surface-raised: #FFFFFF;
+      --ink: #262A0E;
+      --ink-muted: #5C6142;
+      --deep: #3D431F;
+      --lime: #C9E345;
+      --yellow: #F4F04B;
+      --border: #DEE3BD;
+      --danger: #C44343;
+      --warn: #8C5316;
+      --screen-padding: 20px;
+      --min-touch: 48px;
+      --nav-height: 68px;
+      --card-radius: 26px;
+      --sheet-radius: 30px;
+      --shadow-card: 0 2px 8px rgba(101, 114, 28, 0.12);
+      --shadow-overlay: 0 12px 32px rgba(101, 114, 28, 0.24);
+    }
+    * { box-sizing: border-box; }
+    body { min-height: 100vh; margin: 0; background: var(--bg); color: var(--ink); font-family: 'Pretendard', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    ::selection { color: var(--ink); background: var(--lime); }
+    button, input, textarea, select { font: inherit; }
+    button, input, select { min-height: var(--min-touch); }
+    button { cursor: pointer; }
+    button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 3px solid var(--deep); outline-offset: 2px; }
+    .prototype-frame { display: grid; grid-template-columns: 260px minmax(0, 360px); gap: 24px; width: min(100% - 32px, 660px); margin: 24px auto; align-items: start; }
+    #app { min-height: 760px; overflow: hidden; background: var(--surface); border: 1px solid var(--border); border-radius: 34px; box-shadow: var(--shadow-overlay); }
+    #review-panel { position: sticky; top: 24px; min-height: 160px; padding: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--card-radius); box-shadow: var(--shadow-card); }
+    #sheet-root:empty { display: none; }
+    .screen { display: flex; min-height: 760px; flex-direction: column; gap: 20px; overflow-x: hidden; padding: var(--screen-padding); }
+    .screen-header, .list-row, .nav, .split, .button-row, .meta { display: flex; align-items: center; }
+    .screen-header { justify-content: space-between; gap: 8px; }
+    .screen-header h1 { margin: 0; font-size: 20px; font-weight: 700; }
+    .screen-header p, .subtle, .caption { margin: 0; color: var(--ink-muted); }
+    .subtle { min-width: 0; overflow-wrap: anywhere; line-height: 1.55; }
+    .caption { font-size: 13px; }
+    .display { margin: 0; font-size: 26px; line-height: 1.25; letter-spacing: -0.03em; overflow-wrap: anywhere; }
+    .section-title { margin: 0; font-size: 16px; }
+    .card { padding: 16px; background: var(--surface-raised); border: 1px solid var(--border); border-radius: var(--card-radius); box-shadow: var(--shadow-card); }
+    .stack { display: grid; gap: 12px; min-width: 0; }
+    .tight { display: grid; gap: 8px; }
+    .split { justify-content: space-between; gap: 12px; }
+    .button-row { gap: 8px; }
+    .button { width: 100%; border: 0; border-radius: 999px; padding: 12px 16px; font-weight: 700; transition: transform 160ms ease, box-shadow 160ms ease; }
+    .button:hover { transform: translateY(-1px); box-shadow: var(--shadow-card); }
+    .button--primary { color: var(--ink); background: linear-gradient(90deg, var(--lime), var(--yellow)); }
+    .button--soft { color: var(--ink); background: #F2F5DD; }
+    .button--ghost { color: var(--deep); background: transparent; border: 1px solid var(--border); }
+    .button--deep { color: var(--surface); background: var(--deep); }
+    .button--translucent { color: var(--surface); background: rgba(253, 253, 243, 0.16); border: 1px solid rgba(253, 253, 243, 0.48); }
+    .button--danger { color: #fff; background: var(--danger); }
+    .icon-button { width: var(--min-touch); min-width: var(--min-touch); padding: 0; border: 1px solid var(--border); border-radius: 999px; color: var(--deep); background: var(--surface); font-size: 18px; }
+    .list-row { min-height: var(--min-touch); justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--border); color: var(--ink); background: transparent; text-align: left; }
+    .list-row:last-child { border-bottom: 0; }
+    .list-row[role="button"] { width: 100%; border-inline: 0; border-top: 0; }
+    .field { width: 100%; padding: 12px; color: var(--ink); background: var(--surface); border: 1px solid var(--border); border-radius: 16px; }
+    .field--error { border-color: var(--danger); box-shadow: 0 0 0 2px rgba(196, 67, 67, 0.14); }
+    .field-error { color: var(--danger); font-size: 13px; font-weight: 400; }
+    textarea.field { min-height: 104px; resize: vertical; }
+    label { display: grid; gap: 4px; font-weight: 700; }
+    .state-panel { padding: 12px; color: var(--ink-muted); background: #F2F5DD; border-radius: 18px; }
+    .state-panel--error { color: var(--danger); background: #FFD9D2; }
+    .state-panel--offline { color: var(--warn); background: #FFF6EA; }
+    .map-placeholder, .camera-placeholder { display: grid; min-height: 210px; place-items: center; border-radius: var(--card-radius); color: var(--surface); background: #657D39; text-align: center; }
+    .camera-placeholder { background: #22260F; }
+    .metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .metric { padding: 12px 8px; background: #F2F5DD; border-radius: 18px; text-align: center; }
+    .metric strong { display: block; font-size: 19px; }
+    .chip { display: inline-flex; align-items: center; min-height: 32px; padding: 6px 10px; border-radius: 999px; color: #F4F04B; background: var(--deep); font-size: 12px; font-weight: 700; }
+    .tabs { display: flex; gap: 8px; overflow-x: auto; }
+    .tabs button { min-width: max-content; min-height: var(--min-touch); padding: 8px 12px; border: 1px solid var(--border); border-radius: 999px; color: var(--ink-muted); background: var(--surface); }
+    .tabs button[aria-pressed="true"] { color: #F4F04B; background: var(--deep); border-color: var(--deep); }
+    .nav { position: sticky; bottom: 0; justify-content: space-around; min-height: var(--nav-height); margin: auto -20px -20px; padding: 8px; background: var(--surface); border-top: 1px solid var(--border); }
+    .nav button { min-width: 48px; color: var(--ink-muted); background: transparent; border: 0; }
+    .nav button[aria-current="page"] { color: var(--deep); font-weight: 800; }
+    .nav-start-action { position: relative; z-index: 1; min-width: 84px !important; margin-top: -28px; padding: 12px 10px; border: 1px solid var(--surface) !important; border-radius: 999px; color: var(--ink) !important; background: linear-gradient(90deg, var(--lime), var(--yellow)) !important; box-shadow: var(--shadow-overlay); font-size: 12px; font-weight: 800; }
+    .review-title { margin: 0 0 8px; font-size: 16px; }
+    .review-select { width: 100%; margin-top: 8px; padding: 8px; border: 1px solid var(--border); border-radius: 12px; color: var(--ink); background: var(--surface); }
+    .review-button { margin-top: 8px; }
+    .sheet-scrim { position: fixed; inset: 0; z-index: 10; display: grid; align-items: end; background: rgba(38, 42, 14, 0.45); backdrop-filter: blur(3px); }
+    .sheet { display: grid; gap: 12px; width: min(100%, 360px); max-height: calc(100vh - 24px); margin: 0 auto; padding: 24px 20px; overflow-y: auto; background: var(--surface-raised); border-radius: var(--sheet-radius) var(--sheet-radius) 0 0; box-shadow: var(--shadow-overlay); }
+    .screen-list { max-height: 55vh; overflow-y: auto; }
+    .calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+    .calendar button { min-width: 0; border: 1px solid var(--border); border-radius: 10px; color: var(--ink); background: var(--surface); }
+    .calendar button[data-active="true"] { background: var(--lime); }
+    .brand { font-size: 32px; font-weight: 900; letter-spacing: -0.08em; }
+    .avatar { display: grid; width: 42px; height: 42px; place-items: center; flex: 0 0 auto; overflow: hidden; border: 2px solid var(--surface); border-radius: 50%; color: var(--deep); background: var(--lime); font-weight: 800; }
+    .avatar--lg { width: 64px; height: 64px; font-size: 22px; }
+    .avatar-stack { display: flex; align-items: center; padding-left: 8px; }
+    .avatar-stack .avatar { margin-left: -8px; }
+    .badge { display: inline-flex; align-items: center; min-height: 24px; padding: 4px 8px; border-radius: 999px; color: var(--yellow); background: var(--deep); font-size: 12px; font-weight: 800; }
+    .dot { display: inline-block; width: 8px; height: 8px; border-radius: 999px; background: var(--danger); }
+    .banner { padding: 12px; border-radius: 18px; color: var(--ink-muted); background: #F2F5DD; line-height: 1.45; }
+    .banner--warn { color: var(--warn); background: #FFF6EA; }
+    .banner--danger { color: var(--danger); background: #FFD9D2; }
+    .tile-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .shortcut { display: grid; min-height: 104px; place-items: center; gap: 6px; padding: 12px; border: 1px solid var(--border); border-radius: 18px; color: var(--deep); background: var(--surface); font-weight: 800; text-align: center; }
+    .post-frame, .photo-frame { display: grid; min-height: 176px; place-items: center; border-radius: 18px; color: var(--ink-muted); background: #E8EFC7; }
+    .photo-frame { min-height: 90px; color: var(--surface); background: #657D39; }
+    .category-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    .message { max-width: 82%; padding: 10px 12px; border-radius: 18px 18px 18px 4px; color: var(--ink); background: #F2F5DD; line-height: 1.45; }
+    .message--me { margin-left: auto; border-radius: 18px 18px 4px 18px; color: var(--ink); background: var(--lime); }
+    .start-screen { justify-content: flex-end; color: var(--surface); background: linear-gradient(180deg, rgba(253,253,243,.14), rgba(38,42,14,.86)), #657D39; }
+    .start-screen .subtle, .start-screen .button--ghost { color: var(--surface); }
+    .start-screen .button--ghost { border-color: rgba(253,253,243,.72); }
+    .start-hero { display: grid; min-height: 390px; place-items: center; align-content: center; gap: 12px; text-align: center; }
+    .home-hero { display: grid; min-height: 220px; place-items: center; border-radius: var(--card-radius); color: var(--deep); background: #E8EFC7; text-align: center; }
+    .spark { display: flex; height: 48px; align-items: end; gap: 4px; }
+    .spark span { width: 12px; border-radius: 999px 999px 2px 2px; background: var(--deep); }
+    .metric-grid-four { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; overflow: hidden; border: 1px solid var(--border); border-radius: 18px; }
+    .metric-grid-four .metric { border-radius: 0; background: var(--surface); }
+    .photo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+    .photo-grid button { min-height: 92px; border: 0; border-radius: 10px; color: var(--surface); background: #657D39; }
+    @media (max-width: 700px) { .prototype-frame { display: flex; flex-direction: column; width: 100%; margin: 0; } #app { order: 1; min-height: 100vh; border: 0; border-radius: 0; } #review-panel { order: 2; position: static; margin: 12px; } }
+  </style>
+</head>
+<body>
+  <!-- THESIS: approval-first mobile prototype; refuses generic dashboard chrome. OWN-WORLD: established olive, lime, cream tokens, tactile cards, and dense operating controls. STORY: team members inspect approved screens, actions, and role visibility without a server. FIRST VIEWPORT: 390px app shell shows start screen while review controls stay beside it. FORM: established mobile product language, seed inherited. FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md. -->
+  <div class="prototype-frame">
+    <aside id="review-panel"></aside>
+    <main id="app"></main>
+    <div id="sheet-root"></div>
+  </div>
+  <script>
+    'use strict'
+
+    const state = { currentScreenId: '1-1', history: ['1-1'], role: '크루원', viewState: '기본', sheet: null, sheetTrigger: null, invitePreview: false, resetSent: false, pickupCount: 1, profileTab: '기록', feedTab: '전체' }
+    const mock = { crew: '한강줍깅크루', leader: '관열', member: '민지', post: '오늘 아침 한강을 걸으며 플로깅했어요.', activity: '여의도 한강공원 아침 활동' }
+    const app = document.getElementById('app')
+    const reviewPanel = document.getElementById('review-panel')
+    const sheetRoot = document.getElementById('sheet-root')
+
+    function element(tag, options = {}, children = []) {
+      const node = document.createElement(tag)
+      if (options.className) node.className = options.className
+      if (options.text !== undefined) node.textContent = options.text
+      if (options.type) node.type = options.type
+      if (options.role) node.setAttribute('role', options.role)
+      if (options.ariaLabel) node.setAttribute('aria-label', options.ariaLabel)
+      if (options.ariaPressed !== undefined) node.setAttribute('aria-pressed', String(options.ariaPressed))
+      if (options.ariaCurrent) node.setAttribute('aria-current', options.ariaCurrent)
+      if (options.selected !== undefined) node.selected = options.selected
+      if (options.onClick) node.addEventListener('click', options.onClick)
+      children.filter(Boolean).forEach((child) => node.append(child))
+      return node
+    }
+
+    function button(label, onClick, variant = 'primary') { return element('button', { className: `button button--${variant}`, text: label, type: 'button', onClick }) }
+    function iconButton(label, onClick) { return element('button', { className: 'icon-button', text: '‹', type: 'button', ariaLabel: label, onClick }) }
+    function card(children = []) { return element('section', { className: 'card' }, children) }
+    function text(tag, value, className = '') { return element(tag, { text: value, className }) }
+    function avatar(name, size = '') { return element('span', { className: `avatar ${size ? `avatar--${size}` : ''}`, text: name.slice(0, 1), ariaLabel: name }) }
+    function avatarStack(names) { return element('div', { className: 'avatar-stack', ariaLabel: `${names.join(', ')} 프로필` }, names.map((name) => avatar(name))) }
+    function badge(value) { return element('span', { className: 'badge', text: value }) }
+    function banner(value, tone = '') { return element('section', { className: `banner${tone ? ` banner--${tone}` : ''}`, text: value }) }
+    function photoFrame(label = '사진 미리보기') { return element('div', { className: 'photo-frame', text: label }) }
+    function categoryChips(values) { return element('div', { className: 'category-chips' }, values.map((value) => element('span', { className: 'chip', text: value }))) }
+    function categoryGrid() {
+      return element('div', { className: 'tile-grid' }, ['담배꽁초', '캔', '플라스틱', '종이', '유리', '비닐', '일반'].map((name, index) => card([text('strong', name), text('p', index === 1 ? 'AI · 1개' : index === 2 ? '확인 필요 · 2개' : '0개', 'caption'), element('div', { className: 'button-row' }, [button('−', () => {}, 'ghost'), button('+', () => {}, 'soft')])])))
+    }
+    function recordMetrics(values = [['27', '개수'], ['42분', '시간'], ['3.1km', '거리']]) { return element('div', { className: 'metrics' }, values.map(([value, label]) => element('div', { className: 'metric' }, [text('strong', value), text('span', label, 'caption')]))) }
+    function stack(children = [], className = 'stack') { return element('div', { className }, children) }
+    function field(labelText, value = '', type = 'text', error = '') {
+      const input = element(type === 'textarea' ? 'textarea' : 'input', { className: `field${error ? ' field--error' : ''}`, type })
+      if (type !== 'textarea') input.value = value
+      else input.value = value
+      input.setAttribute('aria-label', labelText)
+      if (error) input.setAttribute('aria-invalid', 'true')
+      return element('label', {}, [text('span', labelText), input, error ? text('span', error, 'field-error') : null])
+    }
+    function listRow(title, subtitle, onClick) {
+      const words = stack([text('strong', title), subtitle ? text('span', subtitle, 'caption') : null], 'tight')
+      return element('button', { className: 'list-row', type: 'button', role: 'button', onClick }, [words, text('span', '›')])
+    }
+    function leaderOnly(node) { return state.role === '크루장' ? node : null }
+    function statePanel() {
+      if (state.viewState === '기본') return null
+      const message = { '로딩': '내용을 불러오는 중이에요.', '빈': '아직 표시할 내용이 없어요.', '오류': '문제가 생겼어요. 다시 시도해 주세요.', '오프라인': '인터넷 연결을 확인해 주세요.', '권한 거부': '권한을 허용하면 이 기능을 사용할 수 있어요.', '제출 중': '처리 중이에요. 잠시만 기다려 주세요.' }[state.viewState]
+      const tone = state.viewState === '오류' ? ' state-panel--error' : state.viewState === '오프라인' ? ' state-panel--offline' : ''
+      return element('section', { className: `state-panel${tone}`, text: message })
+    }
+    function page(title, description, children = [], options = {}) {
+      const isTabRoot = ['2-1', '5-1', '4-1', '3-1', '5-5'].includes(state.currentScreenId)
+      const header = element('header', { className: 'screen-header' }, [options.back === false || isTabRoot ? text('span', '') : iconButton('뒤로', back), stack([text('h1', title), description ? text('p', description) : null], 'tight'), options.action || text('span', '')])
+      const screen = element('section', { className: 'screen' }, [header, statePanel(), ...children])
+      return screen
+    }
+    function tabs(labels, selected = labels[0], onChange = () => {}) { return element('div', { className: 'tabs' }, labels.map((label) => element('button', { text: label, type: 'button', ariaPressed: selected === label, onClick: () => onChange(label) }))) }
+    function metrics() { return element('div', { className: 'metrics' }, [['거리', '2.8km'], ['시간', '41분'], ['줍기', '17개']].map(([label, value]) => element('div', { className: 'metric' }, [text('strong', value), text('span', label, 'caption')]))) }
+    function mapPlaceholder(label = '활동 경로 미리보기') { return element('div', { className: 'map-placeholder', text: label }) }
+    function confirmSheet(title, body, action, label = '확인') { openSheet('confirm', { title, body, action, label }) }
+
+    function navigate(id, options = {}) {
+      if (!screenById.has(id)) return
+      if (options.replace) state.history[state.history.length - 1] = id
+      else state.history.push(id)
+      state.currentScreenId = id
+      state.viewState = '기본'
+      state.sheet = null
+      renderApp()
+    }
+    function back() {
+      if (state.history.length > 1) state.history.pop()
+      else state.history = ['1-1']
+      state.currentScreenId = state.history[state.history.length - 1]
+      state.viewState = '기본'
+      state.sheet = null
+      renderApp()
+    }
+    function openSheet(kind, data = {}) { state.sheetTrigger = document.activeElement; state.sheet = { kind, data }; renderSheet() }
+    function closeSheet() {
+      state.sheet = null
+      if (state.currentScreenId === '4-2') { state.sheetTrigger = null; return navigate('4-1', { replace: true }) }
+      if (state.currentScreenId === '4-6') { state.sheetTrigger = null; return navigate('4-3', { replace: true }) }
+      renderSheet()
+      if (state.sheetTrigger?.isConnected) state.sheetTrigger.focus()
+      state.sheetTrigger = null
+    }
+
+    function renderStart() {
+      const hero = element('section', { className: 'screen start-screen' }, [
+        stack([text('div', '가치줍깅', 'brand'), text('p', '크루와 함께 걸으며 줍는 사람들.\n기록하고, 나누고, 응원해요.', 'subtle')], 'start-hero'),
+        state.viewState === '오류' ? banner('소셜 로그인에 실패했어요. 네트워크 상태를 확인하고 다시 시도해 주세요.', 'danger') : null,
+        stack([
+          button('카카오로 시작하기', () => navigate('1-4')), button('구글로 시작하기', () => navigate('1-4'), 'ghost'),
+          button('이메일로 로그인', () => navigate('1-2'), 'soft'), button('처음이신가요? 회원가입', () => navigate('1-3'), 'ghost'),
+        ]),
+      ])
+      return hero
+    }
+    function renderLogin() {
+      return page('이메일 로그인', '기존 계정', [stack([
+        text('div', '가치줍깅', 'brand'), text('h2', '다시 만나서 반가워요', 'display'), text('p', '가입한 이메일로 로그인하고\n오늘의 줍깅을 이어가요.', 'subtle'),
+        field('이메일', 'you@example.com', 'email'), field('비밀번호', '', 'password'), button('비밀번호 보기', () => {}, 'ghost'),
+        state.viewState === '오류' ? banner('이메일 또는 비밀번호가 올바르지 않아요.', 'danger') : null, button('로그인', () => navigate('2-1')),
+        element('div', { className: 'button-row' }, [button('비밀번호를 잊으셨나요?', () => navigate('1-5'), 'ghost'), button('회원가입', () => navigate('1-3'), 'ghost')]),
+      ])])
+    }
+    function renderSignup() {
+      return page('회원가입', '', [stack([
+        text('h2', '가치줍깅에 오신 걸 환영해요', 'display'), text('p', '이메일·비밀번호·닉네임을 입력해 주세요.', 'subtle'), field('이메일', 'you@example.com', 'email'), field('비밀번호', '', 'password'), field('닉네임', '새싹'),
+        card([listRow('필수 약관 동의', '내용 보기', () => {}), listRow('필수 개인정보 동의', '내용 보기', () => {}), listRow('선택 동의 항목', '내용 보기', () => {})]), button('회원가입', () => navigate('1-6')), button('이미 계정이 있어요 · 로그인', () => navigate('1-2'), 'ghost'),
+      ])])
+    }
+    function renderNickname() {
+      return page('닉네임 설정', '', [stack([
+        element('span', { className: 'chip', text: '프로필 만들기' }), text('h2', '어떻게 불러 드릴까요?', 'display'), text('p', '닉네임은 피드와 크루에서 보여요.', 'subtle'), field('닉네임', '새싹'),
+        card([listRow('필수 약관 동의', '내용 보기', () => {}), listRow('필수 개인정보 동의', '내용 보기', () => {}), listRow('선택 동의 항목', '내용 보기', () => {})]), button('다음', () => navigate('1-6')),
+      ])])
+    }
+    function renderPasswordReset() {
+      if (state.resetSent) return page('비밀번호 재설정', '계정 복구', [stack([text('h2', '재설정 요청을 접수했어요', 'display'), text('p', '계정이 있으면 메일로 받은 코드를 확인해 주세요.', 'subtle'), button('코드 입력하기', () => openSheet('password-code')), button('메일 다시 보내기', () => {}, 'ghost')])])
+      return page('비밀번호 재설정', '계정 복구', [stack([text('h2', '가입한 이메일을 알려 주세요', 'display'), field('이메일', 'you@example.com', 'email'), button('재설정 메일 보내기', () => { state.resetSent = true; renderApp() })])])
+    }
+    function renderCrewChoice() {
+      return page('크루 시작하기', '', [stack([
+        element('span', { className: 'chip', text: '크루 시작하기' }), text('h2', '함께 줍는 크루를 선택해 주세요', 'display'), text('p', '한 사람은 크루 하나에만 소속될 수 있어요.', 'subtle'),
+        card([text('strong', '＋  새 크루 만들기'), text('p', '이름만 정하면 바로 시작해요.', 'caption'), button('새 크루 만들기 ›', () => navigate('1-7'), 'ghost')]),
+        card([text('strong', '#  초대 코드로 가입하기'), text('p', '크루장에게 받은 코드를 입력해요.', 'caption'), button('초대 코드 입력 ›', () => navigate('1-8'), 'ghost')]),
+        banner('크루장이 승인하면 크루원이 돼요.'), button('내 활동 기록 보기', () => navigate('5-5'), 'ghost'),
+      ])])
+    }
+    function renderCrewCreate() {
+      return page('새 크루 만들기', '', [stack([
+        field('크루 이름', mock.crew), text('p', '2~20자로 입력해 주세요.', 'caption'), banner('크루를 만들면 내가 크루장이 돼요. 초대 코드는 자동으로 만들어져요. 소개·사진·목표는 나중에 정할 수 있어요.'), button('크루 만들기', () => navigate('2-1', { replace: true })),
+      ])])
+    }
+    function renderInviteCode() {
+      const content = state.invitePreview ? [
+        element('span', { className: 'chip', text: '크루 가입하기' }), text('h2', '이 크루가 맞나요?', 'display'), text('p', '크루장이 승인하면 크루원이 돼요.', 'subtle'),
+        card([element('div', { className: 'button-row' }, [avatar(mock.crew, 'lg'), stack([text('strong', mock.crew), text('p', '크루원 18명', 'caption')])]), element('div', { className: 'button-row' }, [avatar('관열'), text('span', '크루장 관열', 'caption')]), text('p', '매주 토요일 아침 여의도', 'subtle'), text('p', '초대 코드 HG-7K2P', 'caption')]),
+        button('가입 신청', () => navigate('1-9', { replace: true })), button('다른 코드 입력', () => { state.invitePreview = false; renderApp() }, 'ghost'),
+      ] : [element('span', { className: 'chip', text: '크루 가입하기' }), text('h2', '초대 코드를 입력해 주세요', 'display'), text('p', '크루장에게 받은 코드로 크루를 찾아요.', 'subtle'), field('초대 코드', 'HG-7K2P'), button('크루 확인', () => { state.invitePreview = true; renderApp() })]
+      return page('크루 가입하기', '', [stack(content)])
+    }
+    function renderPending() { return page('가입 신청 대기', '', [stack([text('div', '⌛', 'brand'), text('h2', '크루장 승인을 기다리고 있어요', 'display'), card([text('strong', mock.crew), text('p', '가입 신청을 보냈어요', 'subtle')]), banner('크루장이 승인하면 크루원이 돼요. 앱을 닫아도 신청은 그대로 남아요.'), button('신청 취소', () => confirmSheet('가입 신청을 취소할까요?', '다시 가입하려면 초대 코드를 입력해야 해요.', () => navigate('1-6', { replace: true }), '신청 취소'), 'ghost'), button('승인 상태 확인', () => navigate('2-1', { replace: true }), 'soft')])], { back: false }) }
+    function renderLocationPermission() { return page('위치 권한이 필요해요', '', [stack([text('h2', '활동 경로와 거리를 기록해요', 'display'), text('p', '위치 공유를 켜면 크루원에게 내 위치를 보여요. 다른 탭은 지금도 이용할 수 있어요.', 'subtle'), banner('활동을 시작할 때만 정확한 위치를 요청해요.'), button('위치 권한 허용', back), button('나중에', back, 'ghost')])]) }
+    function renderHome() {
+      const spark = element('div', { className: 'spark', ariaLabel: '최근 7일 줍기 추이' }, [12, 30, 4, 41, 25, 38, 22].map((value) => element('span', { className: '', text: '' }, [])))
+      ;[12, 30, 4, 41, 25, 38, 22].forEach((value, index) => { spark.children[index].style.height = `${Math.max(4, value)}px` })
+      return page('가치줍깅', '오늘도 가볍게 한 바퀴 🌱', [stack([
+        element('div', { className: 'split' }, [button(`${mock.crew} ›`, () => navigate('3-2'), 'ghost'), button('알림 ●', () => navigate('2-3'), 'ghost')]),
+        card([text('p', '최근 7일 우리 크루가 주운 쓰레기', 'subtle'), element('div', { className: 'split' }, [text('strong', '168개', 'display'), spark]), button('크루 기록 보기 ›', () => navigate('3-4'), 'ghost')]),
+        element('button', { className: 'home-hero', type: 'button', onClick: () => openSheet('info', { title: '크루 목표', body: '최근 14일 312개, 목표 달성!' }) }, [text('div', '🌱', 'brand'), text('strong', '파티 중인 크루 캐릭터'), text('span', '최근 14일 312개, 목표 달성!', 'caption')]),
+        element('div', { className: 'tile-grid' }, [
+          card([text('p', '지금 활동 중인 크루원', 'caption'), element('div', { className: 'split' }, [text('strong', '2', 'display'), avatarStack(['민지', '도윤'])]), button('목록 보기 ›', () => navigate('2-2'), 'ghost')]),
+          card([text('p', '최근 7일 내가 주운 쓰레기', 'caption'), text('strong', '23개', 'display'), text('p', '담배꽁초 14 · 플라스틱 6 · 캔 3', 'caption')]),
+        ]),
+      ])])
+    }
+    function memberLiveRow(name, detail, paused = false) {
+      return card([element('div', { className: 'split' }, [element('div', { className: 'button-row' }, [avatar(name), stack([element('div', { className: 'button-row' }, [text('strong', name), paused ? badge('일시정지 중') : null]), text('p', detail, 'caption')])]), button('프로필 ›', () => navigate('5-4'), 'ghost')])])
+    }
+    function renderActiveMembers() { return page('활동 중인 크루원', '2명', [stack([mapPlaceholder('민지 1.2km · 도윤 0.8km'), memberLiveRow('민지', '활동 중 · 1.2km · 줍기 9개'), memberLiveRow('도윤', '0.8km · 줍기 4개', true)])]) }
+    function notificationRow(icon, title, detail, onClick, unread = true) { return element('button', { className: 'list-row', type: 'button', onClick }, [element('div', { className: 'button-row' }, [element('span', { className: 'avatar', text: icon }), stack([text('strong', title), text('p', detail, 'caption')])]), unread ? element('span', { className: 'dot' }) : null]) }
+    function renderNotifications() { return page('알림', '', [stack([leaderOnly(card([text('strong', '처리 대기'), notificationRow('✓', '가입 신청이 도착했어요', '한강줍깅크루 · 방금 전', () => navigate('3-8')), notificationRow('!', '신고 처리가 필요해요', '처리 대기 1건', () => navigate('6-2'))])), notificationRow('💬', '게시물에 댓글이 달렸어요', '민지 · 10분 전', () => navigate('5-2')), notificationRow('✉', '크루 채팅 새 메시지', '도윤 · 1시간 전', () => navigate('3-7')), notificationRow('🌱', '민지님이 활동을 시작했어요', '활동 중인 크루원 보기', () => navigate('2-2'), false)])]) }
+
+    function renderCrewHome() {
+      return page('모이깅', '', [stack([
+        element('div', { className: 'split' }, [text('span', ''), button('알림 ●', () => navigate('2-3'), 'ghost')]),
+        listRow(mock.crew, '크루원 18명 · 14일 목표 300개', () => navigate('3-2')),
+        element('div', { className: 'tile-grid' }, [
+          element('button', { className: 'shortcut', type: 'button', text: '공지', onClick: () => navigate('3-5') }),
+          element('button', { className: 'shortcut', type: 'button', text: '채팅 ●', onClick: () => navigate('3-7') }),
+          element('button', { className: 'shortcut', type: 'button', text: '크루 기록', onClick: () => navigate('3-4') }),
+          element('button', { className: 'shortcut', type: 'button', text: '활동 달력', onClick: () => navigate('3-9') }),
+        ]),
+        listRow('📌 9월 정기 활동 안내', '관열 · 오늘', () => navigate('3-6')),
+      ])])
+    }
+    function renderCrewInfo() {
+      return page('크루 정보', '', [stack([
+        card([element('div', { className: 'button-row' }, [avatar(mock.crew, 'lg'), stack([element('div', { className: 'button-row' }, [text('strong', mock.crew), state.role === '크루장' ? badge('크루장') : null]), text('p', '크루원 18명 · 14일 목표 300개', 'caption')])]), text('p', '한강을 걸으며 함께 줍는 크루예요. 매주 토요일 아침에 모여요.', 'subtle'), leaderOnly(button('크루 정보 수정', () => navigate('3-10'), 'ghost'))]),
+        card([text('strong', '크루원'), element('div', { className: 'split' }, [avatarStack(['관열', '민지', '도윤', '서윤']), button('전체 보기 ›', () => navigate('3-11'), 'ghost')])]),
+        button('크루 채팅 열기', () => navigate('3-7')), element('div', { className: 'tile-grid' }, [card([text('strong', '초대 코드'), text('p', 'HG-7K2P', 'caption'), button('보기', () => navigate('3-3'), 'ghost')]), card([text('strong', '크루 기록'), text('p', '이번 주 168개', 'caption'), button('보기', () => navigate('3-4'), 'ghost')])]),
+        leaderOnly(element('div', { className: 'tile-grid' }, [card([text('strong', '가입 신청'), text('p', '처리 대기 1건', 'caption'), button('관리', () => navigate('3-8'), 'ghost')]), card([text('strong', '크루원 관리'), text('p', '위임 · 추방', 'caption'), button('관리', () => navigate('3-11'), 'ghost')])])),
+      ])])
+    }
+    function renderCrewInvite() {
+      return page('초대 코드', '', [stack([
+        text('p', '크루원에게 초대 코드를 공유해 주세요.', 'subtle'), card([text('strong', 'HG-7K2P', 'brand'), text('p', '한 글자씩 정확히 입력해 주세요.', 'caption')]),
+        element('div', { className: 'button-row' }, [button('코드 복사', () => openSheet('info', { title: '복사됨', body: '초대 코드 HG-7K2P를 복사했어요.' }), 'soft'), button('공유', () => openSheet('info', { title: '공유', body: '휴대폰 기본 공유창으로 코드를 보낼 수 있어요.' }), 'ghost')]),
+        leaderOnly(banner('코드를 재발급하면 이전 코드로 새 가입 신청을 받을 수 없어요.', 'warn')), leaderOnly(button('코드 재발급', () => confirmSheet('초대 코드를 재발급할까요?', '이전 코드로 새 신청을 받을 수 없어요.', closeSheet, '재발급'))),
+      ])])
+    }
+    function renderCrewRecords() {
+      const chart = element('div', { className: 'spark', ariaLabel: '이번 주 크루 줍기 추이' }, [24, 52, 36, 68, 40, 74, 58].map(() => element('span')))
+      ;[24, 52, 36, 68, 40, 74, 58].forEach((value, index) => { chart.children[index].style.height = `${value}px` })
+      return page('크루 기록', '', [stack([
+        tabs(['이번 주', '이번 달', '전체']), card([text('strong', '이번 주 크루 기록'), chart, text('p', '월요일부터 오늘까지 168개', 'caption')]),
+        element('div', { className: 'metric-grid-four' }, [['168', '줍기'], ['12', '활동'], ['24.6km', '거리'], ['18명', '참여']].map(([value, label]) => element('div', { className: 'metric' }, [text('strong', value), text('span', label, 'caption')]))),
+        categoryChips(['담배꽁초 74', '플라스틱 42', '캔 28', '비닐 24']), card([text('strong', '크루원 순위'), listRow('1위 민지', '32개 · 내 순위 3위', () => navigate('5-4')), listRow('2위 도윤', '27개', () => navigate('5-4'))]),
+        leaderOnly(button('기간 선택 · CSV 내보내기', () => openSheet('info', { title: 'CSV 내보내기', body: '기간을 고르고 OS 공유 시트로 보낼 수 있어요.' }), 'soft')),
+      ])])
+    }
+    function renderNotices() {
+      return page('공지 목록', '', [stack([
+        leaderOnly(button('공지 작성', () => navigate('3-12'))), card([badge('최신 공지'), text('h2', '토요일 아침 활동 안내', 'section-title'), text('p', '이번 주 토요일 8시에 여의도 한강공원에서 만나요. 준비물을 확인해 주세요.', 'subtle'), element('div', { className: 'split' }, [text('span', '관열 · 오늘 · 댓글 2', 'caption'), button('보기 ›', () => navigate('3-6'), 'ghost')])]),
+        listRow('우천 시 활동 안내', '관열 · 3일 전 · 댓글 1', () => navigate('3-6')),
+      ])])
+    }
+    function renderNoticeDetail() {
+      return page('공지 상세', '', [stack([
+        badge('최신 공지'), text('h2', '토요일 아침 활동 안내', 'display'), text('p', '관열 · 오늘 오전 9:00', 'caption'), card([text('p', '이번 주 토요일 8시에 여의도 한강공원에서 만나요. 준비물을 확인해 주세요.', 'subtle')]),
+        stack([element('div', { className: 'button-row' }, [avatar('민지'), stack([text('strong', '민지'), text('p', '참석할게요!', 'caption')])]), element('div', { className: 'button-row' }, [avatar('도윤'), stack([text('strong', '도윤'), text('p', '장갑도 챙길게요.', 'caption')])])]),
+        field('댓글 입력', ''), element('div', { className: 'button-row' }, [button('전송', () => {}, 'soft'), button('신고', () => navigate('6-1'), 'ghost'), leaderOnly(button('수정', () => navigate('3-12'), 'ghost'))]),
+      ])])
+    }
+    function renderCrewChat() {
+      return page('크루 채팅', '한강줍깅크루', [stack([
+        banner('연결됨 · 새 메시지는 바로 표시돼요.'), text('p', '2026년 9월 8일', 'caption'), element('div', { className: 'message', text: '민지  오늘 바람이 좋아요!' }), element('div', { className: 'message message--me', text: '저도 지금 출발했어요.' }), element('div', { className: 'message', text: '도윤  여의도에서 만나요.' }),
+        field('메시지 입력', ''), element('div', { className: 'button-row' }, [button('신고', () => navigate('6-1'), 'ghost'), button('전송', () => {}, 'soft')]),
+      ])])
+    }
+    function renderJoinRequests() {
+      const applicant = card([element('div', { className: 'split' }, [element('div', { className: 'button-row' }, [avatar('서윤'), stack([text('strong', '서윤'), text('p', '가입 신청 · 오늘 오전 10:20', 'caption')])]), button('프로필 ›', () => navigate('5-4'), 'ghost')]), text('p', '한강을 걸으며 함께 줍고 싶어요.', 'subtle'), leaderOnly(element('div', { className: 'button-row' }, [button('승인', () => confirmSheet('가입을 승인할까요?', '서윤님이 크루원이 돼요.', closeSheet)), button('거절', () => confirmSheet('가입을 거절할까요?', '신청자에게 결과를 알려요.', closeSheet), 'ghost')]))])
+      return page('가입 신청 관리', '', [stack([text('p', '가입 신청 1건', 'caption'), applicant])])
+    }
+    function renderActivityCalendar() {
+      return page('활동 달력', '', [stack([
+        element('div', { className: 'split' }, [button('‹', () => {}, 'ghost'), text('h2', '2026년 9월', 'section-title'), button('›', () => {}, 'ghost')]), text('p', '일 월 화 수 목 금 토', 'caption'),
+        element('div', { className: 'calendar' }, Array.from({ length: 35 }, (_, index) => { const day = element('button', { text: index < 2 ? '' : String(index - 1), type: 'button', onClick: () => navigate('5-3') }); day.dataset.active = String([3, 7, 13, 20, 26].includes(index)); return day })),
+        card([text('strong', '9월 19일 활동 2건'), listRow('민지', '2.8km · 17개', () => navigate('5-4')), listRow('도윤', '1.2km · 4개', () => navigate('5-4'))]),
+      ])])
+    }
+    function renderCrewEdit() { return page('크루 정보 수정', '', [stack([photoFrame('대표 사진 변경'), field('크루 이름', mock.crew), field('소개', '한강을 걸으며 함께 줍는 크루예요.', 'textarea'), card([text('strong', '14일 목표'), element('div', { className: 'button-row' }, [button('−', () => {}, 'ghost'), text('strong', '300개'), button('+', () => {}, 'soft')])]), button('저장', () => navigate('3-2', { replace: true }))])]) }
+    function memberCard(name, detail, isLeader = false) {
+      return card([element('div', { className: 'split' }, [element('div', { className: 'button-row' }, [avatar(name), stack([element('div', { className: 'button-row' }, [text('strong', name), isLeader ? badge('크루장') : null]), text('p', detail, 'caption')])]), button('프로필 ›', () => navigate('5-4'), 'ghost')]), leaderOnly(element('div', { className: 'button-row' }, [button('더보기', () => openSheet('info', { title: `${name} 관리`, body: '크루장 위임 또는 추방을 선택할 수 있어요.' }), 'ghost')]))])
+    }
+    function renderMemberManagement() {
+      return page('크루원 목록', '', [stack([
+        memberCard('관열', '누적 412개 · 가입 2026. 4. 1', true), memberCard('민지', '누적 316개 · 가입 2026. 4. 3'), memberCard('도윤', '누적 203개 · 가입 2026. 5. 12'),
+        leaderOnly(banner('추방해도 활동 기록과 크루 합산은 그대로 남아요.', 'warn')),
+      ])])
+    }
+    function renderNoticeEditor() { return page('공지 작성', '', [stack([field('제목 · 0/50', '토요일 아침 활동 안내'), field('내용 · 0/500', '이번 주 토요일 8시에 여의도 한강공원에서 만나요.', 'textarea'), text('p', '제목과 내용을 입력하면 게시할 수 있어요.', 'caption'), button('공지 게시', () => navigate('3-5', { replace: true }))])]) }
+
+    function renderActivityReady() {
+      return page('줍깅', '', [stack([
+        text('h2', '지금 주운 것을 기록해 보세요.', 'display'), element('div', { className: 'home-hero', text: '🌱' }),
+        banner('활동을 시작하면 거리·시간·줍기를 기록할 수 있어요.'), button('줍깅 시작', () => openSheet('activity-start')),
+      ])])
+    }
+    function renderActivityStart() {
+      state.sheet = { kind: 'activity-start', data: {} }
+      return renderActivityReady()
+    }
+    function renderActivityActive() {
+      const controls = element('div', { className: 'button-row' }, [button('채팅', () => navigate('3-7'), 'ghost'), button('📷 쓰레기 촬영', () => navigate('4-4')), button('일시정지', () => openSheet('info', { title: '일시정지 중', body: '위치 공유와 줍기 기록은 이어져요.' }), 'ghost')])
+      return page('활동 중', '', [stack([
+        element('div', { className: 'split' }, [element('span', { className: 'chip', text: '위치 공유 중' }), button('활동 종료', () => confirmSheet('활동을 종료할까요?', '지금까지 주운 기록이 저장돼요.', () => navigate('4-7'), '종료하기'), 'danger')]),
+        element('div', { className: 'metric-grid-four' }, [['17', '줍기 개수'], ['42:10', '활동 시간'], ['2.1km', '이동 거리'], ['3,200', '걸음']].map(([value, label]) => element('div', { className: 'metric' }, [text('strong', value), text('span', label, 'caption')]))),
+        mapPlaceholder('내 경로  ·  민지  ·  도윤 일시정지 중'), element('div', { className: 'split' }, [button('줍기 17개', () => openSheet('quick-pickup'), 'ghost'), button('내 위치로', () => {}, 'soft')]), controls,
+      ])])
+    }
+    function renderCamera() {
+      return page('쓰레기 촬영', '찍으면 AI가 종류를 찾아요', [stack([
+        element('div', { className: 'camera-placeholder', text: '쓰레기를 화면 중앙에 놓아 주세요' }),
+        banner('쓰레기가 겹치지 않게 펼쳐 찍으면 AI가 더 잘 찾아요.'), button('◎ 촬영', () => openSheet('camera-preview')),
+      ])])
+    }
+    function renderAiClassification() {
+      return page('AI 분류 확인', '', [stack([
+        photoFrame('방금 촬영한 수거물'), banner('확인 필요 표시가 있는 종류와 수량을 확인해 주세요.', 'warn'),
+        element('div', { className: 'split' }, [text('h2', '맞게 분류됐나요?', 'section-title'), text('span', 'AI가 3개 찾았어요', 'caption')]), categoryGrid(),
+        element('div', { className: 'button-row' }, [button('다시 촬영', () => navigate('4-4', { replace: true }), 'ghost'), button('이대로 담기 · 3개', () => navigate('4-3', { replace: true }))]),
+      ])])
+    }
+    function renderQuickPickup() {
+      state.sheet = { kind: 'quick-pickup', data: {} }
+      return renderActivityActive()
+    }
+    function renderActivitySummary() {
+      return page('오늘의 줍깅 정리 🌱', '9월 7일 · 09:02 – 09:48 · 4,100걸음', [stack([
+        mapPlaceholder('📍 이동 경로 · 시작 · 끝'), recordMetrics([['17', '줍기 개수'], ['42분', '활동 시간'], ['3.1km', '이동 거리']]), categoryChips(['담배꽁초 8', '플라스틱 4', '캔 3', '일반 2']),
+        card([text('h2', '✓ 기록을 저장했어요. 피드에 공유할까요?', 'section-title'), listRow('공유 이미지에 경로 포함', '끔', () => {}), element('div', { className: 'button-row' }, [button('공유 안 함', () => navigate('4-1', { replace: true }), 'ghost'), button('공유하기', () => navigate('5-6'))]), button('이 기록 지우기', () => confirmSheet('활동 기록을 삭제할까요?', '수거·시간·거리와 사진이 모두 삭제돼요.', () => navigate('4-1', { replace: true }), '기록 삭제'), 'ghost')]),
+      ])])
+    }
+
+    function postCard(author, body, options = {}) {
+      return card([stack([
+        element('div', { className: 'split' }, [element('div', { className: 'button-row' }, [avatar(author), stack([text('strong', author), text('span', options.time || '10분 전', 'caption')], 'tight')]), options.private ? badge('나만 보기') : text('span', '')]),
+        options.photo === false ? element('button', { className: 'post-frame', type: 'button', text: body, onClick: () => navigate('5-2') }) : element('button', { className: 'photo-frame', type: 'button', text: '게시물 사진 3장', onClick: () => navigate('5-2') }),
+        text('p', body, 'subtle'), element('div', { className: 'button-row' }, [button('♡ 고마워요 6', () => {}, 'ghost'), button('댓글 2', () => navigate('5-2'), 'ghost')]),
+      ])])
+    }
+    function renderFeed() {
+      const posts = state.feedTab === '전체'
+        ? [postCard('민지', mock.post, { time: '10분 전' }), postCard('관열', '오늘 여의도에서 주운 기록을 남겨요.', { time: '어제', photo: false, private: true })]
+        : [postCard('관열', '오늘 여의도에서 주운 기록을 남겨요.', { time: '어제', photo: false, private: true })]
+      return page('피드', '', [stack([
+        element('div', { className: 'split' }, [tabs(['전체', '내 게시물'], state.feedTab, (tab) => { state.feedTab = tab; renderApp() }), element('div', { className: 'button-row' }, [button('날짜', () => openSheet('info', { title: '날짜 선택', body: '9월 6일 이전 게시물을 보는 날짜 필터예요.' }), 'ghost'), button('+ 글쓰기', () => navigate('5-6'))])]),
+        ...posts,
+      ])])
+    }
+    function renderPostDetail() {
+      return page('게시물 상세', '', [stack([
+        element('div', { className: 'button-row' }, [avatar('민지'), stack([text('strong', '민지'), text('p', '10분 전', 'caption')])]), photoFrame('게시물 사진 1 / 3'), text('h2', mock.post, 'section-title'), text('p', '오늘 여의도 한강을 걸으며 플로깅했어요. 담배꽁초와 플라스틱을 많이 주웠습니다.', 'subtle'),
+        element('div', { className: 'button-row' }, [button('♡ 고마워요 6', () => {}, 'ghost'), button('댓글 2', () => {}, 'ghost'), button('신고', () => navigate('6-1'), 'ghost'), leaderOnly(button('삭제', () => confirmSheet('게시물을 삭제할까요?', '작성자와 신고자에게 결과를 알려요.', closeSheet), 'danger'))]),
+        stack([element('div', { className: 'button-row' }, [avatar('도윤'), stack([text('strong', '도윤'), text('p', '수고했어요!', 'caption')])]), element('div', { className: 'button-row' }, [avatar('서윤'), stack([text('strong', '서윤'), text('p', '다음 활동도 함께해요.', 'caption')])])]), field('댓글 입력', ''), button('댓글 등록', () => {}, 'soft'),
+      ])])
+    }
+    function renderRecordDetail() {
+      return page('활동 기록 상세', '', [stack([
+        text('h2', '9월 5일(금) 오후 6:02', 'display'), text('p', '여의도 한강공원 아침 활동', 'caption'), mapPlaceholder('이동 경로 · 3.1km'), recordMetrics(), categoryChips(['담배꽁초 14', '플라스틱 6', '캔 3', '종이 2', '비닐 2']),
+        card([text('strong', '줍기 목록'), listRow('플라스틱 6개', '사진 2장', () => {}), listRow('담배꽁초 14개', '사진 1장', () => {})]), photoFrame('활동 사진'), button('요약 이미지 공유', () => navigate('5-6'), 'soft'),
+      ])])
+    }
+    function renderUserProfile() {
+      return page('타인 프로필', '', [stack([
+        card([element('div', { className: 'button-row' }, [avatar('민지', 'lg'), stack([text('strong', '민지'), text('p', '한강을 좋아하는 크루원', 'caption')])])]),
+        recordMetrics([['18', '활동'], ['42.1km', '거리'], ['316', '개수']]), tabs(['기록', '게시물']),
+        element('div', { className: 'calendar' }, Array.from({ length: 21 }, (_, index) => { const day = element('button', { text: String(index + 1), type: 'button', onClick: () => navigate('5-3') }); day.dataset.active = String([3, 7, 12, 19].includes(index + 1)); return day })),
+        listRow('9월 19일 활동', '2.8km · 17개', () => navigate('5-3')), listRow('오늘 아침 한강을 걸으며', '게시물', () => navigate('5-2')), button('신고', () => navigate('6-1'), 'ghost'),
+      ])])
+    }
+    function renderMyProfile() {
+      const profileContent = state.profileTab === '기록'
+        ? stack([listRow('9월 5일(금) 오후 6:02', '27개 · 42분 · 3.1km', () => navigate('5-3')), listRow('9월 3일(수) 오전 7:10', '줍기 기록 없음 · 18분 · 1.2km', () => navigate('5-3'))])
+        : element('div', { className: 'photo-grid' }, ['활동 사진', '한강 줍깅', '나만 보기', '게시물', '사진', '글'].map((value) => element('button', { text: value, type: 'button', onClick: () => navigate('5-2') })))
+      return page('내 정보', '', [stack([
+        element('div', { className: 'split' }, [text('span', ''), button('설정', () => navigate('5-7'), 'ghost')]),
+        card([element('div', { className: 'split' }, [element('div', { className: 'button-row' }, [avatar('새싹', 'lg'), stack([element('div', { className: 'button-row' }, [text('strong', '새싹'), state.role === '크루장' ? badge('크루장') : null]), text('p', '한강을 좋아하는 플로거예요.', 'caption'), button(`${mock.crew} ›`, () => navigate('3-2'), 'ghost')])]), button('프로필 수정', () => navigate('5-8'), 'ghost')])]),
+        element('div', { className: 'metrics' }, [['12', '활동'], ['38.4km', '거리'], ['412', '개수']].map(([value, label]) => element('div', { className: 'metric' }, [text('strong', value), text('span', label, 'caption')]))),
+        tabs(['기록', '게시물'], state.profileTab, (tab) => { state.profileTab = tab; renderApp() }), profileContent,
+      ])])
+    }
+    function renderPostEditor() {
+      return page('게시물 작성', '', [stack([
+        photoFrame('사진 추가 · 최대 10장'), element('div', { className: 'photo-grid' }, ['사진 1', '사진 2', '+'].map((value) => element('button', { text: value, type: 'button' }))),
+        tabs(['크루에 공개', '나만 보기']), field('내용', '오늘 아침 한강을 걸으며 플로깅했어요.', 'textarea'), button('게시', () => navigate('5-1', { replace: true })),
+      ])])
+    }
+    function renderSettings() {
+      return page('설정', '', [stack([
+        text('h2', '계정', 'section-title'), listRow('비밀번호 재설정', '이메일 계정', () => navigate('1-5')), listRow('차단 관리', '차단한 크루원', () => navigate('5-9')),
+        text('h2', '활동', 'section-title'), listRow('활동 시작 알림', '켜짐', () => {}), listRow('위치 공유 기본값', '켜짐', () => {}),
+        text('h2', '크루', 'section-title'), listRow('크루 나가기', mock.crew, () => confirmSheet('크루를 나갈까요?', '다른 크루원이 있으면 크루장 위임이 필요해요.', () => navigate('1-6'), '나가기')),
+        text('h2', '계정 관리', 'section-title'), listRow('로그아웃', '', () => confirmSheet('로그아웃할까요?', '미동기화 활동이 없을 때 진행할 수 있어요.', () => navigate('1-1', { replace: true }), '로그아웃')), listRow('회원 탈퇴', '개인 활동 상세가 삭제돼요', () => confirmSheet('회원 탈퇴를 진행할까요?', '되돌릴 수 없어요.', () => navigate('1-1', { replace: true }), '탈퇴')),
+      ])])
+    }
+    function renderProfileEdit() { return page('프로필 수정', '', [stack([photoFrame('프로필 사진 변경'), field('닉네임', '새싹'), field('소개', '한강을 좋아하는 플로거예요.', 'textarea'), button('저장', () => navigate('5-5', { replace: true }))])]) }
+    function renderBlockList() { return page('차단 관리', '', [stack([banner('차단한 크루원의 게시물·댓글·채팅·활동 위치를 내 화면에서 숨겨요.'), listRow('도윤', '차단한 크루원', () => navigate('5-4')), button('도윤 차단 해제', () => confirmSheet('차단을 해제할까요?', '다시 개인 콘텐츠가 보여요.', closeSheet), 'ghost')])]) }
+    function renderReport() {
+      return page('신고', '', [stack([
+        card([text('strong', '신고 대상'), element('div', { className: 'button-row' }, [avatar('민지'), stack([text('strong', '민지'), text('p', '오늘 아침 한강을 걸으며 플로깅했어요.', 'caption')])])]),
+        text('h2', '신고 이유를 선택해 주세요', 'section-title'), tabs(['부적절한 내용', '스팸', '괴롭힘', '기타']), field('상세 설명', '', 'textarea'), text('p', '신고 내용은 크루장만 확인해요.', 'caption'), button('신고하기', () => openSheet('info', { title: '신고를 접수했어요', body: '크루장이 신고를 검토해요.' })),
+      ])])
+    }
+    function renderReportReview() {
+      return page('신고 처리', '', [stack([
+        card([text('strong', '민지의 게시물 신고'), text('p', '부적절한 내용 · 신고자 새싹 · 오늘', 'subtle'), photoFrame('신고된 게시물 미리보기')]),
+        field('처리 메모', '', 'textarea'), leaderOnly(element('div', { className: 'button-row' }, [
+          button('기각', () => confirmSheet('신고를 기각할까요?', '신고자에게 결과를 알려요.', closeSheet), 'ghost'), button('게시물 삭제', () => confirmSheet('게시물을 삭제할까요?', '작성자와 신고자에게 결과를 알려요.', closeSheet), 'danger'),
+        ])), leaderOnly(button('크루원 추방', () => confirmSheet('크루원을 추방할까요?', '활동 기록과 크루 합산은 남아요.', closeSheet), 'danger')),
+      ])])
+    }
+
+    const screens = [
+      { id: '1-1', name: '시작', spec: 'docs/screens/1-1-start.md', group: 'onboarding', render: renderStart },
+      { id: '1-2', name: '로그인', spec: 'docs/screens/1-2-login.md', group: 'onboarding', render: renderLogin },
+      { id: '1-3', name: '회원가입', spec: 'docs/screens/1-3-sign-up.md', group: 'onboarding', render: renderSignup },
+      { id: '1-4', name: '소셜 첫 가입 닉네임', spec: 'docs/screens/1-4-nickname.md', group: 'onboarding', render: renderNickname },
+      { id: '1-5', name: '비밀번호 재설정·확인', spec: 'docs/screens/1-5-reset-password.md', group: 'onboarding', render: renderPasswordReset },
+      { id: '1-6', name: '크루 만들기/가입하기', spec: 'docs/screens/1-6-create-or-join-crew.md', group: 'onboarding', render: renderCrewChoice },
+      { id: '1-7', name: '크루 만들기', spec: 'docs/screens/1-7-create-crew.md', group: 'onboarding', render: renderCrewCreate },
+      { id: '1-8', name: '초대 코드 입력', spec: 'docs/screens/1-8-enter-invite-code.md', group: 'onboarding', render: renderInviteCode },
+      { id: '1-9', name: '승인 대기', spec: 'docs/screens/1-9-pending-approval.md', group: 'onboarding', render: renderPending },
+      { id: '1-10', name: '위치 권한 안내', spec: 'docs/screens/1-10-location-permission.md', group: 'onboarding', render: renderLocationPermission },
+      { id: '2-1', name: '홈', spec: 'docs/screens/2-1-home.md', group: 'home', render: renderHome },
+      { id: '2-2', name: '활동 중인 크루원 목록', spec: 'docs/screens/2-2-active-crew-members.md', group: 'home', render: renderActiveMembers },
+      { id: '2-3', name: '알림 목록', spec: 'docs/screens/2-3-notifications.md', group: 'home', render: renderNotifications },
+      { id: '3-1', name: '모이깅', spec: 'docs/screens/3-1-crew.md', group: 'crew', render: renderCrewHome },
+      { id: '3-2', name: '크루 정보', spec: 'docs/screens/3-2-crew-info.md', group: 'crew', render: renderCrewInfo },
+      { id: '3-3', name: '초대 코드', spec: 'docs/screens/3-3-invite-code.md', group: 'crew', render: renderCrewInvite },
+      { id: '3-4', name: '크루 기록', spec: 'docs/screens/3-4-crew-records.md', group: 'crew', render: renderCrewRecords },
+      { id: '3-5', name: '공지 목록', spec: 'docs/screens/3-5-notices.md', group: 'crew', render: renderNotices },
+      { id: '3-6', name: '공지 상세', spec: 'docs/screens/3-6-notice-detail.md', group: 'crew', render: renderNoticeDetail },
+      { id: '3-7', name: '크루 채팅', spec: 'docs/screens/3-7-crew-chat.md', group: 'crew', render: renderCrewChat },
+      { id: '3-8', name: '가입 신청 관리', spec: 'docs/screens/3-8-manage-join-requests.md', group: 'crew', render: renderJoinRequests },
+      { id: '3-9', name: '활동 달력', spec: 'docs/screens/3-9-activity-calendar.md', group: 'crew', render: renderActivityCalendar },
+      { id: '3-10', name: '크루 정보 수정', spec: 'docs/screens/3-10-edit-crew.md', group: 'crew', render: renderCrewEdit },
+      { id: '3-11', name: '크루원 목록·관리', spec: 'docs/screens/3-11-manage-crew-members.md', group: 'crew', render: renderMemberManagement },
+      { id: '3-12', name: '공지 작성·수정', spec: 'docs/screens/3-12-edit-notice.md', group: 'crew', render: renderNoticeEditor },
+      { id: '4-1', name: '줍깅 대기', spec: 'docs/screens/4-1-plogging-ready.md', group: 'activity', render: renderActivityReady },
+      { id: '4-2', name: '활동 시작 시트', spec: 'docs/screens/4-2-start-activity-sheet.md', group: 'activity', render: renderActivityStart },
+      { id: '4-3', name: '활동 중', spec: 'docs/screens/4-3-activity-in-progress.md', group: 'activity', render: renderActivityActive },
+      { id: '4-4', name: '사진 촬영', spec: 'docs/screens/4-4-take-photo.md', group: 'activity', render: renderCamera },
+      { id: '4-5', name: 'AI 분류 확인', spec: 'docs/screens/4-5-ai-classification-review.md', group: 'activity', render: renderAiClassification },
+      { id: '4-6', name: '빠른 줍기 시트', spec: 'docs/screens/4-6-quick-pickup-sheet.md', group: 'activity', render: renderQuickPickup },
+      { id: '4-7', name: '활동 종료 요약', spec: 'docs/screens/4-7-activity-summary.md', group: 'activity', render: renderActivitySummary },
+      { id: '5-1', name: '피드', spec: 'docs/screens/5-1-feed.md', group: 'social', render: renderFeed },
+      { id: '5-2', name: '게시물 상세', spec: 'docs/screens/5-2-post-detail.md', group: 'social', render: renderPostDetail },
+      { id: '5-3', name: '활동 기록 상세', spec: 'docs/screens/5-3-activity-record-detail.md', group: 'social', render: renderRecordDetail },
+      { id: '5-4', name: '타인 프로필', spec: 'docs/screens/5-4-user-profile.md', group: 'social', render: renderUserProfile },
+      { id: '5-5', name: '내 정보', spec: 'docs/screens/5-5-my-profile.md', group: 'social', render: renderMyProfile },
+      { id: '5-6', name: '게시물 작성', spec: 'docs/screens/5-6-create-post.md', group: 'social', render: renderPostEditor },
+      { id: '5-7', name: '설정', spec: 'docs/screens/5-7-settings.md', group: 'social', render: renderSettings },
+      { id: '5-8', name: '프로필 수정', spec: 'docs/screens/5-8-edit-profile.md', group: 'social', render: renderProfileEdit },
+      { id: '5-9', name: '차단 관리', spec: 'docs/screens/5-9-manage-blocks.md', group: 'social', render: renderBlockList },
+      { id: '6-1', name: '신고', spec: 'docs/screens/6-1-report.md', group: 'safety', render: renderReport },
+      { id: '6-2', name: '신고 처리', spec: 'docs/screens/6-2-review-report.md', group: 'safety', render: renderReportReview },
+    ]
+    const screenById = new Map(screens.map((screen) => [screen.id, screen]))
+    const tabRoots = [['홈', '2-1'], ['피드', '5-1'], ['줍깅', '4-1'], ['모이깅', '3-1'], ['내 정보', '5-5']]
+    const applicableStates = {
+      '1-1': ['기본', '오류', '오프라인', '제출 중'],
+      '1-2': ['기본', '오류', '오프라인', '제출 중'],
+      '1-3': ['기본', '빈', '오류', '오프라인', '제출 중'],
+      '1-4': ['기본', '빈', '오류', '오프라인', '제출 중'],
+      '1-5': ['기본', '오류', '오프라인', '제출 중'],
+      '1-6': ['기본', '오류', '오프라인'],
+      '1-7': ['기본', '오류', '오프라인', '제출 중'],
+      '1-8': ['기본', '오류', '오프라인', '제출 중'],
+      '1-9': ['기본', '로딩', '빈', '오류', '오프라인', '제출 중'],
+      '1-10': ['기본', '오류', '오프라인', '권한 거부'],
+      '2-1': ['기본', '로딩', '오류', '오프라인'],
+      '2-2': ['기본', '로딩', '빈', '오류', '오프라인'],
+      '2-3': ['기본', '로딩', '빈', '오류', '오프라인'],
+      '3-1': ['기본', '로딩', '오류', '오프라인'],
+      '3-2': ['기본', '로딩', '오류', '오프라인'],
+      '3-3': ['기본', '오류', '오프라인', '제출 중'],
+      '3-4': ['기본', '로딩', '오류', '오프라인'],
+      '3-5': ['기본', '로딩', '빈', '오류', '오프라인'],
+      '3-6': ['기본', '로딩', '오류', '오프라인', '제출 중'],
+      '3-7': ['기본', '로딩', '빈', '오류', '오프라인', '제출 중'],
+      '3-8': ['기본', '로딩', '빈', '오류', '오프라인', '제출 중'],
+      '3-9': ['기본', '로딩', '빈', '오류', '오프라인'],
+      '3-10': ['기본', '오류', '오프라인', '제출 중'],
+      '3-11': ['기본', '로딩', '빈', '오류', '오프라인', '제출 중'],
+      '3-12': ['기본', '오류', '오프라인', '제출 중'],
+      '4-1': ['기본', '로딩', '오류', '오프라인', '권한 거부'],
+      '4-2': ['기본', '오류', '오프라인', '권한 거부', '제출 중'],
+      '4-3': ['기본', '로딩', '빈', '오류', '오프라인', '권한 거부'],
+      '4-4': ['기본', '로딩', '오류', '오프라인', '권한 거부', '제출 중'],
+      '4-5': ['기본', '빈', '오류', '오프라인', '제출 중'],
+      '4-6': ['기본', '빈', '오류', '오프라인', '제출 중'],
+      '4-7': ['기본', '빈', '오류', '오프라인', '제출 중'],
+      '5-1': ['기본', '로딩', '빈', '오류', '오프라인', '제출 중'],
+      '5-2': ['기본', '로딩', '오류', '오프라인', '제출 중'],
+      '5-3': ['기본', '로딩', '빈', '오류', '오프라인', '제출 중'],
+      '5-4': ['기본', '로딩', '빈', '오류', '오프라인'],
+      '5-5': ['기본', '로딩', '빈', '오류', '오프라인', '제출 중'],
+      '5-6': ['기본', '오류', '오프라인', '권한 거부', '제출 중'],
+      '5-7': ['기본', '오류', '오프라인', '제출 중'],
+      '5-8': ['기본', '오류', '오프라인', '권한 거부', '제출 중'],
+      '5-9': ['기본', '로딩', '빈', '오류', '오프라인', '제출 중'],
+      '6-1': ['기본', '오류', '오프라인', '제출 중'],
+      '6-2': ['기본', '로딩', '빈', '오류', '오프라인', '제출 중'],
+    }
+
+    function renderReviewPanel(screen) {
+      reviewPanel.replaceChildren()
+      reviewPanel.append(text('h2', '검토 제어', 'review-title'), text('p', `${screen.id} · ${screen.name}`, 'caption'), text('p', screen.spec, 'caption'))
+      const role = element('select', { className: 'review-select', ariaLabel: '역할 선택' })
+      ;['크루원', '크루장'].forEach((value) => { const option = element('option', { text: value }); option.value = value; option.selected = state.role === value; role.append(option) })
+      role.addEventListener('change', () => { state.role = role.value; renderApp() })
+      const stateSelect = element('select', { className: 'review-select', ariaLabel: '상태 선택' })
+      const screenStates = applicableStates[screen.id]
+      if (!screenStates.includes(state.viewState)) state.viewState = '기본'
+      screenStates.forEach((value) => { const option = element('option', { text: value }); option.value = value; option.selected = state.viewState === value; stateSelect.append(option) })
+      stateSelect.addEventListener('change', () => { state.viewState = stateSelect.value; renderApp() })
+      reviewPanel.append(role, stateSelect, button('전체 화면', () => openSheet('screens'), 'ghost'))
+    }
+    function renderBottomNav() {
+      return element('nav', { className: 'nav', ariaLabel: '하단 탭' }, tabRoots.map(([label, id]) => id === '4-1'
+        ? element('button', { className: 'nav-start-action', text: '줍깅 시작', type: 'button', ariaLabel: '줍깅 시작', onClick: () => openSheet('activity-start') })
+        : element('button', { text: label, type: 'button', ariaCurrent: state.currentScreenId === id ? 'page' : null, onClick: () => navigate(id) })))
+    }
+    function renderSheet() {
+      sheetRoot.replaceChildren()
+      if (!state.sheet) return
+      const scrim = element('div', { className: 'sheet-scrim' })
+      const dialog = element('section', { className: 'sheet', ariaLabel: '선택 시트' })
+      dialog.setAttribute('role', 'dialog')
+      dialog.setAttribute('aria-modal', 'true')
+      if (state.sheet.kind === 'screens') {
+        dialog.append(text('h2', '전체 화면', 'section-title'))
+        const list = element('div', { className: 'screen-list' })
+        screens.forEach((screen) => list.append(listRow(`${screen.id} ${screen.name}`, screen.spec, () => navigate(screen.id))))
+        dialog.append(list)
+      } else if (state.sheet.kind === 'password-code') {
+        dialog.append(text('h2', '새 비밀번호 설정', 'section-title'), field('인증 코드', '', 'text', state.viewState === '오류' ? '인증 코드를 확인해 주세요.' : ''), field('새 비밀번호', '', 'password'), button('비밀번호 변경', () => { state.resetSent = false; closeSheet(); navigate('1-2', { replace: true }) }))
+      } else if (state.sheet.kind === 'activity-start') {
+        dialog.append(text('h2', '활동을 시작할까요?', 'section-title'), card([text('strong', '크루원에게 위치 공유'), text('p', '켜면 활동 중 내 위치와 경로가 크루원 지도에 보여요. 꺼도 내 기록에는 경로가 남아요.', 'subtle'), button('위치 공유 켬', () => {}, 'soft')]), banner('위치를 잡고 있어요…'), listRow('걸음수 측정 안 됨', '연결 · 선택', () => {}), text('p', '나를 팔로우한 크루원에게 시작 알림이 가요.', 'caption'), button('위치 권한 안내', () => navigate('1-10'), 'ghost'), button('줍깅 시작', () => navigate('4-3')))
+      } else if (state.sheet.kind === 'quick-pickup') {
+        dialog.append(text('h2', '이번 활동 줍기 17개', 'section-title'), text('p', '하나 담기 또는 수량을 입력하세요', 'subtle'), categoryGrid(), banner(`플라스틱 ${state.pickupCount}개 담았어요 · 저장됨`), button('되돌리기', () => { state.pickupCount = 0; renderSheet() }, 'ghost'), button('닫기', closeSheet))
+      } else if (state.sheet.kind === 'camera-preview') {
+        dialog.append(text('h2', '방금 찍은 사진', 'section-title'), photoFrame('촬영 사진 미리보기'), element('div', { className: 'button-row' }, [button('다시 찍기', closeSheet, 'ghost'), button('사용', () => navigate('4-5'))]))
+      } else {
+        const data = state.sheet.data
+        dialog.append(text('h2', data.title || '안내', 'section-title'), text('p', data.body || '', 'subtle'))
+        if (state.sheet.kind === 'confirm') dialog.append(element('div', { className: 'button-row' }, [button(data.label || '확인', () => { data.action(); closeSheet() }), button('취소', closeSheet, 'ghost')]))
+      }
+      dialog.append(button('닫기', closeSheet, 'ghost'))
+      dialog.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') { event.preventDefault(); closeSheet(); return }
+        if (event.key !== 'Tab') return
+        const focusables = [...dialog.querySelectorAll('button, input, textarea, select, [href]')].filter((node) => !node.disabled)
+        const current = focusables.indexOf(document.activeElement)
+        if (event.shiftKey && current <= 0) { event.preventDefault(); focusables.at(-1).focus() }
+        else if (!event.shiftKey && current === focusables.length - 1) { event.preventDefault(); focusables[0].focus() }
+      })
+      scrim.addEventListener('click', (event) => { if (event.target === scrim) closeSheet() })
+      scrim.append(dialog)
+      sheetRoot.append(scrim)
+      dialog.querySelector('button, input, textarea, select, [href]')?.focus()
+    }
+    function renderApp() {
+      const screen = screenById.get(state.currentScreenId) || screenById.get('1-1')
+      app.replaceChildren(screen.render())
+      if (tabRoots.some(([, id]) => id === screen.id)) app.firstElementChild.append(renderBottomNav())
+      renderReviewPanel(screen)
+      renderSheet()
+    }
+    renderApp()
+  </script>
+</body>
+</html>

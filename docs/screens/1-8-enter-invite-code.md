@@ -34,9 +34,9 @@
 
 | 구역 | 요소 | 내용 (계약 필드) | 컴포넌트 | 탭하면 |
 |---|---|---|---|---|
-| ① | 뒤로 버튼 | 두 단계 모두 보인다 | `Icon`(arrow-left) (옛 view_screen_header 의 backButton, `ic_back`) | 1-6 |
-| ① | 헤더 제목 | "크루 가입하기" | `Txt` title (옛 view_screen_header 의 headerTitle) | — |
-| ② | 배지 | "🌱 크루 가입하기". 짙은 초록 알약, 흰 글자 | `신규` 짙은 알약 (옛 `Gachi.Chip.Static.Deep`, `bg_chip_deep`) | — |
+| ① | 뒤로 버튼 | 두 단계 모두 보인다 | `AppHeader` (옛 view_screen_header 의 backButton, `ic_back`) | 1-6 |
+| ① | 헤더 제목 | "크루 가입하기" | `AppHeader` (옛 view_screen_header 의 headerTitle) | — |
+| ② | 배지 | "🌱 크루 가입하기". 짙은 초록 알약, 흰 글자 | `Chip` deep (옛 `Gachi.Chip.Static.Deep`, `bg_chip_deep`) | — |
 | ② | 큰 제목 | 1단계 "초대 코드를 입력해 주세요" · 2단계 "이 크루가 맞나요?" | `Txt` display | — |
 | ② | 설명 | 1단계 "크루장에게 받은 코드로 크루를 찾아요." · 2단계 "크루장이 승인하면 크루원이 돼요." | `Txt` caption muted | — |
 | ③ | 라벨 | "초대 코드". 1단계만 | `Field` 의 label | — |

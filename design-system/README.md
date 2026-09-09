@@ -224,3 +224,32 @@ pyftsubset assets/fonts/Pretendard-Regular.ttf   --unicodes-file=tools/pretendar
 ```
 
 소스에 쓰인 한글이 전부 들어 있는지 확인하고 교체하세요.
+
+## 화면 조합 레시피
+
+화면 설계의 정본은 `../docs/screens/`이다. 아래 레시피는 화면이 그 문서를 구현할 때
+재사용하는 배치 규칙이며, 기능·도메인 동작을 대신 정의하지 않는다.
+
+| 레시피 | 소유 영역 | 조합 규칙 |
+|---|---|---|
+| Root tab | `Screen` 안전 영역과 `BottomNav` | 본문만 스크롤하고 하단 내비는 고정한다. 5개 목적지를 넘기면 가운데 항목을 `startAction`으로 표시하며 선택 상태와 `onChange`를 보존한다. |
+| Sub-screen | `Screen` + `AppHeader` | 헤더는 고정, 본문은 스크롤한다. 뒤로·제목·선택 액션은 `AppHeader` 슬롯에 넣는다. |
+| Form | `AppHeader` + `Field` + `Button` | 필드 오류는 바로 아래, primary action은 문서가 정한 고정/스크롤 위치에 둔다. 키보드가 포커스 필드를 가리지 않게 한다. |
+| List/detail | `List`/`ListRow`/`Card` | 목록 행의 좌·우 슬롯에 상태와 조작을 합성한다. 상세의 사진·지도·댓글은 기능 레이어가 소유한다. |
+| Overlay | `BottomSheet` 또는 `Dialog` | 선택·보조 조작은 시트, 파괴적이거나 흐름을 멈추는 결정은 대화상자를 쓴다. |
+| Metrics | `Card`/`Tile`/`Progress` | 수치 위계는 `Txt` 토큰으로, 차트·경로·활동 달력은 기능 레이어로 둔다. |
+
+## UX 계약
+
+- 모든 독립 조작은 48dp 이상의 터치 영역을 가진다. 작게 보이는 `Chip`은 hitSlop으로 이를 만족한다.
+- 각 화면은 설계서의 로딩·빈·오류·오프라인·권한 거부·부분 실패 상태를 모두 구현한다. 공통 상태 표현은 `Loading`, `EmptyState`, `ErrorState`, `Banner`, `Snackbar`를 우선 사용한다.
+- 제출 중에는 같은 요청을 다시 보내지 않도록 제출 조작을 잠그고, 실패한 폼 값은 보존한다.
+- 필드 오류는 해당 필드 아래에 보이며, 서버 오류는 화면 설계서가 정한 `Banner` 또는 `Snackbar`로 보인다.
+- 삭제·탈퇴·변경 버리기처럼 되돌리기 어려운 조작은 설계서에 정한 `Dialog` 확인을 거친다.
+- 활동 달력·지도·경로·카메라·미디어·채팅 말풍선·홈의 캐릭터/그래프는 디자인 시스템 컴포넌트가 아니다. 토큰과 레시피만 공유하고 기능 화면에서 소유한다.
+
+## 추가 공개 컴포넌트
+
+- `IconButton`, `AppHeader`: 독립 아이콘 조작과 서브 화면 헤더. 요청 중에는 `backDisabled`로 뒤로가기를 비활성으로 알린다.
+- `Switch`, `Checkbox`, `Field.endAdornment`, `NumberStepper`: 반복되는 폼 조작. 스테퍼는 직접 정수 입력과 0.3초 간격 길게 누르기를 제공한다.
+- `BottomNav.startAction`, `Button`의 `deep`/`danger`/`ghostDanger`/`translucent`, `Chip`의 `deep`, `Avatar`의 `xl`(96dp)

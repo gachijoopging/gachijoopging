@@ -30,8 +30,8 @@
 
 | 구역 | 요소 | 내용 (계약 필드) | 컴포넌트 | 탭하면 |
 |---|---|---|---|---|
-| ① | 뒤로 버튼 | "뒤로" | `Icon`(arrow-left) | 진입 화면 |
-| ① | 헤더 제목 | "크루 기록" | `Txt` title | — |
+| ① | 뒤로 버튼 | "뒤로" | `AppHeader` | 진입 화면 |
+| ① | 헤더 제목 | "크루 기록" | `AppHeader` | — |
 | ② | 기간 칩 | `range` (`GET /crew/stats`) WEEK "이번 주" · MONTH "이번 달" · ALL "전체" | `Chip` choice | 기간 재조회 |
 | ③ | 일별 막대 | `series[].date`·`series[].items` (`GET /crew/stats`). WEEK·MONTH는 일별, ALL은 월별 줍기 수를 막대로 표시 | `신규` 막대 그래프 (옛 `view_map_frame` 자리) + `Txt` micro | — |
 | ③ | 기간 라벨 | `range`에 맞는 "이번 주" / "이번 달" / "전체 기간" | `Txt` caption | — |

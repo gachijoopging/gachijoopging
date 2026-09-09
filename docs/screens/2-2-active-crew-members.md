@@ -37,8 +37,8 @@
 
 | 구역 | 요소 | 내용 (계약 필드) | 컴포넌트 | 탭하면 |
 |---|---|---|---|---|
-| ① | 뒤로 버튼 | "뒤로" | `Icon`(arrow-left) | 진입 화면 |
-| ① | 헤더 제목 | "활동 중인 크루원" | `Txt` title | — |
+| ① | 뒤로 버튼 | "뒤로" | `AppHeader` | 진입 화면 |
+| ① | 헤더 제목 | "활동 중인 크루원" | `AppHeader` | — |
 | ① | 새로고침 버튼 | "새로고침" | `Icon`(refresh) | `GET /crew/live` 재조회 |
 | ② | 활동 수 | `GET /crew/live` 배열의 길이. "지금 2명이 활동 중이에요" · 1명이면 "지금 1명이 활동 중이에요" | `Txt` subtitle | — |
 | ③ | 크루원 행 | `user.photoUrl`·`user.nickname`·`activityId`·`startedAt`·`elapsedSec`·`distanceM`·`itemCount`·`paused`·`locationShared`·`location` (`GET /crew/live`) | `ListRow` + `Avatar` + `Badge` | 5-4 |

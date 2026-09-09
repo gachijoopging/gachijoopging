@@ -27,8 +27,8 @@
 
 | 구역 | 요소 | 내용 (계약 필드) | 컴포넌트 | 탭하면 |
 |---|---|---|---|---|
-| ① | 뒤로 버튼 | "뒤로" | `Icon`(arrow-left) | 3-1 |
-| ① | 헤더 제목 | "공지" | `Txt` title | — |
+| ① | 뒤로 버튼 | "뒤로" | `AppHeader` | 3-1 |
+| ① | 헤더 제목 | "공지" | `AppHeader` | — |
 | ① | 작성 버튼 | 크루장만 "작성" | `Button` primary sm + `Icon`(plus) | 3-12 |
 | ② | 안내 문구 | "크루원 모두에게 알릴 내용을 확인해요." | `Txt` caption muted | — |
 | ③ | 최신 공지 행 | 최신 작성 공지를 뜻하는 읽기 전용 `pinned` true인 `title`·`preview`·`commentCount`·`createdAt` (`GET /crew/notices`) | `Card` + `Icon`(pin) + `Txt` + `Badge` | 3-6 |

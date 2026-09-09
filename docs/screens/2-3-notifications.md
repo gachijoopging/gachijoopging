@@ -40,8 +40,8 @@
 
 | 구역 | 요소 | 내용 (계약 필드) | 컴포넌트 | 탭하면 |
 |---|---|---|---|---|
-| ① | 뒤로 | 왼쪽 화살표 아이콘 버튼 | `신규` 화면 헤더 (옛 `view_screen_header`) + `Icon`(arrow-left) | 진입 화면. 앱 시작 푸시는 소속에 따라 2-1 또는 1-6 |
-| ① | 제목·부제 | "알림" / 아래 작은 글자: `count` (`GET /notifications/unread-count`) 가 1 이상이면 "읽지 않음 3", 0 이면 "모두 읽었어요" | `Txt` title + `Txt` caption | — |
+| ① | 뒤로 | 왼쪽 화살표 아이콘 버튼 | `AppHeader` (내부 `IconButton` arrow-left, 옛 `view_screen_header`) | 진입 화면. 앱 시작 푸시는 소속에 따라 2-1 또는 1-6 |
+| ① | 제목·부제 | "알림" / 아래 작은 글자: `count` (`GET /notifications/unread-count`) 가 1 이상이면 "읽지 않음 3", 0 이면 "모두 읽었어요" | `AppHeader` | — |
 | ② | 묶음 라벨 | "처리 대기". `pending.joinRequests` 와 `pending.reports` (`GET /notifications`) 가 둘 다 0 이면 ② 전체를 숨긴다. 크루원은 둘 다 0 으로 오므로 항상 숨김 | `Txt` caption strong | — |
 | ② | 가입 신청 행 | `pending.joinRequests` (`GET /notifications`) 가 1 이상일 때. 원 아이콘 + "가입 신청 2건이 기다리고 있어요" + 오른쪽 숫자 배지 + chevron | `ListRow` + `Icon`(account-plus-outline) + `Badge` deep | 3-8 가입 신청 관리 |
 | ② | 신고 행 | `pending.reports` (`GET /notifications`) 가 1 이상일 때. 원 아이콘 + "신고 1건이 기다리고 있어요" + 오른쪽 숫자 배지 + chevron | `ListRow` + `Icon`(flag-outline) + `Badge` danger | 6-2 신고 처리(목록) |

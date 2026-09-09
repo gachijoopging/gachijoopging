@@ -40,8 +40,8 @@
 
 | 구역 | 요소 | 내용 (계약 필드) | 컴포넌트 | 탭하면 |
 |---|---|---|---|---|
-| ① | 뒤로 버튼 | 왼쪽 화살표 아이콘 | `신규` 화면 헤더 (옛 `view_screen_header`) + `Icon`(arrow-left) | 진입한 화면으로 |
-| ① | 제목 | "신고하기" | `Txt` title (옛 `rp_title`) | — |
+| ① | 뒤로 버튼 | 왼쪽 화살표 아이콘 | `AppHeader` (내부 `IconButton` arrow-left, 옛 `view_screen_header`) | 진입한 화면으로 |
+| ① | 제목 | "신고하기" | `AppHeader` (옛 `rp_title`) | — |
 | ② | 대상 라벨 | 고정 문구 "신고 대상" | `Txt` caption | — |
 | ② | 대상 아바타 | 신고 대상의 사진. `targetType` 이 USER 면 그 크루원, POST·COMMENT·NOTICE_COMMENT·CHAT_MESSAGE 면 작성자의 `photoUrl`. 진입 화면에서 대상 id와 미리보기 정보를 함께 받는다. null 이면 `nickname` 첫 글자 | `Avatar` sm | — |
 | ② | 대상 닉네임 | `nickname`. 진입한 화면에서 전달받는다 | `Txt` body strong | — |

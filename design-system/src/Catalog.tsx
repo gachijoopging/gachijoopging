@@ -7,10 +7,14 @@ import { shadow, borderWidth } from '../tokens/elevation.ts';
 import { useTheme, depth, type Scheme } from './theme.tsx';
 import { Txt } from './components/Text.tsx';
 import { Icon, type IconName } from './components/Icon.tsx';
+import { IconButton } from './components/IconButton.tsx';
+import { AppHeader } from './components/AppHeader.tsx';
 import { Button, CaptureButton } from './components/Button.tsx';
 import { Chip } from './components/Chip.tsx';
 import { Card, Tile } from './components/Card.tsx';
 import { Field } from './components/Input.tsx';
+import { Checkbox, Switch } from './components/Toggle.tsx';
+import { NumberStepper } from './components/NumberStepper.tsx';
 import { Avatar } from './components/Avatar.tsx';
 import { Badge, Dot } from './components/Badge.tsx';
 import { Banner } from './components/Banner.tsx';
@@ -70,9 +74,12 @@ export function Catalog({ scheme, onScheme }: { scheme: Scheme; onScheme: (s: Sc
   const [dialog, setDialog] = useState(false);
   const [snack, setSnack] = useState(false);
   const [tab, setTab] = useState<'all' | 'friends'>('all');
-  const [nav, setNav] = useState<'home' | 'feed' | 'meet' | 'me'>('home');
+  const [nav, setNav] = useState<'home' | 'feed' | 'start' | 'meet' | 'me'>('home');
   const [picked, setPicked] = useState('a');
   const [chip, setChip] = useState(false);
+  const [toggle, setToggle] = useState(true);
+  const [checked, setChecked] = useState(false);
+  const [participants, setParticipants] = useState(4);
   const [text, setText] = useState('');
 
   const noop = useCallback(() => {}, []);
@@ -187,12 +194,30 @@ export function Catalog({ scheme, onScheme }: { scheme: Scheme; onScheme: (s: Sc
           </Row>
         </Section>
 
+        <Section title="아이콘 버튼과 화면 헤더" note="아이콘만으로 동작할 때는 반드시 접근성 라벨을 제공합니다.">
+          <Row>
+            <IconButton icon="arrow-left" label="뒤로 가기" onPress={noop} />
+            <IconButton icon="cog" label="설정" variant="surface" onPress={noop} />
+            <IconButton icon="plus" label="추가" variant="lime" onPress={noop} />
+          </Row>
+          <AppHeader title="모임 설정" onBack={noop} />
+          <AppHeader
+            title="프로필"
+            subtitle="이웃에게 보이는 정보"
+            action={<IconButton icon="cog" label="프로필 설정" variant="tint" onPress={noop} />}
+          />
+        </Section>
+
         <Section title="버튼" note="주 채움은 라임→노랑 가로 그라데이션. 안드로이드에서는 리플로 반응합니다.">
           <Row>
             <Button label="줍깅 시작" onPress={noop} />
             <Button label="모임 만들기" variant="soft" onPress={noop} />
             <Button label="카카오로 로그인" variant="kakao" onPress={noop} />
             <Button label="취소" variant="ghost" onPress={noop} />
+            <Button label="선택" variant="deep" onPress={noop} />
+            <Button label="삭제" variant="danger" onPress={noop} />
+            <Button label="삭제 취소" variant="ghostDanger" onPress={noop} />
+            <Button label="사진 위 버튼" variant="translucent" onPress={noop} />
           </Row>
           <Row>
             <Button label="아이콘" icon="camera" size="md" onPress={noop} />
@@ -210,6 +235,7 @@ export function Catalog({ scheme, onScheme }: { scheme: Scheme; onScheme: (s: Sc
         <Section title="칩" note="시각 높이는 32 지만 터치 영역은 hitSlop 으로 48 을 지킵니다.">
           <Row>
             <Chip label="라임" tone="lime" />
+            <Chip label="딥" tone="deep" />
             <Chip label="소프트" tone="soft" />
             <Chip label="서피스" tone="surface" />
             <Chip label="중립" tone="neutral" />
@@ -222,9 +248,26 @@ export function Catalog({ scheme, onScheme }: { scheme: Scheme; onScheme: (s: Sc
 
         <Section title="입력창" note="화면이 KeyboardAvoidingView 를 쓰므로 키보드가 올라와도 가리지 않습니다.">
           <Field label="닉네임" placeholder="두 글자 이상" value={text} onChangeText={setText} hint="이웃에게 보이는 이름입니다" />
-          <Field label="비밀번호" placeholder="8자 이상" secureTextEntry error="8자 이상 입력해 주세요" />
+          <Field
+            label="비밀번호"
+            placeholder="8자 이상"
+            secureTextEntry
+            error="8자 이상 입력해 주세요"
+            endAdornment={<IconButton icon="eye" label="비밀번호 보기" onPress={noop} />}
+          />
           <Field label="한마디" placeholder="오늘 줍깅은 어땠나요?" multiline />
           <Field label="동네" value="역삼동" editable={false} />
+        </Section>
+
+        <Section title="토글과 체크박스">
+          <Switch label="모임 알림 받기" value={toggle} onValueChange={setToggle} />
+          <Switch label="비활성 알림" value={false} onValueChange={noop} disabled />
+          <Checkbox label="이용약관에 동의합니다" checked={checked} onChange={setChecked} />
+          <Checkbox label="선택할 수 없는 항목" checked onChange={noop} disabled />
+        </Section>
+
+        <Section title="수량 스테퍼" note="최소·최대값은 호출자가 정하고, 컴포넌트는 화면 안에서만 값을 제한합니다.">
+          <NumberStepper label="참여 인원" min={1} max={8} value={participants} onChange={setParticipants} />
         </Section>
 
         <Section title="카드">
@@ -251,6 +294,7 @@ export function Catalog({ scheme, onScheme }: { scheme: Scheme; onScheme: (s: Sc
         <Section title="아바타와 배지">
           <Row>
             <Avatar name="백관열" size="lg" />
+            <Avatar name="가치줍깅" size="xl" />
             <Avatar name="서상혁" size="md" />
             <Avatar name="김영현" size="sm" />
             <Avatar name="이웃" size="md" ring />
@@ -294,11 +338,13 @@ export function Catalog({ scheme, onScheme }: { scheme: Scheme; onScheme: (s: Sc
             items={[
               { value: 'home', label: '홈', icon: 'home' },
               { value: 'feed', label: '피드', icon: 'view-list' },
+              { value: 'start', label: '줍깅', icon: 'plus' },
               { value: 'meet', label: '모임', icon: 'account-group' },
               { value: 'me', label: '내정보', icon: 'account' },
             ] as const}
             value={nav}
             onChange={setNav}
+            startAction={{ icon: 'plus', label: '시작', onPress: noop }}
           />
         </Section>
 

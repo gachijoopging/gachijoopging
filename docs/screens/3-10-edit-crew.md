@@ -28,8 +28,8 @@
 
 | 구역 | 요소 | 내용 (계약 필드) | 컴포넌트 | 탭하면 |
 |---|---|---|---|---|
-| ① | 뒤로 버튼 | "뒤로" | `Icon`(arrow-left) | 3-2 |
-| ① | 헤더 제목 | "크루 정보 수정" | `Txt` title | — |
+| ① | 뒤로 버튼 | "뒤로" | `AppHeader` | 3-2 |
+| ① | 헤더 제목 | "크루 정보 수정" | `AppHeader` | — |
 | ② | 대표 사진 | `photoUrl` (`GET /crew`). null이면 `name` 첫 글자 | `Avatar` xl + `Button` ghost sm | 사진 선택 시트 |
 | ② | 사진 변경 시트 | "카메라로 촬영" · "사진 선택"(OS 기본 사진 선택기) · 사진이 있으면 "사진 삭제" | `BottomSheet` | `POST /media` purpose CREW → `photoMediaId` |
 | ③ | 이름 입력창 | `name` (`PATCH /crew`) · 2~20자, 기존 "한강줍깅크루" | `Field` | 키보드 |

@@ -41,15 +41,15 @@
 
 | 구역 | 요소 | 내용 (계약 필드) | 컴포넌트 | 탭하면 |
 |---|---|---|---|---|
-| ① | 뒤로 | 왼쪽 화살표 아이콘 버튼 | `신규` 화면 헤더 (옛 `view_screen_header`) + `Icon`(arrow-left) | 1-1 시작 |
-| ① | 제목·부제 | "이메일 로그인" / 아래 작은 글자 "기존 계정" | `Txt` title + `Txt` caption | — |
+| ① | 뒤로 | 왼쪽 화살표 아이콘 버튼 | `AppHeader` (내부 `IconButton` arrow-left, 옛 `view_screen_header`) | 1-1 시작 |
+| ① | 제목·부제 | "이메일 로그인" / 아래 작은 글자 "기존 계정" | `AppHeader` title + subtitle | — |
 | ② | 워드마크 | 고정 이미지 "가치줍깅". 너비 190dp, 가운데 정렬 | `신규` 워드마크 (옛 `img_logo_wordmark`, 에셋 `design-system/assets/logo-wordmark.png`) | — |
 | ② | 헤드라인 | 고정 문구 "다시 만나서 반가워요" 가운데 정렬, 24sp 굵게 | `Txt` title | — |
 | ② | 설명 | 고정 문구 두 줄 "가입한 이메일로 로그인하고\n오늘의 줍깅을 이어가요." 가운데 정렬, 흐린 글자, 줄 간격 넉넉히 | `Txt` body muted | — |
 | ③ | 이메일 입력 | 라벨 "이메일" · 자리 글 "you@example.com" · 이메일 키보드 · 자동 완성은 이메일. 값은 `POST /auth/login` 의 `email` | `Field` | 포커스·키보드 |
 | ③ | 이메일 오류 | 평소 숨김. "이메일 형식이 올바르지 않아요. @와 도메인을 확인해 주세요." 검증에 걸리면 입력 아래에 붉게, 테두리도 오류색 | `Field` error | — |
-| ④ | 비밀번호 입력 | 라벨 "비밀번호" · 자리 글 "8자 이상" · 글자 가림 · 자동 완성은 비밀번호. 값은 `POST /auth/login` 의 `password`. 오른쪽 끝 86dp 는 보기 칩 자리라 글자가 칩 밑에 깔리지 않는다 | `Field` | 포커스·키보드 |
-| ④ | 보기 칩 | 입력창 오른쪽 안쪽에 얹힌 작은 중립 알약. 가릴 때 "보기", 보일 때 "숨기기". 보이는 높이 28dp, 터치 높이 48dp | `Chip` neutral (옛 `bg_chip_neutral_touch` — 터치 영역 확장은 `신규`) | 비밀번호 글자 가림 ↔ 보임 토글. 커서 위치는 유지 |
+| ④ | 비밀번호 입력 | 라벨 "비밀번호" · 자리 글 "8자 이상" · 글자 가림 · 자동 완성은 비밀번호. 값은 `POST /auth/login` 의 `password`. 오른쪽 끝 86dp 는 보기 칩 자리라 글자가 칩 밑에 깔리지 않는다 | `Field` endAdornment | 포커스·키보드 |
+| ④ | 보기 칩 | 입력창 오른쪽 안쪽에 얹힌 작은 중립 알약. 가릴 때 "보기", 보일 때 "숨기기". 보이는 높이 28dp, 터치 높이 48dp | `Chip` neutral (옛 `bg_chip_neutral_touch`, 터치 영역은 hitSlop) | 비밀번호 글자 가림 ↔ 보임 토글. 커서 위치는 유지 |
 | ④ | 비밀번호 오류 | 평소 숨김. "비밀번호는 8자 이상이어야 해요." 검증에 걸리면 입력 아래에 붉게 | `Field` error | — |
 | ⑥ | 서버 오류 배너 | 평소 숨김. `POST /auth/login` 이 실패했을 때만 ⑤ 바로 위에 나타난다. 문구는 상태 표의 오류 행 | `Banner` danger | — |
 | ⑤ | 로그인 버튼 | "로그인". 채운 알약, 전체 폭 | `Button` primary lg | 검증 → `POST /auth/login` (`email`·`password`) → 성공하면 `GET /users/me` → 아래 분기 표 |

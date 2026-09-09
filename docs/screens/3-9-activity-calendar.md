@@ -28,8 +28,8 @@
 
 | 구역 | 요소 | 내용 (계약 필드) | 컴포넌트 | 탭하면 |
 |---|---|---|---|---|
-| ① | 뒤로 버튼 | "뒤로" | `Icon`(arrow-left) | 3-1 |
-| ① | 헤더 제목 | "활동 달력" | `Txt` title | — |
+| ① | 뒤로 버튼 | "뒤로" | `AppHeader` | 3-1 |
+| ① | 헤더 제목 | "활동 달력" | `AppHeader` | — |
 | ② | 이전·다음 월 버튼 | "이전 달" / "다음 달". month (`GET /crew/calendar`)를 YYYY-MM으로 바꾼다 | `Icon`(chevron-left) + `Icon`(chevron-right) | 해당 월 재조회 |
 | ② | 월 제목 | 선택된 month를 "2026년 9월"로 표시 | `Txt` section | — |
 | ③ | 날짜 칸 | 해당 날짜의 `days[].date`·`days[].items` (`GET /crew/calendar`). 활동이 없으면 수량 표시 없음, 수량이 많을수록 진한 배경 | `신규` 7열 달력 격자 + `Txt` | ④ 갱신 |

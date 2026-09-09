@@ -5,18 +5,20 @@ import { borderWidth } from '../../tokens/elevation.ts';
 import { useTheme } from '../theme.tsx';
 import { Txt, type TextVariant } from './Text.tsx';
 
-export type AvatarSize = 'sm' | 'md' | 'lg';
+export type AvatarSize = 'sm' | 'md' | 'lg' | 'xl';
 export type AvatarTone = 'me' | 'pink' | 'sky' | 'sand' | 'lilac' | 'leaf';
 
 const DIM: Record<AvatarSize, number> = {
   sm: sizes.avatarSm,
   md: sizes.avatarMd,
   lg: sizes.avatarLg,
+  xl: sizes.avatarXl,
 };
 const LABEL: Record<AvatarSize, TextVariant> = {
   sm: 'label',
   md: 'section',
   lg: 'display',
+  xl: 'display',
 };
 
 const TONES: AvatarTone[] = ['me', 'pink', 'sky', 'sand', 'lilac', 'leaf'];

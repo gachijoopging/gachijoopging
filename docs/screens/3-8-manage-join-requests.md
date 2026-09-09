@@ -32,8 +32,8 @@
 
 | 구역 | 요소 | 내용 (계약 필드) | 컴포넌트 | 탭하면 |
 |---|---|---|---|---|
-| ① | 뒤로 버튼 | "뒤로" | `Icon`(arrow-left) | 진입 화면 |
-| ① | 헤더 제목 | "가입 신청 관리" | `Txt` title | — |
+| ① | 뒤로 버튼 | "뒤로" | `AppHeader` | 진입 화면 |
+| ① | 헤더 제목 | "가입 신청 관리" | `AppHeader` | — |
 | ② | 대기 수 | `GET /crew/join-requests` 배열 길이. "대기 중인 가입 신청 2건" | `Txt` section | — |
 | ③ | 신청 행 | `id`·`user.photoUrl`·`user.nickname`·`createdAt`·`status` (`GET /crew/join-requests`) | `Card` + `Avatar` md + `Txt` | 신청자 → 5-4 |
 | ③ | 신청자 아바타·닉네임 | `user.photoUrl` null이면 `user.nickname` 첫 글자 | `Avatar` md + `Txt` body strong | 5-4 |

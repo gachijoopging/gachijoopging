@@ -30,8 +30,8 @@
 
 | 구역 | 요소 | 내용 (계약 필드) | 컴포넌트 | 탭하면 |
 |---|---|---|---|---|
-| ① | 뒤로 버튼 | "뒤로" | `Icon`(arrow-left) | 3-1 또는 2-1 |
-| ① | 헤더 제목 | "크루 정보" | `Txt` title | — |
+| ① | 뒤로 버튼 | "뒤로" | `AppHeader` | 3-1 또는 2-1 |
+| ① | 헤더 제목 | "크루 정보" | `AppHeader` | — |
 | ② | 크루 대표 카드 | `photoUrl`·`name`·`intro`·`goalCount`·`isLeader` (`GET /crew`) | `Card` + `Avatar` lg + `Txt` + `Badge` | — |
 | ② | 크루 사진·이름 | `photoUrl` null이면 `name` 첫 글자 · `name` "한강줍깅크루" | `Avatar` lg + `Txt` display | — |
 | ② | 소개 | `intro`이 비어 있으면 "소개가 아직 없어요." | `Txt` caption | — |
