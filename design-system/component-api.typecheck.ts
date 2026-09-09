@@ -1,10 +1,15 @@
 import {
   AppHeader,
   BottomNav,
+  Checkbox,
+  Switch,
   IconButton,
   type AppHeaderProps,
   type BottomNavProps,
+  type CheckboxProps,
+  type FieldProps,
   type IconButtonProps,
+  type SwitchProps,
 } from './src/index.ts';
 
 const appHeader: AppHeaderProps = {
@@ -39,3 +44,21 @@ const bottomNav: BottomNavProps<'home' | 'feed' | 'meet' | 'me'> = {
 
 void BottomNav;
 void bottomNav;
+
+const toggle: SwitchProps = {
+  label: '알림 받기',
+  value: true,
+  onValueChange: () => {},
+};
+const checkbox: CheckboxProps = {
+  label: '이용약관에 동의합니다',
+  checked: false,
+  onChange: () => {},
+};
+const field: FieldProps = { endAdornment: null };
+
+void Switch;
+void Checkbox;
+void toggle;
+void checkbox;
+void field;

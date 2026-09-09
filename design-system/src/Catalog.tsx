@@ -13,6 +13,7 @@ import { Button, CaptureButton } from './components/Button.tsx';
 import { Chip } from './components/Chip.tsx';
 import { Card, Tile } from './components/Card.tsx';
 import { Field } from './components/Input.tsx';
+import { Checkbox, Switch } from './components/Toggle.tsx';
 import { Avatar } from './components/Avatar.tsx';
 import { Badge, Dot } from './components/Badge.tsx';
 import { Banner } from './components/Banner.tsx';
@@ -75,6 +76,8 @@ export function Catalog({ scheme, onScheme }: { scheme: Scheme; onScheme: (s: Sc
   const [nav, setNav] = useState<'home' | 'feed' | 'meet' | 'me'>('home');
   const [picked, setPicked] = useState('a');
   const [chip, setChip] = useState(false);
+  const [toggle, setToggle] = useState(true);
+  const [checked, setChecked] = useState(false);
   const [text, setText] = useState('');
 
   const noop = useCallback(() => {}, []);
@@ -238,9 +241,22 @@ export function Catalog({ scheme, onScheme }: { scheme: Scheme; onScheme: (s: Sc
 
         <Section title="입력창" note="화면이 KeyboardAvoidingView 를 쓰므로 키보드가 올라와도 가리지 않습니다.">
           <Field label="닉네임" placeholder="두 글자 이상" value={text} onChangeText={setText} hint="이웃에게 보이는 이름입니다" />
-          <Field label="비밀번호" placeholder="8자 이상" secureTextEntry error="8자 이상 입력해 주세요" />
+          <Field
+            label="비밀번호"
+            placeholder="8자 이상"
+            secureTextEntry
+            error="8자 이상 입력해 주세요"
+            endAdornment={<IconButton icon="eye" label="비밀번호 보기" onPress={noop} />}
+          />
           <Field label="한마디" placeholder="오늘 줍깅은 어땠나요?" multiline />
           <Field label="동네" value="역삼동" editable={false} />
+        </Section>
+
+        <Section title="토글과 체크박스">
+          <Switch label="모임 알림 받기" value={toggle} onValueChange={setToggle} />
+          <Switch label="비활성 알림" value={false} onValueChange={noop} disabled />
+          <Checkbox label="이용약관에 동의합니다" checked={checked} onChange={setChecked} />
+          <Checkbox label="선택할 수 없는 항목" checked onChange={noop} disabled />
         </Section>
 
         <Section title="카드">

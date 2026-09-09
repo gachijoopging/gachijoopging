@@ -27,6 +27,9 @@ export type { CardProps, TileTone } from './components/Card.tsx';
 export { Field } from './components/Input.tsx';
 export type { FieldProps } from './components/Input.tsx';
 
+export { Switch, Checkbox } from './components/Toggle.tsx';
+export type { SwitchProps, CheckboxProps } from './components/Toggle.tsx';
+
 export { Avatar, toneForName } from './components/Avatar.tsx';
 export type { AvatarProps, AvatarSize, AvatarTone } from './components/Avatar.tsx';
 
