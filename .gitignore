@@ -28,3 +28,6 @@ Thumbs.db
 
 # 작업 스펙·계획 (옛 저장소 관례). 남아야 할 결정은 docs/feature-scope.md·docs/adr 로
 docs/superpowers/
+
+# Local legacy app for design comparison
+mobile/legacy-387996e3-20260813.apk
