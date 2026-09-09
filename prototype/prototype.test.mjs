@@ -21,7 +21,7 @@ test('declares offline token CSS', () => {
 })
 
 test('registers every approved screen exactly once', () => {
-  const entries = [...html.matchAll(/id:\s*'([1-6]-\d+)'[\s\S]*?spec:\s*'(docs\/screens\/[^']+\.md)'/g)]
+  const entries = [...html.matchAll(/id:\s*'([1-6]-\d+)'[\s\S]*?spec:\s*'(docs\/화면설계\/[^']+\.md)'/g)]
   assert.equal(entries.length, 43)
   assert.equal(new Set(entries.map(([, id]) => id)).size, 43)
   assert.equal(new Set(entries.map(([, , spec]) => spec)).size, 43)
