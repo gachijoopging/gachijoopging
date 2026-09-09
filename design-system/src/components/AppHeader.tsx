@@ -20,7 +20,7 @@ export function AppHeader({ title, subtitle, onBack, action, style }: AppHeaderP
         style,
       ]}
     >
-      {onBack ? <IconButton icon="arrow-left" label="뒤로 가기" onPress={onBack} /> : null}
+      {onBack ? <IconButton icon="arrow-left" label="뒤로 가기" variant="surface" onPress={onBack} /> : null}
       <View style={{ flex: 1, gap: subtitle ? space.xs : 0 }}>
         <Txt variant="section" accessibilityRole="header">
           {title}
