@@ -7,7 +7,7 @@
 
 **학습 로그의 지표는 서빙이 내는 값이 아니다.** ultralytics 는 학습 중 val 에
 `rect=True` 를 넘기고(`models/yolo/detect/train.py:76`), 서빙은 `rect=False` 로 고정돼
-있다(`app/infer.py`, `진행상황.md` §3.1 "절대 조건"). 이 스크립트가 그 간극을 메운다.
+있다(`app/infer.py`, `progress.md` §3.1 "절대 조건"). 이 스크립트가 그 간극을 메운다.
 
 패스가 둘인 이유: **mAP 는 `conf` 를 낮게 둬야 맞고**(PR 곡선 전체가 필요하다)
 **사용자가 보는 것은 `CONF_MIN` 이후**다. 한 번으로는 둘 다 못 낸다.
@@ -59,7 +59,7 @@ VAL_IMAGES = 131
 # 두 모델을 같은 자로 잴 수 없다.
 SIX = tuple(name for name in CLASSES if name != "GENERAL")
 
-# `실험기록.md` §4 `run: train` 의 best.pt 검증값 (rect=True · batch=128 · conf=0.001).
+# `experiment-log.md` §4 `run: train` 의 best.pt 검증값 (rect=True · batch=128 · conf=0.001).
 # `--compare-rect` 가 이 숫자를 재현해야 나머지 출력을 믿을 수 있다.
 RECORDED_RECT_TRUE = {"mAP50": 0.338, "mAP50-95": 0.255}
 
@@ -268,7 +268,7 @@ def print_predict(result: dict) -> None:
 
 
 def write_report(serving: dict, predicted: dict, path: Path, dataset: str) -> Path:
-    """`실험기록.md` §4 에 그대로 붙는 markdown. 손으로 옮겨 적다 틀리는 것을 막는다.
+    """`experiment-log.md` §4 에 그대로 붙는 markdown. 손으로 옮겨 적다 틀리는 것을 막는다.
 
     표 형태는 그 파일 §4 의 템플릿(`| 클래스 | AP50 | AP50-95 | 비고 |`)과 같아야 한다.
     """
@@ -368,7 +368,7 @@ def main() -> int:
 
     report = write_report(serving, predicted, AI_DIR / "runs" / f"eval_report{suffix}.md",
                           data_yaml.parent.name)
-    print(f"\n→ {report}  (실험기록.md §4 에 그대로 붙는다)")
+    print(f"\n→ {report}  (experiment-log.md §4 에 그대로 붙는다)")
     return 0
 
 

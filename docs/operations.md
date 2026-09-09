@@ -1,11 +1,11 @@
 # 운영
 
-EC2 한 대 + Supabase Postgres + 담당자 노트북의 AI 서버. 컨테이너 4개(`기능범위.md` 인프라 행).
+EC2 한 대 + Supabase Postgres + 담당자 노트북의 AI 서버. 컨테이너 4개(`feature-scope.md` 인프라 행).
 
 ## 구성 — 미결
 
-옛 EC2 구성(nginx·blue/green·acme·redis·Postgres 컨테이너·LiveKit·모니터링)은 가져오지 않았다. 서버는 새로 구성하며 플랫폼·배포·감시 방식은 아직 정하지 않았다(`기능범위.md` 미결).
-정해진 것: DB 는 Supabase Postgres(ADR-0001), 공개 주소는 `www.gachi-joopging.site`(apex 는 301 이라 쓰지 않는다), 채팅·위치는 STOMP 소켓(`소켓.md`)이라 소켓을 통과시키는 입구가 필요하다.
+옛 EC2 구성(nginx·blue/green·acme·redis·Postgres 컨테이너·LiveKit·모니터링)은 가져오지 않았다. 서버는 새로 구성하며 플랫폼·배포·감시 방식은 아직 정하지 않았다(`feature-scope.md` 미결).
+정해진 것: DB 는 Supabase Postgres(ADR-0001), 공개 주소는 `www.gachi-joopging.site`(apex 는 301 이라 쓰지 않는다), 채팅·위치는 STOMP 소켓(`realtime.md`)이라 소켓을 통과시키는 입구가 필요하다.
 
 ## `.env` 키
 
