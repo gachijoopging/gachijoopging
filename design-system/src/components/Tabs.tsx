@@ -98,7 +98,7 @@ export function BottomNav<T extends string>({
   const { colors, shadows } = useTheme();
   const ripple = useRipple();
   const hasRootAction = !!startAction && (items.length === 4 || items.length === 5);
-  const [leadingItems, trailingItems] = splitBottomNavItems(items);
+  const [leadingItems, actionItem, trailingItems] = splitBottomNavItems(items);
   const item = (it: BottomNavItem<T>) => {
     const on = it.value === value;
     const ink = on ? colors.onDark : colors.inkMuted;
@@ -154,11 +154,17 @@ export function BottomNav<T extends string>({
         <>
           {leadingItems.map(item)}
           <Pressable
-            accessibilityRole="button"
+            accessibilityRole={actionItem ? 'tab' : 'button'}
             accessibilityLabel={startAction.label}
-            accessibilityState={{ disabled: !!startAction.disabled }}
+            accessibilityState={{
+              disabled: !!startAction.disabled,
+              ...(actionItem ? { selected: actionItem.value === value } : {}),
+            }}
             disabled={startAction.disabled}
-            onPress={startAction.onPress}
+            onPress={() => {
+              if (actionItem) onChange(actionItem.value);
+              startAction.onPress();
+            }}
             android_ripple={ripple}
             style={({ pressed }) => ({
               width: 52,

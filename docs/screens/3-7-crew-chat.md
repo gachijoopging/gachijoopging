@@ -44,7 +44,7 @@
 | 구역 | 요소 | 내용 (계약 필드) | 컴포넌트 | 탭하면 |
 |---|---|---|---|---|
 | ① | 뒤로 | 왼쪽 화살표 아이콘 버튼 | `AppHeader` (내부 `IconButton` arrow-left, 옛 `view_screen_header`) | 진입한 화면으로 |
-| ① | 제목·부제 | "크루 채팅" / 아래 작은 글자 "크루원 `memberCount`명" (`GET /crew`) 예: "크루원 18명" | `Txt` title + `Txt` caption | — |
+| ① | 제목·부제 | "크루 채팅" / 아래 작은 글자 "크루원 `memberCount`명" (`GET /crew`) 예: "크루원 18명" | `AppHeader` | — |
 | ② | 끊김 배너 | 평소 숨김. 소켓이 끊겨 재연결 중이면 헤더 아래에 "연결 중…". 다시 붙으면 사라진다 | `Banner` warn | — |
 | ③ | 시작 안내 | 이력의 맨 위. `hasMore` (`GET /crew/chat/messages`) 가 false 일 때만 "크루원만 참여하는 채팅방이에요" 가운데 작은 알약 | `Chip` neutral (옛 `bg_chip_surface`) | — |
 | ③ | 날짜 구분선 | `createdAt` 의 날짜가 앞 메시지와 다를 때마다 가운데 작은 알약. 오늘 "오늘" · 어제 "어제" · 그 외 "2026년 9월 6일 토요일" | `Chip` neutral | — |

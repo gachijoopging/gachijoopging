@@ -54,7 +54,7 @@
 | 구역 | 요소 | 내용 (계약 필드) | 컴포넌트 | 탭하면 |
 |---|---|---|---|---|
 | ① | 뒤로 | 왼쪽 화살표 아이콘 버튼 | `AppHeader` (내부 `IconButton` arrow-left, 옛 `view_screen_header`) | 진입한 화면으로 |
-| ① | 제목 | "게시물" | `Txt` title | — |
+| ① | 제목 | "게시물" | `AppHeader` | — |
 | ② | 얼굴 | `author.photoUrl` (`GET /posts/{postId}`) 38dp 원. null 이면 `author.nickname` 첫 글자 | `Avatar` md | 5-4 타인 프로필 (`author.id`). 내 글이면 눌리지 않는다 |
 | ② | 이름 | `author.nickname`. 탈퇴했으면 서버가 "탈퇴한 크루원" 으로 준다 | `Txt` body strong | 5-4 타인 프로필. "탈퇴한 크루원" 과 내 글은 눌리지 않는다 |
 | ② | 메타 | `createdAt` 의 상대 시각(1분 안 "방금" · 60분 안 "N분 전" · 24시간 안 "N시간 전" · 어제 "어제" · 그 뒤 "M월 D일" · 해가 다르면 "YYYY.M.D"). `visibility` 가 PRIVATE 면 뒤에 " · 나만 보기" | `Txt` caption | — |

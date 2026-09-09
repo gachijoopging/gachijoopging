@@ -36,7 +36,7 @@
 | 구역 | 요소 | 내용 (계약 필드) | 컴포넌트 | 탭하면 |
 |---|---|---|---|---|
 | ① | 뒤로 버튼 | 왼쪽 화살표 아이콘 | `AppHeader` (내부 `IconButton` arrow-left, 옛 `view_screen_header`) | 5-5 내 정보 |
-| ① | 제목 | "설정" | `Txt` title | — |
+| ① | 제목 | "설정" | `AppHeader` | — |
 | ②-a | 프로필 수정 | "프로필 수정" · "닉네임과 사진을 바꿔요." | `ListRow` (옛 `view_settings_row`) | 5-8 프로필 수정 |
 | ②-b | 위치 공유 기본값 | "위치 공유 기본값" · "활동을 시작할 때 미리 선택돼요." 값은 `settings.shareLocationDefault` (`GET /users/me`) | `ListRow` + `Switch` (옛 `Gachi.Switch`, 행 id rowSwitch) | 스위치 토글 → 아래 "토글 저장" |
 | ②-c | 활동 시작 알림 | "활동 시작 알림" · "팔로우한 크루원이 활동을 시작하면 알려줘요." 값은 `settings.notifyActivityStart` (`GET /users/me`) | `ListRow` + `Switch` (옛 `Gachi.Switch`, 행 id rowSwitch) | 스위치 토글 → 아래 "토글 저장" |

@@ -43,7 +43,7 @@
 | 구역 | 요소 | 내용 (계약 필드) | 컴포넌트 | 탭하면 |
 |---|---|---|---|---|
 | ① | 뒤로 버튼 | 왼쪽 화살표 아이콘 | `AppHeader` (내부 `IconButton` arrow-left, 옛 `view_screen_header`) | 뒤로 가기(아래 인터랙션) |
-| ① | 제목 | "게시물 작성" | `Txt` title | — |
+| ① | 제목 | "게시물 작성" | `AppHeader` | — |
 | ② | 글 라벨 | "글" | `Txt` label | — |
 | ② | 글 입력 | 자리 글 "오늘의 줍깅은 어땠나요?"(옛 hint_post_body, 글자수 안내는 뺐다). 여러 줄. 값은 앞뒤 공백을 지운 `text`(`POST /crew/posts`), 최대 1000자 | `Field` (옛 `bg_input_multiline`) | 포커스·키보드 |
 | ② | 글자수 | "137 / 1000" 처럼 입력 오른쪽 아래에. `text` 가 1000자에 닿으면 더 입력되지 않고 숫자가 붉게 | `Txt` micro (옛 `pub_count`) | — |

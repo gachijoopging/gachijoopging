@@ -34,8 +34,8 @@
 | 구역 | 요소 | 내용 (계약 필드) | 컴포넌트 | 탭하면 |
 |---|---|---|---|---|
 | ① | 뒤로 버튼 | 왼쪽 화살표 아이콘 | `AppHeader` (내부 `IconButton` arrow-left, 옛 `view_screen_header`) | 5-7 설정 |
-| ① | 제목 | "차단 관리" | `Txt` title | — |
-| ① | 부제 | `data` (`GET /users/me/blocked`) 배열 길이로 "차단 3명" 처럼. 0 이어도 표시 | `Txt` caption | — |
+| ① | 제목 | "차단 관리" | `AppHeader` | — |
+| ① | 부제 | `data` (`GET /users/me/blocked`) 배열 길이로 "차단 3명" 처럼. 0 이어도 표시 | `AppHeader` | — |
 | ② | 아바타 | `photoUrl` (`GET /users/me/blocked`). null 이면 `nickname` 첫 글자 | `Avatar` sm | 5-4 타인 프로필 (`id`) |
 | ② | 닉네임 | `nickname` (`GET /users/me/blocked`). 탈퇴했으면 "탈퇴한 크루원"(스키마 그대로) | `Txt` body strong | 5-4 타인 프로필 (`id`), 탈퇴한 크루원이면 이동 없음 |
 | ② | 부제 | 고정 문구 "차단됨 · 게시물·댓글·채팅·위치에서 숨김" | `Txt` caption muted | 아바타·닉네임과 같다 |
