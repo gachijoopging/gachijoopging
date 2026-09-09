@@ -53,16 +53,16 @@
 
 | 구역 | 요소 | 내용 (계약 필드) | 컴포넌트 | 탭하면 |
 |---|---|---|---|---|
-| ① | 뒤로 | 왼쪽 화살표 아이콘 버튼 | `신규` 화면 헤더 (옛 `view_screen_header`) + `Icon`(arrow-left) | 진입한 화면으로 |
+| ① | 뒤로 | 왼쪽 화살표 아이콘 버튼 | `AppHeader` (내부 `IconButton` arrow-left, 옛 `view_screen_header`) | 진입한 화면으로 |
 | ① | 제목 | "게시물" | `Txt` title | — |
 | ② | 얼굴 | `author.photoUrl` (`GET /posts/{postId}`) 38dp 원. null 이면 `author.nickname` 첫 글자 | `Avatar` md | 5-4 타인 프로필 (`author.id`). 내 글이면 눌리지 않는다 |
 | ② | 이름 | `author.nickname`. 탈퇴했으면 서버가 "탈퇴한 크루원" 으로 준다 | `Txt` body strong | 5-4 타인 프로필. "탈퇴한 크루원" 과 내 글은 눌리지 않는다 |
 | ② | 메타 | `createdAt` 의 상대 시각(1분 안 "방금" · 60분 안 "N분 전" · 24시간 안 "N시간 전" · 어제 "어제" · 그 뒤 "M월 D일" · 해가 다르면 "YYYY.M.D"). `visibility` 가 PRIVATE 면 뒤에 " · 나만 보기" | `Txt` caption | — |
-| ② | 더보기 | 세로 점 3개, 연한 원 배경 48dp. 아래 시트 표 참고 | `신규` 원 아이콘 배경 (옛 `bg_circle_tint_36`) + `Icon`(dots-vertical) | 게시물 시트 |
+| ② | 더보기 | 세로 점 3개, 연한 원 배경 48dp. 아래 시트 표 참고 | `IconButton` tint (옛 `bg_circle_tint_36`) | 게시물 시트 |
 | ② | 사진 | `media[].url`. 첫 장이 보이고 좌우로 넘긴다. 자르지 않고 원본 비율, 최소 220dp · 최대 520dp. 받는 동안 `thumbUrl` 을 흐리게 먼저 보인다. `media` 가 비어 있으면 사진 틀 전체를 그리지 않는다(글만) | `신규` 사진 페이저 (옛 `bg_photo_placeholder`, photoFrame 자리) | 사진을 탭해도 아무 일 없음 |
 | ② | 사진 자리 | 사진을 못 받았을 때 틀 가운데 흐린 사진 아이콘 48dp | `Icon`(image-outline) | — |
 | ② | 사진 번호 | `media` 가 2장 이상일 때만 사진 오른쪽 위에 "1/3" 짙은 반투명 알약 | `Chip` neutral (옛 `bg_pill_overlay` — 반투명은 `신규`) | — |
-| ② | 이전·다음 | `media` 가 2장 이상일 때만 사진 좌우 가운데에 48dp 흰 원 화살표. 첫 장에서는 이전, 마지막 장에서는 다음을 숨긴다 | `신규` 원 아이콘 배경 (옛 `bg_circle_surface_32`) + `Icon`(chevron-left / chevron-right) | 한 장 넘김 |
+| ② | 이전·다음 | `media` 가 2장 이상일 때만 사진 좌우 가운데에 48dp 흰 원 화살표. 첫 장에서는 이전, 마지막 장에서는 다음을 숨긴다 | `IconButton` surface (옛 `bg_circle_surface_32`) | 한 장 넘김 |
 | ② | 본문 | `text`. 줄바꿈 유지, 줄 간격 1.6. 전체를 보인다(더 보기 없음). 비어 있으면 줄을 그리지 않는다 | `Txt` body | — |
 | ② | 좋아요 칩 | 하트 + "좋아요 `likeCount`" 예: "좋아요 6". `liked` 가 true 면 채운 하트에 선택 색, false 면 빈 하트 | `Chip` (선택형, 옛 `Gachi.Chip.Choice`) + `Icon`(heart / heart-outline) | `liked` false → `PUT /posts/{postId}/like`, true → `DELETE /posts/{postId}/like`. 누르는 순간 하트와 숫자를 먼저 바꾸고 응답을 기다리지 않는다 |
 | ② | 댓글 칩 | 말풍선 + "댓글 `commentCount`" 예: "댓글 2" | `Chip` neutral + `Icon`(comment-outline) | ④ 입력에 포커스, 키보드가 올라온다 |

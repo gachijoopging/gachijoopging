@@ -33,7 +33,7 @@
 
 | 구역 | 요소 | 내용 (계약 필드) | 컴포넌트 | 탭하면 |
 |---|---|---|---|---|
-| ① | 뒤로 버튼 | 왼쪽 화살표 아이콘 | `신규` 화면 헤더 (옛 `view_screen_header`) + `Icon`(arrow-left) | 5-7 설정 |
+| ① | 뒤로 버튼 | 왼쪽 화살표 아이콘 | `AppHeader` (내부 `IconButton` arrow-left, 옛 `view_screen_header`) | 5-7 설정 |
 | ① | 제목 | "차단 관리" | `Txt` title | — |
 | ① | 부제 | `data` (`GET /users/me/blocked`) 배열 길이로 "차단 3명" 처럼. 0 이어도 표시 | `Txt` caption | — |
 | ② | 아바타 | `photoUrl` (`GET /users/me/blocked`). null 이면 `nickname` 첫 글자 | `Avatar` sm | 5-4 타인 프로필 (`id`) |

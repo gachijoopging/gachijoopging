@@ -39,7 +39,7 @@
 | ③ | 소셜 오류 배너 | 평소 숨김. "소셜 로그인에 실패했어요. 네트워크 상태를 확인하고 다시 시도해 주세요." 카카오·구글 로그인이 실패했을 때만 ④ 바로 위에 나타난다 | `Banner` danger | — |
 | ④ | 카카오 버튼 | "카카오로 시작하기". 카카오 노랑 알약 | `Button` kakao lg | 카카오 로그인 화면(제공자) → 받은 accessToken 을 `token` 으로 `POST /auth/kakao` |
 | ⑤ | 구글 버튼 | "G 구글로 시작하기". 투명 바탕에 가는 테두리 | `Button` ghost lg | 구글 로그인 화면(제공자) → 받은 idToken 을 `token` 으로 `POST /auth/google` |
-| ⑥ | 이메일 버튼 | "✉️ 이메일로 로그인". 반투명 바탕, 흐린 글자 | `Button` soft lg (옛 `bg_button_translucent` — 반투명 바탕은 `신규`) | 1-2 로그인 |
+| ⑥ | 이메일 버튼 | "✉️ 이메일로 로그인". 반투명 바탕, 흐린 글자 | `Button` translucent lg (옛 `bg_button_translucent`) | 1-2 로그인 |
 | ⑦ | 회원가입 링크 | "처음이신가요?" 가운데 정렬, 사진 위에서 읽히게 흰 글자와 그림자 | `Txt` body (옛 `Gachi.Button.Link`) — 텍스트 전체가 터치 영역 | 1-3 회원가입 |
 
 소셜 로그인·자동 로그인 뒤에는 `GET /users/me`의 `profileComplete`를 먼저 확인한다. 미완료면 1-4에서 이어가며 `isNew` false만으로 건너뛰지 않는다. 닉네임과 필수 동의 완료를 모두 확인한 뒤 소속 상태를 따른다. `profileComplete` true만으로 필수 동의 완료를 추정하지 않는다. 저장된 토큰으로 재개하되 인증 갱신 불가 시 1-1을 표시한다.
