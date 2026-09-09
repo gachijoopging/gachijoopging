@@ -20,6 +20,18 @@ test('declares offline token CSS', () => {
   assert.match(html, /--yellow:\s*#F4F04B/)
 })
 
+test('uses the reusable design-system visual primitives', () => {
+  assert.match(html, /@font-face\s*\{[\s\S]*?Pretendard-Regular\.ttf/)
+  assert.match(html, /font-family:\s*'Pretendard'/)
+  assert.match(html, /--surface-raised:\s*#FFFFFF/)
+  assert.match(html, /\.button--deep\s*\{/)
+  assert.match(html, /\.button--translucent\s*\{/)
+  assert.match(html, /\.field--error\s*\{/)
+  for (const primitive of ['button', 'iconButton', 'card', 'field', 'listRow', 'banner']) {
+    assert.match(html, new RegExp(`function ${primitive}\\(`))
+  }
+})
+
 test('registers every approved screen exactly once', () => {
   const entries = [...html.matchAll(/id:\s*'([1-6]-\d+)'[\s\S]*?spec:\s*'(docs\/screens\/[^']+\.md)'/g)]
   assert.equal(entries.length, 43)

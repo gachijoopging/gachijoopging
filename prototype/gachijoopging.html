@@ -5,9 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>가치줍깅 프로토타입</title>
   <style>
+    @font-face { font-family: 'Pretendard'; src: url('../design-system/assets/fonts/Pretendard-Regular.ttf') format('truetype'); font-weight: 400; font-style: normal; font-display: swap; }
+    @font-face { font-family: 'Pretendard'; src: url('../design-system/assets/fonts/Pretendard-Bold.ttf') format('truetype'); font-weight: 700 900; font-style: normal; font-display: swap; }
     :root {
       --bg: #DCE6A6;
       --surface: #FDFDF3;
+      --surface-raised: #FFFFFF;
       --ink: #262A0E;
       --ink-muted: #5C6142;
       --deep: #3D431F;
@@ -25,7 +28,7 @@
       --shadow-overlay: 0 12px 32px rgba(101, 114, 28, 0.24);
     }
     * { box-sizing: border-box; }
-    body { min-height: 100vh; margin: 0; background: var(--bg); color: var(--ink); font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    body { min-height: 100vh; margin: 0; background: var(--bg); color: var(--ink); font-family: 'Pretendard', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
     ::selection { color: var(--ink); background: var(--lime); }
     button, input, textarea, select { font: inherit; }
     button, input, select { min-height: var(--min-touch); }
@@ -38,13 +41,13 @@
     .screen { display: flex; min-height: 760px; flex-direction: column; gap: 20px; overflow-x: hidden; padding: var(--screen-padding); }
     .screen-header, .list-row, .nav, .split, .button-row, .meta { display: flex; align-items: center; }
     .screen-header { justify-content: space-between; gap: 8px; }
-    .screen-header h1 { margin: 0; font-size: 20px; }
+    .screen-header h1 { margin: 0; font-size: 20px; font-weight: 700; }
     .screen-header p, .subtle, .caption { margin: 0; color: var(--ink-muted); }
     .subtle { min-width: 0; overflow-wrap: anywhere; line-height: 1.55; }
     .caption { font-size: 13px; }
     .display { margin: 0; font-size: 26px; line-height: 1.25; letter-spacing: -0.03em; overflow-wrap: anywhere; }
     .section-title { margin: 0; font-size: 16px; }
-    .card { padding: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--card-radius); box-shadow: var(--shadow-card); }
+    .card { padding: 16px; background: var(--surface-raised); border: 1px solid var(--border); border-radius: var(--card-radius); box-shadow: var(--shadow-card); }
     .stack { display: grid; gap: 12px; min-width: 0; }
     .tight { display: grid; gap: 8px; }
     .split { justify-content: space-between; gap: 12px; }
@@ -54,12 +57,15 @@
     .button--primary { color: var(--ink); background: linear-gradient(90deg, var(--lime), var(--yellow)); }
     .button--soft { color: var(--ink); background: #F2F5DD; }
     .button--ghost { color: var(--deep); background: transparent; border: 1px solid var(--border); }
+    .button--deep { color: var(--surface); background: var(--deep); }
+    .button--translucent { color: var(--surface); background: rgba(253, 253, 243, 0.16); border: 1px solid rgba(253, 253, 243, 0.48); }
     .button--danger { color: #fff; background: var(--danger); }
     .icon-button { width: var(--min-touch); min-width: var(--min-touch); padding: 0; border: 1px solid var(--border); border-radius: 999px; color: var(--deep); background: var(--surface); font-size: 18px; }
     .list-row { min-height: var(--min-touch); justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--border); color: var(--ink); background: transparent; text-align: left; }
     .list-row:last-child { border-bottom: 0; }
     .list-row[role="button"] { width: 100%; border-inline: 0; border-top: 0; }
     .field { width: 100%; padding: 12px; color: var(--ink); background: var(--surface); border: 1px solid var(--border); border-radius: 16px; }
+    .field--error { border-color: var(--danger); box-shadow: 0 0 0 2px rgba(196, 67, 67, 0.14); }
     textarea.field { min-height: 104px; resize: vertical; }
     label { display: grid; gap: 4px; font-weight: 700; }
     .state-panel { padding: 12px; color: var(--ink-muted); background: #F2F5DD; border-radius: 18px; }
