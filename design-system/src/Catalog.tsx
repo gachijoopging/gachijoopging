@@ -14,6 +14,7 @@ import { Chip } from './components/Chip.tsx';
 import { Card, Tile } from './components/Card.tsx';
 import { Field } from './components/Input.tsx';
 import { Checkbox, Switch } from './components/Toggle.tsx';
+import { NumberStepper } from './components/NumberStepper.tsx';
 import { Avatar } from './components/Avatar.tsx';
 import { Badge, Dot } from './components/Badge.tsx';
 import { Banner } from './components/Banner.tsx';
@@ -78,6 +79,7 @@ export function Catalog({ scheme, onScheme }: { scheme: Scheme; onScheme: (s: Sc
   const [chip, setChip] = useState(false);
   const [toggle, setToggle] = useState(true);
   const [checked, setChecked] = useState(false);
+  const [participants, setParticipants] = useState(4);
   const [text, setText] = useState('');
 
   const noop = useCallback(() => {}, []);
@@ -212,6 +214,10 @@ export function Catalog({ scheme, onScheme }: { scheme: Scheme; onScheme: (s: Sc
             <Button label="모임 만들기" variant="soft" onPress={noop} />
             <Button label="카카오로 로그인" variant="kakao" onPress={noop} />
             <Button label="취소" variant="ghost" onPress={noop} />
+            <Button label="선택" variant="deep" onPress={noop} />
+            <Button label="삭제" variant="danger" onPress={noop} />
+            <Button label="삭제 취소" variant="ghostDanger" onPress={noop} />
+            <Button label="사진 위 버튼" variant="translucent" onPress={noop} />
           </Row>
           <Row>
             <Button label="아이콘" icon="camera" size="md" onPress={noop} />
@@ -229,6 +235,7 @@ export function Catalog({ scheme, onScheme }: { scheme: Scheme; onScheme: (s: Sc
         <Section title="칩" note="시각 높이는 32 지만 터치 영역은 hitSlop 으로 48 을 지킵니다.">
           <Row>
             <Chip label="라임" tone="lime" />
+            <Chip label="딥" tone="deep" />
             <Chip label="소프트" tone="soft" />
             <Chip label="서피스" tone="surface" />
             <Chip label="중립" tone="neutral" />
@@ -259,6 +266,10 @@ export function Catalog({ scheme, onScheme }: { scheme: Scheme; onScheme: (s: Sc
           <Checkbox label="선택할 수 없는 항목" checked onChange={noop} disabled />
         </Section>
 
+        <Section title="수량 스테퍼" note="최소·최대값은 호출자가 정하고, 컴포넌트는 화면 안에서만 값을 제한합니다.">
+          <NumberStepper label="참여 인원" min={1} max={8} value={participants} onChange={setParticipants} />
+        </Section>
+
         <Section title="카드">
           <Card>
             <Txt variant="section" bold>이번 주 기록</Txt>
@@ -283,6 +294,7 @@ export function Catalog({ scheme, onScheme }: { scheme: Scheme; onScheme: (s: Sc
         <Section title="아바타와 배지">
           <Row>
             <Avatar name="백관열" size="lg" />
+            <Avatar name="가치줍깅" size="xl" />
             <Avatar name="서상혁" size="md" />
             <Avatar name="김영현" size="sm" />
             <Avatar name="이웃" size="md" ring />

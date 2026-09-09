@@ -2,13 +2,18 @@ import {
   AppHeader,
   BottomNav,
   Checkbox,
+  NumberStepper,
   Switch,
   IconButton,
   type AppHeaderProps,
+  type AvatarProps,
+  type ButtonProps,
   type BottomNavProps,
   type CheckboxProps,
   type FieldProps,
   type IconButtonProps,
+  type ChipProps,
+  type NumberStepperProps,
   type SwitchProps,
 } from './src/index.ts';
 
@@ -62,3 +67,20 @@ void Checkbox;
 void toggle;
 void checkbox;
 void field;
+
+const visualVariants: ButtonProps['variant'][] = ['deep', 'danger', 'ghostDanger', 'translucent'];
+const deepChip: ChipProps = { label: '선택됨', tone: 'deep' };
+const largeAvatar: AvatarProps = { name: '가치줍깅', size: 'xl' };
+const numberStepper: NumberStepperProps = {
+  label: '참여 인원',
+  min: 1,
+  max: 8,
+  value: 4,
+  onChange: () => {},
+};
+
+void visualVariants;
+void deepChip;
+void largeAvatar;
+void NumberStepper;
+void numberStepper;

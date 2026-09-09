@@ -30,6 +30,9 @@ export type { FieldProps } from './components/Input.tsx';
 export { Switch, Checkbox } from './components/Toggle.tsx';
 export type { SwitchProps, CheckboxProps } from './components/Toggle.tsx';
 
+export { NumberStepper } from './components/NumberStepper.tsx';
+export type { NumberStepperProps } from './components/NumberStepper.tsx';
+
 export { Avatar, toneForName } from './components/Avatar.tsx';
 export type { AvatarProps, AvatarSize, AvatarTone } from './components/Avatar.tsx';
 
