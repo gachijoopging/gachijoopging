@@ -315,6 +315,7 @@ export function Catalog({ scheme, onScheme }: { scheme: Scheme; onScheme: (s: Sc
             ] as const}
             value={nav}
             onChange={setNav}
+            startAction={{ icon: 'plus', label: '시작', onPress: noop }}
           />
         </Section>
 

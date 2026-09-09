@@ -39,6 +39,7 @@ export type { BannerTone } from './components/Banner.tsx';
 export { BottomSheet, Dialog } from './components/Sheet.tsx';
 
 export { Tabs, BottomNav } from './components/Tabs.tsx';
+export type { BottomNavItem, BottomNavProps, BottomNavStartAction } from './components/Tabs.tsx';
 
 export { ListRow, SelectRow } from './components/ListRow.tsx';
 
