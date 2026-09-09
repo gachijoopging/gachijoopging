@@ -9,6 +9,12 @@ export type { TextVariant, TextTone, TxtProps } from './components/Text.tsx';
 export { Icon } from './components/Icon.tsx';
 export type { IconName, IconProps } from './components/Icon.tsx';
 
+export { IconButton } from './components/IconButton.tsx';
+export type { IconButtonProps, IconButtonVariant } from './components/IconButton.tsx';
+
+export { AppHeader } from './components/AppHeader.tsx';
+export type { AppHeaderProps } from './components/AppHeader.tsx';
+
 export { Button, CaptureButton } from './components/Button.tsx';
 export type { ButtonVariant, ButtonSize, ButtonProps } from './components/Button.tsx';
 

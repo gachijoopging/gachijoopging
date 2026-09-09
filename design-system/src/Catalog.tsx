@@ -7,6 +7,8 @@ import { shadow, borderWidth } from '../tokens/elevation.ts';
 import { useTheme, depth, type Scheme } from './theme.tsx';
 import { Txt } from './components/Text.tsx';
 import { Icon, type IconName } from './components/Icon.tsx';
+import { IconButton } from './components/IconButton.tsx';
+import { AppHeader } from './components/AppHeader.tsx';
 import { Button, CaptureButton } from './components/Button.tsx';
 import { Chip } from './components/Chip.tsx';
 import { Card, Tile } from './components/Card.tsx';
@@ -185,6 +187,20 @@ export function Catalog({ scheme, onScheme }: { scheme: Scheme; onScheme: (s: Sc
               </View>
             ))}
           </Row>
+        </Section>
+
+        <Section title="아이콘 버튼과 화면 헤더" note="아이콘만으로 동작할 때는 반드시 접근성 라벨을 제공합니다.">
+          <Row>
+            <IconButton icon="arrow-left" label="뒤로 가기" onPress={noop} />
+            <IconButton icon="cog" label="설정" variant="surface" onPress={noop} />
+            <IconButton icon="plus" label="추가" variant="lime" onPress={noop} />
+          </Row>
+          <AppHeader title="모임 설정" onBack={noop} />
+          <AppHeader
+            title="프로필"
+            subtitle="이웃에게 보이는 정보"
+            action={<IconButton icon="cog" label="프로필 설정" variant="tint" onPress={noop} />}
+          />
         </Section>
 
         <Section title="버튼" note="주 채움은 라임→노랑 가로 그라데이션. 안드로이드에서는 리플로 반응합니다.">
