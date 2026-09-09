@@ -31,3 +31,6 @@ docs/superpowers/
 
 # Local legacy app for design comparison
 mobile/legacy-387996e3-20260813.apk
+
+# Local git worktrees
+.worktrees/
