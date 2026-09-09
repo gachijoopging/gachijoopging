@@ -1,6 +1,9 @@
 # 의존성
 node_modules/
 
+# TokenSave local index
+.tokensave/
+
 # Expo / Metro 산출물
 .expo/
 dist/
@@ -23,5 +26,5 @@ local.properties
 .DS_Store
 Thumbs.db
 
-# 작업 스펙·계획 (옛 저장소 관례). 남아야 할 결정은 docs/기능범위.md·docs/adr 로
+# 작업 스펙·계획 (옛 저장소 관례). 남아야 할 결정은 docs/feature-scope.md·docs/adr 로
 docs/superpowers/

@@ -5,7 +5,7 @@
     uv run python scripts/build_dataset.py --refreeze    # 검증셋 다시 뽑기 (평소엔 금지)
 
 **정규화 분모는 `annotations.json` 의 width/height 다.** 저장 파일 크기로 나누면
-Orientation=6 이미지의 bbox 가 전치돼 **에러 없이 조용히 틀어진다** (`진행상황.md` §3.3).
+Orientation=6 이미지의 bbox 가 전치돼 **에러 없이 조용히 틀어진다** (`progress.md` §3.3).
 왕복 검증(픽셀→정규화→픽셀)으로는 절대 못 잡는다 — 틀린 축으로 나눴다가 틀린 축으로
 곱하면 원래 값이 돌아온다. 잡는 것은 ① 파일 크기와 주석 크기의 대조와
 ② `scripts/check_dataset.py` 의 눈 검증뿐이다.

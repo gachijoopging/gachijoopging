@@ -1,5 +1,5 @@
 """화면설계서 한 장을 검사한다: 요소 표의 계약 필드·경로가 openapi.yaml 에, 컴포넌트가 design-system 에 있는지.
-사용: python docs/화면설계/check.py docs/화면설계/2-1-홈.md"""
+사용: python docs/screens/check.py docs/screens/2-1-home.md"""
 import re, sys, pathlib
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]

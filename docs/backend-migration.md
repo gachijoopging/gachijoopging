@@ -32,7 +32,7 @@
 | `live` | 활동 중 위치(`live_locations`), `/crew/live`, 소켓 `LIVE_*` | 크루 범위 |
 | `post` | 게시물·사진·좋아요·댓글 | `visibility` CREW/PRIVATE, `crew_id`, `post_likes`, 크루장 삭제(`deleted_by`) |
 | `notice` | 공지·공지 댓글·고정 | 신규 |
-| `chat` | 크루 채팅 이력 + STOMP 브로커 + Redis pub/sub | 방 키 `crew_id`, 폴링 없음(`소켓.md`) |
+| `chat` | 크루 채팅 이력 + STOMP 브로커 + Redis pub/sub | 방 키 `crew_id`, 폴링 없음(`realtime.md`) |
 | `notification` | 알림 9종, 팔로우 기반 활동 시작 발송, 크루장 처리 대기 집계 | 종류 전부 교체 |
 | `safety` | 차단·신고(크루장 처리) | `reports.crew_id`, 결과 DELETE/DISMISS |
 | `stats` | `/crew/home`·`/crew/stats`·`/crew/calendar`·`/crew/export`(CSV) | 신규. 원본은 `crew_daily_stats` + `activities` |
@@ -42,4 +42,4 @@
 - `/crew/...` 는 호출자의 소속 크루를 `crew_members` 에서 찾아 주입한다. 없으면 403 `NO_CREW`. 크루장 전용은 `crews.leader_id` 대조 → 403 `FORBIDDEN`
 - 차단 필터는 서버가 목록·상세·소켓 발행에서 걸러낸다
 - 계약 테스트(`OpenApiContractTest`)는 `../docs/openapi.yaml` 을 읽어 경로·메서드를 컨트롤러와 대조한다. 가져왔고 경로만 새 계약을 가리킨다
-- 멱등("같은 UUID 재전송이면 200")은 별도 모듈이 아니라 각 저장 로직의 패턴이다. `backend/docs/02-컨벤션.md` §8
+- 멱등("같은 UUID 재전송이면 200")은 별도 모듈이 아니라 각 저장 로직의 패턴이다. `backend/docs/02-conventions.md` §8

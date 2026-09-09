@@ -49,7 +49,7 @@
 | ④ | 안내 문구 | "활동 중인 크루원의 위치는 위치 공유를 켠 경우에만 보여요." | `Banner` neutral | — |
 | ⑤ | 공유 위치 지도 | `activityId`·`locationShared`·`location`·`paused` (`GET /crew/live`). 활동 중이며 공유가 켜져 있고 좌표가 있는 크루원만 표시한다. 일시정지는 유지하고 종료하면 마커를 제거한다 | `신규` 지도 (4-3의 카카오맵·크루원 마커 재사용) + `Avatar` + `Badge` | 마커를 누르면 크루원 이름·진행 상황, 프로필 보기 |
 
-`GET /crew/live` 뒤 갱신은 `docs/소켓.md`의 LIVE 이벤트를 따른다. LIVE_STARTED는 행을 추가하고, LIVE_UPDATE는 `elapsedSec`·`distanceM`·`itemCount`·`paused`·`locationShared`·`location`을 바꾸며, LIVE_ENDED는 행을 뺀다. 목록은 차단한 크루원을 서버가 이미 걸러 낸 값만 받는다.
+`GET /crew/live` 뒤 갱신은 `docs/realtime.md`의 LIVE 이벤트를 따른다. LIVE_STARTED는 행을 추가하고, LIVE_UPDATE는 `elapsedSec`·`distanceM`·`itemCount`·`paused`·`locationShared`·`location`을 바꾸며, LIVE_ENDED는 행을 뺀다. 목록은 차단한 크루원을 서버가 이미 걸러 낸 값만 받는다.
 
 ## 상태
 
@@ -63,7 +63,7 @@
 | 권한 거부 | 내 위치 권한 없이도 목록과 공유 위치 지도를 본다 | 목록·지도 |
 | 공유 좌표 없음 | 활동 목록은 있으나 지도에 표시할 좌표가 없으면 지도 자리에 "공유 중인 위치가 없어요". 공유 중 위치 확인 대기는 해당 행에서 구분한다 | 목록·새로고침 |
 | 부분 실패 | 지도 타일만 실패하면 지도 영역에 재시도 안내. 목록은 그대로 사용한다 | 지도 재시도·목록 |
-| 소켓 끊김 | 기존 목록을 흐리지 않고 ② 아래 "실시간 연결이 끊겼어요. 다시 연결하고 있어요." `Banner`. `소켓.md`의 지수 백오프(1·2·4·8·최대 30초)로 재연결한 뒤 `GET /crew/live`으로 전체를 맞춘다 | 뒤로·새로고침 |
+| 소켓 끊김 | 기존 목록을 흐리지 않고 ② 아래 "실시간 연결이 끊겼어요. 다시 연결하고 있어요." `Banner`. `realtime.md`의 지수 백오프(1·2·4·8·최대 30초)로 재연결한 뒤 `GET /crew/live`으로 전체를 맞춘다 | 뒤로·새로고침 |
 
 ## 인터랙션
 

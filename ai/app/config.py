@@ -35,7 +35,7 @@ DEVICE: int | str = int(_device) if _device.isdigit() else _device
 
 # CONF_MIN 미만은 items 에 넣지 않는다. **실측값은 W4 ⑰**이고 지금은 임시다.
 # 0.25 = Ultralytics 기본값. 근거 없는 숫자를 새로 만들지 않기 위해 기본값을 쓴다
-# (진행상황.md §3 "미정 항목을 추측으로 채우지 않는다").
+# (progress.md §3 "미정 항목을 추측으로 채우지 않는다").
 CONF_MIN = float(os.environ.get("AI_CONF_MIN", "0.25"))
 
 # API 계약. 앱·백엔드·문서 3곳에 박혀 있어 바꾸지 않는다 (README §3.3).

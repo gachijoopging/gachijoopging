@@ -4,8 +4,8 @@ info:
   title: 가치줍깅 API
   version: 3.0.0
   description: |
-    앱과 백엔드 사이 HTTP 계약의 유일한 정본. 실시간(채팅·위치)은 `소켓.md`.
-    화면마다 필요한 데이터는 `화면.md`, 테이블은 `ERD.md`, 결정은 `기능범위.md`, 용어는 `../CONTEXT.md`.
+    앱과 백엔드 사이 HTTP 계약의 유일한 정본. 실시간(채팅·위치)은 `realtime.md`.
+    화면마다 필요한 데이터는 `screens.md`, 테이블은 `ERD.md`, 결정은 `feature-scope.md`, 용어는 `../CONTEXT.md`.
 
     ### 공통 규약 (옛 계약 2.3 을 이어받음)
     - 성공은 `{ "data": … }` 봉투, 오류는 `{ "code", "message", "requestId" }`
@@ -1009,7 +1009,7 @@ paths:
   /crew/chat/messages:
     get:
       tags: [chat]
-      summary: 메시지 이력 — beforeSeq 는 거꾸로, afterSeq 는 재연결 뒤 빈 구간 채우기. 실시간은 소켓.md
+      summary: 메시지 이력 — beforeSeq 는 거꾸로, afterSeq 는 재연결 뒤 빈 구간 채우기. 실시간은 realtime.md
       parameters:
         - in: query
           name: beforeSeq

@@ -8,12 +8,12 @@
 ## 문서 (정본은 docs/)
 
 - 왜 만드나 → `intent.md` · 말 → `CONTEXT.md` (용어집. 코드·문서·대화의 이름은 여기 것을 쓴다)
-- 무엇을 만드나, 결정과 이유 → `docs/기능범위.md` · 되돌리기 어려운 결정 → `docs/adr/`
-- 화면 → `docs/화면.md` · 테이블 → `docs/ERD.md` · HTTP 계약 → `docs/openapi.yaml` · 실시간 → `docs/소켓.md`
-- 옛 백엔드 도메인별 유지·개명·끔 → `docs/백엔드정리.md`
-- 커밋·브랜치·PR·이슈 → `docs/컨벤션.md` · 배포·환경 변수·장애 → `docs/운영.md`
+- 무엇을 만드나, 결정과 이유 → `docs/feature-scope.md` · 되돌리기 어려운 결정 → `docs/adr/`
+- 화면 → `docs/screens.md` · 테이블 → `docs/ERD.md` · HTTP 계약 → `docs/openapi.yaml` · 실시간 → `docs/realtime.md`
+- 옛 백엔드 도메인별 유지·개명·끔 → `docs/backend-migration.md`
+- 커밋·브랜치·PR·이슈 → `docs/conventions.md` · 배포·환경 변수·장애 → `docs/operations.md`
 
-결정은 `기능범위.md` 표에, ADR 은 세 조건(되돌리기 어렵고·맥락 없이는 놀랍고·실제 트레이드오프)이 모두 맞을 때만. 셋째 장소를 만들지 않는다.
+결정은 `feature-scope.md` 표에, ADR 은 세 조건(되돌리기 어렵고·맥락 없이는 놀랍고·실제 트레이드오프)이 모두 맞을 때만. 셋째 장소를 만들지 않는다.
 
 ## 작업 시 주의
 
@@ -50,15 +50,15 @@ LLM 이 자주 내는 실수를 줄이기 위한 행동 지침이다. 프로젝�
 - Entity Lombok 은 `@Getter` + `@NoArgsConstructor(access = PROTECTED)`. `@Setter`·`@Data`·`@ToString`·`@EqualsAndHashCode` 금지. Builder 는 필수값·불변조건을 우회하지 않을 때만
 - Bean 생성자 주입은 순수 `final` 할당이면 `@RequiredArgsConstructor`, 검증·변환이 있으면 명시적 생성자. 필드 주입 금지
 - `/crew/...` 는 호출자의 소속 크루를 주입받는다. 크루 id 를 경로에 넣지 않는다. 크루장 전용은 `crews.leader_id` 대조
-- 코드 규약 상세는 `backend/docs/02-컨벤션.md`
+- 코드 규약 상세는 `backend/docs/02-conventions.md`
 
 ## app (React Native, Android)
 
-앱 골격은 아직 없다. 화면은 docs/화면설계/ 가 확정된 뒤 만든다.
+앱 골격은 아직 없다. 화면은 docs/screens/ 가 확정된 뒤 만든다.
 
-- 화면은 `docs/화면.md` 번호(예: 4-3)로 부르고, 데이터는 `docs/openapi.yaml` 의 `example` 을 목으로 쓴다
+- 화면은 `docs/screens.md` 번호(예: 4-3)로 부르고, 데이터는 `docs/openapi.yaml` 의 `example` 을 목으로 쓴다
 - UI 는 `design-system` 컴포넌트만. 색·간격·반경을 직접 쓰지 않는다. `Screen` 으로 감싸고, 누르는 것엔 `useRipple()`
 - 지도는 카카오맵 Android SDK 네이티브 모듈. Expo Go 는 못 쓰고 개발 빌드로 돈다
 - `applicationId` 는 `site.gachijoopging.app` 고정. Firebase·카카오가 이 값으로 대조한다
-- 위치는 `docs/기능범위.md` "위치 품질" 의 필터 4개를 통과한 점만 경로·소켓에 쓴다
+- 위치는 `docs/feature-scope.md` "위치 품질" 의 필터 4개를 통과한 점만 경로·소켓에 쓴다
 - 상태·훅·유틸은 Jest 단위 테스트. 화면은 카탈로그에서 눈으로 본다
