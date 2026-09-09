@@ -66,6 +66,7 @@
     .list-row[role="button"] { width: 100%; border-inline: 0; border-top: 0; }
     .field { width: 100%; padding: 12px; color: var(--ink); background: var(--surface); border: 1px solid var(--border); border-radius: 16px; }
     .field--error { border-color: var(--danger); box-shadow: 0 0 0 2px rgba(196, 67, 67, 0.14); }
+    .field-error { color: var(--danger); font-size: 13px; font-weight: 400; }
     textarea.field { min-height: 104px; resize: vertical; }
     label { display: grid; gap: 4px; font-weight: 700; }
     .state-panel { padding: 12px; color: var(--ink-muted); background: #F2F5DD; border-radius: 18px; }
@@ -78,7 +79,7 @@
     .metric strong { display: block; font-size: 19px; }
     .chip { display: inline-flex; align-items: center; min-height: 32px; padding: 6px 10px; border-radius: 999px; color: #F4F04B; background: var(--deep); font-size: 12px; font-weight: 700; }
     .tabs { display: flex; gap: 8px; overflow-x: auto; }
-    .tabs button { min-width: max-content; min-height: 38px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 999px; color: var(--ink-muted); background: var(--surface); }
+    .tabs button { min-width: max-content; min-height: var(--min-touch); padding: 8px 12px; border: 1px solid var(--border); border-radius: 999px; color: var(--ink-muted); background: var(--surface); }
     .tabs button[aria-pressed="true"] { color: #F4F04B; background: var(--deep); border-color: var(--deep); }
     .nav { position: sticky; bottom: 0; justify-content: space-around; min-height: var(--nav-height); margin: auto -20px -20px; padding: 8px; background: var(--surface); border-top: 1px solid var(--border); }
     .nav button { min-width: 48px; color: var(--ink-muted); background: transparent; border: 0; }
@@ -134,7 +135,7 @@
   <script>
     'use strict'
 
-    const state = { currentScreenId: '1-1', history: ['1-1'], role: '크루원', viewState: '기본', sheet: null, invitePreview: false, resetSent: false, pickupCount: 1, profileTab: '기록', feedTab: '전체' }
+    const state = { currentScreenId: '1-1', history: ['1-1'], role: '크루원', viewState: '기본', sheet: null, sheetTrigger: null, invitePreview: false, resetSent: false, pickupCount: 1, profileTab: '기록', feedTab: '전체' }
     const mock = { crew: '한강줍깅크루', leader: '관열', member: '민지', post: '오늘 아침 한강을 걸으며 플로깅했어요.', activity: '여의도 한강공원 아침 활동' }
     const app = document.getElementById('app')
     const reviewPanel = document.getElementById('review-panel')
@@ -170,12 +171,13 @@
     }
     function recordMetrics(values = [['27', '개수'], ['42분', '시간'], ['3.1km', '거리']]) { return element('div', { className: 'metrics' }, values.map(([value, label]) => element('div', { className: 'metric' }, [text('strong', value), text('span', label, 'caption')]))) }
     function stack(children = [], className = 'stack') { return element('div', { className }, children) }
-    function field(labelText, value = '', type = 'text') {
-      const input = element(type === 'textarea' ? 'textarea' : 'input', { className: 'field', type })
+    function field(labelText, value = '', type = 'text', error = '') {
+      const input = element(type === 'textarea' ? 'textarea' : 'input', { className: `field${error ? ' field--error' : ''}`, type })
       if (type !== 'textarea') input.value = value
       else input.value = value
       input.setAttribute('aria-label', labelText)
-      return element('label', {}, [text('span', labelText), input])
+      if (error) input.setAttribute('aria-invalid', 'true')
+      return element('label', {}, [text('span', labelText), input, error ? text('span', error, 'field-error') : null])
     }
     function listRow(title, subtitle, onClick) {
       const words = stack([text('strong', title), subtitle ? text('span', subtitle, 'caption') : null], 'tight')
@@ -216,12 +218,14 @@
       state.sheet = null
       renderApp()
     }
-    function openSheet(kind, data = {}) { state.sheet = { kind, data }; renderSheet() }
+    function openSheet(kind, data = {}) { state.sheetTrigger = document.activeElement; state.sheet = { kind, data }; renderSheet() }
     function closeSheet() {
       state.sheet = null
-      if (state.currentScreenId === '4-2') return navigate('4-1', { replace: true })
-      if (state.currentScreenId === '4-6') return navigate('4-3', { replace: true })
+      if (state.currentScreenId === '4-2') { state.sheetTrigger = null; return navigate('4-1', { replace: true }) }
+      if (state.currentScreenId === '4-6') { state.sheetTrigger = null; return navigate('4-3', { replace: true }) }
       renderSheet()
+      if (state.sheetTrigger?.isConnected) state.sheetTrigger.focus()
+      state.sheetTrigger = null
     }
 
     function renderStart() {
@@ -627,7 +631,7 @@
         screens.forEach((screen) => list.append(listRow(`${screen.id} ${screen.name}`, screen.spec, () => navigate(screen.id))))
         dialog.append(list)
       } else if (state.sheet.kind === 'password-code') {
-        dialog.append(text('h2', '새 비밀번호 설정', 'section-title'), field('인증 코드', ''), field('새 비밀번호', '', 'password'), button('비밀번호 변경', () => { state.resetSent = false; closeSheet(); navigate('1-2', { replace: true }) }))
+        dialog.append(text('h2', '새 비밀번호 설정', 'section-title'), field('인증 코드', '', 'text', state.viewState === '오류' ? '인증 코드를 확인해 주세요.' : ''), field('새 비밀번호', '', 'password'), button('비밀번호 변경', () => { state.resetSent = false; closeSheet(); navigate('1-2', { replace: true }) }))
       } else if (state.sheet.kind === 'activity-start') {
         dialog.append(text('h2', '활동을 시작할까요?', 'section-title'), card([text('strong', '크루원에게 위치 공유'), text('p', '켜면 활동 중 내 위치와 경로가 크루원 지도에 보여요. 꺼도 내 기록에는 경로가 남아요.', 'subtle'), button('위치 공유 켬', () => {}, 'soft')]), banner('위치를 잡고 있어요…'), listRow('걸음수 측정 안 됨', '연결 · 선택', () => {}), text('p', '나를 팔로우한 크루원에게 시작 알림이 가요.', 'caption'), button('위치 권한 안내', () => navigate('1-10'), 'ghost'), button('줍깅 시작', () => navigate('4-3')))
       } else if (state.sheet.kind === 'quick-pickup') {
@@ -640,9 +644,18 @@
         if (state.sheet.kind === 'confirm') dialog.append(element('div', { className: 'button-row' }, [button(data.label || '확인', () => { data.action(); closeSheet() }), button('취소', closeSheet, 'ghost')]))
       }
       dialog.append(button('닫기', closeSheet, 'ghost'))
+      dialog.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') { event.preventDefault(); closeSheet(); return }
+        if (event.key !== 'Tab') return
+        const focusables = [...dialog.querySelectorAll('button, input, textarea, select, [href]')].filter((node) => !node.disabled)
+        const current = focusables.indexOf(document.activeElement)
+        if (event.shiftKey && current <= 0) { event.preventDefault(); focusables.at(-1).focus() }
+        else if (!event.shiftKey && current === focusables.length - 1) { event.preventDefault(); focusables[0].focus() }
+      })
       scrim.addEventListener('click', (event) => { if (event.target === scrim) closeSheet() })
       scrim.append(dialog)
       sheetRoot.append(scrim)
+      dialog.querySelector('button, input, textarea, select, [href]')?.focus()
     }
     function renderApp() {
       const screen = screenById.get(state.currentScreenId) || screenById.get('1-1')

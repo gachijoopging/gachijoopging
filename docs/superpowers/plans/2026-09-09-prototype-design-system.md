@@ -144,8 +144,8 @@ git commit -m "feat(prototype): apply shared design primitives"
 
 ```js
 test('keeps the raised plogging action in the five-tab navigation', () => {
-  assert.match(html, /className:\s*'nav-action'/)
-  assert.match(html, /navigate\('4-1'\)/)
+  assert.match(html, /className:\s*'nav-start-action'/)
+  assert.match(html, /openSheet\('activity-start'\)/)
 })
 ```
 
@@ -153,11 +153,11 @@ test('keeps the raised plogging action in the five-tab navigation', () => {
 
 Run: `node --test prototype/prototype.test.mjs`
 
-Expected: `nav-action`이 없어 실패.
+Expected: `nav-start-action`이 없어 실패.
 
 - [ ] **Step 3: 최소 구현**
 
-`renderBottomNav()`에서 `4-1` 항목을 `nav-action`으로 렌더링하고 현재 화면일 때만 `aria-current="page"`를 준다. 클릭은 `navigate('4-1')`을 호출한다. CSS는 라임 원형 액션을 탭 바보다 위로 올리되 버튼 전체의 최소 높이는 48px로 유지한다.
+`renderBottomNav()`에서 `4-1` 자리에 `nav-start-action`을 렌더링하고 클릭은 기존 `openSheet('activity-start')`를 호출한다. CSS는 라임 액션을 탭 바보다 위로 올리되 버튼 전체의 최소 높이는 48px로 유지한다.
 
 `renderSheet()`의 시트·확인 UI는 공통 표면·스크림·위험 액션 클래스를 사용한다. 도메인별 시트 내용과 상태 전이는 바꾸지 않는다.
 
@@ -209,4 +209,3 @@ git log --oneline feat/html-prototype..HEAD
 ```
 
 Expected: 계획된 커밋만 존재하고 의도하지 않은 파일이 없다.
-

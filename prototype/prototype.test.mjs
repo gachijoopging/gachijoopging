@@ -27,6 +27,9 @@ test('uses the reusable design-system visual primitives', () => {
   assert.match(html, /\.button--deep\s*\{/)
   assert.match(html, /\.button--translucent\s*\{/)
   assert.match(html, /\.field--error\s*\{/)
+  assert.match(html, /function field\(labelText, value = '', type = 'text', error = ''\)/)
+  assert.match(html, /field-error/)
+  assert.match(html, /state\.viewState === '오류' \? '인증 코드를 확인해 주세요\.' : ''/)
   for (const primitive of ['button', 'iconButton', 'card', 'field', 'listRow', 'banner']) {
     assert.match(html, new RegExp(`function ${primitive}\\(`))
   }
@@ -73,6 +76,9 @@ test('uses modal semantics and minimum touch targets', () => {
   assert.match(html, /setAttribute\('role', 'dialog'\)/)
   assert.match(html, /--min-touch:\s*48px/)
   assert.match(html, /min-height:\s*var\(--min-touch\)/)
+  assert.match(html, /\.tabs button\s*\{[^}]*min-height:\s*var\(--min-touch\)/)
+  assert.match(html, /event\.key === 'Escape'/)
+  assert.match(html, /event\.key !== 'Tab'/)
 })
 
 test('has valid inline JavaScript', () => {
