@@ -8,11 +8,12 @@ export type AppHeaderProps = {
   title: string;
   subtitle?: string;
   onBack?: () => void;
+  backDisabled?: boolean;
   action?: ReactNode;
   style?: ViewStyle;
 };
 
-export function AppHeader({ title, subtitle, onBack, action, style }: AppHeaderProps) {
+export function AppHeader({ title, subtitle, onBack, backDisabled, action, style }: AppHeaderProps) {
   return (
     <View
       style={[
@@ -20,9 +21,9 @@ export function AppHeader({ title, subtitle, onBack, action, style }: AppHeaderP
         style,
       ]}
     >
-      {onBack ? <IconButton icon="arrow-left" label="뒤로 가기" variant="surface" onPress={onBack} /> : null}
+      {onBack ? <IconButton icon="arrow-left" label="뒤로 가기" variant="surface" onPress={onBack} disabled={backDisabled} /> : null}
       <View style={{ flex: 1, gap: subtitle ? space.xs : 0 }}>
-        <Txt variant="section" accessibilityRole="header">
+        <Txt variant="title" bold accessibilityRole="header">
           {title}
         </Txt>
         {subtitle ? <Txt variant="caption" tone="muted">{subtitle}</Txt> : null}

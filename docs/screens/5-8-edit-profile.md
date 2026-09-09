@@ -48,8 +48,8 @@
 
 | 구역 | 요소 | 내용 (계약 필드) | 컴포넌트 | 탭하면 |
 |---|---|---|---|---|
-| ① | 뒤로 버튼 | 왼쪽 화살표 아이콘 | `Icon`(arrow-left) (옛 view_screen_header 의 backButton, `ic_back`) | 5-5 내 정보 (바뀐 게 있으면 먼저 확인 대화상자) |
-| ① | 헤더 제목 | "프로필 수정" | `Txt` title (옛 view_screen_header 의 headerTitle) | — |
+| ① | 뒤로 버튼 | 왼쪽 화살표 아이콘 | `AppHeader` (옛 view_screen_header 의 backButton, `ic_back`) | 5-5 내 정보 (바뀐 게 있으면 먼저 확인 대화상자) |
+| ① | 헤더 제목 | "프로필 수정" | `AppHeader` (옛 view_screen_header 의 headerTitle) | — |
 | ② | 사진 자리 | `photoUrl` (`GET /users/me`) 또는 방금 고른 사진의 로컬 미리보기. 둘 다 없으면(사진 없음·삭제함) `nickname` 첫 글자를 색 배경에 | `Avatar` lg | 사진 변경 시트 |
 | ② | 사진 변경 라벨 | "사진 변경" | `Txt` caption strong (옛 `ep_change_photo`, 이모지 제외) | 사진 자리와 같다 |
 | ③ | 라벨 | "닉네임" | `Field` 의 label (옛 `label_nickname`) | — |

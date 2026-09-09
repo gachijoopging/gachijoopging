@@ -25,7 +25,7 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "test": "node --test contrast.test.ts NumberStepper.test.ts",
+    "test": "node --test contrast.test.ts NumberStepper.test.ts BottomNav.test.ts",
     "preview": "node preview.mjs",
     "typecheck": "tsc --noEmit"
   },

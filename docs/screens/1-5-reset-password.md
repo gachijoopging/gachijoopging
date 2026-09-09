@@ -71,8 +71,8 @@ B 확인
 
 | 구역 | 요소 | 내용 (계약 필드) | 컴포넌트 | 탭하면 |
 |---|---|---|---|---|
-| A① | 뒤로 | 화살표 아이콘 | `Icon`(arrow-left) — 옛 `ic_back`, 48dp 터치 | 온 곳(1-2 또는 5-7) |
-| A① | 제목·부제 | "비밀번호 재설정" / "계정 복구" 두 줄 | `Txt` title + `Txt` caption (옛 `view_screen_header`) | — |
+| A① | 뒤로 | 화살표 아이콘 | `AppHeader` — 옛 `ic_back`, 48dp 터치 | 온 곳(1-2 또는 5-7) |
+| A① | 제목·부제 | "비밀번호 재설정" / "계정 복구" 두 줄 | `AppHeader` (옛 `view_screen_header`) | — |
 | A② | 헤드라인 | "가입한 이메일을 알려 주세요" | `Txt` display | — |
 | A② | 설명 | "입력한 주소로 비밀번호 재설정 코드를 보내 드려요." | `Txt` caption muted | — |
 | A③ | 이메일 입력 | 라벨 "이메일", 플레이스홀더 "you@example.com". 이메일 키보드, 자동완성 이메일. 1-2에서 전달한 유효 이메일 또는 5-7 에서 왔으면 `email` (`GET /users/me`) 이 미리 채워진다. 값은 `email` 로 `POST /auth/password-reset` | `Field` | — |
@@ -83,8 +83,8 @@ B 확인
 | A⑤ | 설명 | "요청을 접수했어요. {입력한 이메일} 계정이 있으면 메일을 확인해 주세요." 가운데 정렬, 줄 간격 넉넉히 | `Txt` caption muted | — |
 | A⑤ | 코드 입력 버튼 | "코드 입력하기" | `Button` primary md | B 로 푸시. 입력한 이메일을 넘긴다 |
 | A⑤ | 다시 보내기 | "메일 다시 보내기" | `Button` ghost md | 같은 `email` 로 `POST /auth/password-reset` 재요청. 204 면 `Snackbar` "메일을 다시 보냈어요" |
-| B⑥ | 뒤로 | 화살표 아이콘 | `Icon`(arrow-left) — 옛 `ic_back`, 48dp 터치 | A 발송 후 패널(⑤) |
-| B⑥ | 제목 | "새 비밀번호 설정" 한 줄(부제 없음) | `Txt` title (옛 `view_screen_header`) | — |
+| B⑥ | 뒤로 | 화살표 아이콘 | `AppHeader` — 옛 `ic_back`, 48dp 터치 | A 발송 후 패널(⑤) |
+| B⑥ | 제목 | "새 비밀번호 설정" 한 줄(부제 없음) | `AppHeader` (옛 `view_screen_header`) | — |
 | B⑦ | 헤드라인 | "새로 사용할 비밀번호를 입력해 주세요" | `Txt` display | — |
 | B⑧ | 코드 입력 | 라벨 "인증 코드", 플레이스홀더 "메일로 받은 코드". 앞뒤 공백은 잘라서 `code` 로 `POST /auth/password-reset/confirm`. 길이·문자 제한은 두지 않는다(계약에 없음) | `Field` | — |
 | B⑨ | 비밀번호 입력 | 라벨 "비밀번호", 플레이스홀더 "8자 이상". 가림 입력, 자동완성 새 비밀번호. 값은 `newPassword` (`POST /auth/password-reset/confirm`, 최소 8자) | `Field` | — |

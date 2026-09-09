@@ -25,8 +25,8 @@
 
 | 구역 | 요소 | 내용 (계약 필드) | 컴포넌트 | 탭하면 |
 |---|---|---|---|---|
-| ① | 뒤로 버튼 | "뒤로" | `Icon`(arrow-left) | 3-2 |
-| ① | 헤더 제목 | "크루원 관리" | `Txt` title | — |
+| ① | 뒤로 버튼 | "뒤로" | `AppHeader` | 3-2 |
+| ① | 헤더 제목 | "크루원 관리" | `AppHeader` | — |
 | ② | 크루원 수 | `GET /crew/members` 배열 길이. "크루원 18명" | `Txt` section | — |
 | ③ | 크루원 행 | `id`·`photoUrl`·`nickname`·`isLeader`·`totalItems`·`joinedAt` (`GET /crew/members`) | `ListRow` + `Avatar` md + `Txt` + `Badge` | 5-4 |
 | ③ | 크루장 배지 | `isLeader` true면 "크루장" | `Badge` deep | — |

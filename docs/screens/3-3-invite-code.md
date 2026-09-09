@@ -30,8 +30,8 @@
 
 | 구역 | 요소 | 내용 (계약 필드) | 컴포넌트 | 탭하면 |
 |---|---|---|---|---|
-| ① | 뒤로 버튼 | "뒤로" | `Icon`(arrow-left) | 3-2 |
-| ① | 헤더 제목 | "초대 코드" | `Txt` title | — |
+| ① | 뒤로 버튼 | "뒤로" | `AppHeader` | 3-2 |
+| ① | 헤더 제목 | "초대 코드" | `AppHeader` | — |
 | ② | 제목·설명 | "크루원에게 이 코드를 보내세요" / "크루장이 승인하면 크루원이 돼요." | `Txt` display + `Txt` caption | — |
 | ③ | 코드 카드 | `inviteCode` (`GET /crew`) 예: "HG-7K2P". 문자 간 넓은 간격 | `Card` + `Txt` counter | — |
 | ③ | 코드 복사 버튼 | "코드 복사" | `Button` primary lg | 시스템 클립보드에 `inviteCode` 복사 |

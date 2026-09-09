@@ -41,15 +41,15 @@
 
 | 구역 | 요소 | 내용 (계약 필드) | 컴포넌트 | 탭하면 |
 |---|---|---|---|---|
-| ① | 뒤로 버튼 | 헤더 왼쪽 | `Icon`(arrow-left) (옛 view_screen_header 의 backButton, `ic_back`) | 버림 확인 다이얼로그(인터랙션 참고) |
-| ① | 헤더 제목 | "AI 분류 확인" | `Txt` title (옛 view_screen_header 의 headerTitle) | — |
+| ① | 뒤로 버튼 | 헤더 왼쪽 | `AppHeader` (옛 view_screen_header 의 backButton, `ic_back`) | 버림 확인 다이얼로그(인터랙션 참고) |
+| ① | 헤더 제목 | "AI 분류 확인" | `AppHeader` (옛 view_screen_header 의 headerTitle) | — |
 | ② | 사진 | 4-4 에서 받은 `url` (`POST /media`). 가로 폭을 채우고 비율 유지, 최대 높이 520dp. 받기 전엔 `thumbUrl` 을 먼저 보이고 도착하면 바꾼다. 둥근 모서리, 살짝 그림자 | `Card` (옛 `bg_photo_placeholder`, ClipOutlineFrameLayout) | — |
 | ② | 사진 배지 | "방금 촬영한 수거물". 사진 왼쪽 아래, 어두운 반투명 알약에 흰 글자 | `신규` 사진 위 알약 (옛 `bg_pill_overlay`) | — |
 | ③ | 안내 배너 | 평소 숨김. 아래 배너 표의 한 가지만 사진 아래에 나타난다 | `Banner` info / warn | — |
 | ④ | 질문 | "맞게 분류됐나요?" | `Txt` section | — |
 | ④ | 찾은 개수 | 질문 오른쪽. `inference.items` (`POST /media`) 의 개수 N 으로 "AI 가 N개 찾았어요". N 이 0 이거나 `inference.status` 가 UNAVAILABLE 이면 숨긴다 | `Txt` caption muted | — |
 | ④ | 카테고리 칸 ×7 | `Category` 순서 그대로 담배꽁초·캔·플라스틱·종이 / 유리·비닐·일반. 칸 위에 아이콘과 이름, 아래에 수량 조절. 이 칸의 `category` 가 `inference.items` 에 있으면 이름 옆에 작은 "AI" 알약이 붙고 수량이 그 개수로 미리 채워진다. 나머지는 0. 수량이 1 이상인 칸은 테두리가 진해진다 | `Tile` + `Icon`(smoking · cup · bottle-soda-outline · file-document-outline · bottle-wine-outline · shopping-outline · trash-can-outline) + `Txt` label + `Chip` lime | — |
-| ④ | 수량 조절 | 칸 아래 "− [N] +". −는 0에서 비활성. 숫자를 탭해 직접 입력하며 0 이상의 정수만 허용한다. 빈 값·음수·소수·유효 범위를 벗어난 값은 필드 아래 오류, 담기는 비활성. 상한은 API 계약 기준이며 임의의 99 제한을 두지 않는다 | `신규` 스테퍼 (옛 `ic_minus`·`ic_plus`, 옛 화면엔 없음 — 4-6 빠른 줍기와 공유) + `Field` numeric | −: 수량 1 감소 · +: 수량 1 증가. 합계가 ⑤ 버튼에 바로 반영 |
+| ④ | 수량 조절 | 칸 아래 "− [N] +". −는 0에서 비활성. 숫자를 탭해 직접 입력하며 0 이상의 정수만 허용한다. 빈 값·음수·소수·유효 범위를 벗어난 값은 필드 아래 오류, 담기는 비활성. 상한은 API 계약 기준이며 임의의 99 제한을 두지 않는다 | `NumberStepper` | −: 수량 1 감소 · +: 수량 1 증가. 합계가 ⑤ 버튼에 바로 반영 |
 | ⑤ | 다시 촬영 | "다시 촬영". 왼쪽, 테두리 버튼 | `Button` ghost md | 4-4 로 되돌아간다(이 화면은 스택에서 지운다). 이 화면의 수량은 버린다 |
 | ⑤ | 이대로 담기 | "이대로 담기 · N개". N 은 7칸 수량의 합. 합이 0 이면 "이대로 담기" 만 쓰고 비활성 | `Button` primary lg | `POST /activities/{id}/items` — `photoId` (`POST /media` 응답) + `items`: 수량이 1 이상인 칸마다 `ItemInput` 하나(`category` · `quantity` · AI 가 찾은 칸이면 `aiPredictedCategory` 에 같은 값과 그 카테고리 박스 중 가장 높은 `aiConfidence`). 먼저 계정별 내구성 대기열에 항목별 UUID와 수량·photoId를 저장하고 즉시 전송. 로컬 대기열 저장 완료 즉시 4-3으로 돌아가며 서버 응답은 기다리지 않는다 |
 

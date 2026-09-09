@@ -28,8 +28,8 @@
 
 | 구역 | 요소 | 내용 (계약 필드) | 컴포넌트 | 탭하면 |
 |---|---|---|---|---|
-| ① | 뒤로 버튼 | "뒤로" | `Icon`(arrow-left) | 3-5 |
-| ① | 헤더 제목 | "공지 상세" | `Txt` title | — |
+| ① | 뒤로 버튼 | "뒤로" | `AppHeader` | 3-5 |
+| ① | 헤더 제목 | "공지 상세" | `AppHeader` | — |
 | ① | 더보기 메뉴 | 크루장만 보임. "수정" · "삭제" | `Icon`(dots-horizontal) | 메뉴 시트 |
 | ② | 최신 배지 | `pinned` (`GET /notices/{noticeId}`) 최신 작성 공지 한 건만 true인 읽기 전용 값이면 "최신" | `Badge` deep + `Icon`(pin) | — |
 | ② | 제목 | `title` | `Txt` display | — |

@@ -35,8 +35,8 @@
 | 4-2 활동 시작 시트 | feature shared | BottomSheet, Tile, Switch, Button, Banner | Overlay | Tile 전체 토글 제어는 화면 조합 |
 | 4-3 활동 중 | screen-specific | Card, Chip, Badge, Dot, IconButton, Txt | Metrics | 지도·경로·OS 알림·전용 하단 바는 기능 UI |
 | 4-4 사진 촬영 | screen-specific | IconButton translucent, CaptureButton, Button, Snackbar | Overlay | 카메라 프리뷰·가이드는 기능 UI |
-| 4-5 AI 분류 확인 | feature shared | Card, Field, Button, Banner | Form | 공통 스테퍼와 직접 숫자 검증은 기능 UI |
-| 4-6 빠른 줍기 시트 | feature shared | BottomSheet, Field, Button, Snackbar | Overlay | 4-5 공통 스테퍼와 직접 숫자 검증은 기능 UI |
+| 4-5 AI 분류 확인 | feature shared | AppHeader, Card, NumberStepper, Button, Banner | Form | 카테고리 격자·AI 배지는 기능 UI |
+| 4-6 빠른 줍기 시트 | feature shared | BottomSheet, NumberStepper, Button, Snackbar | Overlay | 카테고리 격자·최근 작업은 기능 UI |
 | 4-7 활동 요약 | feature shared | Card, Tile, Button, Snackbar | Metrics | 정지 지도·경로는 기능 UI |
 | 5-1 피드 | screen-specific | BottomNav, Card, Avatar, Chip, Badge, EmptyState | Root tab | 게시물 사진/카드는 기능 UI |
 | 5-2 게시물 상세 | feature shared | AppHeader, IconButton, Card, Chip, BottomSheet, Snackbar | List/detail | 사진 페이저·댓글은 기능 UI |

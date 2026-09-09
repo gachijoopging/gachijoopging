@@ -21,6 +21,7 @@ const appHeader: AppHeaderProps = {
   title: '설정',
   subtitle: '모임을 관리해요',
   onBack: () => {},
+  backDisabled: true,
 };
 
 const iconButton: IconButtonProps = {
@@ -35,10 +36,11 @@ void IconButton;
 void appHeader;
 void iconButton;
 
-const bottomNav: BottomNavProps<'home' | 'feed' | 'meet' | 'me'> = {
+const bottomNav: BottomNavProps<'home' | 'feed' | 'start' | 'meet' | 'me'> = {
   items: [
     { value: 'home', label: '홈', icon: 'home' },
     { value: 'feed', label: '피드', icon: 'view-list' },
+    { value: 'start', label: '줍깅', icon: 'plus' },
     { value: 'meet', label: '모임', icon: 'account-group' },
     { value: 'me', label: '내 정보', icon: 'account' },
   ],
@@ -77,6 +79,7 @@ const numberStepper: NumberStepperProps = {
   max: 8,
   value: 4,
   onChange: () => {},
+  onValidityChange: () => {},
 };
 
 void visualVariants;

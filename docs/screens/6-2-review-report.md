@@ -29,8 +29,8 @@
 
 | 구역 | 요소 | 내용 (계약 필드) | 컴포넌트 | 탭하면 |
 |---|---|---|---|---|
-| ① | 뒤로 버튼 | "뒤로" | `Icon`(arrow-left) | 2-3 또는 진입 화면 |
-| ① | 헤더 제목 | "신고 처리" | `Txt` title | — |
+| ① | 뒤로 버튼 | "뒤로" | `AppHeader` | 2-3 또는 진입 화면 |
+| ① | 헤더 제목 | "신고 처리" | `AppHeader` | — |
 | ② | 불러온 대기 수 | `GET /crew/reports`에서 현재까지 불러온 `items` 길이. "불러온 대기 신고 1건". 다음 장이 있으면 전체 수로 표현하지 않는다 | `Txt` section | — |
 | ③ | 신고 행 | `id`·`reporter.photoUrl`·`reporter.nickname`·`targetType`·`targetPreview`·`reason`·`memo`·`createdAt` (`GET /crew/reports`) | `Card` + `Avatar` sm + `Txt` + `Badge` | ④ 펼치기 |
 | ③ | 대상 요약 | `targetType`별 "게시물 신고"·"댓글 신고"·"공지 댓글 신고"·"크루 채팅 신고"·"사용자 신고". 아래는 `targetPreview`. 대상 작성자 이름이 별도 필드로 없으므로 신고자 닉네임을 대상 이름으로 쓰지 않는다 | `Txt` body strong + `Txt` caption | — |

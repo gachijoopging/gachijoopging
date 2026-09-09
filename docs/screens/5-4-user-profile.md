@@ -49,9 +49,9 @@
 
 | 구역 | 요소 | 내용 (계약 필드) | 컴포넌트 | 탭하면 |
 |---|---|---|---|---|
-| ① | 뒤로 버튼 | < 아이콘. 기본 헤더 | `Icon`(back) | 뒤로 가기 |
-| ① | 헤더 제목 | `nickname` (`GET /crew/members/{userId}`) | `Txt` title | — |
-| ① | ⋯ 버튼 | 뷰어가 크루원이면 "신고 또는 차단", 크루장이면 "크루원 관리" | `Icon`(dots-horizontal) | 안전 시트(아래) |
+| ① | 뒤로 버튼 | < 아이콘. 기본 헤더 | `AppHeader` | 뒤로 가기 |
+| ① | 헤더 제목 | `nickname` (`GET /crew/members/{userId}`) | `AppHeader` | — |
+| ① | ⋯ 버튼 | 뷰어가 크루원이면 "신고 또는 차단", 크루장이면 "크루원 관리" | `AppHeader.action` + `IconButton`(dots-horizontal) | 안전 시트(아래) |
 | ② | 아바타 | `photoUrl` (`GET /crew/members/{userId}`). null 이면 `nickname` 첫 글자 | `Avatar` lg | — |
 | ② | 닉네임 | `nickname` (`GET /crew/members/{userId}`). 탈퇴했으면 "탈퇴한 크루원" | `Txt` title | — |
 | ② | 크루장 배지 | `isLeader` (`GET /crew/members/{userId}`) 가 true 일 때만 닉네임 오른쪽에 "크루장" | `Badge` deep | — |

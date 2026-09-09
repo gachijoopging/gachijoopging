@@ -232,7 +232,7 @@ pyftsubset assets/fonts/Pretendard-Regular.ttf   --unicodes-file=tools/pretendar
 
 | 레시피 | 소유 영역 | 조합 규칙 |
 |---|---|---|
-| Root tab | `Screen` 안전 영역과 `BottomNav` | 본문만 스크롤하고 하단 내비는 고정한다. 4개 목적지에는 `startAction`을 둔다. |
+| Root tab | `Screen` 안전 영역과 `BottomNav` | 본문만 스크롤하고 하단 내비는 고정한다. 5개 목적지를 넘기면 가운데 항목을 `startAction`으로 표시한다. |
 | Sub-screen | `Screen` + `AppHeader` | 헤더는 고정, 본문은 스크롤한다. 뒤로·제목·선택 액션은 `AppHeader` 슬롯에 넣는다. |
 | Form | `AppHeader` + `Field` + `Button` | 필드 오류는 바로 아래, primary action은 문서가 정한 고정/스크롤 위치에 둔다. 키보드가 포커스 필드를 가리지 않게 한다. |
 | List/detail | `List`/`ListRow`/`Card` | 목록 행의 좌·우 슬롯에 상태와 조작을 합성한다. 상세의 사진·지도·댓글은 기능 레이어가 소유한다. |
@@ -250,6 +250,6 @@ pyftsubset assets/fonts/Pretendard-Regular.ttf   --unicodes-file=tools/pretendar
 
 ## 추가 공개 컴포넌트
 
-- `IconButton`, `AppHeader`: 독립 아이콘 조작과 서브 화면 헤더
-- `Switch`, `Checkbox`, `Field.endAdornment`, `NumberStepper`: 반복되는 폼 조작
+- `IconButton`, `AppHeader`: 독립 아이콘 조작과 서브 화면 헤더. 요청 중에는 `backDisabled`로 뒤로가기를 비활성으로 알린다.
+- `Switch`, `Checkbox`, `Field.endAdornment`, `NumberStepper`: 반복되는 폼 조작. 스테퍼는 직접 정수 입력과 0.3초 간격 길게 누르기를 제공한다.
 - `BottomNav.startAction`, `Button`의 `deep`/`danger`/`ghostDanger`/`translucent`, `Chip`의 `deep`, `Avatar`의 `xl`(96dp)

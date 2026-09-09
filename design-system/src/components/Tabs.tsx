@@ -4,6 +4,7 @@ import { space, size as sizes, navIndicatorInset } from '../../tokens/spacing.ts
 import { useTheme, useRipple, pressedOpacity, depth } from '../theme.tsx';
 import { Txt } from './Text.tsx';
 import { Icon, type IconName } from './Icon.tsx';
+import { splitBottomNavItems } from './BottomNav.ts';
 
 export type BottomNavItem<T extends string> = { value: T; label: string; icon: IconName };
 export type BottomNavStartAction = {
@@ -96,7 +97,8 @@ export function BottomNav<T extends string>({
 }: BottomNavProps<T>) {
   const { colors, shadows } = useTheme();
   const ripple = useRipple();
-  const hasRootAction = !!startAction && items.length === 4;
+  const hasRootAction = !!startAction && (items.length === 4 || items.length === 5);
+  const [leadingItems, trailingItems] = splitBottomNavItems(items);
   const item = (it: BottomNavItem<T>) => {
     const on = it.value === value;
     const ink = on ? colors.onDark : colors.inkMuted;
@@ -150,7 +152,7 @@ export function BottomNav<T extends string>({
     >
       {hasRootAction ? (
         <>
-          {items.slice(0, 2).map(item)}
+          {leadingItems.map(item)}
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={startAction.label}
@@ -186,7 +188,7 @@ export function BottomNav<T extends string>({
               {startAction.label}
             </Txt>
           </Pressable>
-          {items.slice(2).map(item)}
+          {trailingItems.map(item)}
         </>
       ) : items.map(item)}
     </View>

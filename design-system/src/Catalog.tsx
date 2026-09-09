@@ -74,7 +74,7 @@ export function Catalog({ scheme, onScheme }: { scheme: Scheme; onScheme: (s: Sc
   const [dialog, setDialog] = useState(false);
   const [snack, setSnack] = useState(false);
   const [tab, setTab] = useState<'all' | 'friends'>('all');
-  const [nav, setNav] = useState<'home' | 'feed' | 'meet' | 'me'>('home');
+  const [nav, setNav] = useState<'home' | 'feed' | 'start' | 'meet' | 'me'>('home');
   const [picked, setPicked] = useState('a');
   const [chip, setChip] = useState(false);
   const [toggle, setToggle] = useState(true);
@@ -338,6 +338,7 @@ export function Catalog({ scheme, onScheme }: { scheme: Scheme; onScheme: (s: Sc
             items={[
               { value: 'home', label: '홈', icon: 'home' },
               { value: 'feed', label: '피드', icon: 'view-list' },
+              { value: 'start', label: '줍깅', icon: 'plus' },
               { value: 'meet', label: '모임', icon: 'account-group' },
               { value: 'me', label: '내정보', icon: 'account' },
             ] as const}
