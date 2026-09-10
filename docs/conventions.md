@@ -90,10 +90,11 @@ feat/… ──PR──▶ dev ──PR──▶ main
 | | 무엇이 보내나 | 웹훅 값 |
 |---|---|---|
 | 자동 | `.github/workflows/notify-mattermost.yml` — PR 열림·머지·닫힘·승인·변경요청 | 레포 Secret `MM_WEBHOOK_URL` |
-| 손으로 | `node infra/notify.mjs "메시지"` | 각자 `infra/.env` 의 `MM_WEBHOOK_URL` |
+| 손으로 | `node infra/notify.mjs "메시지"` | 각자 **저장소 루트** `.env` 의 `MM_WEBHOOK_URL` |
 
 - **PR 이벤트만** 자동으로 보낸다. CI 실패·이슈·푸시는 보내지 않는다 — 3명 규모에서 그 이상은 노이즈가 되어 아무도 안 본다
-- 웹훅 URL 은 각자 발급받아 자기 `infra/.env` 에 넣는다. 발급 방법은 `infra/.env.example` 에 적혀 있다. **저장소에 넣지 않는다**
+- 웹훅 URL 은 각자 발급받아 저장소 루트의 `.env` 에 넣는다. 발급 방법은 루트 `.env.example` 에 적혀 있다. **저장소에 넣지 않는다**
+- 루트 `.env` 는 로컬 설정, `infra/.env` 는 EC2 에 올라가는 운영 값이다. 섞지 않는다
 - 손으로 보낼 때 웹훅 URL 을 직접 `curl` 하지 않고 `notify.mjs` 를 쓴다. 그래야 URL 이 쉘 히스토리에 남지 않는다
 
 ## 테스트
