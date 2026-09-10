@@ -43,24 +43,24 @@ chore(infra): 모니터링 컨테이너 제거
 ## 브랜치
 
 ```
-feat/<이슈 ID>-<이슈 제목 슬러그>      예: feat/GAC-12-초대-코드-재발급
+<계정명>/gac-<번호>-<이슈 제목 슬러그>      예: djm062954/gac-5-초대-코드-재발급
 ```
 
 - 이슈 하나 = 브랜치 하나 = PR 하나
-- **Linear 이슈가 주는 브랜치 이름을 그대로 복사해 쓴다.** 손으로 짓지 않는다 — 이 이름 안의 이슈 ID 가 PR 을 이슈에 잇고, PR 열림 → In Review, 머지 → Done 을 자동으로 건다
-- 슬러그는 이슈 제목을 옮긴 것이다(공백·금지 문자 → 하이픈). 한글 그대로 둔다
+- **Linear 이슈 화면의 "Copy git branch name" 이 주는 이름을 그대로 복사해 쓴다.** 손으로 짓지 않는다 — 이 이름 안의 이슈 ID 가 PR 을 이슈에 잇고, PR 열림 → In Review, 머지 → Done 을 자동으로 건다
+- 커밋 type(`feat`/`fix`/`chore`)은 브랜치 이름이 아니라 **커밋 메시지**에 남는다. 브랜치 이름은 Linear 형식을 그대로 따른다
 - `git check-ref-format "refs/heads/<이름>"` 으로 만들기 전에 검증한다
 
 ## 브랜치 전략과 머지
 
 ```
-feat/… ──PR──▶ dev ──PR──▶ main
-        squash O       squash X
+<계정명>/gac-N-… ──PR──▶ dev ──PR──▶ main
+                  squash O       squash X
 ```
 
 - **`main`** 은 배포본. 머지되는 순간이 운영 배포다
 - **`dev`** 는 통합 브랜치이자 기본 브랜치. 작업은 `dev` 에서 잘라 `dev` 로 돌아간다
-- `feat → dev` 는 **squash merge**(PR 하나 = 커밋 하나). `dev → main` 은 **merge commit**(이슈별 배포 이력 보존)
+- 이슈 브랜치 → `dev` 는 **squash merge**(PR 하나 = 커밋 하나). `dev → main` 은 **merge commit**(이슈별 배포 이력 보존)
 - 승인 1명. 예외 없다 — 셋뿐이라 부담이 아니고, GitHub 브랜치 보호는 타입별 예외를 표현하지 못한다
 - 브랜치 보호: `main`·`dev` 모두 force push 금지·직접 push 금지. PR 만. CI 필수 체크는 CI 가 들어온 뒤에 건다
 

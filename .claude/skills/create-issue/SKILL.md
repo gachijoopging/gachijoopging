@@ -110,7 +110,7 @@ Linear MCP 도구(`list_issues` · `list_teams` · `save_issue` · `list_issue_l
 브랜치 이름은 Linear 가 주는 것을 그대로 쓴다 (`conventions.md` §브랜치):
 
 ```
-feat/GAC-12-초대-코드-재발급
+djm062954/gac-12-초대-코드-재발급
 ```
 
 이 이름으로 브랜치를 만들면 PR 열림 → In Review, 머지 → Done 이 자동으로 걸린다.
