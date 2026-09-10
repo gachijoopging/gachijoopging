@@ -1,0 +1,68 @@
+# PR 이벤트만 Mattermost 로 보낸다 (conventions.md §알림).
+# 이건 검사가 아니다 — 실패해도 PR 을 막지 않는다.
+# Mattermost incoming webhook 은 {"text": ...} 만 받아서 GitHub 웹훅을 직접 걸 수 없다.
+name: notify-mattermost
+
+on:
+  pull_request:
+    types: [opened, ready_for_review, closed]
+  pull_request_review:
+    types: [submitted]
+
+permissions:
+  contents: read
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 메시지 만들기
+        id: msg
+        env:
+          EVENT: ${{ github.event_name }}
+          ACTION: ${{ github.event.action }}
+          MERGED: ${{ github.event.pull_request.merged }}
+          STATE: ${{ github.event.review.state }}
+          NUM: ${{ github.event.pull_request.number }}
+          TITLE: ${{ github.event.pull_request.title }}
+          URL: ${{ github.event.pull_request.html_url }}
+          AUTHOR: ${{ github.event.pull_request.user.login }}
+          ACTOR: ${{ github.actor }}
+          BASE: ${{ github.event.pull_request.base.ref }}
+        run: |
+          case "$EVENT:$ACTION" in
+            pull_request:opened|pull_request:ready_for_review)
+              TEXT=":inbox_tray: **PR #${NUM} 열림** → \`${BASE}\`
+[${TITLE}](${URL}) — @${AUTHOR}" ;;
+            pull_request:closed)
+              if [ "$MERGED" = "true" ]; then
+                TEXT=":twisted_rightwards_arrows: **PR #${NUM} 머지됨** → \`${BASE}\`
+[${TITLE}](${URL})"
+              else
+                TEXT=":x: **PR #${NUM} 닫힘 (머지 안 됨)**
+[${TITLE}](${URL})"
+              fi ;;
+            pull_request_review:submitted)
+              case "$STATE" in
+                approved)          TEXT=":white_check_mark: **PR #${NUM} 승인** — @${ACTOR}
+[${TITLE}](${URL})" ;;
+                changes_requested) TEXT=":pencil2: **PR #${NUM} 변경 요청** — @${ACTOR}
+[${TITLE}](${URL})" ;;
+                *) echo "skip=true" >> "$GITHUB_OUTPUT"; exit 0 ;;
+              esac ;;
+            *) echo "skip=true" >> "$GITHUB_OUTPUT"; exit 0 ;;
+          esac
+          {
+            echo "text<<__EOF__"
+            echo "$TEXT"
+            echo "__EOF__"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: 보내기
+        if: steps.msg.outputs.skip != 'true'
+        env:
+          HOOK: ${{ secrets.MM_WEBHOOK_URL }}
+          TEXT: ${{ steps.msg.outputs.text }}
+        run: |
+          jq -nc --arg t "$TEXT" '{text:$t}' \
+            | curl -sS -f -X POST -H 'Content-Type: application/json' -d @- "$HOOK"
