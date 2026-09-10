@@ -43,3 +43,7 @@ mobile/legacy-387996e3-20260813.apk
 
 # Local Serena configuration and cache.
 /.serena/
+
+# Claude Code 개인 설정. 팀 공유분은 .claude/settings.json·helpers/·skills/ 로 커밋한다
+.claude/settings.local.json
+.claude/scheduled_tasks.lock
