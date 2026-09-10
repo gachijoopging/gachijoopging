@@ -47,3 +47,6 @@ mobile/legacy-387996e3-20260813.apk
 # Claude Code 개인 설정. 팀 공유분은 .claude/settings.json·helpers/·skills/ 로 커밋한다
 .claude/settings.local.json
 .claude/scheduled_tasks.lock
+
+# graft 는 개인 도구다. 쓰는 사람만 .claude/settings.local.json 에 설정한다
+.mcp.json
