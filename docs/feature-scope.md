@@ -17,6 +17,7 @@
 | 영역 | 결정 |
 |---|---|
 | 저장소 | GitHub 새 저장소. 옛 모노레포에서 가져온 것: `design-system` · backend 의 `global`·`auth`·`media` 와 빌드 파일 · `backend/docs/02-conventions.md` · `ai/` 전체 · 옛 안드로이드 `res/`(`docs/legacy/`, 화면설계서 참고용) · 로고·사진 에셋. 가져오지 않은 것: 데이터 도메인·Flyway·infra·admin-web·Kotlin 소스. 옛 저장소는 지운다 |
+| 협업 도구 | 이슈는 **Linear** 한 곳(가치줍깅 전용 워크스페이스). GitHub Issues 는 끈다. 브랜치 이름에 든 Linear 이슈 ID 가 PR 과 이슈를 잇고 상태를 자동으로 옮긴다. 알림은 Mattermost 웹훅으로 **PR 이벤트만**. 리뷰어는 `.github/CODEOWNERS` 가 폴더별로 지정. 절차는 `conventions.md` |
 | 제품 | 여러 크루가 각자 쓰는 크루 운영 앱 |
 | 무전(LiveKit) | 끔. 앱·서버·인프라에서 제거 |
 | 인증 | 이메일+비밀번호, 카카오·구글 소셜 모두 유지. 이메일 계정에 소셜을 연결하는 기존 흐름 유지. iOS 를 넣을 때 Apple 로그인 문제(ADR-0003)를 다시 본다 |
