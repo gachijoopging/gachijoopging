@@ -107,11 +107,12 @@ Linear MCP 도구(`list_issues` · `list_teams` · `save_issue` · `list_issue_l
 
 만든 이슈마다 **키 · 제목 · URL · 브랜치 이름**을 돌려준다.
 
-브랜치 이름은 Linear 가 주는 것을 그대로 쓴다 (`conventions.md` §브랜치):
+브랜치 이름은 Linear 가 주는 이름에서 슬러그를 잘라 `<계정명>/gac-<번호>` 만 쓴다 (`conventions.md` §브랜치):
 
 ```
-djm062954/gac-12-초대-코드-재발급
+djm062954/gac-12
 ```
 
+한글 슬러그를 그대로 두지 않는다 — 팀 전원 Windows 라 한글 브랜치명이 터미널에서 깨지거나 탭 완성이 꼬인다.
 이 이름으로 브랜치를 만들면 PR 열림 → In Review, 머지 → Done 이 자동으로 걸린다.
 만들기 전에 `git check-ref-format "refs/heads/<이름>"` 으로 검증한다.
