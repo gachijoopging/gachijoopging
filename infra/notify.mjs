@@ -1,5 +1,6 @@
 // Mattermost 로 한 줄 보낸다.  node infra/notify.mjs "메시지"
-// 웹훅 URL 은 infra/.env 의 MM_WEBHOOK_URL 에서 읽는다. 사람마다 다르므로 인자로 받지 않는다.
+// 웹훅 URL 은 저장소 루트 .env 의 MM_WEBHOOK_URL 에서 읽는다. 사람마다 다르므로 인자로 받지 않는다.
+// 서버 환경 변수(infra/.env)와는 별개다 — 이건 각자 로컬 설정이다.
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, resolve } from 'node:path';
@@ -29,16 +30,16 @@ async function main() {
     process.exit(2);
   }
 
-  const envPath = join(dirname(fileURLToPath(import.meta.url)), '.env');
+  const envPath = join(dirname(fileURLToPath(import.meta.url)), '..', '.env');
   let hook;
   try {
     hook = parseEnv(readFileSync(envPath, 'utf8')).MM_WEBHOOK_URL;
   } catch {
-    console.error(`${envPath} 가 없다. infra/.env.example 을 복사해 채운다.`);
+    console.error(`${envPath} 가 없다. 저장소 루트의 .env.example 을 .env 로 복사해 채운다.`);
     process.exit(1);
   }
   if (!hook) {
-    console.error('infra/.env 의 MM_WEBHOOK_URL 이 비어 있다. 발급 방법은 .env.example 참고.');
+    console.error('.env 의 MM_WEBHOOK_URL 이 비어 있다. 발급 방법은 .env.example 참고.');
     process.exit(1);
   }
 
