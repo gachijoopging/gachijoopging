@@ -83,6 +83,21 @@ feat/… ──PR──▶ dev ──PR──▶ main
 - 추정: `1`=1시간 이내 · `2`=3~4시간 · `3`=하루 · `5`=이틀 · `8`=3일. 8 이 나오면 쪼개라는 신호다
 - 등록 절차와 설명 템플릿은 `/create-issue` 스킬(`.claude/skills/create-issue/SKILL.md`)이 정본이다
 
+### Linear 연결 (각자 1회)
+
+`.mcp.json` 이 Linear MCP 서버를 팀 공통으로 정의하고, **키는 각자 자기 것**을 쓴다.
+한 대에 다른 Linear 계정이 붙어 있어도 이 키가 이긴다.
+
+1. https://linear.app/settings/account/security → Personal API keys → New API key
+   (가치줍깅 워크스페이스에 로그인한 상태에서 만든다)
+2. `.claude/settings.local.json` 의 `env.LINEAR_API_KEY` 에 붙여넣는다
+3. Claude Code 를 다시 띄운다 — MCP 설정은 시작할 때 읽는다
+
+`.claude/settings.local.json` 은 개인 파일이라 커밋되지 않는다. **키를 `.mcp.json` 이나
+`.env.example` 에 넣지 않는다** — 그 둘은 공유 파일이다.
+
+키가 안 먹으면 창을 새로 열어 `setx LINEAR_API_KEY "lin_api_..."` 로 넣고 다시 띄운다.
+
 ## 알림 (Mattermost)
 
 보내는 길이 둘이고 쓰는 값이 다르다.
