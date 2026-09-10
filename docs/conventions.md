@@ -119,18 +119,23 @@ chore(infra): 모니터링 컨테이너 제거
 
 ## 알림 (Mattermost)
 
-보내는 것은 **셋뿐**이다. `.github/workflows/notify-mattermost.yml` 이 보낸다.
+보내는 것은 **셋뿐**이다. `.claude/hooks/notify-push.mjs` 가 보낸다 — Claude Code 의 PostToolUse
+훅으로, `git push`·`gh pr create`·`gh pr merge` 를 로컬에서 잡아 각자의 웹훅으로 직접 쏜다.
+GitHub Actions 는 안 쓴다.
 
 | 언제 | 무엇 |
 |---|---|
-| `dev` 에 반영 | 머지된 커밋 제목 + 변경 내역 링크 |
+| `dev` 에 반영 | 머지된 커밋(또는 PR) 제목 + 링크 |
 | `main` 에 반영 | 배포다. 같은 형식 |
-| 리뷰어 지정 | 리뷰어를 멘션하고 PR 링크 |
+| 리뷰어 지정 | `gh pr create` 로 PR 을 열 때 CODEOWNERS 가 자동 지정한 리뷰어를 멘션하고 PR 링크 |
 
-작업 브랜치 푸시·PR 열림·승인·댓글은 **보내지 않는다.** 3명 채널에서 노이즈가 되어 아무도 안 보게 된다.
+작업 브랜치 푸시·PR 열림 자체·승인·댓글은 **보내지 않는다.** 3명 채널에서 노이즈가 되어 아무도 안 보게 된다.
 CI 실패도 안 보낸다 — PR 에 이미 보인다.
 
-웹훅 값은 레포 Secret `MM_WEBHOOK_URL` 하나다.
+**한계**: 로컬 훅이라 Claude Code 를 거치지 않은 작업은 못 잡는다 — GitHub 웹에서 직접 머지하거나
+터미널에서 맨 `git`/`gh` 를 쓰면 알림이 안 나간다. 그 경우 아래처럼 손으로 보낸다.
+
+웹훅 값은 각자 저장소 루트 `.env` 의 `MM_WEBHOOK_URL` 이다. 팀 공용 Secret 은 안 쓴다.
 
 손으로 뭔가 알리고 싶으면 `node infra/notify.mjs "메시지"` 를 쓴다. 이건 각자 저장소 루트 `.env` 의
 `MM_WEBHOOK_URL` 을 읽으므로 자기 이름으로 나간다. 발급 방법은 루트 `.env.example` 에 있다.
