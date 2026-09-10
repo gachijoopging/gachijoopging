@@ -8,7 +8,7 @@ on:
   push:
     branches: [dev, main]
   pull_request:
-    types: [review_requested]
+    types: [opened, review_requested]
 
 permissions:
   contents: read
@@ -21,11 +21,13 @@ jobs:
         id: msg
         env:
           EVENT: ${{ github.event_name }}
+          ACTION: ${{ github.event.action }}
           BRANCH: ${{ github.ref_name }}
           SUBJECT: ${{ github.event.head_commit.message }}
           PUSHER: ${{ github.event.head_commit.author.name }}
           COMPARE: ${{ github.event.compare }}
           REVIEWER: ${{ github.event.requested_reviewer.login }}
+          REVIEWERS_JSON: ${{ toJSON(github.event.pull_request.requested_reviewers) }}
           NUM: ${{ github.event.pull_request.number }}
           TITLE: ${{ github.event.pull_request.title }}
           PR_URL: ${{ github.event.pull_request.html_url }}
@@ -41,6 +43,13 @@ ${PUSHER} · [변경 내역](${COMPARE})"
               TEXT=":arrows_counterclockwise: **dev 반영** — ${HEAD_LINE}
 ${PUSHER} · [변경 내역](${COMPARE})"
             fi
+          elif [ "$ACTION" = "opened" ]; then
+            # CODEOWNERS 로 자동 지정된 리뷰어는 review_requested 이벤트를 발생시키지 않는다
+            # (GitHub 의 알려진 동작) — PR 이 열릴 때의 requested_reviewers 스냅샷으로 대신 잡는다
+            REVIEWERS=$(jq -r '[.[].login] | join(", @")' <<<"$REVIEWERS_JSON")
+            [ -z "$REVIEWERS" ] && { echo "skip=true" >> "$GITHUB_OUTPUT"; exit 0; }
+            TEXT=":eyes: **@${REVIEWERS} 리뷰 요청** — PR #${NUM}
+[${TITLE}](${PR_URL}) · @${AUTHOR}"
           elif [ -n "$REVIEWER" ]; then
             TEXT=":eyes: **@${REVIEWER} 리뷰 요청** — PR #${NUM}
 [${TITLE}](${PR_URL}) · @${AUTHOR}"
