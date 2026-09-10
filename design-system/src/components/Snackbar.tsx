@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Animated, Pressable, View, AccessibilityInfo, useAnimatedValue } from 'react-native';
+import { Animated, Pressable, View, AccessibilityInfo } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { radius } from '../../tokens/radius.ts';
 import { space, screen, size as sizes } from '../../tokens/spacing.ts';
@@ -34,7 +34,7 @@ export function Snackbar({
   const { colors, shadows } = useTheme();
   const insets = useSafeAreaInsets();
   const ripple = useRipple();
-  const opacity = useAnimatedValue(0);
+  const opacity = useRef(new Animated.Value(0)).current;
   const reduceMotion = useRef(false);
 
   useEffect(() => {

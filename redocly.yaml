@@ -1,0 +1,8 @@
+# 계약 검증은 구조가 깨지는 것만 잡는다. 경고가 0 이라야 새로 생긴 경고가 신호가 된다.
+extends:
+  - minimal
+
+rules:
+  # 앱을 손으로 쓰므로 클라이언트 코드 생성을 하지 않는다. 코드 생성을 도입하면 켠다
+  operation-operationId: off
+  tag-description: off

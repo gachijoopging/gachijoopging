@@ -1,0 +1,16 @@
+# 폴더별 리뷰어 자동 지정. conventions.md §PR 의 정본이다.
+
+*                   @djm030
+
+/mobile/            @djm030
+/ai/                @djm030
+/design-system/     @djm030
+
+/backend/           @whyH25
+
+/infra/             @yydd12
+/.github/           @yydd12
+
+# 계약은 셋 다 본다 — 바꾸면 앱·백엔드를 같은 PR 에서 고쳐야 한다
+/docs/openapi.yaml  @djm030 @whyH25 @yydd12
+/docs/              @djm030 @whyH25

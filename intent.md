@@ -34,4 +34,4 @@
 - iOS — 1차는 Android 만. 필요가 확인되면 다음 릴리스
 - 기존 운영 데이터 이관
 
-무엇을 만드는지는 [`docs/기능범위.md`](docs/기능범위.md), 말은 [`CONTEXT.md`](CONTEXT.md) 를 따른다.
+무엇을 만드는지는 [`docs/feature-scope.md`](docs/feature-scope.md), 말은 [`CONTEXT.md`](CONTEXT.md) 를 따른다.

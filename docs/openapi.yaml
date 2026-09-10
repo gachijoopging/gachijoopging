@@ -4,15 +4,22 @@ info:
   title: 가치줍깅 API
   version: 3.0.0
   description: |
-    앱과 백엔드 사이 HTTP 계약의 유일한 정본. 실시간(채팅·위치)은 `소켓.md`.
-    화면마다 필요한 데이터는 `화면.md`, 테이블은 `ERD.md`, 결정은 `기능범위.md`, 용어는 `../CONTEXT.md`.
+    앱과 백엔드 사이 HTTP 계약의 유일한 정본. 실시간(채팅·위치)은 `realtime.md`.
+    화면마다 필요한 데이터는 `screens.md`, 테이블은 `ERD.md`, 결정은 `feature-scope.md`, 용어는 `../CONTEXT.md`.
 
     ### 공통 규약 (옛 계약 2.3 을 이어받음)
     - 성공은 `{ "data": … }` 봉투, 오류는 `{ "code", "message", "requestId" }`
     - 시간은 ISO-8601 UTC `Z` 고정. 날짜만 필요한 곳은 `YYYY-MM-DD`
     - 앱이 UUID 를 만드는 리소스(미디어·활동·줍기·게시물·댓글·채팅·신고)는 같은 id 재전송 시 200 으로 흡수(멱등)
     - 목록은 `{ items, nextCursor }`. limit 기본 20·최대 50. 예외(배열 그대로): 크루원 목록 · 차단 목록 · 활동 중인 크루원 · 알림 처리 대기
-    - 차단·공개 범위 필터링은 서버 책임
+    - 차단·공개 범위 필터링은 서버 책임. 차단은 한 방향으로 차단자의 개인 게시물·댓글·채팅·위치 조회에서 대상만 숨긴다. 공식 공지와 필요한 크루장 관리 정보는 유지한다
+    - 닉네임·크루 이름은 앞뒤 공백과 줄바꿈을 제거한 뒤 기존 길이·저장 시 중복 검사를 적용한다. 비밀번호는 변형하지 않는다
+    - 걸음수는 선택이며 권한·측정값 부재나 비보행 활동은 시작·기록·종료를 막지 않는다. 일시정지 걸음수는 제외하며 사용할 수 없는 0/null로 GPS를 보정하지 않는다
+    - 활동 중 또는 계정별 로컬 미동기화 활동이 있으면 앱은 로그아웃·크루 나가기·회원 탈퇴를 막고 데이터를 보존한다. 서버는 진행 중 활동 충돌을 409 CONFLICT로 거절한다
+
+    ### 남은 설계 계약 의존성
+    - 가입 완료 전 필수/선택 약관·개인정보 동의를 구분한다. 실제 전문·버전·동의 저장/조회 계약은 미정이며 아래 가입/프로필 계약만으로 가입 완료를 구현할 수 없다. 임의 동의 필드는 정의하지 않는다
+    - profileComplete는 닉네임 설정 완료만 나타내며 동의 완료를 뜻하지 않는다
     - 카테고리 7종: CIGARETTE·CAN·PLASTIC·PAPER·GLASS·VINYL·GENERAL
     - 입력 상한: 게시물 1000자 · 댓글 500자 · 채팅 500자 · 소개 200자 · 공지 제목 100자·본문 3000자 · 크루 이름 2~20자 · 닉네임 2~12자. 초과는 422
     - 모든 `example` 은 앱 목 데이터의 원본이다. 진행 순서 2단계는 이 예시로 화면을 완성한다
@@ -124,6 +131,7 @@ paths:
     post:
       tags: [auth]
       summary: 이 기기의 refreshToken 무효화
+      description: 진행 중 활동은 409 CONFLICT. 로컬 미동기화 활동은 앱이 먼저 차단한다
       requestBody:
         content:
           application/json:
@@ -132,6 +140,8 @@ paths:
               properties: { refreshToken: { type: string } }
       responses:
         '204': { description: 완료 }
+        '409': { $ref: '#/components/responses/Error' }
+
   /auth/password-reset:
     post:
       tags: [auth]
@@ -149,6 +159,7 @@ paths:
       tags: [auth]
       security: []
       summary: 코드로 새 비밀번호 설정
+      description: 성공하면 모든 기기의 access/refresh 세션을 무효화하고 다시 로그인한다. 소셜 전용 계정에는 비밀번호를 새로 만들지 않는다
       requestBody:
         required: true
         content:
@@ -185,6 +196,7 @@ paths:
                   intro: 한강 서쪽 담당
                   photoUrl: https://cdn…/p/6f1c.jpg
                   email: kwan@example.com
+                  profileComplete: true
                   hasPassword: true
                   linked: { kakao: true, google: false }
                   settings: { shareLocationDefault: true, notifyActivityStart: true }
@@ -194,13 +206,14 @@ paths:
     patch:
       tags: [me]
       summary: 프로필·설정 수정
+      description: 미완료 소셜 가입은 닉네임만 저장한다. 저장 성공 시 profileComplete=true. 사진은 이후 선택이다
       requestBody:
         content:
           application/json:
             schema:
               type: object
               properties:
-                nickname: { type: string }
+                nickname: { type: string, minLength: 2, maxLength: 12 }
                 intro: { type: string, maxLength: 200 }
                 photoMediaId: { type: string, format: uuid, nullable: true }
                 shareLocationDefault: { type: boolean }
@@ -214,10 +227,32 @@ paths:
         '409': { $ref: '#/components/responses/Error' }
     delete:
       tags: [me]
-      summary: 회원 탈퇴 — 크루장은 위임 뒤에만(403 LEADER_MUST_DELEGATE)
+      summary: 회원 탈퇴 — 다른 크루원이 있으면 크루장은 먼저 위임
+      description: 혼자 남은 크루장은 해산 확인 뒤 탈퇴 가능. 진행 중 활동은 409 CONFLICT. 로컬 미동기화 활동은 앱이 차단한다
       responses:
         '204': { description: 완료 }
         '403': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+
+  /users/me/activities:
+    get:
+      tags: [me, activities]
+      summary: 내 전체 활동 기록 — 이전 크루 포함, 소속 없어도 조회
+      parameters:
+        - { $ref: '#/components/parameters/Cursor' }
+        - { $ref: '#/components/parameters/Limit' }
+      responses:
+        '200': { $ref: '#/components/responses/ActivityPage' }
+  /users/me/stats:
+    get:
+      tags: [me, stats]
+      summary: 내 누적 기록·달력 — 이전 크루 포함, 소속 없어도 조회
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { type: object, properties: { data: { $ref: '#/components/schemas/MemberStats' } } }
   /users/me/social:
     put:
       tags: [me]
@@ -338,6 +373,7 @@ paths:
     post:
       tags: [crew]
       summary: 초대 코드로 가입 신청 — 대기 중이면 200 으로 흡수
+      description: 거절·추방 뒤에도 현재 유효 코드로 재신청할 수 있다
       requestBody:
         required: true
         content:
@@ -412,7 +448,8 @@ paths:
   /crew/invite-code:
     post:
       tags: [crew]
-      summary: "[크루장] 초대 코드 재발급 — 옛 코드 즉시 무효"
+      summary: "[크루장] 초대 코드 재발급 — 옛 코드의 신규 신청만 무효"
+      description: 기존 대기 신청은 보존한다
       responses:
         '200':
           description: OK
@@ -422,10 +459,13 @@ paths:
   /crew/leave:
     post:
       tags: [crew]
-      summary: 크루 나가기 — 크루장은 403 LEADER_MUST_DELEGATE
+      summary: 크루 나가기 — 다른 크루원이 있으면 크루장은 403 LEADER_MUST_DELEGATE
+      description: 혼자 남은 크루장은 해산 확인 뒤 가능. 진행 중 활동은 409 CONFLICT. 로컬 미동기화 활동은 앱이 차단한다. 내 기록은 보존한다
       responses:
         '204': { description: 완료 }
         '403': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+
   /crew/members:
     get:
       tags: [members]
@@ -447,6 +487,7 @@ paths:
     get:
       tags: [members]
       summary: 타인 프로필 (5-4) — 차단한 사람은 404
+      description: 현재 소속 크루의 활동을 locationShared와 무관하게 합산한다. 본인의 이전 크루 포함 합산은 /users/me/stats
       parameters: [{ $ref: '#/components/parameters/UserId' }]
       responses:
         '200':
@@ -457,12 +498,14 @@ paths:
     delete:
       tags: [members]
       summary: "[크루장] 추방"
+      description: 대상의 현재 크루 내 PENDING USER 신고를 함께 RESOLVED 처리하고 각 신고자에게 REPORT_RESOLVED 결과 알림을 보낸다
       parameters: [{ $ref: '#/components/parameters/UserId' }]
       responses: { '204': { description: 완료 } }
   /crew/members/{userId}/activities:
     get:
       tags: [members]
-      summary: 그 크루원의 활동 목록 (5-4 기록 탭). 본인이면 내 기록
+      summary: 현재 크루원의 활동 목록 (5-4 기록 탭)
+      description: 현재 같은 크루의 활동 메타데이터·사진은 locationShared와 무관하게 조회한다. locationShared=false면 경로만 숨긴다. 본인의 이전 크루 포함 기록은 /users/me/activities를 쓴다
       parameters:
         - { $ref: '#/components/parameters/UserId' }
         - { $ref: '#/components/parameters/Cursor' }
@@ -522,7 +565,8 @@ paths:
   /activities:
     post:
       tags: [activities]
-      summary: 활동 시작 — 진행 중이 있으면 그것을 200 으로 돌려준다
+      summary: 활동 시작 — 같은 UUID 재전송은 200
+      description: 다른 UUID의 진행 중 활동은 409 CONFLICT. 앱은 이전 로컬 종료/줍기 대기가 동기화될 때까지 새 시작을 차단한다
       requestBody:
         required: true
         content:
@@ -541,11 +585,13 @@ paths:
             application/json:
               schema: { type: object, properties: { data: { $ref: '#/components/schemas/Activity' } } }
         '200':
-          description: 진행 중인 활동이 이미 있어 그것을 돌려준다
+          description: 같은 UUID의 활동을 돌려준다
           content:
             application/json:
               schema: { type: object, properties: { data: { $ref: '#/components/schemas/Activity' } } }
         '403': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
+
   /activities/current:
     get:
       tags: [activities]
@@ -559,19 +605,22 @@ paths:
   /activities/{id}/pause:
     post:
       tags: [activities]
-      summary: 일시정지 — 거리·시간만 멈춤 (Q30)
+      summary: 일시정지 — 거리·시간·걸음수 누적 정지 (Q30)
+      description: paused=true, pausedAt 저장. IN_PROGRESS 유지, 위치 공유와 줍기는 계속 가능. 재전송은 현재 상태 유지
       parameters: [{ $ref: '#/components/parameters/ActivityId' }]
       responses: { '204': { description: 완료 } }
   /activities/{id}/resume:
     post:
       tags: [activities]
       summary: 재개
+      description: paused=false, pausedAt=null로 갱신하고 일시정지 누적 시간을 반영한다. 재전송은 중복 가산하지 않는다
       parameters: [{ $ref: '#/components/parameters/ActivityId' }]
       responses: { '204': { description: 완료 } }
   /activities/{id}/items:
     post:
       tags: [activities]
       summary: 줍기 추가 — 빠른 줍기(photoId 없음) 또는 AI 확인 뒤 저장(photoId 있음). 여러 건 한 번에
+      description: 앱은 UUID를 즉시 로컬 영속 저장 후 전송한다. 5초 배치 대기 없음. 되돌리기는 미전송 건 취소 또는 저장된 동일 UUID DELETE. 종료 요청보다 먼저 큐를 동기화한다
       parameters: [{ $ref: '#/components/parameters/ActivityId' }]
       requestBody:
         required: true
@@ -588,7 +637,7 @@ paths:
                   items: { $ref: '#/components/schemas/ItemInput' }
             example:
               photoId: null
-              items: [{ category: CIGARETTE, quantity: 3 }]
+              items: [{ id: 00000000-0000-4000-8000-000000000001, category: CIGARETTE, quantity: 3 }]
       responses:
         '200':
           description: 갱신된 요약
@@ -604,7 +653,7 @@ paths:
         - in: path
           name: itemId
           required: true
-          schema: { type: integer }
+          schema: { type: string, format: uuid }
       requestBody:
         required: true
         content:
@@ -628,7 +677,7 @@ paths:
         - in: path
           name: itemId
           required: true
-          schema: { type: integer }
+          schema: { type: string, format: uuid }
       responses: { '204': { description: 완료 } }
   /activities/{id}/live:
     post:
@@ -655,7 +704,8 @@ paths:
   /activities/{id}/end:
     post:
       tags: [activities]
-      summary: 종료 — 경로·거리·시간·걸음수를 한 번에. 이후 수정 불가 항목
+      summary: 종료 — 경로·거리·시간·선택 걸음수를 한 번에
+      description: 같은 활동 UUID의 반복 종료는 저장된 결과를 200으로 반환하고 집계를 중복 가산하지 않는다. 짧거나 수량 0인 활동도 저장한다. 앱은 오프라인 종료를 영속 저장하고 줍기 큐 처리 후 이 요청을 재시도한다. 서버 저장 완료 후에만 요약 이미지를 공유한다
       parameters: [{ $ref: '#/components/parameters/ActivityId' }]
       requestBody:
         required: true
@@ -668,8 +718,8 @@ paths:
                 endedAt: { type: string, format: date-time }
                 durationSec: { type: integer, minimum: 0 }
                 pausedSec: { type: integer, minimum: 0 }
-                distanceM: { type: integer, minimum: 0, description: 필터·걸음수 보정 뒤 값 }
-                steps: { type: integer, nullable: true }
+                distanceM: { type: integer, minimum: 0, description: 필터 적용 후 값. 사용 가능한 걸음수가 있을 때만 보정 }
+                steps: { type: integer, minimum: 0, nullable: true, description: 선택 측정값. 일시정지 제외. 미측정은 null }
                 route:
                   type: array
                   description: 필터 통과한 점만. [lng, lat]
@@ -683,7 +733,8 @@ paths:
   /activities/{id}:
     get:
       tags: [activities]
-      summary: 활동 기록 상세 (5-3) — 남의 것은 locationShared 일 때만 route 포함
+      summary: 활동 기록 상세 (5-3)
+      description: 본인은 소속 없이 이전 크루 기록까지 조회한다. 타인은 현재 같은 크루의 활동 메타데이터·사진을 locationShared와 무관하게 조회하며 locationShared=true일 때만 route 포함. 모든 사진 조회 가능. 요약 공유는 별도 경로 포함 선택을 하는 이미지이며 게시물 연결이 아니다
       parameters: [{ $ref: '#/components/parameters/ActivityId' }]
       responses:
         '200':
@@ -700,6 +751,8 @@ paths:
                   endedAt: 2026-09-05T09:48:00Z
                   durationSec: 2520
                   pausedSec: 240
+                  paused: false
+                  pausedAt: null
                   distanceM: 3120
                   steps: 4100
                   locationShared: true
@@ -709,8 +762,8 @@ paths:
                   photos:
                     - { id: p1, url: https://cdn…/a100/p1.jpg, thumbUrl: https://cdn…/a100/p1_t.jpg, takenAt: 2026-09-05T09:10:00Z }
                   items:
-                    - { id: 1, photoId: p1, category: PLASTIC, quantity: 2, source: AI, aiConfidence: 0.91, unclassified: false, bbox: { x: 0.2, y: 0.3, w: 0.2, h: 0.25 } }
-                    - { id: 2, photoId: null, category: CIGARETTE, quantity: 5, source: MANUAL, aiConfidence: null, unclassified: false, bbox: null }
+                    - { id: 00000000-0000-4000-8000-000000000001, photoId: p1, category: PLASTIC, quantity: 2, source: AI, aiConfidence: 0.91, unclassified: false, bbox: { x: 0.2, y: 0.3, w: 0.2, h: 0.25 } }
+                    - { id: 00000000-0000-4000-8000-000000000002, photoId: null, category: CIGARETTE, quantity: 5, source: MANUAL, aiConfidence: null, unclassified: false, bbox: null }
     delete:
       tags: [activities]
       summary: 내 활동 삭제 — 크루 합산(crew_daily_stats)은 줄어든다. 본인 것만
@@ -720,6 +773,7 @@ paths:
     get:
       tags: [activities]
       summary: 활동 중인 크루원 (2-2, 4-3 초기 로드). 이후 갱신은 소켓 (배열)
+      description: 조회자는 활동 중일 필요 없다. 좌표는 대상이 IN_PROGRESS이고 locationShared=true일 때만 제공한다. 종료 대상은 제외, 차단 대상은 개인 조회에서 제외한다
       responses:
         '200':
           description: OK
@@ -731,14 +785,15 @@ paths:
                   data: { type: array, items: { $ref: '#/components/schemas/LiveMember' } }
               example:
                 data:
-                  - { user: { id: 8a2d…, nickname: 상혁, photoUrl: null }, activityId: a101, startedAt: 2026-09-07T08:30:00Z, elapsedSec: 900, distanceM: 1200, itemCount: 9, paused: false, location: { lng: 126.93, lat: 37.52 } }
-                  - { user: { id: 9b3e…, nickname: 지수, photoUrl: null }, activityId: a102, startedAt: 2026-09-07T08:40:00Z, elapsedSec: 300, distanceM: 400, itemCount: 2, paused: true, location: null }
+                  - { user: { id: 8a2d…, nickname: 상혁, photoUrl: null }, activityId: a101, startedAt: 2026-09-07T08:30:00Z, elapsedSec: 900, distanceM: 1200, itemCount: 9, paused: false, locationShared: true, location: { lng: 126.93, lat: 37.52 } }
+                  - { user: { id: 9b3e…, nickname: 지수, photoUrl: null }, activityId: a102, startedAt: 2026-09-07T08:40:00Z, elapsedSec: 300, distanceM: 400, itemCount: 2, paused: true, locationShared: false, location: null }
 
   # ───────────────────────── media ─────────────────────────
   /media:
     post:
       tags: [media]
-      summary: 사진 업로드 + AI 추론 — 옛 계약 그대로. 추론 실패는 200 + inference.status=UNAVAILABLE
+      summary: 사진 업로드 + AI 추론 — 추론 실패는 200 + inference.status=UNAVAILABLE
+      description: 업로드 성공 뒤 추론 실패해도 photoId와 사진을 보존하고 수동 분류한다. 활동 사진은 카메라 촬영만 사용하며 오프라인은 빠른 줍기로 기록한다. aiConfidence가 0.7 미만인 분류는 확인 필요로 표시하고 확률 퍼센트로 표시하지 않는다
       requestBody:
         required: true
         content:
@@ -795,6 +850,7 @@ paths:
     post:
       tags: [posts]
       summary: 게시물 작성 (5-6)
+      description: 본문 또는 사진 중 하나 이상 필요. 사진만이면 text는 빈 문자열, 글만이면 mediaIds는 빈 배열. 활동 요약은 이미지뿐이다
       requestBody:
         required: true
         content:
@@ -871,7 +927,8 @@ paths:
   /crew/notices:
     get:
       tags: [notices]
-      summary: 공지 목록 (3-5). 고정이 먼저
+      summary: 공지 목록 (3-5) — 최신 작성순
+      description: 삭제되지 않은 최신 공지 한 건만 자동 노출. 수동 고정 없음
       parameters:
         - { $ref: '#/components/parameters/Cursor' }
         - { $ref: '#/components/parameters/Limit' }
@@ -952,7 +1009,7 @@ paths:
   /crew/chat/messages:
     get:
       tags: [chat]
-      summary: 메시지 이력 — beforeSeq 는 거꾸로, afterSeq 는 재연결 뒤 빈 구간 채우기. 실시간은 소켓.md
+      summary: 메시지 이력 — beforeSeq 는 거꾸로, afterSeq 는 재연결 뒤 빈 구간 채우기. 실시간은 realtime.md
       parameters:
         - in: query
           name: beforeSeq
@@ -1044,6 +1101,7 @@ paths:
     post:
       tags: [reports]
       summary: 신고 (6-1) — 크루장에게 REPORT 알림
+      description: reason=OTHER이면 공백뿐이지 않은 memo가 필수다. 같은 신고자의 같은 targetType·targetId 중복 신고는 409 CONFLICT. 동일 id 재전송은 공통 멱등 규칙으로 흡수한다
       requestBody:
         required: true
         content:
@@ -1084,6 +1142,7 @@ paths:
     post:
       tags: [reports]
       summary: "[크루장] 처리 — DELETE 는 대상 게시물·댓글·채팅을 지운다. USER 신고는 DISMISS 또는 별도 추방"
+      description: 처리 시 신고자에게 REPORT_RESOLVED 알림으로 결과를 전달한다. USER에 DELETE는 허용하지 않는다
       parameters:
         - in: path
           name: reportId
@@ -1126,6 +1185,7 @@ paths:
     get:
       tags: [stats]
       summary: 크루 기록 (3-4)
+      description: KST 기준 WEEK는 이번 월요일 00시부터, MONTH는 이번 달 1일 00시부터 현재까지. ALL은 전체 기간이며 추이는 월별(월 1일 date), WEEK/MONTH는 일별. 순위는 줍기 수량 내림차순이며 동수량은 공동 순위
       parameters:
         - in: query
           name: range
@@ -1149,6 +1209,7 @@ paths:
     get:
       tags: [stats]
       summary: 활동 달력 한 달 (3-9)
+      description: KST 날짜 기준. 활동 수는 사람 수가 아닌 활동 횟수
       parameters:
         - in: query
           name: month
@@ -1172,6 +1233,7 @@ paths:
                           properties:
                             date: { type: string, format: date }
                             items: { type: integer }
+                            activityCount: { type: integer, description: 해당 날짜의 활동 횟수 }
                             activities:
                               type: array
                               items:
@@ -1254,7 +1316,7 @@ components:
             required: [token]
             properties:
               token: { type: string, description: 카카오 accessToken / 구글 idToken }
-              nickname: { type: string, description: 첫 가입일 때만 }
+              nickname: { type: string, minLength: 2, maxLength: 12, description: 첫 가입 때 선택. 없으면 profileComplete=false로 PATCH /users/me에서 이어간다 }
     CommentInput:
       required: true
       content:
@@ -1274,7 +1336,6 @@ components:
             properties:
               title: { type: string, maxLength: 100 }
               body: { type: string, maxLength: 3000 }
-              pinned: { type: boolean }
 
   responses:
     Error:
@@ -1303,7 +1364,7 @@ components:
                 properties:
                   accessToken: { type: string }
                   refreshToken: { type: string }
-                  isNew: { type: boolean, description: 소셜 첫 가입이면 true → 닉네임 화면 }
+                  isNew: { type: boolean, description: 최초 발급 여부만 표시. 재진입 분기는 Me.profileComplete와 membership으로 판단 }
     ActivityPage:
       description: 활동 목록
       content:
@@ -1354,9 +1415,11 @@ components:
         photoUrl: { type: string, nullable: true }
     Me:
       type: object
+      required: [profileComplete]
       properties:
         id: { type: string }
-        nickname: { type: string }
+        profileComplete: { type: boolean, description: 닉네임 설정 완료 여부. false면 닉네임 화면 재개. 약관 동의 완료를 뜻하지 않음 }
+        nickname: { type: string, nullable: true }
         intro: { type: string }
         photoUrl: { type: string, nullable: true }
         email: { type: string, nullable: true }
@@ -1393,6 +1456,7 @@ components:
         inviteCode: { type: string }
         pendingJoinRequests: { type: integer, description: "크루장만 값. 크루원은 0" }
         pinnedNotice:
+          description: 삭제되지 않은 최신 공지 한 건 자동 선택. 없으면 null
           type: object
           nullable: true
           properties:
@@ -1418,19 +1482,24 @@ components:
             totalItems: { type: integer }
             joinedAt: { type: string, format: date-time }
             following: { type: boolean }
+    MemberStats:
+      type: object
+      properties:
+        totalItems: { type: integer }
+        totalDistanceM: { type: integer }
+        totalActivities: { type: integer }
+        activeDays:
+          type: array
+          description: KST 최근 6개월 활동한 날짜 — 프로필 달력
+          items: { type: string, format: date }
     MemberProfile:
       allOf:
         - $ref: '#/components/schemas/Member'
+        - $ref: '#/components/schemas/MemberStats'
         - type: object
           properties:
             intro: { type: string }
-            totalDistanceM: { type: integer }
-            totalActivities: { type: integer }
             blocked: { type: boolean }
-            activeDays:
-              type: array
-              description: 최근 6개월 활동한 날짜 — 프로필 달력
-              items: { type: string, format: date }
     ItemInput:
       type: object
       required: [id, category, quantity]
@@ -1479,6 +1548,7 @@ components:
         thumbUrl: { type: string, nullable: true }
     Activity:
       type: object
+      required: [paused, pausedAt]
       properties:
         id: { type: string }
         user: { $ref: '#/components/schemas/UserBrief' }
@@ -1487,8 +1557,10 @@ components:
         endedAt: { type: string, format: date-time, nullable: true }
         durationSec: { type: integer }
         pausedSec: { type: integer }
+        paused: { type: boolean, description: 재실행 시 복원할 일시정지 상태. 종료 시 false }
+        pausedAt: { type: string, format: date-time, nullable: true, description: 일시정지 시작 시각. 재개·종료 시 null }
         distanceM: { type: integer }
-        steps: { type: integer, nullable: true }
+        steps: { type: integer, minimum: 0, nullable: true, description: 선택 측정값. 일시정지 제외. 미측정은 null }
         locationShared: { type: boolean }
         itemCount: { type: integer }
         byCategory: { type: object, additionalProperties: { type: integer } }
@@ -1509,6 +1581,7 @@ components:
         items: { type: array, items: { $ref: '#/components/schemas/Item' } }
     LiveMember:
       type: object
+      required: [locationShared]
       properties:
         user: { $ref: '#/components/schemas/UserBrief' }
         activityId: { type: string }
@@ -1517,10 +1590,11 @@ components:
         distanceM: { type: integer }
         itemCount: { type: integer }
         paused: { type: boolean }
+        locationShared: { type: boolean, description: false는 공유 끔. true인데 location=null이면 좌표 확인 중 }
         location:
           type: object
           nullable: true
-          description: 위치 공유를 끈 사람은 null
+          description: IN_PROGRESS이며 locationShared=true인 대상만 좌표 제공. 그 외 null
           properties: { lng: { type: number }, lat: { type: number } }
     MediaResult:
       type: object
@@ -1573,7 +1647,7 @@ components:
         id: { type: string }
         title: { type: string }
         preview: { type: string, description: 본문 첫 줄 }
-        pinned: { type: boolean }
+        pinned: { type: boolean, readOnly: true, description: 최신 공지 한 건이면 true인 파생 값. 수동 설정 불가 }
         commentCount: { type: integer }
         createdAt: { type: string, format: date-time }
     ChatMessage:
@@ -1590,15 +1664,15 @@ components:
         id: { type: integer }
         type:
           type: string
-          enum: [JOIN_REQUEST, JOIN_APPROVED, JOIN_REJECTED, NOTICE, COMMENT, CHAT, ACTIVITY_STARTED, REPORT, POST_REMOVED]
+          enum: [JOIN_REQUEST, JOIN_APPROVED, JOIN_REJECTED, NOTICE, COMMENT, CHAT, ACTIVITY_STARTED, REPORT, REPORT_RESOLVED, POST_REMOVED]
         title: { type: string }
         detail: { type: string }
         unread: { type: boolean }
         target:
           type: object
-          description: 이동 대상. JOIN_REQUESTS→3-8 · REPORTS→6-2 · POST→5-2 · NOTICE→3-6 · CHAT→3-7 · LIVE→2-2 · CREW→1-6/탭
+          description: 이동 대상. JOIN_REQUESTS→3-8 · REPORTS→6-2 · POST→5-2 · NOTICE→3-6 · CHAT→3-7 · LIVE→2-2 · CREW→1-6/탭 · NOTIFICATIONS→2-3 (신고 결과는 title/detail, 크루장 처리 화면으로 보내지 않음)
           properties:
-            type: { type: string, enum: [JOIN_REQUESTS, REPORTS, POST, NOTICE, CHAT, LIVE, CREW] }
+            type: { type: string, enum: [JOIN_REQUESTS, REPORTS, POST, NOTICE, CHAT, LIVE, CREW, NOTIFICATIONS] }
             id: { type: string, nullable: true }
         createdAt: { type: string, format: date-time }
     Report:
