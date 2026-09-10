@@ -1,0 +1,48 @@
+# conventions.md §PR: "평일 24시간 내 응답. 넘기면 데일리에서 언급" 을 사람이 아니라
+# 스케줄이 추적한다. 평일 아침에 돌며, 리뷰 요청 뒤 24시간이 지났는데 아직 리뷰가
+# 하나도 안 달린 PR 을 찾아 리뷰어를 멘션해 알린다. 이미 리뷰가 달린 PR 은 건드리지 않는다
+# — 그 다음부터는 저자·리뷰어가 서로 보고 있다고 본다.
+name: pr-review-sla
+
+on:
+  schedule:
+    - cron: '0 0 * * 1-5'  # 평일 09:00 KST(UTC+9) = 00:00 UTC
+  workflow_dispatch: {}     # 수동 실행 — 완료 조건 검증용
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 24시간 넘은 미응답 PR 찾아 알리기
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HOOK: ${{ secrets.MM_WEBHOOK_URL }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          NOW=$(date -u +%s)
+          PRS=$(gh pr list --repo "$REPO" --state open --json number,title,url,createdAt,reviewRequests,reviews)
+
+          echo "$PRS" | jq -c '.[]' | while read -r pr; do
+            NUM=$(jq -r '.number' <<<"$pr")
+            TITLE=$(jq -r '.title' <<<"$pr")
+            URL=$(jq -r '.url' <<<"$pr")
+            CREATED=$(jq -r '.createdAt' <<<"$pr")
+            REVIEWERS=$(jq -r '[.reviewRequests[].login] | join(", @")' <<<"$pr")
+            REVIEW_COUNT=$(jq -r '.reviews | length' <<<"$pr")
+
+            [ -z "$REVIEWERS" ] && continue          # 리뷰어 지정 안 됨 — 대상 아님
+            [ "$REVIEW_COUNT" != "0" ] && continue   # 이미 리뷰가 달림 — 대상 아님
+
+            CREATED_TS=$(date -u -d "$CREATED" +%s)
+            HOURS=$(( (NOW - CREATED_TS) / 3600 ))
+            [ "$HOURS" -lt 24 ] && continue
+
+            TEXT=":alarm_clock: **PR #${NUM} 리뷰 ${HOURS}시간째 무응답** — @${REVIEWERS}
+[${TITLE}](${URL})"
+            jq -nc --arg t "$TEXT" '{text:$t}' | curl -sS -f -X POST -H 'Content-Type: application/json' -d @- "$HOOK"
+          done
