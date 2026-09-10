@@ -108,17 +108,23 @@ feat/… ──PR──▶ dev ──PR──▶ main
 
 ## 알림 (Mattermost)
 
-보내는 길이 둘이고 쓰는 값이 다르다.
+보내는 것은 **셋뿐**이다. `.github/workflows/notify-mattermost.yml` 이 보낸다.
 
-| | 무엇이 보내나 | 웹훅 값 |
-|---|---|---|
-| 자동 | `.github/workflows/notify-mattermost.yml` — PR 열림·머지·닫힘·승인·변경요청 | 레포 Secret `MM_WEBHOOK_URL` |
-| 손으로 | `node infra/notify.mjs "메시지"` | 각자 **저장소 루트** `.env` 의 `MM_WEBHOOK_URL` |
+| 언제 | 무엇 |
+|---|---|
+| `dev` 에 반영 | 머지된 커밋 제목 + 변경 내역 링크 |
+| `main` 에 반영 | 배포다. 같은 형식 |
+| 리뷰어 지정 | 리뷰어를 멘션하고 PR 링크 |
 
-- **PR 이벤트만** 자동으로 보낸다. CI 실패·이슈·푸시는 보내지 않는다 — 3명 규모에서 그 이상은 노이즈가 되어 아무도 안 본다
-- 웹훅 URL 은 각자 발급받아 저장소 루트의 `.env` 에 넣는다. 발급 방법은 루트 `.env.example` 에 적혀 있다. **저장소에 넣지 않는다**
-- 루트 `.env` 는 로컬 설정, `infra/.env` 는 EC2 에 올라가는 운영 값이다. 섞지 않는다
-- 손으로 보낼 때 웹훅 URL 을 직접 `curl` 하지 않고 `notify.mjs` 를 쓴다. 그래야 URL 이 쉘 히스토리에 남지 않는다
+작업 브랜치 푸시·PR 열림·승인·댓글은 **보내지 않는다.** 3명 채널에서 노이즈가 되어 아무도 안 보게 된다.
+CI 실패도 안 보낸다 — PR 에 이미 보인다.
+
+웹훅 값은 레포 Secret `MM_WEBHOOK_URL` 하나다.
+
+손으로 뭔가 알리고 싶으면 `node infra/notify.mjs "메시지"` 를 쓴다. 이건 각자 저장소 루트 `.env` 의
+`MM_WEBHOOK_URL` 을 읽으므로 자기 이름으로 나간다. 발급 방법은 루트 `.env.example` 에 있다.
+웹훅 URL 을 직접 `curl` 하지 않는다 — 쉘 히스토리에 남는다.
+루트 `.env` 는 로컬 설정, `infra/.env` 는 EC2 에 올라가는 운영 값이다. 섞지 않는다.
 
 ## 테스트
 
