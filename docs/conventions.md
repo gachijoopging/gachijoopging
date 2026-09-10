@@ -6,6 +6,7 @@
 ## 문서 규약
 
 - 수명이 정해진 임시 문서를 영속 문서에서 링크하지 않는다. 내용이 필요하면 요약을 옮기고, 경위는 커밋 해시로 인용한다
+- `docs/superpowers/` 는 그 임시 문서다(gitignore 됨, 개인 작업 초안). 팀이 알아야 하는 결정은 반드시 아래 정본으로 옮긴다 — 옮기기 전에는 없는 결정으로 친다
 - 결정은 `feature-scope.md` 표에, 되돌리기 어려운 결정은 `adr/` 에, 말은 `../CONTEXT.md` 에. 셋째 장소를 만들지 않는다
 - 코드 주석에 동작 설명(How)·변경 이력·이슈 번호를 쓰지 않는다. 정책의 이유(Why)와 외부 제약만 남긴다
 
@@ -43,24 +44,25 @@ chore(infra): 모니터링 컨테이너 제거
 ## 브랜치
 
 ```
-feat/<이슈 ID>-<이슈 제목 슬러그>      예: feat/GAC-12-초대-코드-재발급
+<계정명>/gac-<번호>      예: djm062954/gac-5
 ```
 
 - 이슈 하나 = 브랜치 하나 = PR 하나
-- **Linear 이슈가 주는 브랜치 이름을 그대로 복사해 쓴다.** 손으로 짓지 않는다 — 이 이름 안의 이슈 ID 가 PR 을 이슈에 잇고, PR 열림 → In Review, 머지 → Done 을 자동으로 건다
-- 슬러그는 이슈 제목을 옮긴 것이다(공백·금지 문자 → 하이픈). 한글 그대로 둔다
+- **슬러그를 붙이지 않는다.** Linear 의 "Copy git branch name" 은 이슈 제목을 그대로 슬러그로 붙이는데, 제목이 한글이면 브랜치 이름도 한글이 된다 — 팀 전원 Windows 라 PowerShell·일부 터미널에서 한글 브랜치명이 깨지거나 탭 완성이 꼬이는 문제가 있어 통째로 뺀다. Linear 가 준 이름에서 `-<슬러그>` 부분만 잘라내고 쓴다
+- 브랜치 이름 안의 이슈 ID(`gac-N`)가 PR 을 이슈에 잇고, PR 열림 → In Review, 머지 → Done 을 자동으로 건다 — 슬러그를 잘라도 이 연결에는 영향 없다
+- 커밋 type(`feat`/`fix`/`chore`)은 브랜치 이름이 아니라 **커밋 메시지**에 남는다
 - `git check-ref-format "refs/heads/<이름>"` 으로 만들기 전에 검증한다
 
 ## 브랜치 전략과 머지
 
 ```
-feat/… ──PR──▶ dev ──PR──▶ main
-        squash O       squash X
+<계정명>/gac-N-… ──PR──▶ dev ──PR──▶ main
+                  squash O       squash X
 ```
 
 - **`main`** 은 배포본. 머지되는 순간이 운영 배포다
 - **`dev`** 는 통합 브랜치이자 기본 브랜치. 작업은 `dev` 에서 잘라 `dev` 로 돌아간다
-- `feat → dev` 는 **squash merge**(PR 하나 = 커밋 하나). `dev → main` 은 **merge commit**(이슈별 배포 이력 보존)
+- 이슈 브랜치 → `dev` 는 **squash merge**(PR 하나 = 커밋 하나). `dev → main` 은 **merge commit**(이슈별 배포 이력 보존)
 - 승인 1명. 예외 없다 — 셋뿐이라 부담이 아니고, GitHub 브랜치 보호는 타입별 예외를 표현하지 못한다
 - 브랜치 보호: `main`·`dev` 모두 force push 금지·직접 push 금지. PR 만. CI 필수 체크는 CI 가 들어온 뒤에 건다
 
@@ -79,23 +81,61 @@ feat/… ──PR──▶ dev ──PR──▶ main
 
 - 라벨을 폴더 이름과 맞춘다: `app` · `ai` · `backend` · `infra` · `design-system` · `docs`. 커밋 scope 와 한 단어로 꿰어진다
 - 유형 라벨: `feat` · `fix` · `chore`
-- 하위 이슈로 쪼개지 않는다. Project 는 진행 순서 4단계(계약 · 앱 · 백엔드 · 통합)로 둔다
+- 하위 이슈로 쪼개지 않는다. Project 는 **주 단위** 4개다
+
+| Project | 기간 | 무엇 |
+|---|---|---|
+| `W0 레포 정비` | 9/10 ~ 9/11 | 협업 체계. 다른 모든 것보다 먼저 |
+| `W1 골격` | 9/12 ~ 9/18 | 백엔드 빌드 복구 · 카카오맵 스파이크 · RN 골격 · 서버 구성 결정 |
+| `W2 도메인` | 9/19 ~ 9/25 | 화면·도메인 대량. 9/25 까지 스테이징 |
+| `W3 통합·마무리` | 9/26 ~ 10/2 | 목 → 실 API · 소켓 · **9/30 코드 프리즈** |
+
 - 추정: `1`=1시간 이내 · `2`=3~4시간 · `3`=하루 · `5`=이틀 · `8`=3일. 8 이 나오면 쪼개라는 신호다
 - 등록 절차와 설명 템플릿은 `/create-issue` 스킬(`.claude/skills/create-issue/SKILL.md`)이 정본이다
 
+### 상태 전환 (Linear↔GitHub 연동 전까지 임시)
+
+연동이 되면 PR 열림 → In Review, 머지 → Done 이 자동으로 걸린다. 연동 전에는 손으로 옮긴다:
+
+- PR 을 연 사람이 자기 이슈를 **In Review** 로 옮기고 PR 링크를 붙인다
+- PR 이 머지되면 머지한 사람이 이슈를 **Done** 으로 옮긴다
+
+연동되면 이 절을 지운다.
+
+### Linear 연결 (각자 1회)
+
+`.mcp.json` 이 Linear MCP 서버를 팀 공통으로 정의하고, **키는 각자 자기 것**을 쓴다.
+한 대에 다른 Linear 계정이 붙어 있어도 이 키가 이긴다.
+
+1. https://linear.app/settings/account/security → Personal API keys → New API key
+   (가치줍깅 워크스페이스에 로그인한 상태에서 만든다)
+2. `.claude/settings.local.json` 의 `env.LINEAR_API_KEY` 에 붙여넣는다
+3. Claude Code 를 다시 띄운다 — MCP 설정은 시작할 때 읽는다
+
+`.claude/settings.local.json` 은 개인 파일이라 커밋되지 않는다. **키를 `.mcp.json` 이나
+`.env.example` 에 넣지 않는다** — 그 둘은 공유 파일이다.
+
+키가 안 먹으면 창을 새로 열어 `setx LINEAR_API_KEY "lin_api_..."` 로 넣고 다시 띄운다.
+
 ## 알림 (Mattermost)
 
-보내는 길이 둘이고 쓰는 값이 다르다.
+보내는 것은 **셋뿐**이다. `.github/workflows/notify-mattermost.yml` 이 보낸다.
 
-| | 무엇이 보내나 | 웹훅 값 |
-|---|---|---|
-| 자동 | `.github/workflows/notify-mattermost.yml` — PR 열림·머지·닫힘·승인·변경요청 | 레포 Secret `MM_WEBHOOK_URL` |
-| 손으로 | `node infra/notify.mjs "메시지"` | 각자 **저장소 루트** `.env` 의 `MM_WEBHOOK_URL` |
+| 언제 | 무엇 |
+|---|---|
+| `dev` 에 반영 | 머지된 커밋 제목 + 변경 내역 링크 |
+| `main` 에 반영 | 배포다. 같은 형식 |
+| 리뷰어 지정 | 리뷰어를 멘션하고 PR 링크 |
 
-- **PR 이벤트만** 자동으로 보낸다. CI 실패·이슈·푸시는 보내지 않는다 — 3명 규모에서 그 이상은 노이즈가 되어 아무도 안 본다
-- 웹훅 URL 은 각자 발급받아 저장소 루트의 `.env` 에 넣는다. 발급 방법은 루트 `.env.example` 에 적혀 있다. **저장소에 넣지 않는다**
-- 루트 `.env` 는 로컬 설정, `infra/.env` 는 EC2 에 올라가는 운영 값이다. 섞지 않는다
-- 손으로 보낼 때 웹훅 URL 을 직접 `curl` 하지 않고 `notify.mjs` 를 쓴다. 그래야 URL 이 쉘 히스토리에 남지 않는다
+작업 브랜치 푸시·PR 열림·승인·댓글은 **보내지 않는다.** 3명 채널에서 노이즈가 되어 아무도 안 보게 된다.
+CI 실패도 안 보낸다 — PR 에 이미 보인다.
+
+웹훅 값은 레포 Secret `MM_WEBHOOK_URL` 하나다.
+
+손으로 뭔가 알리고 싶으면 `node infra/notify.mjs "메시지"` 를 쓴다. 이건 각자 저장소 루트 `.env` 의
+`MM_WEBHOOK_URL` 을 읽으므로 자기 이름으로 나간다. 발급 방법은 루트 `.env.example` 에 있다.
+웹훅 URL 을 직접 `curl` 하지 않는다 — 쉘 히스토리에 남는다.
+루트 `.env` 는 로컬 설정, `infra/.env` 는 EC2 에 올라가는 운영 값이다. 섞지 않는다.
 
 ## 테스트
 

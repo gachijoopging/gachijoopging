@@ -49,4 +49,3 @@ mobile/legacy-387996e3-20260813.apk
 .claude/scheduled_tasks.lock
 
 # graft 는 개인 도구다. 쓰는 사람만 .claude/settings.local.json 에 설정한다
-.mcp.json

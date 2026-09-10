@@ -36,11 +36,16 @@ Linear MCP 도구(`list_issues` · `list_teams` · `save_issue` · `list_issue_l
 폴더가 둘로 갈리면 **이슈를 쪼갠다.** 한 사람에게 양쪽을 주지 않는다.
 예외: 계약(`docs/openapi.yaml`) 변경은 conventions.md 대로 앱·백엔드를 같은 PR 에서 고치므로 쪼개지 않는다.
 
-## 프로젝트 = 진행 순서 4단계
+## 프로젝트 = 주 단위 4개
 
-`feature-scope.md` 의 진행 순서를 Linear Project 로 쓴다.
+| Project | 기간 |
+|---|---|
+| `W0 레포 정비` | 9/10 ~ 9/11 |
+| `W1 골격` | 9/12 ~ 9/18 |
+| `W2 도메인` | 9/19 ~ 9/25 |
+| `W3 통합·마무리` | 9/26 ~ 10/2 |
 
-1. API 계약 · 2. 앱 (목 데이터) · 3. 백엔드 · 4. 통합
+이슈는 **할 주**의 Project 에 넣는다. 어느 주인지 모르겠으면 묻는다.
 
 ## 라벨
 
@@ -102,11 +107,12 @@ Linear MCP 도구(`list_issues` · `list_teams` · `save_issue` · `list_issue_l
 
 만든 이슈마다 **키 · 제목 · URL · 브랜치 이름**을 돌려준다.
 
-브랜치 이름은 Linear 가 주는 것을 그대로 쓴다 (`conventions.md` §브랜치):
+브랜치 이름은 Linear 가 주는 이름에서 슬러그를 잘라 `<계정명>/gac-<번호>` 만 쓴다 (`conventions.md` §브랜치):
 
 ```
-feat/GAC-12-초대-코드-재발급
+djm062954/gac-12
 ```
 
+한글 슬러그를 그대로 두지 않는다 — 팀 전원 Windows 라 한글 브랜치명이 터미널에서 깨지거나 탭 완성이 꼬인다.
 이 이름으로 브랜치를 만들면 PR 열림 → In Review, 머지 → Done 이 자동으로 걸린다.
 만들기 전에 `git check-ref-format "refs/heads/<이름>"` 으로 검증한다.
