@@ -367,7 +367,7 @@ paths:
                       photoUrl: { type: string, nullable: true }
                       intro: { type: string }
                       leader: { $ref: '#/components/schemas/UserBrief' }
-              example: { data: { id: c001, name: 한강줍깅크루, memberCount: 18, photoUrl: null, intro: 매주 토요일 아침 여의도, leader: { id: u001, nickname: 관열, photoUrl: null } } }
+              example: { data: { id: c001, name: 한강줍깅크루, memberCount: 18, photoUrl: null, intro: 매주 토요일 아침 여의도, leader: { id: u001, nickname: 관열, photoUrl: null, withdrawn: false } } }
         '404': { $ref: '#/components/responses/Error' }
   /crews/join-requests:
     post:
@@ -418,7 +418,7 @@ paths:
                   name: 한강줍깅크루
                   intro: 매주 토요일 아침 여의도
                   photoUrl: null
-                  leader: { id: 6f1c…, nickname: 관열, photoUrl: null }
+                  leader: { id: 6f1c…, nickname: 관열, photoUrl: null, withdrawn: false }
                   memberCount: 18
                   goalCount: 300
                   inviteCode: HG-7K2P
@@ -481,8 +481,8 @@ paths:
                   data: { type: array, items: { $ref: '#/components/schemas/Member' } }
               example:
                 data:
-                  - { id: 6f1c…, nickname: 관열, photoUrl: null, isLeader: true, totalItems: 412, joinedAt: 2026-09-01T00:00:00Z, following: false }
-                  - { id: 8a2d…, nickname: 상혁, photoUrl: null, isLeader: false, totalItems: 380, joinedAt: 2026-09-02T00:00:00Z, following: true }
+                  - { id: 6f1c…, nickname: 관열, photoUrl: null, withdrawn: false, isLeader: true, totalItems: 412, joinedAt: 2026-09-01T00:00:00Z, following: false }
+                  - { id: 8a2d…, nickname: 상혁, photoUrl: null, withdrawn: false, isLeader: false, totalItems: 380, joinedAt: 2026-09-02T00:00:00Z, following: true }
   /crew/members/{userId}:
     get:
       tags: [members]
@@ -662,7 +662,7 @@ paths:
               type: object
               properties:
                 category: { $ref: '#/components/schemas/Category' }
-                quantity: { type: integer, minimum: 1 }
+                quantity: { type: integer, minimum: 1, maximum: 999, description: 상한 초과는 422 VALIDATION }
       responses:
         '200':
           description: 갱신된 요약
@@ -745,7 +745,7 @@ paths:
               example:
                 data:
                   id: a100
-                  user: { id: 8a2d…, nickname: 상혁, photoUrl: null }
+                  user: { id: 8a2d…, nickname: 상혁, photoUrl: null, withdrawn: false }
                   status: ENDED
                   startedAt: 2026-09-05T09:02:00Z
                   endedAt: 2026-09-05T09:48:00Z
@@ -785,8 +785,8 @@ paths:
                   data: { type: array, items: { $ref: '#/components/schemas/LiveMember' } }
               example:
                 data:
-                  - { user: { id: 8a2d…, nickname: 상혁, photoUrl: null }, activityId: a101, startedAt: 2026-09-07T08:30:00Z, elapsedSec: 900, distanceM: 1200, itemCount: 9, paused: false, locationShared: true, location: { lng: 126.93, lat: 37.52 } }
-                  - { user: { id: 9b3e…, nickname: 지수, photoUrl: null }, activityId: a102, startedAt: 2026-09-07T08:40:00Z, elapsedSec: 300, distanceM: 400, itemCount: 2, paused: true, locationShared: false, location: null }
+                  - { user: { id: 8a2d…, nickname: 상혁, photoUrl: null, withdrawn: false }, activityId: a101, startedAt: 2026-09-07T08:30:00Z, elapsedSec: 900, distanceM: 1200, itemCount: 9, paused: false, locationShared: true, location: { lng: 126.93, lat: 37.52 } }
+                  - { user: { id: 9b3e…, nickname: 지수, photoUrl: null, withdrawn: false }, activityId: a102, startedAt: 2026-09-07T08:40:00Z, elapsedSec: 300, distanceM: 400, itemCount: 2, paused: true, locationShared: false, location: null }
 
   # ───────────────────────── media ─────────────────────────
   /media:
@@ -1179,7 +1179,7 @@ paths:
                     items: 312
                     goalCount: 300
                     stage: 5
-                  live: { count: 2, users: [{ id: 8a2d…, nickname: 상혁, photoUrl: null }, { id: 9b3e…, nickname: 지수, photoUrl: null }] }
+                  live: { count: 2, users: [{ id: 8a2d…, nickname: 상혁, photoUrl: null, withdrawn: false }, { id: 9b3e…, nickname: 지수, photoUrl: null, withdrawn: false }] }
                   unreadNotifications: 3
   /crew/stats:
     get:
@@ -1203,8 +1203,8 @@ paths:
                   byCategory: { CIGARETTE: 620, PLASTIC: 310, CAN: 190, PAPER: 120, VINYL: 110, GLASS: 40, GENERAL: 40 }
                   series: [{ date: 2026-09-01, items: 40 }, { date: 2026-09-02, items: 0 }, { date: 2026-09-03, items: 77 }]
                   ranking:
-                    - { rank: 1, user: { id: 6f1c…, nickname: 관열, photoUrl: null }, items: 412, distanceM: 30100 }
-                    - { rank: 2, user: { id: 8a2d…, nickname: 상혁, photoUrl: null }, items: 380, distanceM: 28800 }
+                    - { rank: 1, user: { id: 6f1c…, nickname: 관열, photoUrl: null, withdrawn: false }, items: 412, distanceM: 30100 }
+                    - { rank: 2, user: { id: 8a2d…, nickname: 상혁, photoUrl: null, withdrawn: false }, items: 380, distanceM: 28800 }
   /crew/calendar:
     get:
       tags: [stats]
@@ -1352,6 +1352,17 @@ components:
               code: { type: string }
               message: { type: string }
               requestId: { type: string }
+              fields:
+                type: array
+                description: |
+                  VALIDATION 422 일 때만. 화면이 해당 입력 아래에 오류를 붙이는 데 쓴다.
+                  다른 코드에서는 생략한다
+                items:
+                  type: object
+                  required: [field, code]
+                  properties:
+                    field: { type: string, description: 요청 본문의 속성 이름 }
+                    code: { type: string, description: 예 TOO_SHORT · TOO_LONG · TAKEN · FORMAT }
     TokenPair:
       description: 토큰 쌍
       content:
@@ -1393,7 +1404,7 @@ components:
             data:
               items:
                 - id: po77
-                  author: { id: 8a2d…, nickname: 상혁, photoUrl: null }
+                  author: { id: 8a2d…, nickname: 상혁, photoUrl: null, withdrawn: false }
                   text: 오늘 여의도 3km. 꽁초가 유난히 많았다
                   visibility: CREW
                   media: [{ url: https://cdn…/po77/1.jpg, thumbUrl: https://cdn…/po77/1_t.jpg }]
@@ -1409,10 +1420,16 @@ components:
       enum: [CIGARETTE, CAN, PLASTIC, PAPER, GLASS, VINYL, GENERAL]
     UserBrief:
       type: object
+      required: [id, nickname, withdrawn]
       properties:
         id: { type: string }
         nickname: { type: string, description: 탈퇴했으면 "탈퇴한 크루원" }
         photoUrl: { type: string, nullable: true }
+        withdrawn:
+          type: boolean
+          description: |
+            탈퇴 여부. 닉네임 문자열로 판별하지 않는다 — 같은 닉네임의 살아 있는 계정과
+            구별되지 않는다. true 면 프로필 열기·팔로우·차단 등 그 사람을 향한 행동을 감춘다
     Me:
       type: object
       required: [profileComplete]
@@ -1506,7 +1523,7 @@ components:
       properties:
         id: { type: string, format: uuid, description: 앱이 만든다. 같은 id 재전송은 200 으로 흡수(멱등) }
         category: { $ref: '#/components/schemas/Category' }
-        quantity: { type: integer, minimum: 1 }
+        quantity: { type: integer, minimum: 1, maximum: 999, description: 상한 초과는 422 VALIDATION }
         aiPredictedCategory: { $ref: '#/components/schemas/Category' }
         aiConfidence: { type: number, nullable: true }
         bbox: { $ref: '#/components/schemas/Bbox' }
