@@ -1,3 +1,24 @@
+# 가치줍깅
+
+크루 단위 플로깅 앱. 옛 모노레포 `gachijupging` 에서 갈라져 나왔고, 그쪽은 읽기 전용 보존이다.
+배포 산출물은 app(React Native, Android) · backend(Spring Boot) · ai(FastAPI) 셋이고, design-system 은 앱이 의존하는 패키지다. 서버 구성은 미결이다.
+
+이 파일이 이 저장소에서 일하는 **모든 AI 에이전트의 단일 진입점**이다. Claude Code · Codex · Cursor 등 도구와 무관하게 이 파일이 먼저다.
+프로젝트 규칙은 여기 한 곳에만 있다. `CLAUDE.md` 는 Claude Code 전용 항목(스킬·에이전트·알림)만 담는다.
+
+## 지시 우선순위
+
+충돌하면 위쪽이 이긴다.
+
+1. 사용자의 현재 요청
+2. 바꿀 파일에 더 가까운 지침 (예: `backend/CLAUDE.md` · `design-system/CLAUDE.md`)
+3. `docs/feature-scope.md` — 결정된 것. 다른 문서와 어긋나면 여기가 맞다
+4. 이 파일
+5. `docs/` 아래 도메인 문서
+6. 그 영역의 기존 관례
+
+우선순위로 풀리지 않는 충돌은 **멈추고 묻는다.**
+
 ## 문서 (정본은 docs/)
 
 - 왜 만드나 → `intent.md` · 말 → `CONTEXT.md` (용어집. 코드·문서·대화의 이름은 여기 것을 쓴다)
@@ -16,6 +37,7 @@
 - 팀 전원 Windows 다. `.sh` 는 LF, 대소문자 오류는 CI(Linux)에서만 드러난다
 - 한글이 든 `.ps1` 은 UTF-8 BOM. PowerShell 5.1 은 BOM 없으면 cp949 로 읽어 구문 오류로 나타난다
 - `design-system` 의 색을 바꿨으면 그 폴더에서 `npm test`. 자세한 규칙은 `design-system/CLAUDE.md`
+- 이슈를 Done 으로 옮기기 전에 `docs/conventions.md` §완료의 정의 넷을 모두 만족해야 한다. 여기에 옮겨 적지 않는다 — 정본은 그쪽이다
 
 ## 코딩 지침
 
@@ -56,3 +78,17 @@ LLM 이 자주 내는 실수를 줄이기 위한 행동 지침이다. 프로젝�
 - 위치는 `docs/feature-scope.md` "위치 품질" 의 필터 4개를 통과한 점만 경로·소켓에 쓴다
 - 상태·훅·유틸은 Jest 단위 테스트. 화면은 카탈로그에서 눈으로 본다
 
+## ai (FastAPI)
+
+- 줍기 사진에서 쓰레기를 탐지해 카테고리 7종으로 돌려준다. 앱과의 계약은 `docs/openapi.yaml` 이고, 요청·응답을 여기서 임의로 바꾸지 않는다
+- 사진 한 장에서 찾은 물체를 **전부** 돌려준다. 최고 신뢰도 하나만 남기지 않는다 (`docs/feature-scope.md` §AI 줍기)
+- 신뢰도를 정답 확률 %로 표현하지 않는다. 0.7 미만은 "확인 필요"로만 표시한다
+- 모델 개선 실험 수치(`ai/experiment-log.md`)와 실환경 정확도를 구별해 말한다. 진행 상황은 `ai/progress.md`
+- 라벨링 규칙은 `ai/docs/labeling-guide.md`. 데이터셋·가중치는 커밋하지 않는다
+
+## infra
+
+- 손으로 알릴 것은 `node infra/notify.mjs "메시지"`. 웹훅 URL 을 직접 `curl` 하지 않는다 — 쉘 히스토리에 남는다
+- 환경 변수 **키 목록**의 정본은 `docs/operations.md`. 값은 어디에도 커밋하지 않는다
+- 루트 `.env` 는 각자의 로컬 설정, `infra/.env` 는 EC2 에 올라가는 운영 값이다. 섞지 않는다
+- 서버 구성(플랫폼·배포·감시)은 미결이다. 정해지면 `docs/adr/` 에 남긴다
