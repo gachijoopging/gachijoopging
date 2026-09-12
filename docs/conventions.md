@@ -181,3 +181,7 @@ CI 실패도 안 보낸다 — PR 에 이미 보인다.
 - 대소문자 오류는 CI(Linux)에서만 드러난다. "로컬은 되는데 CI 만 깨진다" 는 먼저 이걸 의심한다
 - 한글이 든 `.ps1` 은 UTF-8 BOM
 - 각자 1회: `git config --global core.longpaths true`, Docker Desktop WSL2
+- 각자 1회(관리자 PowerShell): `Set-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem' -Name LongPathsEnabled -Value 1`
+  앱을 빌드하려면 필요하다. RN 의 C++ 코드젠이 객체 파일 경로에 소스 절대경로를 그대로 복제해 369자가 되는데,
+  Windows 기본 한계는 260자다. 저장소를 짧은 경로로 옮겨도 305자라 넘는다. 위 `core.longpaths` 는 git 전용이라
+  빌드에는 듣지 않는다 — 둘 다 켜야 한다. 설정 뒤 터미널을 새로 연다
