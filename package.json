@@ -1,0 +1,5 @@
+{
+  "name": "gachijoopging",
+  "private": true,
+  "workspaces": ["mobile", "design-system"]
+}
