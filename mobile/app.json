@@ -7,7 +7,9 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "platforms": ["android"],
+    "platforms": [
+      "android"
+    ],
     "android": {
       "package": "site.gachijoopging.app",
       "adaptiveIcon": {
@@ -22,7 +24,8 @@
       "expo-router",
       "expo-font",
       "expo-dev-client",
-      "@react-native-vector-icons/material-design-icons"
+      "@react-native-vector-icons/material-design-icons",
+      "expo-splash-screen"
     ]
   }
 }
