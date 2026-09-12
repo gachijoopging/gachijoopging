@@ -8,6 +8,7 @@ node_modules/
 .expo/
 mobile/android/
 mobile/ios/
+mobile/modules/*/android/build/
 dist/
 web-build/
 *.tsbuildinfo
