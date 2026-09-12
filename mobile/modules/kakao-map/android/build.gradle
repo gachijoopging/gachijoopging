@@ -1,0 +1,26 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'expo.modules.kakaomap'
+version = '0.1.0'
+
+repositories {
+  maven { url 'https://devrepo.kakao.com/nexus/content/groups/public/' }
+}
+
+android {
+  namespace "expo.modules.kakaomap"
+  defaultConfig {
+    versionCode 1
+    versionName "0.1.0"
+  }
+  lintOptions {
+    abortOnError false
+  }
+}
+
+dependencies {
+  implementation 'com.kakao.maps.open:android:2.15.2'
+}

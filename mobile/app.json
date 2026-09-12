@@ -25,7 +25,8 @@
       "expo-font",
       "expo-dev-client",
       "@react-native-vector-icons/material-design-icons",
-      "expo-splash-screen"
+      "expo-splash-screen",
+      "./plugins/with-kakao-maven"
     ]
   }
 }
