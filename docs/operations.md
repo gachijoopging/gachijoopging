@@ -38,7 +38,18 @@ EC2 한 대 + Supabase Postgres + 담당자 노트북의 AI 서버. 컨테이너
 |---|---|
 | `KAKAO_NATIVE_APP_KEY` | 카카오맵 SDK 초기화. 없으면 지도 화면이 안내 배너만 띄운다 |
 
-카카오 개발자 콘솔에서 앱에 `site.gachijoopging.app` 과 키 해시가 등록돼 있어야 지도가 뜬다.
+카카오 개발자 콘솔 → 앱 설정 → 플랫폼 → Android 에 **패키지명과 키 해시**가 등록돼 있어야 지도가 뜬다.
+없으면 `MapAuthException(401): Unauthorized` 가 난다.
+
+**키 해시는 APK 에서 직접 뽑는다.** `~/.android/debug.keystore` 가 아니다 — `expo prebuild` 가
+`mobile/android/app/debug.keystore` 를 따로 만들기 때문에 둘의 해시가 다르다.
+
+```bash
+apksigner verify --print-certs <apk> | grep SHA-1
+# 나온 hex 를 base64 로: python -c "import base64,binascii;print(base64.b64encode(binascii.unhexlify('<hex>')).decode())"
+```
+
+값은 `.env` 에 따옴표 없이 넣는다. `KEY='abc'` 로 적으면 따옴표까지 값으로 읽혀 401 이 난다.
 
 ## 개인정보
 
