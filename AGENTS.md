@@ -108,7 +108,7 @@ iOS · 관리자 웹 · 크루 웹 · 게시물 수정 · 1:1 채팅 · 기존 �
 
 ## app (React Native, Android)
 
-앱 골격은 아직 없다. 화면은 docs/screens/ 가 확정된 뒤 만든다.
+폴더별 명령과 구조는 `mobile/CLAUDE.md`.
 
 - 화면은 `docs/screens.md` 번호(예: 4-3)로 부르고, 데이터는 `docs/openapi.yaml` 의 `example` 을 목으로 쓴다
 - UI 는 `design-system` 컴포넌트만. 색·간격·반경을 직접 쓰지 않는다. `Screen` 으로 감싸고, 누르는 것엔 `useRipple()`
