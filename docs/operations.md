@@ -30,6 +30,16 @@ EC2 한 대 + Supabase Postgres + 담당자 노트북의 AI 서버. 컨테이너
 
 `.env` 를 고칠 때는 **바이너리로 다룬다.** PEM 값에 CR 이 섞이면 docker compose 는 통과시키고 Spring 만 `Missing key encoding` 으로 죽는다. Windows 편집기로 열지 않고 `dev-env.ps1` 같은 스크립트로 올린다.
 
+## `mobile/.env` 키 (앱)
+
+위 표는 서버(`infra/.env`)다. 앱은 별도이며 각자 로컬에만 둔다 — `.gitignore` 가 막는다.
+
+| 키 | 용도 |
+|---|---|
+| `KAKAO_NATIVE_APP_KEY` | 카카오맵 SDK 초기화. 없으면 지도 화면이 안내 배너만 띄운다 |
+
+카카오 개발자 콘솔에서 앱에 `site.gachijoopging.app` 과 키 해시가 등록돼 있어야 지도가 뜬다.
+
 ## 개인정보
 
 - 위치 경로(`activities.route`)와 실시간 위치(`live_locations`)는 위치 정보다. 실시간 위치는 활동 종료 때 즉시 지운다
