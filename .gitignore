@@ -9,6 +9,7 @@ node_modules/
 mobile/android/
 mobile/ios/
 mobile/modules/*/android/build/
+mobile/modules/*/android/.gradle/
 dist/
 web-build/
 *.tsbuildinfo
