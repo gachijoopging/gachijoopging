@@ -13,10 +13,18 @@ const outPath = resolve(here, '../src/api/mocks.generated.ts');
 
 const spec = parse(readFileSync(specPath, 'utf8'));
 
+// 여러 경로가 같은 응답(예: TokenPair)을 $ref 로 공유한다. YAML 파서는 $ref 를 풀지
+// 않으므로 여기서 한 단계만 직접 풀어 준다 — 안 풀면 그 경로들의 example 이 조용히 빠진다.
+function resolveResponse(res) {
+  if (!res?.$ref) return res;
+  return res.$ref.replace('#/', '').split('/').reduce((node, key) => node?.[key], spec);
+}
+
 const entries = [];
 for (const [path, methods] of Object.entries(spec.paths ?? {})) {
   for (const [method, op] of Object.entries(methods)) {
-    for (const [status, res] of Object.entries(op?.responses ?? {})) {
+    for (const [status, resRaw] of Object.entries(op?.responses ?? {})) {
+      const res = resolveResponse(resRaw);
       const example = res?.content?.['application/json']?.example;
       if (example === undefined) continue;
       entries.push({ key: `${method.toUpperCase()} ${path}`, status: Number(status), example });
