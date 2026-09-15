@@ -8,7 +8,7 @@ export type VoidMutationKey =
 export type MutationKey = MockKey | VoidMutationKey;
 
 export type ApiClient = {
-  get<K extends MockKey>(key: K): Promise<(typeof MOCKS)[K]>;
+  get<K extends MockKey>(key: K, query?: unknown): Promise<(typeof MOCKS)[K]>;
   /** POST·PATCH 등 GET 이외의 요청. 키는 `METHOD /경로` 그대로다 */
   mutate<K extends MutationKey>(key: K, body?: unknown): Promise<K extends MockKey ? (typeof MOCKS)[K] : void>;
 };

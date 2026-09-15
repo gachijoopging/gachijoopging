@@ -32,8 +32,9 @@ export default function CreateCrewScreen() {
       if (mapped.alreadyInCrew) {
         try {
           const me = await api.get('GET /users/me');
-          if (me.data.membership?.status === 'MEMBER') router.replace('/(tabs)');
-          if (me.data.membership?.status === 'PENDING') router.replace('/1-9-pending-approval');
+          const membershipStatus = me.data.membership?.status;
+          if (membershipStatus === 'MEMBER') router.replace('/(tabs)');
+          else if (membershipStatus === 'PENDING') router.replace('/1-9-pending-approval');
         } catch {
           // 이미 보인 오류 문구를 유지한다.
         }
