@@ -1,5 +1,12 @@
 import { ApiError } from '../api/client';
-import { loginErrorMessage, mapNicknameError, mapResetConfirmError, mapSignupError, resetRequestErrorMessage } from './errors';
+import {
+  loginErrorMessage,
+  mapCrewCreateError,
+  mapNicknameError,
+  mapResetConfirmError,
+  mapSignupError,
+  resetRequestErrorMessage,
+} from './errors';
 
 describe('loginErrorMessage', () => {
   test('INVALID_CREDENTIALS 는 계정 없음과 비밀번호 오류를 가르지 않는다', () => {
@@ -53,6 +60,27 @@ describe('mapNicknameError', () => {
 
   test('그 외는 배너', () => {
     expect(mapNicknameError(new Error('network'))).toEqual({ banner: '저장하지 못했어요. 다시 시도해 주세요.' });
+  });
+});
+
+describe('mapCrewCreateError', () => {
+  test('ALREADY_IN_CREW 는 소속 안내 배너로', () => {
+    expect(mapCrewCreateError(new ApiError('ALREADY_IN_CREW'))).toEqual({
+      banner: '이미 크루에 소속돼 있어요.',
+      alreadyInCrew: true,
+    });
+  });
+
+  test('VALIDATION 은 이름 필드 오류로', () => {
+    expect(mapCrewCreateError(new ApiError('VALIDATION'))).toEqual({
+      field: '크루 이름을 다시 확인해 주세요.',
+    });
+  });
+
+  test('그 외 실패는 일반 배너로', () => {
+    expect(mapCrewCreateError(new Error('network'))).toEqual({
+      banner: '크루를 만들지 못했어요. 네트워크 상태를 확인하고 다시 시도해 주세요.',
+    });
   });
 });
 
