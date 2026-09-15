@@ -326,6 +326,23 @@ export const MOCKS = {
       ]
     }
   },
+  "GET /crews/join-requests/mine": {
+    "data": {
+      "id": "jr001",
+      "crew": {
+        "id": "c001",
+        "name": "한강줍깅크루"
+      },
+      "user": {
+        "id": "u001",
+        "nickname": "관열",
+        "photoUrl": null,
+        "withdrawn": false
+      },
+      "status": "PENDING",
+      "createdAt": "2026-09-15T10:00:00Z"
+    }
+  },
   "GET /crews/preview": {
     "data": {
       "id": "c001",
@@ -459,6 +476,44 @@ export const MOCKS = {
       "accessToken": "eyJhbGciOiJIUzI1NiJ9.mock…",
       "refreshToken": "8f2a9c1e-mock-refresh…",
       "isNew": false
+    }
+  },
+  "POST /crews": {
+    "data": {
+      "id": "c001",
+      "name": "한강줍깅크루",
+      "intro": "",
+      "photoUrl": null,
+      "leader": {
+        "id": "u001",
+        "nickname": "관열",
+        "photoUrl": null,
+        "withdrawn": false
+      },
+      "memberCount": 1,
+      "goalCount": 300,
+      "inviteCode": "HG-7K2P",
+      "pendingJoinRequests": 0,
+      "pinnedNotice": null,
+      "unreadChat": 0,
+      "isLeader": true
+    }
+  },
+  "POST /crews/join-requests": {
+    "data": {
+      "id": "jr001",
+      "crew": {
+        "id": "c001",
+        "name": "한강줍깅크루"
+      },
+      "user": {
+        "id": "u001",
+        "nickname": "관열",
+        "photoUrl": null,
+        "withdrawn": false
+      },
+      "status": "PENDING",
+      "createdAt": "2026-09-15T10:00:00Z"
     }
   },
   "POST /media": {

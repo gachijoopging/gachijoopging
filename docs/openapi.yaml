@@ -354,6 +354,7 @@ paths:
           content:
             application/json:
               schema: { type: object, properties: { data: { $ref: '#/components/schemas/Crew' } } }
+              example: { data: { id: c001, name: 한강줍깅크루, intro: '', photoUrl: null, leader: { id: u001, nickname: 관열, photoUrl: null, withdrawn: false }, memberCount: 1, goalCount: 300, inviteCode: HG-7K2P, pendingJoinRequests: 0, pinnedNotice: null, unreadChat: 0, isLeader: true } }
         '409': { $ref: '#/components/responses/Error' }
   /crews/preview:
     get:
@@ -399,6 +400,7 @@ paths:
           content:
             application/json:
               schema: { type: object, properties: { data: { $ref: '#/components/schemas/JoinRequest' } } }
+              example: { data: { id: jr001, crew: { id: c001, name: 한강줍깅크루 }, user: { id: u001, nickname: 관열, photoUrl: null, withdrawn: false }, status: PENDING, createdAt: 2026-09-15T10:00:00Z } }
         '404': { $ref: '#/components/responses/Error' }
         '409': { $ref: '#/components/responses/Error' }
   /crews/join-requests/mine:
@@ -411,6 +413,7 @@ paths:
           content:
             application/json:
               schema: { type: object, properties: { data: { $ref: '#/components/schemas/JoinRequest', nullable: true } } }
+              example: { data: { id: jr001, crew: { id: c001, name: 한강줍깅크루 }, user: { id: u001, nickname: 관열, photoUrl: null, withdrawn: false }, status: PENDING, createdAt: 2026-09-15T10:00:00Z } }
     delete:
       tags: [crew]
       summary: 신청 취소

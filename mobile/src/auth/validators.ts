@@ -24,3 +24,23 @@ export function validateNickname(value: string): string | undefined {
   if (normalized.length < 2 || normalized.length > 12) return '닉네임은 2자에서 12자여야 해요.';
   return undefined;
 }
+
+export function normalizeCrewName(value: string): string {
+  return value.replace(/\r?\n/g, '').trim();
+}
+
+export function validateCrewName(value: string): string | undefined {
+  const normalized = normalizeCrewName(value);
+  if (normalized.length === 0) return '크루 이름을 입력해 주세요.';
+  if (normalized.length < 2) return '크루 이름은 2자 이상이어야 해요.';
+  if (normalized.length > 20) return '크루 이름은 20자까지 입력할 수 있어요.';
+  return undefined;
+}
+
+export function normalizeInviteCode(value: string): string {
+  return value.trim();
+}
+
+export function validateInviteCode(value: string): string | undefined {
+  return normalizeInviteCode(value) ? undefined : '초대 코드를 입력해 주세요.';
+}

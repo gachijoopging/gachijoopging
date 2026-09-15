@@ -1,7 +1,10 @@
 import { MOCKS, type MockKey } from './mocks.generated';
 
 /** 목에 example 이 없는 204 전용 경로. 성공해도 돌려줄 데이터가 없다 */
-export type VoidMutationKey = 'POST /auth/password-reset' | 'POST /auth/password-reset/confirm';
+export type VoidMutationKey =
+  | 'POST /auth/password-reset'
+  | 'POST /auth/password-reset/confirm'
+  | 'DELETE /crews/join-requests/mine';
 export type MutationKey = MockKey | VoidMutationKey;
 
 export type ApiClient = {
