@@ -212,6 +212,62 @@ export const MOCKS = {
       }
     ]
   },
+  "GET /crew/members/{userId}/posts": {
+    "data": {
+      "items": [
+        {
+          "id": "po77",
+          "author": {
+            "id": "8a2d…",
+            "nickname": "상혁",
+            "photoUrl": null,
+            "withdrawn": false
+          },
+          "text": "오늘 여의도 3km. 꽁초가 유난히 많았다",
+          "visibility": "CREW",
+          "media": [
+            {
+              "url": "https://cdn…/po77/1.jpg",
+              "thumbUrl": "https://cdn…/po77/1_t.jpg"
+            }
+          ],
+          "likeCount": 6,
+          "liked": true,
+          "commentCount": 2,
+          "createdAt": "2026-09-06T11:00:00Z"
+        }
+      ],
+      "nextCursor": "eyJ…"
+    }
+  },
+  "GET /crew/posts": {
+    "data": {
+      "items": [
+        {
+          "id": "po77",
+          "author": {
+            "id": "8a2d…",
+            "nickname": "상혁",
+            "photoUrl": null,
+            "withdrawn": false
+          },
+          "text": "오늘 여의도 3km. 꽁초가 유난히 많았다",
+          "visibility": "CREW",
+          "media": [
+            {
+              "url": "https://cdn…/po77/1.jpg",
+              "thumbUrl": "https://cdn…/po77/1_t.jpg"
+            }
+          ],
+          "likeCount": 6,
+          "liked": true,
+          "commentCount": 2,
+          "createdAt": "2026-09-06T11:00:00Z"
+        }
+      ],
+      "nextCursor": "eyJ…"
+    }
+  },
   "GET /crew/stats": {
     "data": {
       "range": "MONTH",
@@ -345,6 +401,64 @@ export const MOCKS = {
           "isLeader": true
         }
       }
+    }
+  },
+  "PATCH /users/me": {
+    "data": {
+      "id": "9c2f…",
+      "nickname": "새싹줍깅러",
+      "intro": "",
+      "photoUrl": null,
+      "email": null,
+      "profileComplete": true,
+      "hasPassword": false,
+      "linked": {
+        "kakao": true,
+        "google": false
+      },
+      "settings": {
+        "shareLocationDefault": true,
+        "notifyActivityStart": true
+      },
+      "membership": {
+        "status": "NONE",
+        "crew": null
+      }
+    }
+  },
+  "POST /auth/google": {
+    "data": {
+      "accessToken": "eyJhbGciOiJIUzI1NiJ9.mock…",
+      "refreshToken": "8f2a9c1e-mock-refresh…",
+      "isNew": false
+    }
+  },
+  "POST /auth/kakao": {
+    "data": {
+      "accessToken": "eyJhbGciOiJIUzI1NiJ9.mock…",
+      "refreshToken": "8f2a9c1e-mock-refresh…",
+      "isNew": false
+    }
+  },
+  "POST /auth/login": {
+    "data": {
+      "accessToken": "eyJhbGciOiJIUzI1NiJ9.mock…",
+      "refreshToken": "8f2a9c1e-mock-refresh…",
+      "isNew": false
+    }
+  },
+  "POST /auth/refresh": {
+    "data": {
+      "accessToken": "eyJhbGciOiJIUzI1NiJ9.mock…",
+      "refreshToken": "8f2a9c1e-mock-refresh…",
+      "isNew": false
+    }
+  },
+  "POST /auth/signup": {
+    "data": {
+      "accessToken": "eyJhbGciOiJIUzI1NiJ9.mock…",
+      "refreshToken": "8f2a9c1e-mock-refresh…",
+      "isNew": false
     }
   },
   "POST /media": {

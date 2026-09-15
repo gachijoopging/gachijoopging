@@ -224,6 +224,20 @@ paths:
           content:
             application/json:
               schema: { type: object, properties: { data: { $ref: '#/components/schemas/Me' } } }
+              example:
+                data:
+                  id: 9c2f…
+                  nickname: 새싹줍깅러
+                  intro: ''
+                  photoUrl: null
+                  email: null
+                  profileComplete: true
+                  hasPassword: false
+                  linked: { kakao: true, google: false }
+                  settings: { shareLocationDefault: true, notifyActivityStart: true }
+                  membership:
+                    status: NONE
+                    crew: null
         '409': { $ref: '#/components/responses/Error' }
     delete:
       tags: [me]
@@ -1376,6 +1390,11 @@ components:
                   accessToken: { type: string }
                   refreshToken: { type: string }
                   isNew: { type: boolean, description: 최초 발급 여부만 표시. 재진입 분기는 Me.profileComplete와 membership으로 판단 }
+          example:
+            data:
+              accessToken: eyJhbGciOiJIUzI1NiJ9.mock…
+              refreshToken: 8f2a9c1e-mock-refresh…
+              isNew: false
     ActivityPage:
       description: 활동 목록
       content:
