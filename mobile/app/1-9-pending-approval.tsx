@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { AppState, RefreshControl, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { AppState, BackHandler, RefreshControl, View } from 'react-native';
 import { router } from 'expo-router';
 import { AppHeader, Banner, Button, Card, Dialog, EmptyState, ErrorState, Icon, Loading, Screen, Txt } from 'design-system/src';
 import { createMockClient, type ApiClient } from '../src/api/client';
@@ -32,11 +32,14 @@ export default function PendingApprovalScreen() {
   const [cancelDialog, setCancelDialog] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [banner, setBanner] = useState<string>();
+  const loadingRef = useRef(false);
+  const hasLoadedRef = useRef(false);
 
   async function reload() {
-    if (refreshing || cancelling) return;
+    if (loadingRef.current || cancelling) return;
+    loadingRef.current = true;
     setRefreshing(true);
-    setError(false);
+    if (!hasLoadedRef.current) setError(false);
     try {
       const response = await api.get('GET /crews/join-requests/mine');
       const nextRequest = toJoinRequest(response.data);
@@ -48,24 +51,35 @@ export default function PendingApprovalScreen() {
       const nextState = resolvePendingRequest(nextRequest?.status, membershipStatus);
       setRequest(nextRequest);
       setState(nextState);
+      hasLoadedRef.current = true;
       if (nextState === 'home') router.replace('/(tabs)');
     } catch {
-      setError(true);
+      if (hasLoadedRef.current) setBanner('인터넷 연결을 확인해 주세요.');
+      else setError(true);
     } finally {
+      loadingRef.current = false;
       setRefreshing(false);
     }
   }
 
   useEffect(() => {
     void reload();
-    const subscription = AppState.addEventListener('change', (nextState) => {
+    const appStateSubscription = AppState.addEventListener('change', (nextState) => {
       if (nextState === 'active') void reload();
     });
-    return () => subscription.remove();
+    const backSubscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      BackHandler.exitApp();
+      return true;
+    });
+    return () => {
+      appStateSubscription.remove();
+      backSubscription.remove();
+    };
   }, []);
 
   async function handleCancel() {
-    if (cancelling) return;
+    if (loadingRef.current) return;
+    loadingRef.current = true;
     setCancelling(true);
     setCancelDialog(false);
     try {
@@ -74,6 +88,7 @@ export default function PendingApprovalScreen() {
     } catch {
       setBanner('신청을 취소하지 못했어요. 다시 시도해 주세요.');
     } finally {
+      loadingRef.current = false;
       setCancelling(false);
     }
   }
@@ -82,7 +97,7 @@ export default function PendingApprovalScreen() {
 
   return (
     <Screen scroll refreshControl={<RefreshControl refreshing={refreshing} onRefresh={reload} />}>
-      <AppHeader title="가입 신청" onBack={() => router.back()} backDisabled={refreshing || cancelling} />
+      <AppHeader title="가입 신청" onBack={() => BackHandler.exitApp()} backDisabled={refreshing || cancelling} />
       <View style={{ alignItems: 'center' }}>
         <Icon name="timer-sand" size="lg" />
         <Txt variant="title" bold>크루장 승인을 기다리고 있어요</Txt>
@@ -105,10 +120,10 @@ export default function PendingApprovalScreen() {
       {state === 'rejected' ? <EmptyState icon="close-circle-outline" title="가입 신청이 승인되지 않았어요." description="유효한 초대 코드로 다시 신청하거나 다른 크루를 선택할 수 있어요." actionLabel="크루 선택하기" onAction={() => router.replace('/1-6-create-or-join-crew')} /> : null}
       {state === 'empty' ? <EmptyState title="가입 신청이 없어요." description="크루를 만들거나 초대 코드로 가입해 보세요." actionLabel="크루 선택하기" onAction={() => router.replace('/1-6-create-or-join-crew')} /> : null}
 
-      <Dialog visible={cancelDialog} onClose={() => setCancelDialog(false)} title="가입 신청을 취소할까요?">
+      <Dialog visible={cancelDialog} onClose={() => { if (!cancelling) setCancelDialog(false); }} title="가입 신청을 취소할까요?">
         <Txt variant="body">{request?.crew.name}에 다시 가입하려면 초대 코드를 입력해야 해요.</Txt>
-        <Button label="계속 기다리기" variant="ghost" onPress={() => setCancelDialog(false)} />
-        <Button label="신청 취소" variant="primary" onPress={handleCancel} />
+        <Button label="계속 기다리기" variant="ghost" disabled={cancelling} onPress={() => setCancelDialog(false)} />
+        <Button label="신청 취소" variant="primary" loading={cancelling} disabled={cancelling} onPress={handleCancel} />
       </Dialog>
     </Screen>
   );
