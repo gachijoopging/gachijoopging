@@ -15,6 +15,12 @@ export type NumberStepperProps = {
   disabled?: boolean;
 };
 
+/**
+ * 정수 수량 입력. −/+ 만으로는 큰 수를 넣기 어렵고, 직접 입력만으로는 한 개씩
+ * 고치기 번거로워서 둘을 함께 둡니다. 길게 누르면 0.3초마다 반복합니다.
+ * 범위 밖이거나 정수가 아닌 입력은 값으로 올리지 않고 `Field` 오류로 남겨,
+ * 부모는 `onValidityChange` 로 제출을 막습니다.
+ */
 export function NumberStepper({
   label,
   value,
@@ -90,8 +96,8 @@ export function NumberStepper({
       }}
       endAdornment={(
         <View style={{ flexDirection: 'row', gap: space.xs }}>
-          <IconButton icon="minus" label={`${label} 줄이기`} disabled={decrementDisabled} variant="surface" {...buttonProps(-1)} />
-          <IconButton icon="plus" label={`${label} 늘리기`} disabled={incrementDisabled} variant="surface" {...buttonProps(1)} />
+          <IconButton icon="minus" label={`${label} 줄이기`} disabled={decrementDisabled} tone="surface" {...buttonProps(-1)} />
+          <IconButton icon="plus" label={`${label} 늘리기`} disabled={incrementDisabled} tone="surface" {...buttonProps(1)} />
         </View>
       )}
     />

@@ -36,6 +36,17 @@ export function contrast(a: string, b: string): number {
 
 const round = (n: number) => Math.round(n * 100) / 100;
 
+/** 반투명 rgba() 토큰을 불투명 바탕 위에 얹었을 때 실제로 보이는 #RRGGBB */
+function over(rgba: string, bg: string): string {
+  const m = /^rgba\((\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\)$/.exec(rgba);
+  if (!m) throw new Error(`rgba() 가 아닙니다: ${rgba}`);
+  const a = Number(m[4]);
+  const b = parseInt(bg.slice(1), 16);
+  const mix = (c: number, shift: number) => Math.round(c * a + ((b >> shift) & 0xff) * (1 - a));
+  const hex = (n: number) => n.toString(16).padStart(2, '0');
+  return `#${hex(mix(+m[1], 16))}${hex(mix(+m[2], 8))}${hex(mix(+m[3], 0))}`;
+}
+
 function atLeast(fg: string, bg: string, min: number, label: string) {
   const ratio = contrast(fg, bg);
   assert.ok(
@@ -136,6 +147,13 @@ for (const [name, p] of themes) {
     atLeast(p.onDark, p.deep, 4.5, `${name} Badge deep`);
     atLeast(p.onLime, p.lime, 4.5, `${name} Badge lime`);
     atLeast(p.neutralInk, p.neutral, 4.5, `${name} Badge neutral`);
+    atLeast(p.warnInk, p.warnBg, 4.5, `${name} Badge warn`);
+
+    // Banner neutral
+    atLeast(p.neutralInk, p.neutral, 4.5, `${name} Banner neutral`);
+
+    // Chip overlay · 사진 위. 가장 밝은 사진(흰색)이 최악입니다
+    atLeast(p.onPhoto, over(p.photoBadge, p.white), 4.5, `${name} Chip overlay`);
 
     // Button
     atLeast(p.ink, p.softChip, 4.5, `${name} Button soft`);
@@ -165,6 +183,17 @@ for (const [name, p] of themes) {
     atLeast(p.inkHint, p.surface, 3, `${name} 라디오 미선택 윤곽`);
     atLeast(p.error, p.surface, 3, `${name} Field 오류 테두리`);
     atLeast(p.border, p.surface, 1.2, `${name} 카드 테두리 (층 신호)`);
+
+    // IconCircle · 아이콘은 비텍스트라 3:1. tint 는 반투명이라 서피스 위에 얹어 봅니다
+    atLeast(p.ink, over(p.tint, p.surface), 3, `${name} IconCircle tint`);
+    atLeast(p.neutralInk, p.neutral, 3, `${name} IconCircle neutral`);
+    atLeast(p.ink, p.surface, 3, `${name} IconCircle surface`);
+    atLeast(p.onDeep, p.deep, 3, `${name} IconCircle deep`);
+    atLeast(p.onLime, p.lime, 3, `${name} IconCircle lime`);
+    atLeast(p.onLime, p.orange, 3, `${name} IconCircle orange`);
+
+    // 리플 · 눌림이 서피스 위에서 보여야 합니다
+    atLeast(over(p.ripple, p.surface), p.surface, 1.1, `${name} 리플`);
 
     // SelectRow 의 라임 테두리는 일부러 검사하지 않습니다. 밝은 서피스 위에서
     // 1.41:1 이라 3:1 에 구조적으로 닿을 수 없고, 상태는 위의 라디오가 집니다.

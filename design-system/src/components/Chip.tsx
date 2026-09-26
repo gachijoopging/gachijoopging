@@ -3,7 +3,7 @@ import { Pressable, View, type ViewStyle } from 'react-native';
 import { radius } from '../../tokens/radius.ts';
 import { space, size as sizes } from '../../tokens/spacing.ts';
 import { borderWidth } from '../../tokens/elevation.ts';
-import { useTheme, useRipple, pressedOpacity } from '../theme.tsx';
+import { useTheme, useRipple, pressedOpacity, disabledOpacity } from '../theme.tsx';
 import { Txt } from './Text.tsx';
 import { Icon, type IconName } from './Icon.tsx';
 
@@ -25,7 +25,9 @@ export type ChipTone =
   | 'neutral'
   | 'info'
   | 'warn'
-  | 'danger';
+  | 'danger'
+  /** 사진 위에 얹는 어두운 반투명 알약 (원본 `bg_pill_overlay`) */
+  | 'overlay';
 
 export type ChipProps = {
   label: string;
@@ -33,12 +35,13 @@ export type ChipProps = {
   icon?: IconName;
   selected?: boolean;
   onPress?: () => void;
+  disabled?: boolean;
 };
 
 const VISUAL_HEIGHT = 32;
 const SLOP = (sizes.minTouch - VISUAL_HEIGHT) / 2;
 
-function ChipBase({ label, tone = 'soft', icon, selected, onPress }: ChipProps) {
+function ChipBase({ label, tone = 'soft', icon, selected, onPress, disabled }: ChipProps) {
   const { colors } = useTheme();
   const ripple = useRipple();
 
@@ -51,6 +54,7 @@ function ChipBase({ label, tone = 'soft', icon, selected, onPress }: ChipProps) 
     info: { bg: colors.infoBg, ink: colors.infoInk },
     warn: { bg: colors.warnBg, ink: colors.warnInk },
     danger: { bg: colors.dangerBg, ink: colors.dangerInk },
+    overlay: { bg: colors.photoBadge, ink: colors.onPhoto },
   };
 
   const t = selected ? { bg: colors.deep, ink: colors.onDark } : tones[tone];
@@ -84,13 +88,14 @@ function ChipBase({ label, tone = 'soft', icon, selected, onPress }: ChipProps) 
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityState={{ selected: !!selected }}
+      accessibilityState={{ selected: !!selected, disabled: !!disabled }}
       onPress={onPress}
+      disabled={disabled}
       hitSlop={{ top: SLOP, bottom: SLOP, left: space.xs, right: space.xs }}
-      android_ripple={ripple}
+      android_ripple={disabled ? undefined : ripple}
       style={({ pressed }) => [
         shell,
-        { opacity: pressedOpacity(pressed), overflow: 'hidden' },
+        { opacity: disabled ? disabledOpacity : pressedOpacity(pressed), overflow: 'hidden' },
       ]}
     >
       {body}

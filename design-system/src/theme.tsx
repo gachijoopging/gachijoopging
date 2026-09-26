@@ -51,10 +51,10 @@ export function useRipple(
   color?: string,
   borderless = false,
 ): PressableAndroidRippleConfig | undefined {
-  const { colors, scheme } = useTheme();
+  const { colors } = useTheme();
   if (Platform.OS !== 'android') return undefined;
   return {
-    color: color ?? (scheme === 'dark' ? 'rgba(237, 240, 220, 0.16)' : 'rgba(38, 42, 14, 0.12)'),
+    color: color ?? colors.ripple,
     borderless,
     foreground: !borderless,
   };
@@ -65,6 +65,12 @@ export function pressedOpacity(pressed: boolean): number {
   if (Platform.OS === 'android') return 1;
   return pressed ? 0.85 : 1;
 }
+
+/**
+ * 비활성 조작의 불투명도. 색을 따로 두지 않고 흐리게만 해서, 어떤 채움 위에서도
+ * "원래 무엇이었는지"는 읽히되 누를 수 없다는 것이 보이게 합니다.
+ */
+export const disabledOpacity = 0.55;
 
 /**
  * Android 8.1(API 27) 이하에서는 `boxShadow` 가 아무것도 그리지 않습니다.

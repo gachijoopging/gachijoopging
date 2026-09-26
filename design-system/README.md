@@ -52,6 +52,14 @@ Expo SDK 57 · React Native 0.86 · React 19.2. New Architecture 가 기본이�
 | `ListRow.tsx` | `ListRow` · `SelectRow` | `bg_select_row_*` |
 | `Progress.tsx` | `Progress` | `bg_progress_track` |
 | `States.tsx` | `Loading` · `EmptyState` · `ErrorState` · `DashedBox` | `bg_dashed_box` |
+| `IconCircle.tsx` | `IconCircle` | `bg_circle_tint` · `_neutral` · `_deep` · `_lime` · `_surface` |
+| `MetricSplit.tsx` | `MetricSplit` | `view_record_metrics` · `view_metric_row` · `divider_dashed_vertical` |
+| `LinkText.tsx` | `LinkText` | `Gachi.Button.Link` |
+
+### 이름 규칙
+
+모양·크기·구조가 바뀌면 `variant`, 채움·글자 색만 바뀌면 `tone` 입니다.
+`Button` 은 알약·필드 모서리·테두리 유무가 달라 `variant`, `Chip`·`Badge`·`Banner`·`IconButton`·`IconCircle`·`Tile` 은 `tone` 입니다.
 
 원본 드로어블 88개가 컴포넌트 88개는 아닙니다 — `bg_circle_*` 22개는 대부분 같은
 원의 크기 변형이고 `bg_chip_*` 9종은 채움 색만 다릅니다. prop 으로 접었습니다.
@@ -253,3 +261,7 @@ pyftsubset assets/fonts/Pretendard-Regular.ttf   --unicodes-file=tools/pretendar
 - `IconButton`, `AppHeader`: 독립 아이콘 조작과 서브 화면 헤더. 요청 중에는 `backDisabled`로 뒤로가기를 비활성으로 알린다.
 - `Switch`, `Checkbox`, `Field.endAdornment`, `NumberStepper`: 반복되는 폼 조작. 스테퍼는 직접 정수 입력과 0.3초 간격 길게 누르기를 제공한다.
 - `BottomNav.startAction`, `Button`의 `deep`/`danger`/`ghostDanger`/`translucent`, `Chip`의 `deep`, `Avatar`의 `xl`(96dp)
+- `Card.onPress`·`disabled`: 카드 전체가 하나의 버튼. 안쪽에 다른 조작을 두지 않는다.
+- `Chip` 의 `overlay`(사진 위 알약)·`disabled`, `Badge` 의 `warn`, `Banner` 의 `neutral`(늘 떠 있는 안내문, `alert` 로 끼어들지 않음)
+- `ListRow`·`SelectRow` 의 `disabled`. 비활성 불투명도는 모든 조작이 `disabledOpacity` 하나를 쓴다.
+- `IconButton` 은 `variant` 대신 `tone` 을 받는다(위 이름 규칙).

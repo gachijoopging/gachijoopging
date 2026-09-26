@@ -2,7 +2,7 @@ import { Pressable, Switch as RNSwitch, View, type SwitchProps as RNSwitchProps,
 import { radius } from '../../tokens/radius.ts';
 import { size as sizes, space } from '../../tokens/spacing.ts';
 import { borderWidth } from '../../tokens/elevation.ts';
-import { pressedOpacity, useRipple, useTheme } from '../theme.tsx';
+import { disabledOpacity, pressedOpacity, useRipple, useTheme } from '../theme.tsx';
 import { Icon } from './Icon.tsx';
 import { Txt } from './Text.tsx';
 
@@ -14,6 +14,11 @@ export type SwitchProps = Omit<RNSwitchProps, 'disabled' | 'onValueChange' | 'va
   style?: ViewStyle;
 };
 
+/**
+ * 라벨이 붙은 스위치. 켜고 끄는 즉시 반영되는 설정에 씁니다 — 제출 버튼을 눌러야
+ * 반영되는 값이면 `Checkbox` 가 맞습니다.
+ * 켬 트랙은 라임, 손잡이는 onLime 이라 라임 단독의 낮은 대비를 손잡이가 보강합니다.
+ */
 export function Switch({ label, value, onValueChange, disabled, style, ...rest }: SwitchProps) {
   const { colors } = useTheme();
   return (
@@ -42,6 +47,10 @@ export type CheckboxProps = {
   style?: ViewStyle;
 };
 
+/**
+ * 체크박스. 상자와 라벨을 합친 행 전체가 누르는 영역(48)이라 상자는 24 로 작아도 됩니다.
+ * 체크 상태는 deep 채움으로만 말합니다 — 라임은 밝은 서피스 위에서 구분되지 않습니다.
+ */
 export function Checkbox({ label, checked, onChange, disabled, style }: CheckboxProps) {
   const { colors } = useTheme();
   const ripple = useRipple();
@@ -59,15 +68,15 @@ export function Checkbox({ label, checked, onChange, disabled, style }: Checkbox
           flexDirection: 'row',
           alignItems: 'center',
           gap: space.sm,
-          opacity: disabled ? 0.55 : pressedOpacity(pressed),
+          opacity: disabled ? disabledOpacity : pressedOpacity(pressed),
         },
         style,
       ]}
     >
       <View
         style={{
-          width: 24,
-          height: 24,
+          width: sizes.checkbox,
+          height: sizes.checkbox,
           borderRadius: radius.field / 2,
           borderWidth: borderWidth.focus,
           borderColor: checked ? colors.deep : colors.inkHint,
