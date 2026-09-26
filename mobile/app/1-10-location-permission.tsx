@@ -1,46 +1,47 @@
-import { useEffect, useState } from 'react';
-import { AppState, Linking, PermissionsAndroid, Platform, View } from 'react-native';
-import { router } from 'expo-router';
+import { useCallback, useRef, useState } from 'react';
+import { AppState, Linking, PermissionsAndroid, View } from 'react-native';
+import { router, useFocusEffect } from 'expo-router';
 import { AppHeader, Banner, Button, Screen, Txt } from 'design-system/src';
-
-type PermissionMode = 'loading' | 'request' | 'settings' | 'approximate';
-
-async function getPermissionMode(): Promise<PermissionMode> {
-  if (Platform.OS !== 'android') return 'request';
-  const fineGranted = await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION);
-  if (fineGranted) return 'request';
-  const coarseGranted = await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.ACCESS_COARSE_LOCATION);
-  return coarseGranted ? 'approximate' : 'request';
-}
+import { getPermissionMode, requestPreciseLocation, type PermissionMode } from '../src/auth/location-permission';
+import { usePreventBack } from '../src/auth/usePreventBack';
 
 export default function LocationPermissionScreen() {
   const [mode, setMode] = useState<PermissionMode>('loading');
   const [loading, setLoading] = useState(false);
   const [banner, setBanner] = useState<string>();
+  const busy = useRef(false);
+  const left = useRef(false);
+  usePreventBack(loading);
+
+  function close() {
+    if (left.current) return;
+    left.current = true;
+    router.back();
+  }
 
   async function refreshPermission() {
+    if (busy.current || left.current) return;
     try {
       const nextMode = await getPermissionMode();
-      setMode(nextMode);
-      if (Platform.OS === 'android' && await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION)) {
-        router.back();
-      }
+      setMode((current) => current === 'settings' && nextMode !== 'granted' ? current : nextMode);
+      if (nextMode === 'granted') close();
     } catch {
       setBanner('기기 설정 > 앱 > 가치줍깅 > 권한에서 위치를 켜 주세요.');
       setMode('settings');
     }
   }
 
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
+    left.current = false;
     void refreshPermission();
     const subscription = AppState.addEventListener('change', (state) => {
       if (state === 'active') void refreshPermission();
     });
-    return () => subscription.remove();
-  }, []);
+    return () => { left.current = true; subscription.remove(); };
+  }, []));
 
   async function handlePermission() {
-    if (loading) return;
+    if (busy.current) return;
     if (mode === 'settings') {
       try {
         await Linking.openSettings();
@@ -50,12 +51,13 @@ export default function LocationPermissionScreen() {
       return;
     }
 
+    busy.current = true;
     setLoading(true);
     setBanner(undefined);
     try {
-      const result = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION);
+      const result = await requestPreciseLocation();
       if (result === PermissionsAndroid.RESULTS.GRANTED) {
-        router.back();
+        close();
       } else if (result === PermissionsAndroid.RESULTS.NEVER_ASK_AGAIN) {
         setMode('settings');
       } else {
@@ -65,6 +67,7 @@ export default function LocationPermissionScreen() {
       setBanner('기기 설정 > 앱 > 가치줍깅 > 권한에서 위치를 켜 주세요.');
       setMode('settings');
     } finally {
+      busy.current = false;
       setLoading(false);
     }
   }

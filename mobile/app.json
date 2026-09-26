@@ -27,6 +27,7 @@
     "plugins": [
       "expo-router",
       "expo-font",
+      "expo-notifications",
       "expo-dev-client",
       "@react-native-vector-icons/material-design-icons",
       "expo-splash-screen",

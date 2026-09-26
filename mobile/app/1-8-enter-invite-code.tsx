@@ -1,33 +1,41 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Keyboard, View } from 'react-native';
-import { router } from 'expo-router';
+import { router, useNavigation } from 'expo-router';
 import { AppHeader, Avatar, Banner, Button, Card, Chip, Field, Screen, Txt, space } from 'design-system/src';
-import { ApiError, createMockClient, type ApiClient } from '../src/api/client';
+import { ApiError } from '../src/api/client';
+import { onboardingApi as api } from '../src/api/onboarding';
 import { normalizeInviteCode, validateInviteCode } from '../src/auth/validators';
-
-const api: ApiClient = createMockClient({ delayMs: 300 });
+import { resolveDestination } from '../src/auth/destination';
+import { finishOnboarding, type OnboardingNavigation } from '../src/auth/navigation';
+import { usePreventBack } from '../src/auth/usePreventBack';
 
 type Stage = 'input' | 'preview';
 type CrewPreview = Awaited<ReturnType<typeof api.get<'GET /crews/preview'>>>['data'];
 
 export default function EnterInviteCodeScreen() {
+  const navigation = useNavigation<OnboardingNavigation>('/');
   const [stage, setStage] = useState<Stage>('input');
   const [inviteCode, setInviteCode] = useState('');
   const [codeError, setCodeError] = useState<string>();
   const [preview, setPreview] = useState<CrewPreview>();
   const [banner, setBanner] = useState<string>();
   const [loading, setLoading] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const busy = useRef(false);
+  usePreventBack(loading);
 
   async function handleVerify() {
     const error = validateInviteCode(inviteCode);
     setCodeError(error);
-    if (loading || error) return;
+    if (busy.current || error) return;
+    busy.current = true;
 
     setBanner(undefined);
     setLoading(true);
     try {
       const response = await api.get('GET /crews/preview', { inviteCode: normalizeInviteCode(inviteCode) });
       setPreview(response.data);
+      setExpanded(false);
       setStage('preview');
       Keyboard.dismiss();
     } catch (error) {
@@ -39,28 +47,40 @@ export default function EnterInviteCodeScreen() {
         setBanner('초대를 확인하지 못했어요. 네트워크 상태를 확인하고 다시 시도해 주세요.');
       }
     } finally {
+      busy.current = false;
       setLoading(false);
     }
   }
 
   async function handleJoin() {
-    if (loading) return;
+    if (busy.current || !preview) return;
+    busy.current = true;
 
     setBanner(undefined);
     setLoading(true);
     try {
       await api.mutate('POST /crews/join-requests', { inviteCode: normalizeInviteCode(inviteCode) });
-      router.replace('/1-9-pending-approval');
+      finishOnboarding(navigation, '/1-9-pending-approval');
     } catch (error) {
       if (error instanceof ApiError && error.code === 'NOT_FOUND') {
         setStage('input');
         setCodeError('초대 코드를 찾을 수 없어요. 코드를 다시 확인해 주세요.');
       } else if (error instanceof ApiError && error.code === 'ALREADY_IN_CREW') {
         setBanner('이미 크루에 소속돼 있어요.');
+        try {
+          const me = await api.get('GET /users/me');
+          if (me.data.membership?.status !== 'NONE') finishOnboarding(navigation, resolveDestination(me.data));
+        } catch {
+          setBanner('소속을 확인하지 못했어요. 다시 시도해 주세요.');
+        }
+      } else if (error instanceof ApiError && error.code === 'VALIDATION') {
+        setStage('input');
+        setCodeError('초대 코드 형식이 올바르지 않아요.');
       } else {
         setBanner('초대를 확인하지 못했어요. 네트워크 상태를 확인하고 다시 시도해 주세요.');
       }
     } finally {
+      busy.current = false;
       setLoading(false);
     }
   }
@@ -99,8 +119,14 @@ export default function EnterInviteCodeScreen() {
               <Txt variant="caption" tone="muted">크루원 {preview.memberCount}명</Txt>
             </View>
           </View>
-          <Txt variant="caption">크루장 {preview.leader.nickname}</Txt>
-          {preview.intro ? <Txt variant="caption" tone="muted">{preview.intro}</Txt> : null}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
+            <Avatar name={preview.leader.nickname} uri={preview.leader.photoUrl ?? undefined} size="sm" />
+            <Txt variant="caption">크루장 {preview.leader.nickname}</Txt>
+          </View>
+          {preview.intro ? <>
+            <Txt variant="caption" tone="muted" numberOfLines={expanded ? undefined : 2}>{preview.intro}</Txt>
+            <Button label={expanded ? '소개 접기' : '소개 더 보기'} variant="ghost" size="md" onPress={() => setExpanded(!expanded)} />
+          </> : null}
           <Txt variant="caption" tone="muted">초대 코드 {normalizeInviteCode(inviteCode)}</Txt>
         </Card>
       ) : (
@@ -115,6 +141,7 @@ export default function EnterInviteCodeScreen() {
           onBlur={() => setCodeError(validateInviteCode(inviteCode))}
           error={codeError}
           editable={!loading}
+          autoFocus
           autoCapitalize="none"
           autoCorrect={false}
           returnKeyType="done"

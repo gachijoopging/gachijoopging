@@ -1,11 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { AppState, BackHandler, RefreshControl, View } from 'react-native';
-import { router } from 'expo-router';
+import { router, useFocusEffect, useNavigation } from 'expo-router';
+import { addNotificationReceivedListener, addNotificationResponseReceivedListener } from 'expo-notifications';
 import { AppHeader, Banner, Button, Card, Dialog, EmptyState, ErrorState, Icon, Loading, Screen, Txt } from 'design-system/src';
-import { createMockClient, type ApiClient } from '../src/api/client';
+import { onboardingApi as api } from '../src/api/onboarding';
 import { resolvePendingRequest, type JoinRequestStatus, type MembershipStatus, type PendingRequestState } from '../src/auth/pending-request';
-
-const api: ApiClient = createMockClient({ delayMs: 300 });
+import { finishOnboarding, type OnboardingNavigation } from '../src/auth/navigation';
 
 type JoinRequestData = Awaited<ReturnType<typeof api.get<'GET /crews/join-requests/mine'>>>['data'];
 type JoinRequest = { crew: { name: string }; status: JoinRequestStatus };
@@ -25,6 +25,7 @@ function toMembershipStatus(value: string | undefined): MembershipStatus {
 }
 
 export default function PendingApprovalScreen() {
+  const navigation = useNavigation<OnboardingNavigation>('/');
   const [request, setRequest] = useState<JoinRequest>();
   const [state, setState] = useState<PendingRequestState>();
   const [error, setError] = useState(false);
@@ -35,24 +36,29 @@ export default function PendingApprovalScreen() {
   const loadingRef = useRef(false);
   const hasLoadedRef = useRef(false);
 
-  async function reload() {
-    if (loadingRef.current || cancelling) return;
+  const reload = useCallback(async () => {
+    if (loadingRef.current) return;
     loadingRef.current = true;
     setRefreshing(true);
+    setBanner(undefined);
     if (!hasLoadedRef.current) setError(false);
     try {
       const response = await api.get('GET /crews/join-requests/mine');
       const nextRequest = toJoinRequest(response.data);
-      let membershipStatus: MembershipStatus = 'NONE';
       if (nextRequest?.status === 'APPROVED') {
-        const me = await api.get('GET /users/me');
-        membershipStatus = toMembershipStatus(me.data.membership?.status);
+        setRequest(nextRequest);
+        setState('confirming');
+        setError(false);
+        hasLoadedRef.current = true;
       }
+      const me = await api.get('GET /users/me');
+      const membershipStatus = toMembershipStatus(me.data.membership?.status);
       const nextState = resolvePendingRequest(nextRequest?.status, membershipStatus);
       setRequest(nextRequest);
       setState(nextState);
       hasLoadedRef.current = true;
-      if (nextState === 'home') router.replace('/(tabs)');
+      setError(false);
+      if (nextState === 'home') finishOnboarding(navigation, '/(tabs)');
     } catch {
       if (hasLoadedRef.current) setBanner('인터넷 연결을 확인해 주세요.');
       else setError(true);
@@ -60,22 +66,26 @@ export default function PendingApprovalScreen() {
       loadingRef.current = false;
       setRefreshing(false);
     }
-  }
+  }, [navigation]);
 
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
     void reload();
     const appStateSubscription = AppState.addEventListener('change', (nextState) => {
       if (nextState === 'active') void reload();
     });
     const backSubscription = BackHandler.addEventListener('hardwareBackPress', () => {
-      BackHandler.exitApp();
+      if (!loadingRef.current) BackHandler.exitApp();
       return true;
     });
+    const received = addNotificationReceivedListener(() => { void reload(); });
+    const opened = addNotificationResponseReceivedListener(() => { void reload(); });
     return () => {
       appStateSubscription.remove();
       backSubscription.remove();
+      received.remove();
+      opened.remove();
     };
-  }, []);
+  }, [reload]));
 
   async function handleCancel() {
     if (loadingRef.current) return;
@@ -84,7 +94,7 @@ export default function PendingApprovalScreen() {
     setCancelDialog(false);
     try {
       await api.mutate('DELETE /crews/join-requests/mine');
-      router.replace('/1-6-create-or-join-crew');
+      finishOnboarding(navigation, '/1-6-create-or-join-crew');
     } catch {
       setBanner('신청을 취소하지 못했어요. 다시 시도해 주세요.');
     } finally {
@@ -99,7 +109,7 @@ export default function PendingApprovalScreen() {
     <Screen scroll refreshControl={<RefreshControl refreshing={refreshing} onRefresh={reload} />}>
       <AppHeader title="가입 신청" onBack={() => BackHandler.exitApp()} backDisabled={refreshing || cancelling} />
       <View style={{ alignItems: 'center' }}>
-        <Icon name="timer-sand" size="lg" />
+        <Icon name="timer-sand" />
         <Txt variant="title" bold>크루장 승인을 기다리고 있어요</Txt>
       </View>
 
@@ -111,12 +121,16 @@ export default function PendingApprovalScreen() {
             <Txt variant="title">{request.crew.name}</Txt>
             <Txt variant="caption" tone="muted">가입 신청을 보냈어요</Txt>
           </Card>
-          <Banner tone="neutral">크루장이 승인하면 크루원이 돼요.{"\n"}앱을 닫아도 신청은 그대로 남아요.</Banner>
-          {banner ? <Banner tone="danger">{banner}</Banner> : null}
+          <Banner tone="neutral">{'크루장이 승인하면 크루원이 돼요.\n앱을 닫아도 신청은 그대로 남아요.'}</Banner>
           <Button label="신청 취소" variant="ghost" size="lg" fullWidth loading={cancelling} disabled={refreshing || cancelling} onPress={() => setCancelDialog(true)} />
-          <Button label="승인 상태 확인" variant="secondary" size="lg" fullWidth loading={refreshing} disabled={cancelling} onPress={reload} />
+          <Button label="승인 상태 확인" variant="soft" size="lg" fullWidth loading={refreshing} disabled={cancelling} onPress={reload} />
         </>
       ) : null}
+      {state === 'confirming' ? <>
+        <Banner tone="info">가입 승인을 확인하고 있어요. 소속 확인이 끝나면 홈으로 이동해요.</Banner>
+        <Button label="승인 상태 확인" loading={refreshing} onPress={reload} />
+      </> : null}
+      {banner ? <Banner tone="danger">{banner}</Banner> : null}
       {state === 'rejected' ? <EmptyState icon="close-circle-outline" title="가입 신청이 승인되지 않았어요." description="유효한 초대 코드로 다시 신청하거나 다른 크루를 선택할 수 있어요." actionLabel="크루 선택하기" onAction={() => router.replace('/1-6-create-or-join-crew')} /> : null}
       {state === 'empty' ? <EmptyState title="가입 신청이 없어요." description="크루를 만들거나 초대 코드로 가입해 보세요." actionLabel="크루 선택하기" onAction={() => router.replace('/1-6-create-or-join-crew')} /> : null}
 

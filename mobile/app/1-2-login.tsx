@@ -1,16 +1,13 @@
 import { useState } from 'react';
 import { Image, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { AppHeader, Banner, Button, Chip, Field, Screen, Snackbar, Txt, space } from 'design-system/src';
-import { createMockClient, type ApiClient } from '../src/api/client';
+import { AppHeader, Banner, Button, Chip, Field, LinkText, Screen, Snackbar, Txt, space } from 'design-system/src';
+import { onboardingApi as api } from '../src/api/onboarding';
 import { resolveDestination } from '../src/auth/destination';
 import { loginErrorMessage } from '../src/auth/errors';
-import { LinkText } from '../src/auth/LinkText';
 import { validateEmail, validatePassword } from '../src/auth/validators';
 
 const wordmark = require('../../design-system/assets/logo-wordmark.png');
-
-const api: ApiClient = createMockClient({ delayMs: 300 });
 
 export default function LoginScreen() {
   const params = useLocalSearchParams<{ justReset?: string }>();
