@@ -68,7 +68,8 @@ export default function LocationPermissionScreen() {
       setMode('settings');
     } finally {
       busy.current = false;
-      setLoading(false);
+      // 닫히는 화면을 다시 그리면 Fabric 이 떼어 내던 뷰를 다시 붙이려다 죽는다
+      if (!left.current) setLoading(false);
     }
   }
 
