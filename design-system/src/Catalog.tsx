@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { View } from 'react-native';
+import { ImageBackground, View } from 'react-native';
 import { space, size as sizes } from '../tokens/spacing.ts';
 import { radius } from '../tokens/radius.ts';
 import { fontSize, lineHeight } from '../tokens/typography.ts';
@@ -253,9 +253,13 @@ export function Catalog({ scheme, onScheme }: { scheme: Scheme; onScheme: (s: Sc
             <Chip label="눌러서 선택" selected={chip} onPress={() => setChip((v) => !v)} />
             <Chip label="비활성" onPress={noop} disabled />
           </Row>
-          <View style={{ padding: space.md, borderRadius: radius.tile, backgroundColor: colors.camera.bg }}>
+          <ImageBackground
+            source={require('../assets/legacy/trash-pet.jpg')}
+            resizeMode="cover"
+            style={{ height: 140, justifyContent: 'flex-end', padding: space.md, borderRadius: radius.tile, overflow: 'hidden' }}
+          >
             <Chip label="방금 촬영한 수거물" tone="overlay" />
-          </View>
+          </ImageBackground>
         </Section>
 
         <Section title="입력창" note="화면이 KeyboardAvoidingView 를 쓰므로 키보드가 올라와도 가리지 않습니다.">
@@ -333,15 +337,17 @@ export function Catalog({ scheme, onScheme }: { scheme: Scheme; onScheme: (s: Sc
             <Dot />
             <Dot tone="deep" />
           </Row>
-          <Row>
-            <IconCircle icon="lightning-bolt" tone="deep" />
-            <IconCircle icon="bell-outline" tone="tint" />
-            <IconCircle icon="chat-outline" tone="neutral" />
-            <IconCircle icon="play" tone="lime" />
-            <IconCircle icon="trash-can-outline" tone="orange" />
-            <IconCircle icon="map-marker" tone="surface" size="sm" />
-            <IconCircle icon="sprout" tone="tint" size="lg" label="활동 기록" />
-          </Row>
+          <Card>
+            <Row>
+              <IconCircle icon="lightning-bolt" tone="deep" />
+              <IconCircle icon="bell-outline" tone="tint" />
+              <IconCircle icon="chat-outline" tone="neutral" />
+              <IconCircle icon="play" tone="lime" />
+              <IconCircle icon="trash-can-outline" tone="orange" />
+              <IconCircle icon="map-marker" tone="surface" size="sm" />
+              <IconCircle icon="sprout" tone="tint" size="lg" label="활동 기록" />
+            </Row>
+          </Card>
         </Section>
 
         <Section title="배너">
