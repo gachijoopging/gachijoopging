@@ -42,18 +42,18 @@
 | ① | 크루원 마커 | `GET /crew/live` 중 IN_PROGRESS이고 `locationShared` true인 현재 크루원에서 나와 내가 차단한 사람을 뺀 것. `location` 이 null(미공유 또는 위치 미수신)이면 그리지 않는다. 얼굴은 `user.photoUrl`, null 이면 `user.nickname` 첫 글자. 아래에 닉네임. `paused` 가 true 면 얼굴 오른쪽 위에 "일시정지 중" 배지. 이후 위치는 소켓 LIVE_UPDATE(최대 5초에 한 번)로 옮기고, LIVE_STARTED 로 추가, LIVE_ENDED 로 지운다 | `Avatar` sm + `Txt` label + `Badge` neutral | 마커 위에 "상혁 · 1.2km · 9개" 말풍선 3초 (`distanceM`·`itemCount` 는 `GET /crew/live`·LIVE_UPDATE 값). 떠 있을 때 다시 탭하면 닫힘 |
 | ② | 위치 공유 칩 | `locationShared` (`POST /activities` 응답 또는 `GET /activities/current`). true: "위치 공유 중", false: "위치 공유 꺼짐". 활동 중에는 바꿀 수 없다 | `Chip` lime(켬) / `Chip` neutral(끔) + `Icon`(map-marker-radius / map-marker-off) | — |
 | ② | 활동 중인 크루원 알약 | "크루원 N" — `GET /crew/live` 배열에서 나를 뺀 수. 왼쪽에 사람 아이콘. 0 이어도 보인다("크루원 0") | `Chip` surface + `Icon`(account-group) | 2-2 활동 중인 크루원 목록 |
-| ② | 활동 종료 버튼 | "활동 종료". 빨간 알약, 오른쪽 끝 | `Button` primary sm (기존 danger 의미 색, 옛 `Gachi.Button.Danger`) | ⑧ 종료 확인 대화상자 |
+| ② | 활동 종료 버튼 | "활동 종료". 빨간 알약, 오른쪽 끝 | `Button` danger sm (옛 `Gachi.Button.Danger`) | ⑧ 종료 확인 대화상자 |
 | ③ | 줍기 개수 | `itemCount` — 시작 때 `GET /activities/current`·`POST /activities` 응답, 이후 `POST /activities/{id}/items` 응답으로 갱신. 예: 17. 아래 라벨 "줍기 개수" | `Txt` metric + `Txt` micro muted | — |
 | ③ | 활동 시간 | 진행 중에는 시작(`startedAt`)부터 지금까지에서 완료된 일시정지 시간(`pausedSec`)을 뺀 값. 현재 `paused`이면 끝 시각을 `pausedAt`으로 고정한다. 1초마다 갱신. 1시간 미만 "42:10", 이상 "1:02:10". 아래 라벨 "활동 시간". 종료 때 `durationSec`·`pausedSec` (`POST /activities/{id}/end`) 로 보낸다 | `Txt` metric + `Txt` micro muted | — |
 | ③ | 이동 거리 | 필터 4개를 통과한 점으로 앱이 누적한 `distanceM`. 1km 미만 "850m", 이상 "2.1km"(소수 1자리). 비정지 보행 구간의 유효한 걸음수가 있을 때만 걸음수 거리(걸음×0.7m)보다 30% 넘게 크면 걸음수 거리를 대신 보인다 — 표시에 구분은 없다. 아래 라벨 "이동 거리" | `Txt` metric + `Txt` micro muted | — |
 | ③ | 걸음 | Health Connect 걸음수, 시작 이후 일시정지 구간을 제외한 누적. 선택 정보이며 비보행·미설치·권한 거부·미측정은 활동을 막지 않는다. "3,200". 못 읽으면 "—". 아래 라벨 "걸음". 종료 때 `steps` (`POST /activities/{id}/end`, 못 읽었으면 null) | `Txt` metric + `Txt` micro muted | — |
-| ③ | 지표 카드 | 위 4칸을 담는 카드. 칸 사이 점선 구분. 일시정지 중엔 활동 시간·이동 거리·걸음 세 칸의 숫자가 흐려진다(muted) | `Card` + `신규` 점선 구분선 (옛 `divider_dashed_vertical`) | — |
+| ③ | 지표 카드 | 위 4칸을 담는 카드. 칸 사이 점선 구분. 일시정지 중엔 활동 시간·이동 거리·걸음 세 칸의 숫자가 흐려진다(muted) | `Card` + `MetricSplit` divider dashed (옛 `divider_dashed_vertical`) | — |
 | ④ | 배너 슬롯 | 평소 숨김. 한 번에 하나만. 우선순위 위치 꺼짐 › 오프라인 › 연결 중 › GPS 검색 중 › GPS 불안정 › 일시정지 중. 문구는 상태 표 참조 | `Banner` danger / warn / info 또는 `Chip` warn | 위치 꺼짐 배너의 [설정 열기] → OS 위치 설정 |
 | ⑤ | 내 위치로 | 지도를 옮겨 따라가기가 풀렸을 때만 보인다. 원 버튼에 조준점 아이콘 | `신규` 지도 원 버튼 (옛 `view_map_frame` 의 내 위치 버튼, `ic_my_location`, `bg_circle_surface_40`) | 내 위치로 카메라를 되돌리고 따라가기를 다시 켠다. 버튼은 숨는다 |
 | ⑥ | 줍기 알약 | 쓰레기통 아이콘 + "줍기 N개" (`itemCount`). 0 이면 "줍기 0개" | `Chip` surface + `Icon`(delete-outline) | 4-6 빠른 줍기 시트 |
-| ⑦ | 채팅 | 원 아이콘 + 아래 라벨 "채팅". 읽지 않은 메시지가 있으면 오른쪽 위에 점 — 진입 때 `unreadChat` (`GET /crew`) 이 1 이상, 이후 소켓 CHAT 이 오면 켬 | `신규` 원 아이콘 배경 (옛 `bg_circle_neutral`) + `Icon`(chat-outline) + `Dot` + `Txt` micro | 3-7 크루 채팅 |
+| ⑦ | 채팅 | 원 아이콘 + 아래 라벨 "채팅". 읽지 않은 메시지가 있으면 오른쪽 위에 점 — 진입 때 `unreadChat` (`GET /crew`) 이 1 이상, 이후 소켓 CHAT 이 오면 켬 | `IconCircle` neutral (옛 `bg_circle_neutral`) + `Icon`(chat-outline) + `Dot` + `Txt` micro | 3-7 크루 채팅 |
 | ⑦ | 촬영 | 라임→노랑 원 버튼, 바 위로 솟아 있다. 아래 라벨 "쓰레기 촬영" | `CaptureButton` + `Txt` label | 4-4 사진 촬영 |
-| ⑦ | 일시정지 / 재개 | 진행 중: 일시정지 아이콘 + "일시정지". 일시정지 중: 재생 아이콘(라임 원) + "재개" | `신규` 원 아이콘 배경 (옛 `bg_circle_neutral` / `bg_circle_lime`) + `Icon`(pause / play) + `Txt` micro | 일시정지 → `POST /activities/{id}/pause` · 재개 → `POST /activities/{id}/resume`. 화면은 응답을 기다리지 않고 바로 바뀐다 |
+| ⑦ | 일시정지 / 재개 | 진행 중: 일시정지 아이콘 + "일시정지". 일시정지 중: 재생 아이콘(라임 원) + "재개" | `IconCircle` neutral / lime (옛 `bg_circle_neutral` / `bg_circle_lime`) + `Icon`(pause / play) + `Txt` micro | 일시정지 → `POST /activities/{id}/pause` · 재개 → `POST /activities/{id}/resume`. 화면은 응답을 기다리지 않고 바로 바뀐다 |
 | ⑦ | 하단 바 | 위 셋을 담는 둥근 바. 하단 탭 자리 | `신규` 둥근 바 (옛 `bg_bottom_nav`) | — |
 | ⑧ | 종료 확인 | 제목 "활동을 종료할까요?" · 본문 "지금까지 주운 기록이 저장돼요. 종료 후에는 이어서 담을 수 없어요." · [계속 줍기] [종료하기] | `Dialog` + `Txt` body + `Button` ghost md + `Button` primary md(기존 danger 의미 색) | 계속 줍기 → 닫힘 · 종료하기 → 계정별 로컬 저장소에 줍기 대기열과 종료 스냅샷을 원자적으로 보존하고 추적을 끈 뒤 즉시 4-7. 서버 전송은 줍기 저장·되돌리기 완료 뒤 종료 순서 |
 | ⑨ | 배경 알림창 | 앱 밖(알림 영역·잠금 화면). 제목 "가치줍깅 · 활동 중", 본문 "2.1km · 42:10 · 17개". 일시정지 중엔 제목 "가치줍깅 · 일시정지 중", 본문은 같다. 5초마다 갱신. 지울 수 없다(포그라운드 서비스). 종료하면 즉시 사라진다 | `신규` OS 알림 (옛 화면엔 없음) | 4-3 으로 돌아온다 |

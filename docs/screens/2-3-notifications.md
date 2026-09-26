@@ -46,7 +46,7 @@
 | ② | 가입 신청 행 | `pending.joinRequests` (`GET /notifications`) 가 1 이상일 때. 원 아이콘 + "가입 신청 2건이 기다리고 있어요" + 오른쪽 숫자 배지 + chevron | `ListRow` + `Icon`(account-plus-outline) + `Badge` deep | 3-8 가입 신청 관리 |
 | ② | 신고 행 | `pending.reports` (`GET /notifications`) 가 1 이상일 때. 원 아이콘 + "신고 1건이 기다리고 있어요" + 오른쪽 숫자 배지 + chevron | `ListRow` + `Icon`(flag-outline) + `Badge` danger | 6-2 신고 처리(목록) |
 | ③ | 모두 읽음 | "✓ 모두 읽음" 오른쪽 정렬 링크. 읽지 않은 항목이 하나도 없으면(`count` 0) 비활성 | `Button` ghost sm (옛 `Gachi.Button.Link`) | `POST /notifications/read` 를 본문 없이(ids 생략 = 전체) 보낸다. 성공하면 ④ 의 점이 모두 꺼지고 ① 부제가 "모두 읽었어요" 로 |
-| ④ | 원 아이콘 | `type` (`Notification`) 별 아이콘, 연한 원 배경. 아래 표 참고 | `신규` 원 아이콘 배경 (옛 `bg_circle_tint`) + `Icon` | (행 전체) |
+| ④ | 원 아이콘 | `type` (`Notification`) 별 아이콘, 연한 원 배경. 아래 표 참고 | `IconCircle` tint (옛 `bg_circle_tint`) + `Icon` | (행 전체) |
 | ④ | 제목 | `title` (`Notification`) 을 그대로. 한 줄, 넘치면 말줄임 | `Txt` body strong | (행 전체) |
 | ④ | 안 읽음 점 | `unread` (`Notification`) 가 true 일 때 제목 오른쪽에 7dp 점. false 면 그리지 않는다 | `Dot` deep (옛 `bg_dot_orange`) | (행 전체) |
 | ④ | 부제 | `detail` (`Notification`) + " · " + `createdAt` 의 상대 시각. 1분 안 "방금" · 60분 안 "N분 전" · 24시간 안 "N시간 전" · 어제 "어제" · 그 뒤 "M월 D일" · 해가 다르면 "YYYY.M.D". `detail` 이 비어 있으면 시각만. 한 줄, 넘치면 말줄임 | `Txt` caption | (행 전체) |

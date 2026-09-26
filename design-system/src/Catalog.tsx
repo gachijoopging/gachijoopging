@@ -25,6 +25,9 @@ import { Progress } from './components/Progress.tsx';
 import { Loading, EmptyState, ErrorState } from './components/States.tsx';
 import { Screen } from './components/Screen.tsx';
 import { Snackbar } from './components/Snackbar.tsx';
+import { LinkText } from './components/LinkText.tsx';
+import { IconCircle } from './components/IconCircle.tsx';
+import { MetricSplit } from './components/MetricSplit.tsx';
 
 function Section({ title, note, children }: { title: string; note?: string; children: React.ReactNode }) {
   const { colors } = useTheme();
@@ -197,14 +200,14 @@ export function Catalog({ scheme, onScheme }: { scheme: Scheme; onScheme: (s: Sc
         <Section title="아이콘 버튼과 화면 헤더" note="아이콘만으로 동작할 때는 반드시 접근성 라벨을 제공합니다.">
           <Row>
             <IconButton icon="arrow-left" label="뒤로 가기" onPress={noop} />
-            <IconButton icon="cog" label="설정" variant="surface" onPress={noop} />
-            <IconButton icon="plus" label="추가" variant="lime" onPress={noop} />
+            <IconButton icon="cog" label="설정" tone="surface" onPress={noop} />
+            <IconButton icon="plus" label="추가" tone="lime" onPress={noop} />
           </Row>
           <AppHeader title="모임 설정" onBack={noop} />
           <AppHeader
             title="프로필"
             subtitle="이웃에게 보이는 정보"
-            action={<IconButton icon="cog" label="프로필 설정" variant="tint" onPress={noop} />}
+            action={<IconButton icon="cog" label="프로필 설정" tone="tint" onPress={noop} />}
           />
         </Section>
 
@@ -225,6 +228,11 @@ export function Catalog({ scheme, onScheme }: { scheme: Scheme; onScheme: (s: Sc
             <Button label="비활성" disabled size="md" onPress={noop} />
             <Button label="12개" size="sm" onPress={noop} />
           </Row>
+          <Row>
+            <LinkText label="비밀번호를 잊으셨나요?" tone="muted" onPress={noop} />
+            <LinkText label="회원가입" bold onPress={noop} />
+            <LinkText label="비활성 링크" disabled onPress={noop} />
+          </Row>
           <Button label="가로로 꽉 차는 버튼" fullWidth onPress={noop} />
           <Row>
             <CaptureButton onPress={noop} />
@@ -243,7 +251,11 @@ export function Catalog({ scheme, onScheme }: { scheme: Scheme; onScheme: (s: Sc
             <Chip label="주의" tone="warn" icon="alert" />
             <Chip label="위험" tone="danger" />
             <Chip label="눌러서 선택" selected={chip} onPress={() => setChip((v) => !v)} />
+            <Chip label="비활성" onPress={noop} disabled />
           </Row>
+          <View style={{ padding: space.md, borderRadius: radius.tile, backgroundColor: colors.camera.bg }}>
+            <Chip label="방금 촬영한 수거물" tone="overlay" />
+          </View>
         </Section>
 
         <Section title="입력창" note="화면이 KeyboardAvoidingView 를 쓰므로 키보드가 올라와도 가리지 않습니다.">
@@ -275,9 +287,25 @@ export function Catalog({ scheme, onScheme }: { scheme: Scheme; onScheme: (s: Sc
             <Txt variant="section" bold>이번 주 기록</Txt>
             <Txt variant="body" tone="muted">3번 나가서 12개를 주웠어요.</Txt>
           </Card>
-          <Card speaking>
-            <Txt variant="section" bold>발언 중인 참가자</Txt>
-            <Txt variant="caption" tone="hint">라임 테두리로 표시합니다.</Txt>
+          <Card onPress={noop} accessibilityLabel="크루 만들기">
+            <Txt variant="section" bold>누르는 카드</Txt>
+            <Txt variant="caption" tone="hint">카드 전체가 버튼입니다. 안에 다른 조작을 두지 않습니다.</Txt>
+          </Card>
+          <Card onPress={noop} disabled>
+            <Txt variant="section" bold>비활성 카드</Txt>
+          </Card>
+          <Card>
+            <MetricSplit
+              items={[{ value: '27', label: '개수' }, { value: '42분', label: '시간' }, { value: '3.1km', label: '거리' }]}
+              accessibilityLabel="개수 27개, 시간 42분, 거리 3.1킬로미터"
+            />
+          </Card>
+          <Card>
+            <MetricSplit
+              divider="dashed"
+              items={[{ value: '42:10', label: '활동 시간', muted: true }, { value: '3.1km', label: '이동 거리' }, { value: '4,210', label: '걸음' }, { value: '12', label: '줍기' }]}
+              accessibilityLabel="활동 시간 42분 10초, 이동 거리 3.1킬로미터, 걸음 4210, 줍기 12개"
+            />
           </Card>
           <Row>
             <Tile style={{ flex: 1, minWidth: 140 }}>
@@ -301,8 +329,18 @@ export function Catalog({ scheme, onScheme }: { scheme: Scheme; onScheme: (s: Sc
             <Badge label={3} />
             <Badge label="새 소식" tone="deep" />
             <Badge label="12" tone="lime" />
+            <Badge label="스팸·도배" tone="warn" />
             <Dot />
             <Dot tone="deep" />
+          </Row>
+          <Row>
+            <IconCircle icon="lightning-bolt" tone="deep" />
+            <IconCircle icon="bell-outline" tone="tint" />
+            <IconCircle icon="chat-outline" tone="neutral" />
+            <IconCircle icon="play" tone="lime" />
+            <IconCircle icon="trash-can-outline" tone="orange" />
+            <IconCircle icon="map-marker" tone="surface" size="sm" />
+            <IconCircle icon="sprout" tone="tint" size="lg" label="활동 기록" />
           </Row>
         </Section>
 
@@ -310,6 +348,7 @@ export function Catalog({ scheme, onScheme }: { scheme: Scheme; onScheme: (s: Sc
           <Banner tone="info" title="동네가 설정됐어요">역삼동 이웃들의 모임이 보입니다.</Banner>
           <Banner tone="warn">위치 권한이 꺼져 있어 지도를 그릴 수 없습니다.</Banner>
           <Banner tone="danger" title="업로드 실패">사진 3장 중 1장을 올리지 못했습니다.</Banner>
+          <Banner tone="neutral">크루장이 승인하면 크루원이 돼요.</Banner>
         </Section>
 
         <Section title="진행바">
@@ -330,10 +369,12 @@ export function Catalog({ scheme, onScheme }: { scheme: Scheme; onScheme: (s: Sc
           <Card padded={false} style={{ paddingHorizontal: space.lg }}>
             <ListRow title="알림" subtitle="모임 초대와 댓글" icon="bell" onPress={noop} />
             <ListRow title="차단 목록" icon="account-cancel" onPress={noop} />
+            <ListRow title="비밀번호 재설정" icon="lock-reset" onPress={noop} disabled />
             <ListRow title="로그아웃" icon="logout" onPress={noop} divider={false} />
           </Card>
           <SelectRow title="역삼동" subtitle="현재 위치" selected={picked === 'a'} onPress={() => setPicked('a')} />
           <SelectRow title="논현동" selected={picked === 'b'} onPress={() => setPicked('b')} />
+          <SelectRow title="선택할 수 없음" selected={false} onPress={noop} disabled />
           <BottomNav
             items={[
               { value: 'home', label: '홈', icon: 'home' },

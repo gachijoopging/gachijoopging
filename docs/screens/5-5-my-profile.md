@@ -74,18 +74,18 @@
 | ③ | 활동 | `totalActivities` (`GET /users/me/stats`) 예: 12 · 아래 작은 라벨 "활동" | `Txt` display + `Txt` micro | — |
 | ③ | 거리 | `totalDistanceM` (`GET /users/me/stats`) 를 km 한 자리로. 1000 미만이면 "820m" · 아래 라벨 "거리" | `Txt` display + `Txt` micro | — |
 | ③ | 개수 | `totalItems` (`GET /users/me/stats`) 예: 412 · 아래 라벨 "개수" | `Txt` display + `Txt` micro | — |
-| ③ | 3분할 | 위 셋을 담는 한 줄. 옛 view_record_metrics 와 같이 구분선 없이 균등 3분할 | `Tile` | — |
+| ③ | 3분할 | 위 셋을 담는 한 줄. 옛 view_record_metrics 와 같이 구분선 없이 균등 3분할 | `Tile` + `MetricSplit` | — |
 | ④ | 탭 | "기록" · "게시물" 두 개. 처음엔 "기록" 선택 | `Tabs` | 아래 ⑤ 를 바꾼다 |
 | ⑤-기록 | 썸네일 | `thumbUrl` (`ActivityCard`). null 이면 새싹 아이콘을 연한 원 배경에 | `신규` 원 썸네일 (옛 item_record 의 icon 자리, 아이콘은 ic_sprout) | (카드 전체) |
 | ⑤-기록 | 제목 | `startedAt` (`ActivityCard`) 를 "9월 5일(금) 오후 6:02" 로. 해가 다르면 "2025년 12월 3일(수) 오후 6:02" | `Txt` body strong | (카드 전체) |
-| ⑤-기록 | 3분할 | `itemCount` "27" / "개수" · `durationSec` "42분"(1시간 넘으면 "1시간 8분") / "시간" · `distanceM` "3.1km"(1000 미만 "820m") / "거리" (`ActivityCard`) | `신규` 3분할 요약 (옛 `view_record_metrics`) + `Txt` | (카드 전체) |
+| ⑤-기록 | 3분할 | `itemCount` "27" / "개수" · `durationSec` "42분"(1시간 넘으면 "1시간 8분") / "시간" · `distanceM` "3.1km"(1000 미만 "820m") / "거리" (`ActivityCard`) | `MetricSplit` (옛 `view_record_metrics`) | (카드 전체) |
 | ⑤-기록 | 빈 수거 알약 | `itemCount` (`ActivityCard`) 가 0 일 때만 3분할 아래에 "줍기 기록 없음" | `Chip` neutral | (카드 전체) |
 | ⑤-기록 | ⋯ 버튼 | 카드 오른쪽 위. 기록 삭제만 있는 메뉴 | `Icon`(dots-horizontal) | 삭제 확인 대화상자(아래) |
 | ⑤-기록 | 카드 | 위 요소를 담는 카드. `items` (`GET /users/me/activities`) 순서 그대로(`startedAt` 내림차순) | `Card` | 5-3 활동 기록 상세 (`id`) |
 | ⑤-기록 | 다음 장 로딩 | 끝까지 스크롤하면 `nextCursor` (`GET /users/me/activities`) 로 다음 장(20개씩)을 받는 동안 목록 아래 "불러오는 중…". `nextCursor` 가 null 이면 더 받지 않는다 | `Loading` | — |
 | ⑤-게시물 | 사진 칸 | `media` (`Post`) 의 첫 장 `thumbUrl`. 3열 정사각, 옛 108dp 칸 | `신규` 정사각 그리드 칸 (옛 `item_post_grid`, `bg_photo_placeholder_square`) | 5-2 게시물 상세 (`id`) |
 | ⑤-게시물 | 글 칸 | `media` (`Post`) 가 비어 있으면 사진 대신 `text` 를 다섯 줄까지 가운데 정렬로. 넘치면 말줄임 | `Txt` micro muted | 5-2 게시물 상세 |
-| ⑤-게시물 | 나만 보기 배지 | `visibility` (`Post`) 가 PRIVATE 이면 칸 왼쪽 아래에 "🔒 나만 보기". CREW 면 그리지 않는다 | `신규` 오버레이 알약 (옛 `bg_pill_overlay`) | (칸 전체) |
+| ⑤-게시물 | 나만 보기 배지 | `visibility` (`Post`) 가 PRIVATE 이면 칸 왼쪽 아래에 "🔒 나만 보기". CREW 면 그리지 않는다 | `Chip` overlay (옛 `bg_pill_overlay`) | (칸 전체) |
 | ⑤-게시물 | 다음 장 로딩 | `nextCursor` (`GET /crew/members/{userId}/posts`) 로 다음 장(20개씩). null 이면 끝 | `Loading` | — |
 | ⑥ | 하단 탭 | 홈 · 피드 · 줍깅 · 모이깅 · 내 정보. 내 정보 선택 상태 | `BottomNav` | 각 탭 |
 

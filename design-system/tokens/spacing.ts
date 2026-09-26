@@ -50,7 +50,18 @@ export const size = {
   avatarXl: 96,
   avatarMd: 42,
   avatarSm: 30,
+  /** 원 배경 아이콘. 목록 행 · 요약 카드 · 활동 하단 바 */
+  iconCircleSm: 32,
+  iconCircleMd: 40,
+  iconCircleLg: 48,
   bottomNavHeight: 68,
+  /** 하단 내비 가운데 시작 버튼. 바 위로 `navActionLift` 만큼 솟아 다른 목적지와 구별됩니다 */
+  navAction: 52,
+  navActionLift: 18,
+  /** 서브 화면 헤더 줄 높이 */
+  appBar: 56,
+  /** 체크박스 상자. 터치 영역은 행 전체라 minTouch 보다 작아도 됩니다 */
+  checkbox: 24,
   captureFab: 76,
   /** 촬영 버튼을 배경에서 떼어내는 서피스 색 테두리 */
   captureRing: 6,

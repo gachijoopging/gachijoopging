@@ -1,7 +1,7 @@
 import { Pressable, View } from 'react-native';
 import { radius } from '../../tokens/radius.ts';
 import { space, size as sizes, navIndicatorInset } from '../../tokens/spacing.ts';
-import { useTheme, useRipple, pressedOpacity, depth } from '../theme.tsx';
+import { useTheme, useRipple, pressedOpacity, disabledOpacity, depth } from '../theme.tsx';
 import { Txt } from './Text.tsx';
 import { Icon, type IconName } from './Icon.tsx';
 import { splitBottomNavItems } from './BottomNav.ts';
@@ -124,6 +124,7 @@ export function BottomNav<T extends string>({
             minHeight: sizes.minTouch - navIndicatorInset.vertical * 2,
             alignItems: 'center',
             justifyContent: 'center',
+            // 아이콘과 라벨을 한 덩어리로 읽히게 하는 광학 간격. 4 그리드 밖이 의도입니다.
             gap: 2,
             paddingVertical: space.xs,
             borderRadius: radius.pill,
@@ -167,21 +168,21 @@ export function BottomNav<T extends string>({
             }}
             android_ripple={ripple}
             style={({ pressed }) => ({
-              width: 52,
+              width: sizes.navAction,
               minHeight: sizes.minTouch,
               alignItems: 'center',
               justifyContent: 'flex-start',
               gap: 2,
-              marginTop: -18,
-              opacity: startAction.disabled ? 0.55 : pressedOpacity(pressed),
+              marginTop: -sizes.navActionLift,
+              opacity: startAction.disabled ? disabledOpacity : pressedOpacity(pressed),
               zIndex: 1,
             })}
           >
             <View
               style={{
-                width: 52,
-                height: 52,
-                borderRadius: 26,
+                width: sizes.navAction,
+                height: sizes.navAction,
+                borderRadius: radius.pill,
                 backgroundColor: colors.lime,
                 alignItems: 'center',
                 justifyContent: 'center',

@@ -71,6 +71,8 @@ export function Field({
           multiline={multiline}
           placeholderTextColor={colors.inkHint}
           accessibilityLabel={label}
+          // 아래 문구는 별도 Txt 라 포커스가 입력창에 있으면 읽히지 않습니다. 힌트로 붙여 함께 읽힙니다.
+          accessibilityHint={error ?? hint}
           onFocus={(e) => {
             setFocused(true);
             onFocus?.(e);
@@ -94,7 +96,7 @@ export function Field({
         {endAdornment ? <View style={{ marginLeft: space.sm }}>{endAdornment}</View> : null}
       </View>
       {error ? (
-        <Txt variant="caption" tone="error">
+        <Txt variant="caption" tone="error" accessibilityLiveRegion="polite">
           {error}
         </Txt>
       ) : hint ? (

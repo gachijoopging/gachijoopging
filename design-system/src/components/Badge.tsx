@@ -36,7 +36,7 @@ function DotBase({
 
 export const Dot = memo(DotBase);
 
-export type BadgeTone = 'deep' | 'lime' | 'danger' | 'neutral';
+export type BadgeTone = 'deep' | 'lime' | 'danger' | 'neutral' | 'warn';
 
 /**
  * 숫자·짧은 라벨 배지. 아바타 모서리나 탭 위에 얹습니다.
@@ -61,6 +61,7 @@ function BadgeBase({
     // 뒤집히므로 white 를 직접 쓰지 않습니다.
     danger: { bg: colors.error, ink: colors.onError },
     neutral: { bg: colors.neutral, ink: colors.neutralInk },
+    warn: { bg: colors.warnBg, ink: colors.warnInk },
   };
   const t = tones[tone];
   return (
@@ -69,6 +70,7 @@ function BadgeBase({
         {
           minWidth: 20,
           paddingHorizontal: space.xs + 2,
+          // 12 글자를 20 높이 알약에 맞추는 광학 여백. 4 그리드로 올리면 배지가 칩처럼 커집니다.
           paddingVertical: 1,
           borderRadius: radius.pill,
           backgroundColor: t.bg,

@@ -1,38 +1,75 @@
-import { View, type ViewProps, type ViewStyle } from 'react-native';
+import { Pressable, View, type ViewProps, type ViewStyle } from 'react-native';
 import { radius } from '../../tokens/radius.ts';
 import { space } from '../../tokens/spacing.ts';
 import { borderWidth, type ShadowLevel } from '../../tokens/elevation.ts';
-import { useTheme, depth } from '../theme.tsx';
+import { useTheme, useRipple, pressedOpacity, disabledOpacity, depth } from '../theme.tsx';
 
 export type CardProps = ViewProps & {
   /** 반투명 서피스 — 사진이나 지도 위에 얹을 때 */
   translucent?: boolean;
-  /** 발언 중인 참가자 카드 (원본 `bg_card_speaking`) */
-  speaking?: boolean;
   padded?: boolean;
   level?: ShadowLevel;
+  /**
+   * 주면 카드 전체가 하나의 버튼이 됩니다. 카드 안에 따로 누르는 것을 두지 마세요 —
+   * 겹친 터치 영역은 스크린리더가 하나로 읽어 안쪽 조작에 닿을 수 없습니다.
+   */
+  onPress?: () => void;
+  disabled?: boolean;
 };
 
 export function Card({
   translucent = false,
-  speaking = false,
   padded = true,
   level = 'card',
+  onPress,
+  disabled,
   style,
+  children,
+  accessibilityLabel,
   ...rest
 }: CardProps) {
   const { colors, shadows } = useTheme();
+  const ripple = useRipple();
   const base: ViewStyle = {
     backgroundColor: translucent ? colors.surface85 : colors.surface,
     borderRadius: radius.card,
     padding: padded ? space.lg : 0,
     // 그림자가 안 그려지는 기기에서도 층이 남도록 테두리를 항상 둡니다.
     borderWidth: borderWidth.hairline,
-    borderColor: speaking ? colors.lime : colors.border,
-    ...(speaking ? { borderWidth: borderWidth.focus } : null),
+    borderColor: colors.border,
     ...depth(level, shadows[level]),
   };
-  return <View style={[base, style]} {...rest} />;
+  if (!onPress) {
+    return (
+      <View style={[base, style]} accessibilityLabel={accessibilityLabel} {...rest}>
+        {children}
+      </View>
+    );
+  }
+
+  // 그림자는 바깥 틀에, 리플은 안쪽에서 모서리로 잘라야 둘 다 보입니다.
+  // overflow: hidden 을 그림자와 같은 뷰에 주면 그림자까지 잘립니다.
+  const { padding, ...frame } = base;
+  return (
+    <View style={[frame, style]} {...rest}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={accessibilityLabel}
+        accessibilityState={{ disabled: !!disabled }}
+        onPress={onPress}
+        disabled={disabled}
+        android_ripple={disabled ? undefined : ripple}
+        style={({ pressed }) => ({
+          padding,
+          borderRadius: radius.card,
+          overflow: 'hidden',
+          opacity: disabled ? disabledOpacity : pressedOpacity(pressed),
+        })}
+      >
+        {children}
+      </Pressable>
+    </View>
+  );
 }
 
 export type TileTone = 'tint' | 'surface' | 'dark';

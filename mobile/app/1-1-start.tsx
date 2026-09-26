@@ -2,10 +2,9 @@ import { useState } from 'react';
 import { Image, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { Banner, Button, Screen, Txt, radius, space, useTheme } from 'design-system/src';
+import { Banner, Button, LinkText, Screen, Txt, radius, space, useTheme } from 'design-system/src';
 import { createMockClient, type ApiClient } from '../src/api/client';
 import { resolveDestination } from '../src/auth/destination';
-import { LinkText } from '../src/auth/LinkText';
 
 const bg = require('../../design-system/assets/legacy/start-bg.png');
 const wordmark = require('../../design-system/assets/logo-wordmark.png');

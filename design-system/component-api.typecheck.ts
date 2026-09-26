@@ -5,7 +5,15 @@ import {
   NumberStepper,
   Switch,
   IconButton,
+  IconCircle,
+  LinkText,
+  MetricSplit,
   type AppHeaderProps,
+  type BadgeTone,
+  type BannerTone,
+  type CardProps,
+  type LinkTextProps,
+  type MetricSplitProps,
   type AvatarProps,
   type ButtonProps,
   type BottomNavProps,
@@ -28,7 +36,7 @@ const iconButton: IconButtonProps = {
   icon: 'arrow-left',
   label: '뒤로 가기',
   onPress: () => {},
-  variant: 'surface',
+  tone: 'surface',
 };
 
 void AppHeader;
@@ -82,6 +90,28 @@ const numberStepper: NumberStepperProps = {
   onValidityChange: () => {},
 };
 
+const pressableCard: CardProps = { onPress: () => {}, disabled: true, accessibilityLabel: '크루 만들기' };
+const overlayChip: ChipProps = { label: '방금 촬영한 수거물', tone: 'overlay' };
+const disabledChip: ChipProps = { label: '이번 주', onPress: () => {}, disabled: true };
+const neutralBanner: BannerTone = 'neutral';
+const warnBadge: BadgeTone = 'warn';
+const link: LinkTextProps = { label: '회원가입', onPress: () => {}, tone: 'onPhoto' };
+const metrics: MetricSplitProps = {
+  items: [{ value: '27', label: '개수' }],
+  divider: 'dashed',
+  accessibilityLabel: '개수 27개',
+};
+
+void pressableCard;
+void overlayChip;
+void disabledChip;
+void neutralBanner;
+void warnBadge;
+void link;
+void metrics;
+void IconCircle;
+void LinkText;
+void MetricSplit;
 void visualVariants;
 void deepChip;
 void largeAvatar;

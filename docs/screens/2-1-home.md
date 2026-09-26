@@ -42,7 +42,7 @@
 | ① | 크루 알약 | `crew.name` (`GET /crew/home`) + 오른쪽 chevron | `Chip` + `Icon`(chevron-down) | 3-2 크루 정보 |
 | ① | 벨 | 알림 아이콘. `unreadNotifications` (`GET /crew/home`) 가 1 이상이면 오른쪽 위에 점 | `Icon`(bell-outline) + `Dot` | 2-3 알림 목록 |
 | ② | 오프라인 카드 | 평소 숨김. "!" 원 · "줍기 현황을 불러오지 못했어요" · "네트워크 연결을 확인하고 다시 시도해 주세요." · [다시 시도] | `Card` + `Txt` + `Button` ghost sm | 다시 시도 → `GET /crew/home` 재요청 |
-| ③ | 원 아이콘 | 번개 아이콘, 진한 원 배경 | `신규` 원 아이콘 배경 (옛 `bg_circle_deep`) + `Icon`(lightning-bolt) | (카드 전체) |
+| ③ | 원 아이콘 | 번개 아이콘, 진한 원 배경 | `IconCircle` deep (옛 `bg_circle_deep`) + `Icon`(lightning-bolt) | (카드 전체) |
 | ③ | 제목 | "최근 7일 우리 크루가 주운 쓰레기" | `Txt` body | (카드 전체) |
 | ③ | 큰 숫자 + 단위 | `last7d.crewItems` (`GET /crew/home`) 예: 168 · 단위 알약 "개" | `Txt` counter + `Chip` | (카드 전체) |
 | ③ | 부제 | "크루 기록 보기 ›" | `Txt` caption | (카드 전체) |
@@ -55,7 +55,7 @@
 | ⑤-a | 부제 | `live.count` 가 1 이상: "목록 보기 ›" · 0: "지금 뛰는 크루원이 없어요" | `Txt` caption strong | (카드 전체) |
 | ⑤-a | 카드 | 위 요소를 담는 작은 카드 | `Card` | 2-2 활동 중인 크루원 목록 (0 명이어도 이동) |
 | ⑤-b | 라벨 | "최근 7일\n내가 주운 쓰레기" | `Txt` caption | — |
-| ⑤-b | 숫자 + 원 아이콘 | `last7d.myItems` (`GET /crew/home`) 예: 23 · 오른쪽 주황 원에 쓰레기통 아이콘 | `Txt` display + `신규` 원 아이콘 배경 (옛 `bg_circle_avatar`) + `Icon`(delete-outline) | — |
+| ⑤-b | 숫자 + 원 아이콘 | `last7d.myItems` (`GET /crew/home`) 예: 23 · 오른쪽 주황 원에 쓰레기통 아이콘 | `Txt` display + `IconCircle` orange (옛 `bg_circle_avatar`) + `Icon`(delete-outline) | — |
 | ⑤-b | 부제 | `last7d.myByCategory` (`GET /crew/home`) 를 수량 내림차순으로 최대 3개, "담배꽁초 14 · 플라스틱 6 · 캔 3". 카테고리 이름은 `Category` 의 한글 표기. 비어 있으면 "아직 없어요" | `Txt` caption strong | — |
 | ⑤-b | 카드 | 위 요소를 담는 작은 카드 | `Card` | — |
 | ⑥ | 하단 탭 | 홈 · 피드 · 줍깅 · 모이깅 · 내 정보. 홈 선택 상태 | `BottomNav` | 각 탭 |

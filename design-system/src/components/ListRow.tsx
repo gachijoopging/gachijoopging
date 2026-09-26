@@ -3,7 +3,7 @@ import { Pressable, View } from 'react-native';
 import { radius } from '../../tokens/radius.ts';
 import { space, size as sizes } from '../../tokens/spacing.ts';
 import { borderWidth } from '../../tokens/elevation.ts';
-import { useTheme, useRipple, pressedOpacity } from '../theme.tsx';
+import { useTheme, useRipple, pressedOpacity, disabledOpacity } from '../theme.tsx';
 import { Txt } from './Text.tsx';
 import { Icon, type IconName } from './Icon.tsx';
 
@@ -20,6 +20,7 @@ function ListRowBase({
   right,
   icon,
   onPress,
+  disabled,
   divider = true,
 }: {
   title: string;
@@ -28,6 +29,7 @@ function ListRowBase({
   right?: ReactNode;
   icon?: IconName;
   onPress?: () => void;
+  disabled?: boolean;
   divider?: boolean;
 }) {
   const { colors } = useTheme();
@@ -44,6 +46,7 @@ function ListRowBase({
       }}
     >
       {left ?? (icon ? <Icon name={icon} size={22} color={colors.inkMuted} /> : null)}
+      {/* 제목과 부제를 한 줄 묶음으로 읽히게 하는 광학 간격. xs(4)면 두 항목으로 갈라져 보입니다. */}
       <View style={{ flex: 1, gap: 1 }}>
         <Txt variant="bodyLg">{title}</Txt>
         {subtitle ? (
@@ -58,18 +61,28 @@ function ListRowBase({
 
   if (!onPress) return body;
   return (
-    <PressableRow onPress={onPress}>{body}</PressableRow>
+    <PressableRow onPress={onPress} disabled={disabled}>{body}</PressableRow>
   );
 }
 
-function PressableRow({ onPress, children }: { onPress: () => void; children: ReactNode }) {
+function PressableRow({
+  onPress,
+  disabled,
+  children,
+}: {
+  onPress: () => void;
+  disabled?: boolean;
+  children: ReactNode;
+}) {
   const ripple = useRipple();
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityState={{ disabled: !!disabled }}
       onPress={onPress}
-      android_ripple={ripple}
-      style={({ pressed }) => ({ opacity: pressedOpacity(pressed) })}
+      disabled={disabled}
+      android_ripple={disabled ? undefined : ripple}
+      style={({ pressed }) => ({ opacity: disabled ? disabledOpacity : pressedOpacity(pressed) })}
     >
       {children}
     </Pressable>
@@ -93,18 +106,23 @@ function SelectRowBase({
   subtitle,
   selected,
   onPress,
+  disabled,
 }: {
   title: string;
   subtitle?: string;
   selected: boolean;
   onPress: () => void;
+  disabled?: boolean;
 }) {
   const { colors } = useTheme();
+  const ripple = useRipple();
   return (
     <Pressable
       accessibilityRole="radio"
-      accessibilityState={{ selected }}
+      accessibilityState={{ selected, disabled: !!disabled }}
       onPress={onPress}
+      disabled={disabled}
+      android_ripple={disabled ? undefined : ripple}
       style={({ pressed }) => ({
         flexDirection: 'row',
         alignItems: 'center',
@@ -115,7 +133,8 @@ function SelectRowBase({
         backgroundColor: colors.surface,
         borderWidth: borderWidth.focus,
         borderColor: selected ? colors.lime : colors.border,
-        opacity: pressedOpacity(pressed),
+        overflow: 'hidden',
+        opacity: disabled ? disabledOpacity : pressedOpacity(pressed),
       })}
     >
       <View style={{ flex: 1, gap: 1 }}>

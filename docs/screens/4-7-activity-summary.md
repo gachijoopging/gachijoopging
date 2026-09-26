@@ -46,10 +46,10 @@
 | ① | 메타 | `startedAt` · `endedAt` (`POST /activities/{id}/end`) 로 "9월 7일 (일) 09:02 – 09:48". 이어서 `pausedSec` 이 60 이상이면 " · 일시정지 4분", `steps` 가 null 이 아니면 " · 4,100걸음". 응답 전에는 기기 값으로 같은 모양 | `Txt` caption strong | — |
 | ② | 경로 지도 | `route` (`POST /activities/{id}/end`) 의 점을 이은 선. 시작점·끝점에 작은 원. 경로 전체가 들어오게 카메라를 맞추고 조작(끌기·확대)은 막는다. 높이 248dp, 둥근 모서리. `locationShared` 값과 무관하게 본인 화면이라 항상 그린다. `route` 가 비어 있으면 지도 대신 "경로가 기록되지 않았어요" 를 가운데에 | `신규` 정지 지도 (옛 `view_map_frame`, 카카오맵 · 자리 그림 `img_map_placeholder`) + `Txt` caption | — |
 | ② | 경로 라벨 | 지도 왼쪽 위 알약 "📍 이동 경로". 핀 아이콘 + 글자 | `Chip` neutral + `Icon`(map-marker-outline) (옛 `bg_chip_surface` · `ic_pin_small`) | — |
-| ③ | 줍기 개수 | `itemCount` (`POST /activities/{id}/end`) 예: 27. 아래 라벨 "줍기 개수" | `Card` + `Txt` metric + `Txt` micro (옛 `view_metric_row`, `bg_card_sm`) | — |
+| ③ | 줍기 개수 | `itemCount` (`POST /activities/{id}/end`) 예: 27. 아래 라벨 "줍기 개수" | `Card` + `MetricSplit` 한 칸 (옛 `view_metric_row`, `bg_card_sm`) | — |
 | ③ | 활동 시간 | `durationSec` (`POST /activities/{id}/end`) 을 분으로. 60초 미만 "1분 미만" · 60분 미만 "42분" · 이상 "1시간 12분". 일시정지 시간은 빼고 셈한 값이다(`pausedSec` 은 ① 메타에만). 아래 라벨 "활동 시간" | `Txt` metric + `Txt` micro | — |
 | ③ | 이동 거리 | `distanceM` (`POST /activities/{id}/end`). 1000 미만 "850m" · 이상 "3.1km"(소수 첫째 자리). 아래 라벨 "이동 거리" | `Txt` metric + `Txt` micro | — |
-| ③ | 구분선 | 세 칸 사이 세로 점선 2개 | `신규` 세로 점선 (옛 `divider_dashed_vertical`) | — |
+| ③ | 구분선 | 세 칸 사이 세로 점선 2개 | `MetricSplit` divider dashed (옛 `divider_dashed_vertical`) | — |
 | ④ | 카테고리 칩 | `byCategory` (`POST /activities/{id}/end`) 의 항목마다 칩 하나. `Category` 의 한글 표기(담배꽁초·캔·플라스틱·종이·유리·비닐·일반) + 수량, 수량 내림차순, 같으면 `Category` 순서. 0 인 카테고리는 응답에 없으니 칩도 없다. 줄이 넘치면 다음 줄로 감싼다. `itemCount` 가 0 이면 이 줄 자체를 숨긴다 | `Chip` neutral + `Icon`(smoking · cup · bottle-soda-outline · file-document-outline · bottle-wine-outline · shopping-outline · trash-can-outline) | — |
 | ⑤ | 0개 배너 | 평소 숨김. `itemCount` 가 0 일 때 ④ 자리에 "🚶 줍기 기록 없이 활동만 저장돼요. 활동 시간과 이동 거리도 소중한 기록이에요." | `Banner` info (옛 `bg_banner_info`) | — |
 | ⑥ | 동기화 칩 | 평소 숨김. 종료 요청이 기기 대기열에 있을 때 "📴 동기화 대기 중 · 연결되면 자동 업로드돼요" | `Chip` warn (옛 `Gachi.Chip.Static.Warn`) | — |

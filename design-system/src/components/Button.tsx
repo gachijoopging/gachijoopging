@@ -10,7 +10,7 @@ import { gradient } from '../../tokens/colors.ts';
 import { radius } from '../../tokens/radius.ts';
 import { space, size as sizes } from '../../tokens/spacing.ts';
 import { borderWidth } from '../../tokens/elevation.ts';
-import { useTheme, useRipple, pressedOpacity, depth } from '../theme.tsx';
+import { useTheme, useRipple, pressedOpacity, disabledOpacity, depth } from '../theme.tsx';
 import { Txt, type TextVariant } from './Text.tsx';
 import { Icon, type IconName } from './Icon.tsx';
 
@@ -67,7 +67,7 @@ export function Button({
     flexDirection: 'row',
     gap: space.sm,
     alignSelf: fullWidth ? 'stretch' : 'flex-start',
-    opacity: disabled ? 0.55 : 1,
+    opacity: disabled ? disabledOpacity : 1,
   };
 
   const fill: Record<ButtonVariant, ViewStyle> = {
@@ -183,7 +183,7 @@ export function CaptureButton({
         alignItems: 'center',
         justifyContent: 'center',
         overflow: 'hidden',
-        opacity: disabled ? 0.55 : pressedOpacity(pressed),
+        opacity: disabled ? disabledOpacity : pressedOpacity(pressed),
         ...depth('lime', shadows.lime),
       })}
     >
