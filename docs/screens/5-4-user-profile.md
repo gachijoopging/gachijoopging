@@ -64,12 +64,12 @@
 | ④ | 활동 | `totalActivities` (`GET /crew/members/{userId}`) · 아래 라벨 "활동" | `Txt` display + `Txt` micro | — |
 | ④ | 거리 | `totalDistanceM` (`GET /crew/members/{userId}`) 를 km 한 자리로. 1000 미만이면 "820m" · 아래 라벨 "거리" | `Txt` display + `Txt` micro | — |
 | ④ | 개수 | `totalItems` (`GET /crew/members/{userId}`) · 아래 라벨 "개수" | `Txt` display + `Txt` micro | — |
-| ④ | 3분할 | 위 셋을 담는 한 줄. 5-5 내 정보의 ③ 과 같은 꼴 | `Tile` | — |
+| ④ | 3분할 | 위 셋을 담는 한 줄. 5-5 내 정보의 ③ 과 같은 꼴 | `Tile` + `MetricSplit` | — |
 | ⑤ | 탭 | "기록" · "게시물" 두 개. 처음엔 "기록" 선택 | `Tabs` | 아래 ⑥⑦ 을 바꾼다 |
 | ⑥ | 활동 달력 | `activeDays` (`GET /crew/members/{userId}`) 최근 6개월(26주×7일 격자, 요일 7행·주 26열). 날짜가 배열에 있으면 채운 칸, 없으면 옅은 빈 칸. 오늘 이후 칸은 그리지 않는다. 기록 탭에서만, 목록 맨 위 | `신규` 활동 달력 격자 (옛 화면에 없음 — `MemberProfile.activeDays` 신규 필드) | — (탭 상호작용 없음) |
 | ⑦-기록 | 썸네일 | `thumbUrl` (`ActivityCard`). null 이면 새싹 아이콘 | `신규` 원 썸네일 (옛 `item_record` 의 icon 자리) | (카드 전체) |
 | ⑦-기록 | 제목 | `startedAt` (`ActivityCard`) 를 "9월 5일(금) 오후 6:02" 로 | `Txt` body strong | (카드 전체) |
-| ⑦-기록 | 3분할 | `itemCount` "27" / "개수" · `durationSec` "42분"(1시간 넘으면 "1시간 8분") / "시간" · `distanceM` "3.1km"(1000 미만 "820m") / "거리" (`ActivityCard`) | `신규` 3분할 요약 (옛 `view_record_metrics`) + `Txt` | (카드 전체) |
+| ⑦-기록 | 3분할 | `itemCount` "27" / "개수" · `durationSec` "42분"(1시간 넘으면 "1시간 8분") / "시간" · `distanceM` "3.1km"(1000 미만 "820m") / "거리" (`ActivityCard`) | `MetricSplit` (옛 `view_record_metrics`) | (카드 전체) |
 | ⑦-기록 | 빈 수거 알약 | `itemCount` (`ActivityCard`) 가 0 일 때만 "줍기 기록 없음" | `Chip` neutral | (카드 전체) |
 | ⑦-기록 | 카드 | 위 요소를 담는 카드. ⋯ 삭제 버튼 없음(내 활동이 아니라서). `items` (`GET /crew/members/{userId}/activities`) 순서 그대로 | `Card` | 5-3 활동 기록 상세 (`id`) |
 | ⑦-기록 | 다음 장 로딩 | `nextCursor` (`GET /crew/members/{userId}/activities`) 로 다음 장(20개씩). null 이면 더 받지 않음 | `Loading` | — |

@@ -6,19 +6,19 @@
 
 | 화면 | 분류 | 재사용 컴포넌트 | 레시피 | 디자인 시스템 미결 |
 |---|---|---|---|---|
-| 1-1 시작 | screen-specific | Screen, Button translucent, Txt | Root tab | 없음 |
-| 1-2 로그인 | variant | AppHeader, Field, Chip, Banner, Button | Form | 없음 |
+| 1-1 시작 | screen-specific | Screen, Button translucent, LinkText, Txt | Root tab | 없음 |
+| 1-2 로그인 | variant | AppHeader, Field, Chip, Banner, Button, LinkText | Form | 없음 |
 | 1-3 회원가입 | variant | AppHeader, Field, Checkbox, Banner, Button | Form | 없음 |
 | 1-4 닉네임 | variant | AppHeader, Field, Button | Form | 없음 |
 | 1-5 비밀번호 재설정 | variant | AppHeader, Field, Button, Banner | Form | 없음 |
-| 1-6 크루 만들기/가입 | screen-specific | Screen, Button, Card, Tabs | List/detail | 없음 |
-| 1-7 크루 만들기 | variant | AppHeader, Field, Avatar, Button | Form | 없음 |
+| 1-6 크루 만들기/가입 | screen-specific | Screen, Button, Card onPress, Banner neutral | List/detail | 없음 |
+| 1-7 크루 만들기 | variant | AppHeader, Field, Avatar, Button, Banner neutral | Form | 없음 |
 | 1-8 초대 코드 입력 | variant | AppHeader, Chip deep, Field, Button | Form | 없음 |
-| 1-9 승인 대기 | screen-specific | Screen, Card, Button, Banner | Overlay | 없음 |
+| 1-9 승인 대기 | screen-specific | Screen, Card, Button, Banner neutral | Overlay | 없음 |
 | 1-10 위치 권한 | screen-specific | Screen, Button, Banner | Overlay | 없음 |
-| 2-1 홈 | screen-specific | BottomNav, Card, Tile, Progress, Badge | Root tab | 없음 |
-| 2-2 활동 중인 크루원 | feature shared | AppHeader, Avatar, Badge, ListRow | List/detail | 지도·마커는 기능 UI |
-| 2-3 알림 | feature shared | AppHeader, List, ListRow, Badge, EmptyState | List/detail | 알림별 원 아이콘 배경은 기능 조합 |
+| 2-1 홈 | screen-specific | BottomNav, Card, Tile, Progress, Badge, IconCircle | Root tab | 없음 |
+| 2-2 활동 중인 크루원 | feature shared | AppHeader, Avatar, Badge, ListRow, Banner neutral | List/detail | 지도·마커는 기능 UI |
+| 2-3 알림 | feature shared | AppHeader, List, ListRow, Badge, EmptyState, IconCircle | List/detail | 없음 |
 | 3-1 크루 | screen-specific | BottomNav, Card, Tile, ListRow | Root tab | 없음 |
 | 3-2 크루 정보 | feature shared | AppHeader, Avatar, Card, Tabs, ListRow | List/detail | 크루 소개/사진 조합은 기능 UI |
 | 3-3 초대 코드 | feature shared | AppHeader, Card, Button, Snackbar | Overlay | QR 렌더링은 기능 UI |
@@ -26,29 +26,29 @@
 | 3-5 공지 목록 | feature shared | AppHeader, List, ListRow, EmptyState, Badge | List/detail | 없음 |
 | 3-6 공지 상세 | feature shared | AppHeader, Card, ListRow, BottomSheet, Snackbar | List/detail | 댓글 렌더링은 기능 UI |
 | 3-7 크루 채팅 | feature shared | AppHeader, Field, IconButton, Badge, Snackbar | Form | 말풍선·소켓 목록은 기능 UI |
-| 3-8 가입 요청 관리 | feature shared | AppHeader, ListRow, Avatar, Button, Dialog | List/detail | 없음 |
+| 3-8 가입 요청 관리 | feature shared | AppHeader, ListRow, Avatar, Button, Dialog, Banner neutral | List/detail | 없음 |
 | 3-9 활동 달력 | feature shared | AppHeader, Tabs, Card, EmptyState | Metrics | 7열 달력 격자는 기능 UI |
 | 3-10 크루 정보 수정 | variant | AppHeader, Avatar xl, Field, Tile, Button, BottomSheet, Dialog | Form | 직접 숫자 입력 검증은 화면 계약 |
-| 3-11 크루원 관리 | feature shared | AppHeader, ListRow, Avatar, BottomSheet, Dialog | List/detail | 역할별 액션은 기능 UI |
+| 3-11 크루원 관리 | feature shared | AppHeader, ListRow, Avatar, BottomSheet, Dialog, Banner neutral | List/detail | 역할별 액션은 기능 UI |
 | 3-12 공지 수정 | variant | AppHeader, Field, Button, Dialog, Snackbar | Form | 없음 |
 | 4-1 줍깅 대기 | screen-specific | BottomNav, Card, Button, EmptyState | Root tab | 빈 상태 캐릭터는 기능 UI |
 | 4-2 활동 시작 시트 | feature shared | BottomSheet, Tile, Switch, Button, Banner | Overlay | Tile 전체 토글 제어는 화면 조합 |
-| 4-3 활동 중 | screen-specific | Card, Chip, Badge, Dot, IconButton, Txt | Metrics | 지도·경로·OS 알림·전용 하단 바는 기능 UI |
+| 4-3 활동 중 | screen-specific | Card, MetricSplit, Chip, Badge, Dot, IconButton, IconCircle, Button danger | Metrics | 지도·경로·OS 알림·전용 하단 바는 기능 UI |
 | 4-4 사진 촬영 | screen-specific | IconButton translucent, CaptureButton, Button, Snackbar | Overlay | 카메라 프리뷰·가이드는 기능 UI |
-| 4-5 AI 분류 확인 | feature shared | AppHeader, Card, NumberStepper, Button, Banner | Form | 카테고리 격자·AI 배지는 기능 UI |
+| 4-5 AI 분류 확인 | feature shared | AppHeader, Card, NumberStepper, Button, Banner, Chip overlay | Form | 카테고리 격자·AI 배지는 기능 UI |
 | 4-6 빠른 줍기 시트 | feature shared | BottomSheet, NumberStepper, Button, Snackbar | Overlay | 카테고리 격자·최근 작업은 기능 UI |
-| 4-7 활동 요약 | feature shared | Card, Tile, Button, Snackbar | Metrics | 정지 지도·경로는 기능 UI |
+| 4-7 활동 요약 | feature shared | Card, Tile, MetricSplit, Button, Snackbar | Metrics | 정지 지도·경로는 기능 UI |
 | 5-1 피드 | screen-specific | BottomNav, Card, Avatar, Chip, Badge, EmptyState | Root tab | 게시물 사진/카드는 기능 UI |
 | 5-2 게시물 상세 | feature shared | AppHeader, IconButton, Card, Chip, BottomSheet, Snackbar | List/detail | 사진 페이저·댓글은 기능 UI |
 | 5-3 활동 기록 상세 | feature shared | AppHeader, Card, Tile, Chip, Button | Metrics | 지도·기록 시각화는 기능 UI |
-| 5-4 타인 프로필 | feature shared | AppHeader, Avatar, Tabs, Card, List, BottomSheet | List/detail | 활동 달력·게시물 그리드는 기능 UI |
-| 5-5 내 정보 | feature shared | BottomNav, Avatar, Tabs, Card, Tile, IconButton | Root tab | 활동/게시물 그리드는 기능 UI |
+| 5-4 타인 프로필 | feature shared | AppHeader, Avatar, Tabs, Card, List, BottomSheet, MetricSplit | List/detail | 활동 달력·게시물 그리드는 기능 UI |
+| 5-5 내 정보 | feature shared | BottomNav, Avatar, Tabs, Card, Tile, IconButton, MetricSplit, Chip overlay | Root tab | 활동/게시물 그리드는 기능 UI |
 | 5-6 게시물 작성 | variant | AppHeader, Field, Button, Dialog, Snackbar | Form | 다중 사진 선택·정렬은 기능 UI |
 | 5-7 설정 | variant | AppHeader, ListRow, Switch, Button, Dialog, Snackbar | List/detail | 행 전체 토글 조합은 화면 책임 |
 | 5-8 프로필 수정 | variant | AppHeader, Avatar xl, Field, BottomSheet, Button, Dialog | Form | 사진 선택은 기능 UI |
 | 5-9 차단 관리 | feature shared | AppHeader, List, ListRow, Avatar, Dialog, EmptyState | List/detail | 없음 |
 | 6-1 신고 | variant | AppHeader, Card, Avatar, SelectRow, Field, Button, Banner, Snackbar | Form | 대상 썸네일은 기능 UI |
-| 6-2 신고 처리 | feature shared | AppHeader, Card, ListRow, Button, Dialog, Snackbar | List/detail | 신고 대상별 미리보기는 기능 UI |
+| 6-2 신고 처리 | feature shared | AppHeader, Card, ListRow, Button, Dialog, Snackbar, Badge warn | List/detail | 신고 대상별 미리보기는 기능 UI |
 
 ## 경계 검증
 

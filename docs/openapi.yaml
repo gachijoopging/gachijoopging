@@ -412,7 +412,7 @@ paths:
           description: OK
           content:
             application/json:
-              schema: { type: object, properties: { data: { $ref: '#/components/schemas/JoinRequest', nullable: true } } }
+              schema: { type: object, properties: { data: { anyOf: [{ $ref: '#/components/schemas/JoinRequest' }, { type: object, nullable: true, enum: [null] }] } } }
               example: { data: { id: jr001, crew: { id: c001, name: 한강줍깅크루 }, user: { id: u001, nickname: 관열, photoUrl: null, withdrawn: false }, status: PENDING, createdAt: 2026-09-15T10:00:00Z } }
     delete:
       tags: [crew]

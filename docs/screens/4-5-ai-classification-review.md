@@ -44,7 +44,7 @@
 | ① | 뒤로 버튼 | 헤더 왼쪽 | `AppHeader` (옛 view_screen_header 의 backButton, `ic_back`) | 버림 확인 다이얼로그(인터랙션 참고) |
 | ① | 헤더 제목 | "AI 분류 확인" | `AppHeader` (옛 view_screen_header 의 headerTitle) | — |
 | ② | 사진 | 4-4 에서 받은 `url` (`POST /media`). 가로 폭을 채우고 비율 유지, 최대 높이 520dp. 받기 전엔 `thumbUrl` 을 먼저 보이고 도착하면 바꾼다. 둥근 모서리, 살짝 그림자 | `Card` (옛 `bg_photo_placeholder`, ClipOutlineFrameLayout) | — |
-| ② | 사진 배지 | "방금 촬영한 수거물". 사진 왼쪽 아래, 어두운 반투명 알약에 흰 글자 | `신규` 사진 위 알약 (옛 `bg_pill_overlay`) | — |
+| ② | 사진 배지 | "방금 촬영한 수거물". 사진 왼쪽 아래, 어두운 반투명 알약에 흰 글자 | `Chip` overlay (옛 `bg_pill_overlay`) | — |
 | ③ | 안내 배너 | 평소 숨김. 아래 배너 표의 한 가지만 사진 아래에 나타난다 | `Banner` info / warn | — |
 | ④ | 질문 | "맞게 분류됐나요?" | `Txt` section | — |
 | ④ | 찾은 개수 | 질문 오른쪽. `inference.items` (`POST /media`) 의 개수 N 으로 "AI 가 N개 찾았어요". N 이 0 이거나 `inference.status` 가 UNAVAILABLE 이면 숨긴다 | `Txt` caption muted | — |

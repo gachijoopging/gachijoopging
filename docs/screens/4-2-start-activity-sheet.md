@@ -35,7 +35,7 @@
 | 구역 | 요소 | 내용 (계약 필드) | 컴포넌트 | 탭하면 |
 |---|---|---|---|---|
 | — | 시트 | 위 모서리만 둥근 바닥 시트. 스크림이 4-1 을 덮는다 | `BottomSheet` | 스크림 → 닫기(4-1) |
-| ① | 손잡이 | 가운데 44×5dp 막대 | `BottomSheet` 기본 손잡이 (옛 `Gachi.SheetHandle`) | 아래로 끌면 닫기 |
+| ① | 손잡이 | 가운데 44×4dp 막대 | `BottomSheet` 기본 손잡이 (옛 `Gachi.SheetHandle`) | 아래로 끌면 닫기 |
 | ② | 제목 | 고정 문구 "활동을 시작할까요?" 왼쪽 정렬, 섹션 제목 크기 | `Txt` title | — |
 | ③ | 위치 공유 토글 | 스위치 + 라벨 "크루원에게 위치 공유" + 설명 "켜면 활동 중 내 위치와 경로가 크루원 지도에 보여요. 꺼도 내 기록에는 경로가 남아요." 초깃값은 `settings.shareLocationDefault` (`GET /users/me`). 타일 전체가 터치 영역이고 스위치 자체는 눌리지 않는다(옛 Gachi.Switch 의 clickable=false 그대로) | `Tile` tint + `Switch` + `Txt` bodyLg + `Txt` caption | 켬↔끔. 이 시트 안에서만 바뀌고 설정값(`shareLocationDefault`)은 건드리지 않는다 |
 | ④ | 위치 상태 | 위치 아이콘 + 한 줄. 첫 위치가 아직 안 들어왔으면 "위치를 잡고 있어요…" 흐린 글자, 들어왔으면 "위치 준비됨" 초록 글자. 시작을 막지는 않는다(아래 상태 표) | `Icon`(crosshairs-gps) + `Txt` caption | — |
