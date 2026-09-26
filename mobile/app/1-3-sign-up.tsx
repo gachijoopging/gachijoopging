@@ -2,13 +2,11 @@ import { useState } from 'react';
 import { View } from 'react-native';
 import { router } from 'expo-router';
 import { AppHeader, Banner, Button, Chip, Field, Screen, Txt } from 'design-system/src';
-import { createMockClient, type ApiClient } from '../src/api/client';
+import { onboardingApi as api } from '../src/api/onboarding';
 import { AgreementFields } from '../src/auth/AgreementFields';
 import { resolveDestination } from '../src/auth/destination';
 import { mapSignupError } from '../src/auth/errors';
 import { validateEmail, validateNickname, validatePassword } from '../src/auth/validators';
-
-const api: ApiClient = createMockClient({ delayMs: 300 });
 
 export default function SignUpScreen() {
   const [email, setEmail] = useState('');

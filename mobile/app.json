@@ -12,6 +12,10 @@
     ],
     "android": {
       "package": "site.gachijoopging.app",
+      "permissions": [
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION"
+      ],
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -23,6 +27,7 @@
     "plugins": [
       "expo-router",
       "expo-font",
+      "expo-notifications",
       "expo-dev-client",
       "@react-native-vector-icons/material-design-icons",
       "expo-splash-screen",

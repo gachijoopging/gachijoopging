@@ -40,6 +40,17 @@ export function mapNicknameError(error: unknown): NicknameFieldError {
   return { banner: '저장하지 못했어요. 다시 시도해 주세요.' };
 }
 
+export type CrewCreateError = { field?: string; banner?: string; alreadyInCrew?: boolean };
+
+/** 1-7 크루 만들기 */
+export function mapCrewCreateError(error: unknown): CrewCreateError {
+  if (error instanceof ApiError) {
+    if (error.code === 'ALREADY_IN_CREW') return { banner: '이미 크루에 소속돼 있어요.', alreadyInCrew: true };
+    if (error.code === 'VALIDATION') return { field: '크루 이름을 다시 확인해 주세요.' };
+  }
+  return { banner: '크루를 만들지 못했어요. 네트워크 상태를 확인하고 다시 시도해 주세요.' };
+}
+
 /** 1-5 A 재설정 메일 발송 — 서버는 항상 204 라 실패는 네트워크·서버 오류뿐이다 */
 export function resetRequestErrorMessage(): string {
   return '메일 발송에 실패했어요. 잠시 후 다시 시도해 주세요.';

@@ -2,13 +2,11 @@ import { useState } from 'react';
 import { View } from 'react-native';
 import { router } from 'expo-router';
 import { AppHeader, Banner, Button, Chip, Field, Screen, Txt, space } from 'design-system/src';
-import { createMockClient, type ApiClient } from '../src/api/client';
+import { onboardingApi as api } from '../src/api/onboarding';
 import { AgreementFields } from '../src/auth/AgreementFields';
 import { resolveDestination } from '../src/auth/destination';
 import { mapNicknameError } from '../src/auth/errors';
 import { validateNickname } from '../src/auth/validators';
-
-const api: ApiClient = createMockClient({ delayMs: 300 });
 
 export default function NicknameScreen() {
   const [nickname, setNickname] = useState('');
@@ -26,8 +24,9 @@ export default function NicknameScreen() {
     setBanner(undefined);
     setLoading(true);
     try {
-      const saved = await api.mutate('PATCH /users/me', { nickname: nickname.trim() });
-      router.replace(resolveDestination(saved.data));
+      await api.mutate('PATCH /users/me', { nickname: nickname.trim() });
+      const me = await api.get('GET /users/me');
+      router.replace(resolveDestination(me.data));
     } catch (error) {
       const mapped = mapNicknameError(error);
       setNicknameError(mapped.field);

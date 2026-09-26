@@ -3,13 +3,11 @@ import { Image, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { Banner, Button, LinkText, Screen, Txt, radius, space, useTheme } from 'design-system/src';
-import { createMockClient, type ApiClient } from '../src/api/client';
+import { onboardingApi as api } from '../src/api/onboarding';
 import { resolveDestination } from '../src/auth/destination';
 
 const bg = require('../../design-system/assets/legacy/start-bg.png');
 const wordmark = require('../../design-system/assets/logo-wordmark.png');
-
-const api: ApiClient = createMockClient({ delayMs: 300 });
 
 /** 워드마크 뒤 광원 지름. 워드마크(270)보다 넉넉히 커야 은은하게 번지는 것처럼 보인다 */
 const GLOW_SIZE = 220;

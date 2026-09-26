@@ -1,8 +1,9 @@
-import type { ReactNode } from 'react';
+import type { ReactElement, ReactNode } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  type RefreshControlProps,
   View,
   useWindowDimensions,
   type ViewStyle,
@@ -31,6 +32,7 @@ export type ScreenProps = {
   children: ReactNode;
   /** 내용이 길어 스크롤이 필요하면 true. 목록 화면은 List 를 쓰세요 */
   scroll?: boolean;
+  refreshControl?: ReactElement<RefreshControlProps>;
   /**
    * 안전 영역을 적용할 변. 하단 내비가 있는 화면은 'bottom' 을 빼고
    * 내비 쪽에서 처리합니다.
@@ -45,6 +47,7 @@ export type ScreenProps = {
 export function Screen({
   children,
   scroll = false,
+  refreshControl,
   edges = ['top', 'bottom', 'left', 'right'],
   bleed = false,
   style,
@@ -66,6 +69,7 @@ export function Screen({
       contentContainerStyle={[inner, { paddingBottom: screen.scrollBottom }, contentStyle]}
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+      refreshControl={refreshControl}
     >
       {children}
     </ScrollView>

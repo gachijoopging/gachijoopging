@@ -1,11 +1,25 @@
 import { MOCKS, type MockKey } from './mocks.generated';
+import type { MembershipStatus } from '../auth/destination';
+import type { JoinRequestStatus } from '../auth/pending-request';
+
+type MeData = (typeof MOCKS)['GET /users/me']['data'];
+type JoinRequestData = (typeof MOCKS)['GET /crews/join-requests/mine']['data'];
+export type ApiResponse<K extends MockKey> =
+  K extends 'GET /users/me' ? { data: Omit<MeData, 'membership'> & {
+    membership: { status: MembershipStatus; crew: MeData['membership']['crew'] | null };
+  } } : K extends 'GET /crews/join-requests/mine' ? {
+    data: (Omit<JoinRequestData, 'status'> & { status: JoinRequestStatus }) | null;
+  } : (typeof MOCKS)[K];
 
 /** 목에 example 이 없는 204 전용 경로. 성공해도 돌려줄 데이터가 없다 */
-export type VoidMutationKey = 'POST /auth/password-reset' | 'POST /auth/password-reset/confirm';
+export type VoidMutationKey =
+  | 'POST /auth/password-reset'
+  | 'POST /auth/password-reset/confirm'
+  | 'DELETE /crews/join-requests/mine';
 export type MutationKey = MockKey | VoidMutationKey;
 
 export type ApiClient = {
-  get<K extends MockKey>(key: K): Promise<(typeof MOCKS)[K]>;
+  get<K extends MockKey>(key: K, query?: unknown): Promise<ApiResponse<K>>;
   /** POST·PATCH 등 GET 이외의 요청. 키는 `METHOD /경로` 그대로다 */
   mutate<K extends MutationKey>(key: K, body?: unknown): Promise<K extends MockKey ? (typeof MOCKS)[K] : void>;
 };
@@ -40,7 +54,7 @@ export function createMockClient({ delayMs = 0, failing = [] }: MockOptions = {}
     async get(key) {
       if (delayMs > 0) await wait(delayMs);
       if (failing.includes(key)) throw new ApiError('MOCK_FAILURE');
-      return MOCKS[key];
+      return MOCKS[key] as ApiResponse<typeof key>;
     },
     async mutate(key) {
       if (delayMs > 0) await wait(delayMs);

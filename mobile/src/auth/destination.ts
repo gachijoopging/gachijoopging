@@ -6,7 +6,7 @@ export type Me = {
   membership?: { status: MembershipStatus } | null;
 };
 
-export type Destination = '/1-4-nickname' | '/1-6-crew-onboarding' | '/1-9-pending' | '/(tabs)';
+export type Destination = '/1-4-nickname' | '/1-6-create-or-join-crew' | '/1-9-pending-approval' | '/(tabs)';
 
 /**
  * 1-1·1-2·1-4 가 공유하는 진입 분기. `profileComplete` 는 닉네임 설정 완료만 뜻하고
@@ -18,10 +18,10 @@ export function resolveDestination(me: Me): Destination {
 
   switch (me.membership?.status) {
     case 'PENDING':
-      return '/1-9-pending';
+      return '/1-9-pending-approval';
     case 'MEMBER':
       return '/(tabs)';
     default:
-      return '/1-6-crew-onboarding';
+      return '/1-6-create-or-join-crew';
   }
 }

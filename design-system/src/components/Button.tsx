@@ -123,7 +123,7 @@ export function Button({
       accessibilityState={{ disabled: !!off, busy: loading }}
       disabled={off}
       hitSlop={s.slop}
-      android_ripple={off ? undefined : ripple}
+      android_ripple={ripple}
       style={({ pressed }) => [
         {
           opacity: off ? 1 : pressedOpacity(pressed),
@@ -135,9 +135,9 @@ export function Button({
       ]}
       {...rest}
     >
-      {variant === 'primary' && !off ? (
+      {variant === 'primary' ? (
         <LinearGradient
-          colors={gradient.primary.colors}
+          colors={off ? [colors.track, colors.track] : gradient.primary.colors}
           start={gradient.primary.start}
           end={gradient.primary.end}
           style={shell}
@@ -145,7 +145,7 @@ export function Button({
           {inner}
         </LinearGradient>
       ) : (
-        <View style={[shell, variant === 'primary' ? { backgroundColor: colors.track } : fill[variant]]}>
+        <View style={[shell, fill[variant]]}>
           {inner}
         </View>
       )}
