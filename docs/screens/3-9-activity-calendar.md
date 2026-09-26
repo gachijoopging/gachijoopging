@@ -33,7 +33,7 @@
 | ② | 이전·다음 월 버튼 | "이전 달" / "다음 달". month (`GET /crew/calendar`)를 YYYY-MM으로 바꾼다 | `Icon`(chevron-left) + `Icon`(chevron-right) | 해당 월 재조회 |
 | ② | 월 제목 | 선택된 month를 "2026년 9월"로 표시 | `Txt` section | — |
 | ③ | 날짜 칸 | 해당 날짜의 `days[].date`·`days[].items` (`GET /crew/calendar`). 활동이 없으면 수량 표시 없음, 수량이 많을수록 진한 배경 | `신규` 7열 달력 격자 + `Txt` | ④ 갱신 |
-| ③ | 오늘 표시 | 오늘 날짜에 테두리. 미래 날짜는 비활성 | `Badge` outline | — |
+| ③ | 오늘 표시 | 오늘 날짜에 테두리. 미래 날짜는 비활성 | 달력 격자(기능 UI)가 칸 테두리로 직접 그림 | — |
 | ④ | 선택 날짜 요약 | 선택한 `days[].date`의 `days[].activityCount`·`days[].items` 서버 합계. "9월 5일 · 활동 2건 · 47개" | `Txt` subtitle | — |
 | ④ | 활동 행 | `activities[].user.photoUrl`·`user.nickname`·`items`·`distanceM`·`activityId` | `ListRow` + `Avatar` sm + `Txt` | 5-3 |
 | ④ | 활동 크루원 | `user.photoUrl` null이면 `user.nickname` 첫 글자 | `Avatar` sm + `Txt` | 5-4 |

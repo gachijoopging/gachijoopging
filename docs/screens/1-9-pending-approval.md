@@ -36,7 +36,7 @@
 | ③ | 안내 문구 | "크루장이 승인하면 크루원이 돼요." / "앱을 닫아도 신청은 그대로 남아요." | `Banner` neutral | — |
 | ④ | 신청 취소 버튼 | "신청 취소". 신청이 PENDING일 때만 보인다 | `Button` ghost lg | 확인 대화상자 → `DELETE /crews/join-requests/mine` → 1-6 |
 
-| ⑤ | 상태 확인 | 승인 상태 확인 | `Button` secondary lg | 신청 상태·내 소속 재조회 |
+| ⑤ | 상태 확인 | 승인 상태 확인 | `Button` soft lg | 신청 상태·내 소속 재조회 |
 
 `GET /crews/join-requests/mine`의 `data.status`가 PENDING이면 이 화면을 유지한다. APPROVED면 `GET /users/me` 재확인 뒤 MEMBER 분기로, REJECTED면 이 화면에 거절 설명·크루 선택하기를 유지한다. CANCELED 또는 `data` null이면 신청 없음 안내와 크루 선택하기를 표시한다.
 

@@ -43,7 +43,7 @@
 | ② | 활동 수 | `GET /crew/live` 배열의 길이. "지금 2명이 활동 중이에요" · 1명이면 "지금 1명이 활동 중이에요" | `Txt` subtitle | — |
 | ③ | 크루원 행 | `user.photoUrl`·`user.nickname`·`activityId`·`startedAt`·`elapsedSec`·`distanceM`·`itemCount`·`paused`·`locationShared`·`location` (`GET /crew/live`) | `ListRow` + `Avatar` + `Badge` | 5-4 |
 | ③ | 아바타·닉네임 | `user.photoUrl`이 null이면 `user.nickname` 첫 글자. 닉네임 "상혁" | `Avatar` md + `Txt` body strong | 5-4 |
-| ③ | 활동 상태 | `paused` false면 "활동 중", true면 "일시정지" | `Badge` green / neutral | — |
+| ③ | 활동 상태 | `paused` false면 "활동 중", true면 "일시정지" | `Badge` deep / neutral | — |
 | ③ | 진행 지표 | `distanceM` 1000 미만은 "400m", 이상은 "1.2km" · `elapsedSec`은 "15분" 또는 "1시간 8분" · `itemCount`는 "9개" | `Txt` caption | — |
 | ③ | 위치 공유 상태 | `locationShared`가 false면 "위치를 공유하지 않아요". true이고 `location`이 없으면 "위치를 확인하고 있어요", 좌표가 있으면 "위치 공유 중" | `Txt` micro + `Dot` | — |
 | ④ | 안내 문구 | "활동 중인 크루원의 위치는 위치 공유를 켠 경우에만 보여요." | `Banner` neutral | — |

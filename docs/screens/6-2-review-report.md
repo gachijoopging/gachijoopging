@@ -34,7 +34,7 @@
 | ② | 불러온 대기 수 | `GET /crew/reports`에서 현재까지 불러온 `items` 길이. "불러온 대기 신고 1건". 다음 장이 있으면 전체 수로 표현하지 않는다 | `Txt` section | — |
 | ③ | 신고 행 | `id`·`reporter.photoUrl`·`reporter.nickname`·`targetType`·`targetPreview`·`reason`·`memo`·`createdAt` (`GET /crew/reports`) | `Card` + `Avatar` sm + `Txt` + `Badge` | ④ 펼치기 |
 | ③ | 대상 요약 | `targetType`별 "게시물 신고"·"댓글 신고"·"공지 댓글 신고"·"크루 채팅 신고"·"사용자 신고". 아래는 `targetPreview`. 대상 작성자 이름이 별도 필드로 없으므로 신고자 닉네임을 대상 이름으로 쓰지 않는다 | `Txt` body strong + `Txt` caption | — |
-| ③ | 사유·접수 시각 | `reason`을 "스팸·도배"·"혐오·욕설"·"부적절한 사진"·"사생활 침해"·"기타"로, `createdAt`을 "9월 2일"로 표시 | `Badge` warning + `Txt` micro | — |
+| ③ | 사유·접수 시각 | `reason`을 "스팸·도배"·"혐오·욕설"·"부적절한 사진"·"사생활 침해"·"기타"로, `createdAt`을 "9월 2일"로 표시 | `Badge` warn + `Txt` micro | — |
 | ④ | 신고 상세 | `reporter.nickname`·`targetPreview`·`memo`. memo null이면 "상세 메모 없음" | `Card` + `Txt` | — |
 | ⑤ | 기각 버튼 | "기각". 대상은 유지하고 신고만 처리 | `Button` ghost lg | 확인 대화상자 → `POST /crew/reports/{reportId}` (`result` DISMISS) |
 | ⑤ | 대상 삭제 버튼 | "대상 삭제". USER 신고에는 숨긴다 | `Button` primary lg | 확인 대화상자 → `POST /crew/reports/{reportId}` (`result` DELETE) |
