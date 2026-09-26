@@ -1,7 +1,9 @@
 import { Pressable, type ViewStyle } from 'react-native';
-import { size as sizes, useRipple, pressedOpacity, Txt, type TextTone } from 'design-system/src';
+import { size as sizes } from '../../tokens/spacing.ts';
+import { useRipple, pressedOpacity, disabledOpacity } from '../theme.tsx';
+import { Txt, type TextTone } from './Text.tsx';
 
-type LinkTextProps = {
+export type LinkTextProps = {
   label: string;
   onPress: () => void;
   disabled?: boolean;
@@ -26,7 +28,7 @@ export function LinkText({ label, onPress, disabled, tone = 'ink', bold, accessi
       disabled={disabled}
       android_ripple={disabled ? undefined : ripple}
       style={({ pressed }) => [
-        { minHeight: sizes.minTouch, alignItems: 'center', justifyContent: 'center', opacity: disabled ? 0.55 : pressedOpacity(pressed) },
+        { minHeight: sizes.minTouch, alignItems: 'center', justifyContent: 'center', opacity: disabled ? disabledOpacity : pressedOpacity(pressed) },
         style,
       ]}
     >

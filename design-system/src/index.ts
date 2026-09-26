@@ -1,6 +1,6 @@
 export * from '../tokens/index.ts';
 
-export { ThemeProvider, useTheme, useRipple, pressedOpacity, depth } from './theme.tsx';
+export { ThemeProvider, useTheme, useRipple, pressedOpacity, disabledOpacity, depth } from './theme.tsx';
 export type { Scheme, Theme } from './theme.tsx';
 
 export { Txt } from './components/Text.tsx';
@@ -10,7 +10,7 @@ export { Icon } from './components/Icon.tsx';
 export type { IconName, IconProps } from './components/Icon.tsx';
 
 export { IconButton } from './components/IconButton.tsx';
-export type { IconButtonProps, IconButtonVariant } from './components/IconButton.tsx';
+export type { IconButtonProps, IconButtonTone } from './components/IconButton.tsx';
 
 export { AppHeader } from './components/AppHeader.tsx';
 export type { AppHeaderProps } from './components/AppHeader.tsx';
@@ -60,3 +60,12 @@ export { List } from './components/List.tsx';
 export type { ListProps } from './components/List.tsx';
 
 export { Snackbar } from './components/Snackbar.tsx';
+
+export { LinkText } from './components/LinkText.tsx';
+export type { LinkTextProps } from './components/LinkText.tsx';
+
+export { IconCircle } from './components/IconCircle.tsx';
+export type { IconCircleTone, IconCircleSize } from './components/IconCircle.tsx';
+
+export { MetricSplit } from './components/MetricSplit.tsx';
+export type { MetricItem, MetricSplitProps } from './components/MetricSplit.tsx';
