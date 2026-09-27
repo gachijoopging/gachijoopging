@@ -77,7 +77,8 @@ export function Button({
     ghost: {
       backgroundColor: colors.transparent,
       borderWidth: borderWidth.hairline,
-      borderColor: colors.border,
+      // border 는 카드 층 신호용(배경 위 1.01:1)이라 채움 없는 버튼의 경계로는 안 보인다
+      borderColor: colors.inkHint,
     },
     deep: { backgroundColor: colors.deep },
     danger: { backgroundColor: colors.error },
