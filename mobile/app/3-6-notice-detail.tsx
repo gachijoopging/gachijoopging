@@ -1,7 +1,7 @@
 import * as Crypto from 'expo-crypto';
 import { router, useLocalSearchParams, useNavigation } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { RefreshControl, View } from 'react-native';
+import { RefreshControl, ScrollView, View } from 'react-native';
 import {
   AppHeader,
   Avatar,
@@ -129,7 +129,7 @@ export default function NoticeDetailScreen() {
   const targetAction = commentTarget && me ? commentAction({ authorId: commentTarget.author.id, meId: me.id, isLeader: me.isLeader }) : null;
 
   return (
-    <Screen scroll refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load('pull')} />}>
+    <Screen>
       <AppHeader
         title="공지 상세"
         onBack={() => router.back()}
@@ -156,46 +156,55 @@ export default function NoticeDetailScreen() {
         )
       ) : (
         <>
-          <View
-            accessible
-            accessibilityLabel={[notice.pinned ? '최신 공지' : '', notice.title, monthDay(notice.createdAt)].filter(Boolean).join(', ')}
-            style={{ gap: space.xs }}
+          {/* 댓글 입력은 목록 길이와 상관없이 바닥(키보드 위)에 고정한다 */}
+          <ScrollView
+            style={{ flex: 1 }}
+            contentContainerStyle={{ gap: space.md, paddingBottom: space.md }}
+            keyboardShouldPersistTaps="handled"
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load('pull')} />}
           >
-            {notice.pinned ? <Badge label="최신" tone="deep" style={{ alignSelf: 'flex-start' }} /> : null}
-            <Txt variant="display">{notice.title}</Txt>
-            <Txt variant="caption" tone="muted">{monthDay(notice.createdAt)}</Txt>
-          </View>
-          {failed ? <Banner tone="warn">인터넷 연결을 확인해 주세요.</Banner> : null}
-          <Txt variant="body">{notice.body}</Txt>
+            <View
+              accessible
+              accessibilityLabel={[notice.pinned ? '최신 공지' : '', notice.title, monthDay(notice.createdAt)].filter(Boolean).join(', ')}
+              style={{ gap: space.xs }}
+            >
+              {notice.pinned ? <Badge label="최신" tone="deep" style={{ alignSelf: 'flex-start' }} /> : null}
+              <Txt variant="display">{notice.title}</Txt>
+              <Txt variant="caption" tone="muted">{monthDay(notice.createdAt)}</Txt>
+            </View>
+            {failed ? <Banner tone="warn">인터넷 연결을 확인해 주세요.</Banner> : null}
+            <Txt variant="body">{notice.body}</Txt>
 
-          <View>
-            <Txt variant="section" bold>댓글 {comments.length}개</Txt>
-            {comments.length === 0 ? (
-              <Txt variant="caption" tone="muted">아직 댓글이 없어요.</Txt>
-            ) : (
-              comments.map((c) => (
-                <ListRow
-                  key={c.id}
-                  title={c.author.nickname}
-                  subtitle={c.text}
-                  left={<Avatar name={c.author.nickname} uri={c.author.photoUrl ?? undefined} size="sm" />}
-                  right={
-                    <IconButton
-                      icon="dots-horizontal"
-                      label="댓글 메뉴"
-                      disabled={sending || !me}
-                      onPress={() => setCommentTarget(c)}
-                    />
-                  }
-                  chevron={false}
-                  accessibilityLabel={`${c.author.nickname}, ${monthDay(c.createdAt)}, ${c.text}`}
-                  onPress={() => openAuthor(c.author.id)}
-                />
-              ))
-            )}
-          </View>
+            <View>
+              <Txt variant="section" bold>댓글 {comments.length}개</Txt>
+              {comments.length === 0 ? (
+                <Txt variant="caption" tone="muted">아직 댓글이 없어요.</Txt>
+              ) : (
+                comments.map((c, i) => (
+                  <ListRow
+                    key={c.id}
+                    divider={i < comments.length - 1}
+                    title={`${c.author.nickname} · ${monthDay(c.createdAt)}`}
+                    subtitle={c.text}
+                    left={<Avatar name={c.author.nickname} uri={c.author.photoUrl ?? undefined} size="sm" />}
+                    right={
+                      <IconButton
+                        icon="dots-horizontal"
+                        label="댓글 메뉴"
+                        disabled={sending || !me}
+                        onPress={() => setCommentTarget(c)}
+                      />
+                    }
+                    chevron={false}
+                    accessibilityLabel={`${c.author.nickname}, ${monthDay(c.createdAt)}, ${c.text}`}
+                    onPress={() => openAuthor(c.author.id)}
+                  />
+                ))
+              )}
+            </View>
+          </ScrollView>
 
-          <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: space.sm }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm, paddingBottom: space.md }}>
             <Field
               style={{ flex: 1 }}
               placeholder="댓글을 남겨 보세요."

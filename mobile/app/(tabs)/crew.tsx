@@ -71,19 +71,21 @@ export default function CrewScreen() {
           <Card
             onPress={() => router.push('/3-2-crew-info')}
             accessibilityLabel={`${crew.name}, 크루원 ${crew.memberCount}명, 14일 목표 ${crew.goalCount}개, 크루 정보 보기`}
-            style={{ flexDirection: 'row', alignItems: 'center', gap: space.md }}
           >
-            <Avatar name={crew.name} uri={crew.photoUrl ?? undefined} size="lg" />
-            <View style={{ flex: 1, gap: space.xs }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
-                <Txt variant="section" bold>{crew.name}</Txt>
-                {crew.isLeader ? <Badge label="크루장" tone="deep" /> : null}
+            {/* 누르는 Card 는 style 을 바깥 틀에만 주므로 배치는 안쪽 View 에서 한다 */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.md }}>
+              <Avatar name={crew.name} uri={crew.photoUrl ?? undefined} size="lg" />
+              <View style={{ flex: 1, gap: space.xs }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
+                  <Txt variant="section" bold>{crew.name}</Txt>
+                  {crew.isLeader ? <Badge label="크루장" tone="deep" /> : null}
+                </View>
+                <Txt variant="caption" tone="muted">
+                  크루원 {crew.memberCount}명 · 목표 14일 {crew.goalCount}개
+                </Txt>
               </View>
-              <Txt variant="caption" tone="muted">
-                크루원 {crew.memberCount}명 · 목표 14일 {crew.goalCount}개
-              </Txt>
+              <Icon name="chevron-right" />
             </View>
-            <Icon name="chevron-right" />
           </Card>
 
           {failed ? <Banner tone="warn">인터넷 연결을 확인해 주세요.</Banner> : null}
@@ -145,7 +147,7 @@ function Shortcut({
       android_ripple={ripple}
       style={({ pressed }) => ({ flex: 1, opacity: ripple ? 1 : pressedOpacity(pressed) })}
     >
-      <Tile style={{ alignItems: 'center', gap: space.xs, minHeight: 72, justifyContent: 'center' }}>
+      <Tile tone="surface" style={{ flex: 1, alignItems: 'center', gap: space.xs, minHeight: 72, justifyContent: 'center' }}>
         <View>
           <Icon name={icon} />
           {dot ? (
@@ -154,7 +156,7 @@ function Shortcut({
             </View>
           ) : null}
         </View>
-        <Txt variant="caption">{label}</Txt>
+        <Txt variant="caption" style={{ textAlign: 'center' }}>{label}</Txt>
       </Tile>
     </Pressable>
   );

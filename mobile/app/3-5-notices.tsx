@@ -93,15 +93,16 @@ export default function NoticesScreen() {
                 key={n.id}
                 onPress={() => open(n.id)}
                 accessibilityLabel={`최신 공지, ${n.title}, 댓글 ${n.commentCount}개, ${monthDay(n.createdAt)}`}
-                style={{ gap: space.xs }}
               >
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
-                  <Icon name="pin" />
-                  <Txt variant="section" bold style={{ flex: 1 }}>{n.title}</Txt>
-                  <Icon name="chevron-right" />
+                <View style={{ gap: space.xs }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
+                    <Icon name="pin" />
+                    <Txt variant="section" bold style={{ flex: 1 }}>{n.title}</Txt>
+                    <Icon name="chevron-right" />
+                  </View>
+                  <Txt variant="body" tone="muted" numberOfLines={2}>{n.preview}</Txt>
+                  <Txt variant="micro" tone="muted">{meta(n)}</Txt>
                 </View>
-                <Txt variant="body" tone="muted" numberOfLines={2}>{n.preview}</Txt>
-                <Txt variant="micro" tone="muted">{meta(n)}</Txt>
               </Card>
             ) : (
               <ListRow

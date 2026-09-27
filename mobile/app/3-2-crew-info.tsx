@@ -117,9 +117,10 @@ export default function CrewInfoScreen() {
                 <Button label="다시 시도" variant="ghost" size="sm" onPress={loadMembers} />
               </View>
             ) : (
-              members?.slice(0, PREVIEW_MEMBERS).map((m) => (
+              members?.slice(0, PREVIEW_MEMBERS).map((m, i, shown) => (
                 <ListRow
                   key={m.id}
+                  divider={i < shown.length - 1}
                   title={m.nickname}
                   left={<Avatar name={m.nickname} uri={m.photoUrl ?? undefined} size="sm" />}
                   right={m.isLeader ? <Badge label="크루장" tone="deep" /> : undefined}
@@ -149,8 +150,8 @@ export default function CrewInfoScreen() {
           </View>
 
           <View style={{ flexDirection: 'row', gap: space.sm }}>
-            <Button label="초대 코드" variant="ghost" size="md" style={{ flex: 1 }} onPress={() => router.push('/3-3-invite-code')} />
-            <Button label="크루 기록" variant="ghost" size="md" style={{ flex: 1 }} onPress={() => router.push('/3-4-crew-records')} />
+            <Button label="초대 코드" variant="ghost" size="md" fullWidth style={{ flex: 1 }} onPress={() => router.push('/3-3-invite-code')} />
+            <Button label="크루 기록" variant="ghost" size="md" fullWidth style={{ flex: 1 }} onPress={() => router.push('/3-4-crew-records')} />
           </View>
 
           {crew.isLeader ? (
@@ -158,6 +159,7 @@ export default function CrewInfoScreen() {
               <Button
                 label={`가입 신청 ${crew.pendingJoinRequests}건`}
                 size="md"
+                fullWidth
                 style={{ flex: 1 }}
                 accessibilityLabel={`가입 신청 관리, ${crew.pendingJoinRequests}건, 크루장`}
                 onPress={() => router.push('/3-8-manage-join-requests')}
@@ -166,6 +168,7 @@ export default function CrewInfoScreen() {
                 label="크루원 관리"
                 variant="ghost"
                 size="md"
+                fullWidth
                 style={{ flex: 1 }}
                 accessibilityLabel="크루원 관리, 크루장"
                 onPress={() => router.push('/3-11-manage-crew-members')}

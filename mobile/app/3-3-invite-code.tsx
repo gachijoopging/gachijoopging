@@ -101,6 +101,7 @@ export default function InviteCodeScreen() {
                 label="코드 복사"
                 size="lg"
                 icon="content-copy"
+                fullWidth
                 style={{ flex: 1 }}
                 disabled={reissuing}
                 accessibilityLabel="초대 코드 복사"
@@ -111,6 +112,7 @@ export default function InviteCodeScreen() {
                 variant="soft"
                 size="lg"
                 icon="share-variant-outline"
+                fullWidth
                 style={{ flex: 1 }}
                 disabled={reissuing}
                 accessibilityLabel="초대 코드 공유"
