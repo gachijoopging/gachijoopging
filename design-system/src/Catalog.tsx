@@ -28,6 +28,7 @@ import { Snackbar } from './components/Snackbar.tsx';
 import { LinkText } from './components/LinkText.tsx';
 import { IconCircle } from './components/IconCircle.tsx';
 import { MetricSplit } from './components/MetricSplit.tsx';
+import { BarChart } from './components/BarChart.tsx';
 
 function Section({ title, note, children }: { title: string; note?: string; children: React.ReactNode }) {
   const { colors } = useTheme();
@@ -303,6 +304,10 @@ export function Catalog({ scheme, onScheme }: { scheme: Scheme; onScheme: (s: Sc
               items={[{ value: '27', label: '개수' }, { value: '42분', label: '시간' }, { value: '3.1km', label: '거리' }]}
               accessibilityLabel="개수 27개, 시간 42분, 거리 3.1킬로미터"
             />
+          </Card>
+          <Card>
+            <Txt variant="caption" tone="muted">9월 7일 ~ 9월 13일</Txt>
+            <BarChart values={[40, 0, 77, 120, 64, 0, 95]} accessibilityLabel="이번 주, 총 396개" />
           </Card>
           <Card>
             <MetricSplit
