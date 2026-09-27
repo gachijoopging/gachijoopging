@@ -1,7 +1,7 @@
 import { File, Paths } from 'expo-file-system';
 import { router } from 'expo-router';
 import * as Sharing from 'expo-sharing';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { RefreshControl, View } from 'react-native';
 import {
   AppHeader,
@@ -27,7 +27,7 @@ import {
 import { createMockClient, type ApiClient } from '../src/api/client';
 import type { MOCKS } from '../src/api/mocks.generated';
 import { exportFileName, exportRangeError, fetchCrewCsv, formatDateInput } from '../src/crew/export';
-import { RANGE_LABEL, categoryChips, seriesSummary, totalsLabel, withCommas, type StatsRange } from '../src/crew/records';
+import { RANGE_LABEL, categoryChips, seriesSummary, spokenDistance, totalsLabel, withCommas, type StatsRange } from '../src/crew/records';
 import { formatDistance, formatElapsed } from '../src/format';
 
 type Stats = (typeof MOCKS)['GET /crew/stats']['data'];
@@ -44,14 +44,17 @@ export default function CrewRecordsScreen() {
   const [me, setMe] = useState<{ id: string; isLeader: boolean } | null>(null);
   const [exporting, setExporting] = useState(false);
   const [snackbar, setSnackbar] = useState<string | null>(null);
+  const latestRange = useRef(range);
 
   const load = useCallback(async (r: StatsRange, mode: 'first' | 'pull') => {
     if (mode === 'pull') setRefreshing(true);
     try {
-      setStats((await api.get('GET /crew/stats', { range: r })).data);
+      const { data } = await api.get('GET /crew/stats', { range: r });
+      if (r !== latestRange.current) return;
+      setStats(data);
       setFailed(false);
     } catch {
-      setFailed(true);
+      if (r === latestRange.current) setFailed(true);
     } finally {
       setRefreshing(false);
     }
@@ -65,6 +68,7 @@ export default function CrewRecordsScreen() {
   }, []);
 
   useEffect(() => {
+    latestRange.current = range;
     setStats(null);
     void load(range, 'first');
   }, [range, load]);
@@ -141,7 +145,7 @@ export default function CrewRecordsScreen() {
                       left={<Avatar name={row.user.nickname} uri={row.user.photoUrl ?? undefined} size="sm" />}
                       right={mine ? <Badge label="나" tone="deep" /> : undefined}
                       chevron
-                      accessibilityLabel={`${row.rank}위, ${row.user.nickname}, ${row.items}개, ${distance.replace(/km$/, '킬로미터')}, 프로필 보기`}
+                      accessibilityLabel={`${row.rank}위, ${row.user.nickname}, ${row.items}개, ${spokenDistance(row.distanceM)}, 프로필 보기`}
                       onPress={() =>
                         mine
                           ? router.push('/(tabs)/profile')
@@ -207,7 +211,7 @@ function ExportSheet({ visible, onClose, onFailed }: { visible: boolean; onClose
         <Field label="종료일" placeholder="2026-09-30" value={to} onChangeText={(v) => setTo(formatDateInput(v))} keyboardType="number-pad" maxLength={10} editable={!busy} error={error ?? undefined} />
         <Txt variant="caption" tone="muted">활동 한 회가 한 행으로 내려받아져요.</Txt>
         <View style={{ flexDirection: 'row', gap: space.sm, justifyContent: 'flex-end' }}>
-          <Button label="취소" variant="ghost" size="md" onPress={onClose} />
+          <Button label="취소" variant="ghost" size="md" disabled={busy} onPress={onClose} />
           <Button label="CSV 내보내기" size="md" loading={busy} disabled={busy} onPress={submit} />
         </View>
       </View>

@@ -20,7 +20,10 @@ export function seriesSummary(range: StatsRange, items: number): string {
 
 type Totals = { items: number; distanceM: number; durationSec: number; activities: number };
 
+export function spokenDistance(distanceM: number): string {
+  return formatDistance(distanceM).replace(/km$/, '킬로미터').replace(/m$/, '미터');
+}
+
 export function totalsLabel({ items, distanceM, durationSec, activities }: Totals): string {
-  const distance = formatDistance(distanceM).replace(/km$/, '킬로미터').replace(/m$/, '미터');
-  return `${withCommas(items)}개, ${distance}, ${formatElapsed(durationSec)}, 활동 ${activities}회`;
+  return `${withCommas(items)}개, ${spokenDistance(distanceM)}, ${formatElapsed(durationSec)}, 활동 ${activities}회`;
 }

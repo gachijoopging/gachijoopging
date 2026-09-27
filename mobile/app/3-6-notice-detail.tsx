@@ -46,6 +46,7 @@ export default function NoticeDetailScreen() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [commentTarget, setCommentTarget] = useState<Comment | null>(null);
+  const [commentMenuOpen, setCommentMenuOpen] = useState(false);
   const [snackbar, setSnackbar] = useState<string | null>(null);
 
   const load = useCallback(
@@ -107,7 +108,7 @@ export default function NoticeDetailScreen() {
   };
 
   const deleteComment = async (comment: Comment) => {
-    setCommentTarget(null);
+    setCommentMenuOpen(false);
     const before = comments;
     setComments(before.filter((c) => c.id !== comment.id));
     try {
@@ -192,7 +193,10 @@ export default function NoticeDetailScreen() {
                         icon="dots-horizontal"
                         label="댓글 메뉴"
                         disabled={sending || !me}
-                        onPress={() => setCommentTarget(c)}
+                        onPress={() => {
+                          setCommentTarget(c);
+                          setCommentMenuOpen(true);
+                        }}
                       />
                     }
                     chevron={false}
@@ -247,7 +251,7 @@ export default function NoticeDetailScreen() {
         />
       </BottomSheet>
 
-      <BottomSheet visible={commentTarget != null} onClose={() => setCommentTarget(null)} title="댓글">
+      <BottomSheet visible={commentMenuOpen} onClose={() => setCommentMenuOpen(false)} title="댓글">
         {targetAction === 'delete' ? (
           <ListRow icon="delete-outline" title="삭제" chevron={false} onPress={() => commentTarget && deleteComment(commentTarget)} />
         ) : (
@@ -256,7 +260,7 @@ export default function NoticeDetailScreen() {
             title="신고"
             onPress={() => {
               const target = commentTarget;
-              setCommentTarget(null);
+              setCommentMenuOpen(false);
               if (target) router.push({ pathname: '/6-1-report', params: { targetType: 'NOTICE_COMMENT', targetId: target.id } });
             }}
           />
