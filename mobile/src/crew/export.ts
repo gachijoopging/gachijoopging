@@ -14,3 +14,11 @@ export function exportRangeError(from: string, to: string): string | null {
 export function exportFileName(from: string, to: string): string {
   return `crew-records_${from}_${to}.csv`;
 }
+
+const CSV_HEADER = '날짜,크루원,시작,종료,거리(m),시간(초),총개수,담배꽁초,캔,플라스틱,종이,유리,비닐,일반';
+
+// ponytail: text/csv 라 목 생성기가 못 옮긴다. 실 API 가 붙으면 GET /crew/export?from&to 응답 본문으로 바꾼다
+export async function fetchCrewCsv(from: string, _to: string): Promise<string> {
+  // 엑셀이 UTF-8 로 읽도록 BOM 을 붙인다 (계약과 같다)
+  return `﻿${CSV_HEADER}\n${from},관열,09:02,09:48,3120,2520,27,14,3,6,2,0,2,0\n`;
+}
