@@ -5,6 +5,7 @@ import { borderWidth } from '../../tokens/elevation.ts';
 import { useTheme } from '../theme.tsx';
 import { Txt } from './Text.tsx';
 import { Icon, type IconName } from './Icon.tsx';
+import { Button } from './Button.tsx';
 
 /**
  * 배너. 원본 `bg_banner_info` · `bg_banner_warn` · `bg_banner_danger`.
@@ -26,10 +27,13 @@ export function Banner({
   tone = 'info',
   title,
   children,
+  action,
 }: {
   tone?: BannerTone;
   title?: string;
   children: string;
+  /** 배너가 알린 문제를 바로 푸는 한 가지 행동 (예: 설정 열기) */
+  action?: { label: string; onPress: () => void; accessibilityLabel?: string };
 }) {
   const { colors } = useTheme();
   const tones: Record<BannerTone, { bg: string; ink: string; border?: string }> = {
@@ -65,6 +69,16 @@ export function Banner({
         <Txt variant="body" style={{ color: t.ink }}>
           {children}
         </Txt>
+        {action ? (
+          <Button
+            label={action.label}
+            accessibilityLabel={action.accessibilityLabel}
+            variant="ghost"
+            size="sm"
+            style={{ alignSelf: 'flex-start' }}
+            onPress={action.onPress}
+          />
+        ) : null}
       </View>
     </View>
   );

@@ -22,6 +22,8 @@ function ListRowBase({
   onPress,
   disabled,
   divider = true,
+  chevron = !right,
+  accessibilityLabel,
 }: {
   title: string;
   subtitle?: string;
@@ -31,6 +33,10 @@ function ListRowBase({
   onPress?: () => void;
   disabled?: boolean;
   divider?: boolean;
+  /** 누르는 행의 끝 chevron. right 를 줘도 이동하는 행이면 켠다 */
+  chevron?: boolean;
+  /** 점·배지처럼 글자가 없는 상태를 읽어 줘야 할 때 (예: "…, 안 읽음") */
+  accessibilityLabel?: string;
 }) {
   const { colors } = useTheme();
   const body = (
@@ -55,29 +61,35 @@ function ListRowBase({
           </Txt>
         ) : null}
       </View>
-      {right ?? (onPress ? <Icon name="chevron-right" size={20} color={colors.inkHint} /> : null)}
+      {right}
+      {onPress && chevron ? <Icon name="chevron-right" size={20} color={colors.inkHint} /> : null}
     </View>
   );
 
   if (!onPress) return body;
   return (
-    <PressableRow onPress={onPress} disabled={disabled}>{body}</PressableRow>
+    <PressableRow onPress={onPress} disabled={disabled} accessibilityLabel={accessibilityLabel}>
+      {body}
+    </PressableRow>
   );
 }
 
 function PressableRow({
   onPress,
   disabled,
+  accessibilityLabel,
   children,
 }: {
   onPress: () => void;
   disabled?: boolean;
+  accessibilityLabel?: string;
   children: ReactNode;
 }) {
   const ripple = useRipple();
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
       accessibilityState={{ disabled: !!disabled }}
       onPress={onPress}
       disabled={disabled}
