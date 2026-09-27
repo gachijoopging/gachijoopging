@@ -1112,6 +1112,7 @@ paths:
           content:
             application/json:
               schema: { type: object, properties: { data: { type: object, properties: { count: { type: integer } } } } }
+              example: { data: { count: 1 } }
 
   # ───────────────────────── reports ─────────────────────────
   /reports:

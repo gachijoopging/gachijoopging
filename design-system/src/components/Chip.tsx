@@ -36,12 +36,16 @@ export type ChipProps = {
   selected?: boolean;
   onPress?: () => void;
   disabled?: boolean;
+  /** 아이콘을 글자 뒤에 둔다. 펼침·이동을 뜻하는 chevron 은 뒤가 맞다 */
+  iconEnd?: boolean;
+  /** 글자만으로 누른 결과를 알 수 없을 때 (예: "한강줍깅크루, 크루 정보 보기") */
+  accessibilityLabel?: string;
 };
 
 const VISUAL_HEIGHT = 32;
 const SLOP = (sizes.minTouch - VISUAL_HEIGHT) / 2;
 
-function ChipBase({ label, tone = 'soft', icon, selected, onPress, disabled }: ChipProps) {
+function ChipBase({ label, tone = 'soft', icon, selected, onPress, disabled, iconEnd, accessibilityLabel }: ChipProps) {
   const { colors } = useTheme();
   const ripple = useRipple();
 
@@ -76,10 +80,11 @@ function ChipBase({ label, tone = 'soft', icon, selected, onPress, disabled }: C
 
   const body = (
     <>
-      {icon ? <Icon name={icon} size={15} color={t.ink} /> : null}
-      <Txt variant="label" style={{ color: t.ink }}>
+      {icon && !iconEnd ? <Icon name={icon} size={15} color={t.ink} /> : null}
+      <Txt variant="label" numberOfLines={1} style={{ color: t.ink, flexShrink: 1 }}>
         {label}
       </Txt>
+      {icon && iconEnd ? <Icon name={icon} size={15} color={t.ink} /> : null}
     </>
   );
 
@@ -88,6 +93,7 @@ function ChipBase({ label, tone = 'soft', icon, selected, onPress, disabled }: C
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
       accessibilityState={{ selected: !!selected, disabled: !!disabled }}
       onPress={onPress}
       disabled={disabled}

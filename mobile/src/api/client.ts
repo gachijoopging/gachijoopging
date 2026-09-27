@@ -15,7 +15,8 @@ export type ApiResponse<K extends MockKey> =
 export type VoidMutationKey =
   | 'POST /auth/password-reset'
   | 'POST /auth/password-reset/confirm'
-  | 'DELETE /crews/join-requests/mine';
+  | 'DELETE /crews/join-requests/mine'
+  | 'POST /notifications/read';
 export type MutationKey = MockKey | VoidMutationKey;
 
 export type ApiClient = {
