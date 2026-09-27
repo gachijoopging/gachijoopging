@@ -1,4 +1,4 @@
-import { markAllRead, markRead, notificationDestination, relativeTime } from './notifications';
+import { markAllRead, markRead, markUnread, notificationDestination, relativeTime } from './notifications';
 
 /** 기기 시간대 기준 2026-09-27 12:00 */
 const NOW = new Date(2026, 8, 27, 12, 0);
@@ -82,6 +82,16 @@ describe('읽음 처리', () => {
 
   test('안 읽음 수를 못 받았으면 모르는 채로 둔다', () => {
     expect(markRead({ ...state, unreadCount: null }, 501).unreadCount).toBeNull();
+  });
+
+  test('읽음 요청이 실패하면 그 항목만 안 읽음으로 되돌린다', () => {
+    const next = markUnread(markRead(markRead(state, 501), 499), 501);
+    expect(next.items.map((i) => i.unread)).toEqual([true, false, false]);
+    expect(next.unreadCount).toBe(2);
+  });
+
+  test('이미 안 읽음이면 되돌릴 때 수를 올리지 않는다', () => {
+    expect(markUnread(state, 501)).toBe(state);
   });
 
   test('모두 읽음은 점을 전부 끄고 수를 0 으로', () => {

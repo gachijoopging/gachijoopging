@@ -25,6 +25,7 @@ import type { MembershipStatus } from '../src/auth/destination';
 import {
   markAllRead,
   markRead,
+  markUnread,
   notificationDestination,
   relativeTime,
   type ReadState,
@@ -90,10 +91,10 @@ export default function NotificationsScreen() {
 
   const open = (item: Item) => {
     if (read && item.unread) {
-      const before = read;
-      setRead(markRead(before, item.id));
+      setRead((s) => s && markRead(s, item.id));
+      // 그 사이 다른 항목·모두 읽음이 바꾼 상태를 덮지 않도록 이 항목만 되돌린다
       api.mutate('POST /notifications/read', { ids: [item.id] }).catch(() => {
-        setRead(before);
+        setRead((s) => s && markUnread(s, item.id));
         setSnackbar('읽음 처리에 실패했어요');
       });
     }
@@ -104,13 +105,11 @@ export default function NotificationsScreen() {
 
   const readAll = async () => {
     if (!read) return;
-    const before = read;
     setMarkingAll(true);
     try {
       await api.mutate('POST /notifications/read');
-      setRead(markAllRead(before));
+      setRead((s) => s && markAllRead(s));
     } catch {
-      setRead(before);
       setSnackbar('읽음 처리에 실패했어요');
     } finally {
       setMarkingAll(false);

@@ -60,6 +60,16 @@ export function markRead<T extends { id: number; unread: boolean }>(state: ReadS
   };
 }
 
+/** 읽음 요청이 실패했을 때. 이미 안 읽음이면 수를 두 번 올리지 않는다 */
+export function markUnread<T extends { id: number; unread: boolean }>(state: ReadState<T>, id: number): ReadState<T> {
+  const target = state.items.find((i) => i.id === id);
+  if (!target || target.unread) return state;
+  return {
+    items: state.items.map((i) => (i.id === id ? { ...i, unread: true } : i)),
+    unreadCount: state.unreadCount == null ? null : state.unreadCount + 1,
+  };
+}
+
 export function markAllRead<T extends { id: number; unread: boolean }>(state: ReadState<T>): ReadState<T> {
   return { items: state.items.map((i) => ({ ...i, unread: false })), unreadCount: 0 };
 }
