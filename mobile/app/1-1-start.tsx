@@ -61,7 +61,7 @@ export default function StartScreen() {
                 source={wordmark}
                 accessibilityLabel="가치줍깅"
                 resizeMode="contain"
-                style={{ width: 270, aspectRatio: 840 / 301 }}
+                style={{ width: 270, height: (270 * 301) / 840 }}
               />
             </View>
             <Txt variant="bodyLg" bold tone="onPhoto" style={{ textAlign: 'center' }}>

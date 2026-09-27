@@ -55,7 +55,7 @@ export default function LoginScreen() {
       <AppHeader title="이메일 로그인" subtitle="기존 계정" onBack={() => router.back()} backDisabled={loading} />
 
       <View style={{ alignItems: 'center', gap: space.sm }}>
-        <Image source={wordmark} accessibilityLabel="가치줍깅" resizeMode="contain" style={{ width: 190, aspectRatio: 840 / 301 }} />
+        <Image source={wordmark} accessibilityLabel="가치줍깅" resizeMode="contain" style={{ width: 190, height: (190 * 301) / 840 }} />
         <Txt variant="title" bold style={{ textAlign: 'center' }}>
           다시 만나서 반가워요
         </Txt>
