@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Modal, Pressable, View } from 'react-native';
+import { KeyboardAvoidingView, Modal, Pressable, View } from 'react-native';
 import { radius } from '../../tokens/radius.ts';
 import { space, screen, size as sizes } from '../../tokens/spacing.ts';
 import { useTheme, depth } from '../theme.tsx';
@@ -34,38 +34,42 @@ export function BottomSheet({
       navigationBarTranslucent
       onRequestClose={onClose}
     >
-      <Pressable
-        accessibilityLabel="닫기"
-        onPress={onClose}
-        style={{ flex: 1, backgroundColor: colors.scrim, justifyContent: 'flex-end' }}
-      >
+      {/* 반투명 시스템 바를 쓰는 Modal 창은 안드로이드에서도 키보드에 맞춰 줄지 않아,
+          Screen 과 달리 두 플랫폼 모두 padding 으로 시트를 키보드 위로 올린다 */}
+      <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
         <Pressable
-          // 시트 안을 눌렀을 때 스크림까지 전달되지 않게 막습니다.
-          onPress={(e) => e.stopPropagation()}
-          style={{
-            backgroundColor: colors.surface,
-            borderTopLeftRadius: radius.sheet,
-            borderTopRightRadius: radius.sheet,
-            paddingHorizontal: screen.horizontal,
-            paddingTop: space.md,
-            paddingBottom: space['3xl'],
-            gap: space.lg,
-            ...depth('overlay', shadows.overlay),
-          }}
+          accessibilityLabel="닫기"
+          onPress={onClose}
+          style={{ flex: 1, backgroundColor: colors.scrim, justifyContent: 'flex-end' }}
         >
-          <View
+          <Pressable
+            // 시트 안을 눌렀을 때 스크림까지 전달되지 않게 막습니다.
+            onPress={(e) => e.stopPropagation()}
             style={{
-              width: sizes.sheetHandleWidth,
-              height: sizes.sheetHandleHeight,
-              borderRadius: radius.pill,
-              backgroundColor: colors.handle,
-              alignSelf: 'center',
+              backgroundColor: colors.surface,
+              borderTopLeftRadius: radius.sheet,
+              borderTopRightRadius: radius.sheet,
+              paddingHorizontal: screen.horizontal,
+              paddingTop: space.md,
+              paddingBottom: space['3xl'],
+              gap: space.lg,
+              ...depth('overlay', shadows.overlay),
             }}
-          />
-          {title ? <Txt variant="title">{title}</Txt> : null}
-          {children}
+          >
+            <View
+              style={{
+                width: sizes.sheetHandleWidth,
+                height: sizes.sheetHandleHeight,
+                borderRadius: radius.pill,
+                backgroundColor: colors.handle,
+                alignSelf: 'center',
+              }}
+            />
+            {title ? <Txt variant="title">{title}</Txt> : null}
+            {children}
+          </Pressable>
         </Pressable>
-      </Pressable>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

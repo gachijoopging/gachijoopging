@@ -23,13 +23,15 @@ export function BarChart({ values, accessibilityLabel, height = 72 }: BarChartPr
       accessible
       accessibilityRole="image"
       accessibilityLabel={accessibilityLabel}
-      style={{ height, flexDirection: 'row', alignItems: 'flex-end', gap: space.xs }}
+      style={{ height, flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-around', gap: space.xs }}
     >
       {values.map((value, i) => (
         <View
           key={i}
           style={{
             flex: 1,
+            // 막대가 적은 기간(주 초·월 초)에 알약처럼 부풀지 않게 폭을 막는다
+            maxWidth: space['2xl'],
             height: value > 0 ? Math.max(floor, (value / max) * height) : floor,
             borderRadius: radius.pill,
             backgroundColor: value > 0 ? colors.deep : colors.track,

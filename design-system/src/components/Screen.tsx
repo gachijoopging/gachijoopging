@@ -79,10 +79,9 @@ export function Screen({
 
   return (
     <SafeAreaView edges={edges} style={[{ flex: 1, backgroundColor: colors.bg }, style]}>
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
+      {/* RN 0.86 안드로이드는 항상 edge-to-edge 라 adjustResize 가 창을 줄이지 않는다.
+          두 플랫폼 모두 padding 으로 키보드 높이만큼 비킨다 */}
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
         {body}
       </KeyboardAvoidingView>
     </SafeAreaView>

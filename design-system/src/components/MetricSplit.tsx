@@ -48,8 +48,9 @@ export function MetricSplit({ items, divider = 'none', accessibilityLabel }: Met
               ))}
             </View>
           ) : null}
-          <View style={{ flex: 1, alignItems: 'center', gap: space.xs }}>
-            <Txt variant="metric" bold tone={it.muted ? 'muted' : 'ink'}>
+          <View style={{ flex: 1, alignItems: 'center', gap: space.xs, paddingHorizontal: space.xs }}>
+            {/* 칸이 4개 이상이면 "26시간 40분" 같은 값이 줄바꿈되어 라벨 줄이 어긋난다 */}
+            <Txt variant="metric" bold tone={it.muted ? 'muted' : 'ink'} numberOfLines={1} adjustsFontSizeToFit>
               {it.value}
             </Txt>
             <Txt variant="caption" tone="muted">
