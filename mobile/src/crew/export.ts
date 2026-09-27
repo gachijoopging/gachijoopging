@@ -5,6 +5,12 @@ function isDate(value: string): boolean {
   return !Number.isNaN(date.getTime()) && date.toISOString().startsWith(value);
 }
 
+// 숫자 자판에는 하이픈이 없어서, 숫자만 받고 자리에 맞춰 하이픈을 넣는다
+export function formatDateInput(raw: string): string {
+  const d = raw.replace(/\D/g, '').slice(0, 8);
+  return [d.slice(0, 4), d.slice(4, 6), d.slice(6)].filter(Boolean).join('-');
+}
+
 export function exportRangeError(from: string, to: string): string | null {
   if (!isDate(from) || !isDate(to)) return '날짜를 2026-09-01 처럼 입력해 주세요.';
   return from > to ? '시작일은 종료일보다 앞서야 해요.' : null;

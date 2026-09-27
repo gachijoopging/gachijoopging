@@ -26,7 +26,7 @@ import {
 } from 'design-system/src';
 import { createMockClient, type ApiClient } from '../src/api/client';
 import type { MOCKS } from '../src/api/mocks.generated';
-import { exportFileName, exportRangeError, fetchCrewCsv } from '../src/crew/export';
+import { exportFileName, exportRangeError, fetchCrewCsv, formatDateInput } from '../src/crew/export';
 import { RANGE_LABEL, categoryChips, seriesSummary, totalsLabel, withCommas, type StatsRange } from '../src/crew/records';
 import { formatDistance, formatElapsed } from '../src/format';
 
@@ -203,8 +203,8 @@ function ExportSheet({ visible, onClose, onFailed }: { visible: boolean; onClose
   return (
     <BottomSheet visible={visible} onClose={busy ? () => {} : onClose} title="기록 내보내기">
       <View style={{ gap: space.md }}>
-        <Field label="시작일" placeholder="2026-09-01" value={from} onChangeText={setFrom} keyboardType="numbers-and-punctuation" editable={!busy} />
-        <Field label="종료일" placeholder="2026-09-30" value={to} onChangeText={setTo} keyboardType="numbers-and-punctuation" editable={!busy} error={error ?? undefined} />
+        <Field label="시작일" placeholder="2026-09-01" value={from} onChangeText={(v) => setFrom(formatDateInput(v))} keyboardType="number-pad" maxLength={10} editable={!busy} />
+        <Field label="종료일" placeholder="2026-09-30" value={to} onChangeText={(v) => setTo(formatDateInput(v))} keyboardType="number-pad" maxLength={10} editable={!busy} error={error ?? undefined} />
         <Txt variant="caption" tone="muted">활동 한 회가 한 행으로 내려받아져요.</Txt>
         <View style={{ flexDirection: 'row', gap: space.sm, justifyContent: 'flex-end' }}>
           <Button label="취소" variant="ghost" size="md" onPress={onClose} />

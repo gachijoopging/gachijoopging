@@ -99,8 +99,8 @@ export default function NoticeDetailScreen() {
     setConfirmDelete(false);
     try {
       await api.mutate('DELETE /notices/{noticeId}', { noticeId: id });
-      router.back();
-      // ponytail: 스낵바는 이 화면과 함께 사라진다. 3-5 에 결과를 넘기는 길이 생기면 그쪽에서 띄운다
+      // 이 화면은 사라지므로 삭제 안내는 목록이 띄운다
+      router.dismissTo({ pathname: '/3-5-notices', params: { deleted: '1' } });
     } catch {
       setSnackbar('공지를 삭제하지 못했어요. 다시 시도해 주세요.');
     }

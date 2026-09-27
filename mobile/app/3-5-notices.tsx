@@ -1,4 +1,4 @@
-import { router, useFocusEffect } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { RefreshControl, View } from 'react-native';
 import {
@@ -12,6 +12,7 @@ import {
   ListRow,
   Loading,
   Screen,
+  Snackbar,
   Txt,
   space,
 } from 'design-system/src';
@@ -28,6 +29,8 @@ export default function NoticesScreen() {
   const [isLeader, setIsLeader] = useState(false);
   const [failed, setFailed] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [snackbar, setSnackbar] = useState<string | null>(null);
+  const { deleted } = useLocalSearchParams<{ deleted?: string }>();
 
   const load = useCallback(async (mode: 'quiet' | 'pull') => {
     if (mode === 'pull') setRefreshing(true);
@@ -43,6 +46,12 @@ export default function NoticesScreen() {
 
   // 작성·삭제하고 돌아오면 첫 페이지부터 다시 받는다
   useFocusEffect(useCallback(() => void load('quiet'), [load]));
+
+  useEffect(() => {
+    if (!deleted) return;
+    setSnackbar('공지를 삭제했어요.');
+    router.setParams({ deleted: undefined });
+  }, [deleted]);
 
   useEffect(() => {
     api.get('GET /crew').then((res) => setIsLeader(res.data.isLeader)).catch(() => {});
@@ -118,6 +127,8 @@ export default function NoticesScreen() {
           {/* ponytail: nextCursor 로 다음 장 받기는 목이 한 장뿐이라 백엔드 연결 때 붙인다 */}
         </>
       )}
+
+      <Snackbar visible={snackbar != null} message={snackbar ?? ''} onDismiss={() => setSnackbar(null)} />
     </Screen>
   );
 }
