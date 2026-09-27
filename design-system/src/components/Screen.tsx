@@ -17,8 +17,8 @@ import { useTheme } from '../theme.tsx';
  *
  *   1. 안전 영역 — 상태바 · 노치 · 제스처 바. Expo SDK 54+ 는 안드로이드에서
  *      edge-to-edge 가 기본이라, 이걸 안 쓰면 콘텐츠가 시스템 바 아래로 들어갑니다.
- *   2. 키보드 — iOS 는 padding 으로 밀어 올리고, 안드로이드는 adjustResize 가
- *      창을 줄여 주므로 behavior 를 주지 않습니다. 둘 다 주면 두 번 밀립니다.
+ *   2. 키보드 — 두 플랫폼 모두 padding 으로 키보드 높이만큼 비킵니다. RN 0.86
+ *      안드로이드는 항상 edge-to-edge 라 adjustResize 가 창을 줄이지 않습니다.
  *   3. 최대 폭 — 태블릿에서 입력창과 버튼이 화면 끝까지 늘어나지 않게 막습니다.
  *      Material 은 확장 폭에서 폰 레이아웃을 그대로 늘리지 말라고 합니다.
  *
@@ -79,10 +79,7 @@ export function Screen({
 
   return (
     <SafeAreaView edges={edges} style={[{ flex: 1, backgroundColor: colors.bg }, style]}>
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
         {body}
       </KeyboardAvoidingView>
     </SafeAreaView>

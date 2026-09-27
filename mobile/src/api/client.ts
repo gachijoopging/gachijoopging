@@ -16,7 +16,9 @@ export type VoidMutationKey =
   | 'POST /auth/password-reset'
   | 'POST /auth/password-reset/confirm'
   | 'DELETE /crews/join-requests/mine'
-  | 'POST /notifications/read';
+  | 'POST /notifications/read'
+  | 'DELETE /notices/{noticeId}'
+  | 'DELETE /notice-comments/{commentId}';
 export type MutationKey = MockKey | VoidMutationKey;
 
 export type ApiClient = {

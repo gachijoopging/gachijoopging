@@ -67,5 +67,8 @@ export type { LinkTextProps } from './components/LinkText.tsx';
 export { IconCircle } from './components/IconCircle.tsx';
 export type { IconCircleTone, IconCircleSize } from './components/IconCircle.tsx';
 
+export { BarChart } from './components/BarChart.tsx';
+export type { BarChartProps } from './components/BarChart.tsx';
+
 export { MetricSplit } from './components/MetricSplit.tsx';
 export type { MetricItem, MetricSplitProps } from './components/MetricSplit.tsx';
