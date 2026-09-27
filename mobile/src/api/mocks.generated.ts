@@ -393,6 +393,11 @@ export const MOCKS = {
       "nextCursor": null
     }
   },
+  "GET /notifications/unread-count": {
+    "data": {
+      "count": 1
+    }
+  },
   "GET /users/me": {
     "data": {
       "id": "6f1c…",
