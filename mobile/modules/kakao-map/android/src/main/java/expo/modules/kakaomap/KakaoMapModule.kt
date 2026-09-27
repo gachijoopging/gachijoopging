@@ -9,7 +9,7 @@ class KakaoMapModule : Module() {
     Name("KakaoMap")
 
     View(KakaoMapView::class) {
-      Events("onMapReady", "onMapError")
+      Events("onMapReady", "onMapError", "onMarkerPress")
 
       Prop("appKey") { view: KakaoMapView, appKey: String ->
         view.setAppKey(appKey)
@@ -26,6 +26,18 @@ class KakaoMapModule : Module() {
           val lat = it["latitude"] ?: return@mapNotNull null
           val lng = it["longitude"] ?: return@mapNotNull null
           LatLng.from(lat, lng)
+        })
+      }
+
+      Prop("markers") { view: KakaoMapView, markers: List<Map<String, Any?>> ->
+        view.setMarkers(markers.mapNotNull {
+          KakaoMapView.Marker(
+            id = it["id"] as? String ?: return@mapNotNull null,
+            latitude = (it["latitude"] as? Number)?.toDouble() ?: return@mapNotNull null,
+            longitude = (it["longitude"] as? Number)?.toDouble() ?: return@mapNotNull null,
+            label = it["label"] as? String ?: "",
+            paused = it["paused"] as? Boolean ?: false,
+          )
         })
       }
     }
