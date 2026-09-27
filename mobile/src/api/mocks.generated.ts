@@ -240,6 +240,29 @@ export const MOCKS = {
       "nextCursor": "eyJ…"
     }
   },
+  "GET /crew/notices": {
+    "data": {
+      "items": [
+        {
+          "id": "n01",
+          "title": "9월 정기 활동 안내",
+          "preview": "9월 첫째 주 토요일, 여의도에서 모여요.",
+          "pinned": true,
+          "commentCount": 2,
+          "createdAt": "2026-09-01T09:00:00Z"
+        },
+        {
+          "id": "n00",
+          "title": "새 크루원 환영합니다",
+          "preview": "소개를 확인해 주세요.",
+          "pinned": false,
+          "commentCount": 0,
+          "createdAt": "2026-08-28T09:00:00Z"
+        }
+      ],
+      "nextCursor": null
+    }
+  },
   "GET /crew/posts": {
     "data": {
       "items": [
@@ -356,6 +379,41 @@ export const MOCKS = {
         "photoUrl": null,
         "withdrawn": false
       }
+    }
+  },
+  "GET /notices/{noticeId}": {
+    "data": {
+      "id": "n01",
+      "title": "9월 정기 활동 안내",
+      "preview": "9월 첫째 주 토요일, 여의도에서 모여요.",
+      "pinned": true,
+      "commentCount": 2,
+      "createdAt": "2026-09-01T09:00:00Z",
+      "body": "9월 첫째 주 토요일, 여의도에서 모여요.\n오전 8시 여의나루역 2번 출구 앞입니다. 집게와 봉투는 크루에서 준비해요.",
+      "comments": [
+        {
+          "id": "nc1",
+          "author": {
+            "id": "8a2d…",
+            "nickname": "상혁",
+            "photoUrl": null,
+            "withdrawn": false
+          },
+          "text": "확인했습니다!",
+          "createdAt": "2026-09-01T10:00:00Z"
+        },
+        {
+          "id": "nc2",
+          "author": {
+            "id": "6f1c…",
+            "nickname": "관열",
+            "photoUrl": null,
+            "withdrawn": false
+          },
+          "text": "비 오면 일요일로 미뤄요.",
+          "createdAt": "2026-09-01T11:00:00Z"
+        }
+      ]
     }
   },
   "GET /notifications": {
@@ -483,6 +541,11 @@ export const MOCKS = {
       "isNew": false
     }
   },
+  "POST /crew/invite-code": {
+    "data": {
+      "inviteCode": "HG-9QX4"
+    }
+  },
   "POST /crews": {
     "data": {
       "id": "c001",
@@ -564,6 +627,19 @@ export const MOCKS = {
           }
         ]
       }
+    }
+  },
+  "POST /notices/{noticeId}/comments": {
+    "data": {
+      "id": "00000000-0000-4000-8000-0000000000c3",
+      "author": {
+        "id": "6f1c…",
+        "nickname": "관열",
+        "photoUrl": null,
+        "withdrawn": false
+      },
+      "text": "저도 참여할게요.",
+      "createdAt": "2026-09-01T12:00:00Z"
     }
   },
 } as const;
