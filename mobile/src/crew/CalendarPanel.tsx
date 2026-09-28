@@ -238,6 +238,8 @@ function DayCell({
   const ripple = useRipple();
   // 앞뒤 달 칸은 자리만 차지한다 — 그 달의 응답에 없는 날짜다
   if (!cell.inMonth) return <View style={{ flex: 1, minHeight: size.minTouch }} />;
+  // 다크에서 라임은 서피스보다 훨씬 밝다. 진한 칸(2·3) 위의 밝은 ink·deep 은 1~2:1 로 사라져 어두운 onLime 으로 뒤집는다
+  const mark = selected ? 'onDark' : heat >= 2 ? 'onLime' : 'ink';
   return (
     <Pressable
       accessibilityRole="button"
@@ -257,21 +259,21 @@ function DayCell({
           overflow: 'hidden',
           backgroundColor: selected ? colors.deep : undefined,
           borderWidth: isToday ? borderWidth.focus : 0,
-          borderColor: selected ? colors.onDark : colors.deep,
+          borderColor: colors[mark],
         }}
       >
         {!selected && heat > 0 ? (
           // 라임 한 색을 불투명도로 세 단계 나눈다. 숫자는 그 위에 있어 흐려지지 않는다
           <View style={{ position: 'absolute', inset: 0, backgroundColor: colors.lime, opacity: HEAT_OPACITY[heat] }} />
         ) : null}
-        <Txt variant="caption" tone={selected ? 'onDark' : 'ink'} bold={cell.activityCount > 0}>
+        <Txt variant="caption" tone={mark} bold={cell.activityCount > 0}>
           {Number(cell.date.slice(8))}
         </Txt>
         {/* 라임 농도끼리는 대비가 1.1:1 이라 색만으로 단계를 못 읽는다(SC 1.4.1). 점 개수로 한 번 더 말한다.
             점이 없는 날도 줄 높이를 남겨 숫자 위치가 칸마다 흔들리지 않게 한다 */}
         <View style={{ flexDirection: 'row', gap: space.xs / 2, height: space.xs }}>
           {Array.from({ length: heat }, (_, i) => (
-            <Dot key={i} size={space.xs} tone={selected ? 'onDeep' : 'deep'} />
+            <Dot key={i} size={space.xs} tone={mark === 'onDark' ? 'onDeep' : mark} />
           ))}
         </View>
       </View>
