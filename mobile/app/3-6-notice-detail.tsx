@@ -26,6 +26,7 @@ import type { MOCKS } from '../src/api/mocks.generated';
 import { clearDraft, draftFor, editDraft, requestIdFor } from '../src/crew/comment-draft';
 import { monthDay } from '../src/crew/crew';
 import { COMMENT_MAX, canSendComment, commentAction } from '../src/crew/notice';
+import { useFlash } from '../src/ui/useFlash';
 
 type Detail = (typeof MOCKS)['GET /notices/{noticeId}']['data'];
 type Comment = { id: string; author: { id: string; nickname: string; photoUrl: string | null }; text: string; createdAt: string };
@@ -33,7 +34,7 @@ type Comment = { id: string; author: { id: string; nickname: string; photoUrl: s
 const api: ApiClient = createMockClient({ delayMs: 300 });
 
 export default function NoticeDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, flash } = useLocalSearchParams<{ id: string; flash?: string }>();
   const navigation = useNavigation();
   const [notice, setNotice] = useState<Detail | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
@@ -47,7 +48,7 @@ export default function NoticeDetailScreen() {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [commentTarget, setCommentTarget] = useState<Comment | null>(null);
   const [commentMenuOpen, setCommentMenuOpen] = useState(false);
-  const [snackbar, setSnackbar] = useState<string | null>(null);
+  const [snackbar, setSnackbar] = useFlash();
 
   const load = useCallback(
     async (mode: 'first' | 'pull') => {
@@ -69,11 +70,19 @@ export default function NoticeDetailScreen() {
 
   useEffect(() => {
     void load('first');
+  }, [load]);
+
+  // 수정하고 돌아오면(flash 가 붙어 온다) 바뀐 제목·본문을 다시 받는다
+  useEffect(() => {
+    if (flash) void load('first');
+  }, [flash, load]);
+
+  useEffect(() => {
     api
       .get('GET /users/me')
       .then(({ data }) => setMe({ id: data.id, isLeader: !!data.membership.crew?.isLeader }))
       .catch(() => {});
-  }, [load]);
+  }, []);
 
   const changeText = (value: string) => {
     setText(value);
@@ -86,7 +95,7 @@ export default function NoticeDetailScreen() {
     try {
       const requestId = requestIdFor(id, Crypto.randomUUID);
       const { data } = await api.mutate('POST /notices/{noticeId}/comments', { noticeId: id, id: requestId, text });
-      setComments((prev) => [...prev, data]);
+      setComments((prev) => [...prev.filter((c) => c.id !== data.id), data]);
       clearDraft(id);
       setText('');
     } catch {
@@ -101,7 +110,7 @@ export default function NoticeDetailScreen() {
     try {
       await api.mutate('DELETE /notices/{noticeId}', { noticeId: id });
       // 이 화면은 사라지므로 삭제 안내는 목록이 띄운다
-      router.dismissTo({ pathname: '/3-5-notices', params: { deleted: '1' } });
+      router.dismissTo({ pathname: '/3-5-notices', params: { flash: '공지를 삭제했어요.' } });
     } catch {
       setSnackbar('공지를 삭제하지 못했어요. 다시 시도해 주세요.');
     }
@@ -268,7 +277,6 @@ export default function NoticeDetailScreen() {
       </BottomSheet>
 
       <Dialog visible={confirmDelete} onClose={() => setConfirmDelete(false)} title="이 공지를 삭제할까요?">
-        <Txt variant="body" tone="muted">댓글도 함께 사라져요. 되돌릴 수 없어요.</Txt>
         <View style={{ flexDirection: 'row', gap: space.sm, justifyContent: 'flex-end' }}>
           <Button label="취소" variant="ghost" size="md" onPress={() => setConfirmDelete(false)} />
           <Button label="삭제" variant="danger" size="md" onPress={deleteNotice} />

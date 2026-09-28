@@ -33,10 +33,13 @@ export function Tabs<T extends string>({
   items,
   value,
   onChange,
+  fullWidth = false,
 }: {
   items: ReadonlyArray<{ value: T; label: string }>;
   value: T;
   onChange: (v: T) => void;
+  /** 화면의 내용을 통째로 바꾸는 탭은 폭을 채워 필터 칩과 위계를 가른다 */
+  fullWidth?: boolean;
 }) {
   const { colors } = useTheme();
   const ripple = useRipple();
@@ -49,7 +52,7 @@ export function Tabs<T extends string>({
         padding: space.xs,
         borderRadius: radius.pill,
         backgroundColor: colors.track,
-        alignSelf: 'flex-start',
+        alignSelf: fullWidth ? 'stretch' : 'flex-start',
       }}
     >
       {items.map((it) => {
@@ -64,6 +67,7 @@ export function Tabs<T extends string>({
             style={({ pressed }) => ({
               minHeight: sizes.minTouch,
               minWidth: sizes.minTouch,
+              flex: fullWidth ? 1 : undefined,
               alignItems: 'center',
               justifyContent: 'center',
               paddingHorizontal: space.lg,

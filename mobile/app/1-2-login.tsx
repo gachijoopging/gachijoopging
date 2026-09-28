@@ -59,9 +59,6 @@ export default function LoginScreen() {
         <Txt variant="title" bold style={{ textAlign: 'center' }}>
           다시 만나서 반가워요
         </Txt>
-        <Txt variant="body" tone="muted" style={{ textAlign: 'center' }}>
-          가입한 이메일로 로그인하고{'\n'}오늘의 줍깅을 이어가요.
-        </Txt>
       </View>
 
       <Field

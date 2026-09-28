@@ -1,4 +1,4 @@
-import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { RefreshControl, View } from 'react-native';
 import {
@@ -19,6 +19,7 @@ import {
 import { createMockClient, type ApiClient } from '../src/api/client';
 import type { MOCKS } from '../src/api/mocks.generated';
 import { monthDay } from '../src/crew/crew';
+import { useFlash } from '../src/ui/useFlash';
 
 type Notice = (typeof MOCKS)['GET /crew/notices']['data']['items'][number];
 
@@ -29,8 +30,7 @@ export default function NoticesScreen() {
   const [isLeader, setIsLeader] = useState(false);
   const [failed, setFailed] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [snackbar, setSnackbar] = useState<string | null>(null);
-  const { deleted } = useLocalSearchParams<{ deleted?: string }>();
+  const [snackbar, setSnackbar] = useFlash();
 
   const load = useCallback(async (mode: 'quiet' | 'pull') => {
     if (mode === 'pull') setRefreshing(true);
@@ -46,12 +46,6 @@ export default function NoticesScreen() {
 
   // 작성·삭제하고 돌아오면 첫 페이지부터 다시 받는다
   useFocusEffect(useCallback(() => void load('quiet'), [load]));
-
-  useEffect(() => {
-    if (!deleted) return;
-    setSnackbar('공지를 삭제했어요.');
-    router.setParams({ deleted: undefined });
-  }, [deleted]);
 
   useEffect(() => {
     api.get('GET /crew').then((res) => setIsLeader(res.data.isLeader)).catch(() => {});
@@ -77,7 +71,6 @@ export default function NoticesScreen() {
           ) : undefined
         }
       />
-      <Txt variant="caption" tone="muted">크루원 모두에게 알릴 내용을 확인해요.</Txt>
 
       {!notices ? (
         failed ? (
@@ -89,7 +82,6 @@ export default function NoticesScreen() {
         <EmptyState
           icon="bullhorn-outline"
           title="아직 공지가 없어요"
-          description="크루장이 첫 공지를 작성하면 여기에 보여요."
           actionLabel={isLeader ? '공지 작성' : undefined}
           onAction={isLeader ? () => router.push('/3-12-edit-notice') : undefined}
         />

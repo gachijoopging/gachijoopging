@@ -112,7 +112,7 @@ function HomeCards({ home }: { home: Home }) {
   return (
     <>
       <Card
-        onPress={() => router.push('/3-4-crew-records')}
+        onPress={() => router.navigate({ pathname: '/(tabs)/crew', params: { tab: 'records' } })}
         accessibilityLabel={`최근 7일 우리 크루가 주운 쓰레기, ${last7d.crewItems}개, 크루 기록 보기`}
         style={{ gap: space.sm }}
       >

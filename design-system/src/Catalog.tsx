@@ -273,6 +273,7 @@ export function Catalog({ scheme, onScheme }: { scheme: Scheme; onScheme: (s: Sc
             endAdornment={<IconButton icon="eye" label="비밀번호 보기" onPress={noop} />}
           />
           <Field label="한마디" placeholder="오늘 줍깅은 어땠나요?" multiline />
+          <Field placeholder="메시지 입력" multiline maxLines={4} />
           <Field label="동네" value="역삼동" editable={false} />
         </Section>
 
@@ -412,7 +413,22 @@ export function Catalog({ scheme, onScheme }: { scheme: Scheme; onScheme: (s: Sc
             onAction={noop}
           />
           <ErrorState onRetry={noop} />
+          <ErrorState
+            title="크루장만 가입 신청을 관리할 수 있어요."
+            description={null}
+            icon="lock-outline"
+            actionLabel="크루 정보로"
+            onRetry={noop}
+          />
         </Section>
+
+        <Snackbar
+          visible={snack}
+          message="기록을 지웠어요"
+          actionLabel="되돌리기"
+          onAction={closeSnack}
+          onDismiss={closeSnack}
+        />
       </Screen>
 
       <BottomSheet visible={sheet} onClose={() => setSheet(false)} title="모임에 참여할까요?">
@@ -429,13 +445,6 @@ export function Catalog({ scheme, onScheme }: { scheme: Scheme; onScheme: (s: Sc
         </Row>
       </Dialog>
 
-      <Snackbar
-        visible={snack}
-        message="기록을 지웠어요"
-        actionLabel="되돌리기"
-        onAction={closeSnack}
-        onDismiss={closeSnack}
-      />
     </>
   );
 }

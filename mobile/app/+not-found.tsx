@@ -8,7 +8,6 @@ export default function NotFoundScreen() {
       <EmptyState
         icon="hammer-wrench"
         title="준비 중인 화면이에요"
-        description="곧 열어 드릴게요."
         actionLabel="돌아가기"
         onAction={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)'))}
       />

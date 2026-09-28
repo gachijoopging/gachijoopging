@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useState, type ReactNode, type Ref } from 'react';
 import { TextInput, View, type TextInputProps, type ViewStyle } from 'react-native';
 import { radius } from '../../tokens/radius.ts';
 import { space, size as sizes } from '../../tokens/spacing.ts';
@@ -13,8 +13,14 @@ export type FieldProps = Omit<TextInputProps, 'style'> & {
   error?: string;
   hint?: string;
   multiline?: boolean;
+  /**
+   * 여러 줄 입력을 한 줄 높이로 시작해 이 줄 수까지만 늘립니다. 그 뒤는 안에서 스크롤합니다.
+   * 없으면 여러 줄 입력은 처음부터 본문을 쓰는 높이(96)입니다.
+   */
+  maxLines?: number;
   endAdornment?: ReactNode;
   style?: ViewStyle;
+  ref?: Ref<TextInput>;
 };
 
 /**
@@ -29,6 +35,7 @@ export function Field({
   error,
   hint,
   multiline = false,
+  maxLines,
   endAdornment,
   editable = true,
   style,
@@ -45,6 +52,7 @@ export function Field({
       ? colors.deep
       : colors.border;
 
+  const growing = multiline && maxLines !== undefined;
   const box: ViewStyle = {
     backgroundColor: editable ? colors.surface : colors.neutral,
     borderRadius: radius.field,
@@ -52,7 +60,7 @@ export function Field({
     borderColor,
     paddingHorizontal: space.lg,
     paddingVertical: multiline ? space.md : 0,
-    minHeight: multiline ? 96 : sizes.iconButton,
+    minHeight: multiline && !growing ? 96 : sizes.iconButton,
     justifyContent: 'center',
     flexDirection: 'row',
     alignItems: multiline ? 'flex-start' : 'center',
@@ -87,7 +95,8 @@ export function Field({
             fontSize: fontSize.bodyLg,
             lineHeight: lineHeight.bodyLg,
             textAlignVertical: multiline ? 'top' : 'center',
-            minHeight: multiline ? 72 : undefined,
+            minHeight: multiline && !growing ? 72 : undefined,
+            maxHeight: growing ? lineHeight.bodyLg * maxLines : undefined,
             paddingVertical: 0,
             flex: 1,
           }}

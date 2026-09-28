@@ -97,10 +97,17 @@ export function ErrorState({
   title = '불러오지 못했어요',
   description = '연결 상태를 확인하고 다시 시도해 주세요.',
   onRetry,
+  actionLabel = '다시 시도',
+  icon = 'cloud-off-outline',
 }: {
   title?: string;
-  description?: string;
+  /** null 이면 설명 줄을 그리지 않습니다. 기본값은 연결 문제 안내입니다 */
+  description?: string | null;
   onRetry?: () => void;
+  /** 연결이 아닌 이유(권한 등)로 막혔을 때 바꿉니다 */
+  icon?: IconName;
+  /** 권한 거부처럼 다시 시도가 아니라 다른 화면으로 보내야 할 때 바꿉니다 */
+  actionLabel?: string;
 }) {
   const { colors } = useTheme();
   return (
@@ -115,14 +122,16 @@ export function ErrorState({
         alignSelf: 'stretch',
       }}
     >
-      <Icon name="cloud-off-outline" size={34} color={colors.dangerInk} />
+      <Icon name={icon} size={34} color={colors.dangerInk} />
       <Txt variant="section" bold style={{ color: colors.dangerInk, textAlign: 'center' }}>
         {title}
       </Txt>
-      <Txt variant="caption" style={{ color: colors.dangerInk, textAlign: 'center' }}>
-        {description}
-      </Txt>
-      {onRetry ? <Button label="다시 시도" variant="soft" size="md" onPress={onRetry} /> : null}
+      {description ? (
+        <Txt variant="caption" style={{ color: colors.dangerInk, textAlign: 'center' }}>
+          {description}
+        </Txt>
+      ) : null}
+      {onRetry ? <Button label={actionLabel} variant="soft" size="md" onPress={onRetry} /> : null}
     </View>
   );
 }

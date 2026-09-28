@@ -91,9 +91,6 @@ export default function ResetPasswordRequestScreen() {
           <Txt variant="display" style={{ textAlign: 'center' }}>
             가입한 이메일을 알려 주세요
           </Txt>
-          <Txt variant="caption" tone="muted" style={{ textAlign: 'center' }}>
-            입력한 주소로 비밀번호 재설정 코드를 보내 드려요.
-          </Txt>
 
           <Field
             label="이메일"

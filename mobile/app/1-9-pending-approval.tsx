@@ -121,7 +121,6 @@ export default function PendingApprovalScreen() {
             <Txt variant="title">{request.crew.name}</Txt>
             <Txt variant="caption" tone="muted">가입 신청을 보냈어요</Txt>
           </Card>
-          <Banner tone="neutral">{'크루장이 승인하면 크루원이 돼요.\n앱을 닫아도 신청은 그대로 남아요.'}</Banner>
           <Button label="신청 취소" variant="ghost" size="lg" fullWidth loading={cancelling} disabled={refreshing || cancelling} onPress={() => setCancelDialog(true)} />
           <Button label="승인 상태 확인" variant="soft" size="lg" fullWidth loading={refreshing} disabled={cancelling} onPress={reload} />
         </>
@@ -131,11 +130,10 @@ export default function PendingApprovalScreen() {
         <Button label="승인 상태 확인" loading={refreshing} onPress={reload} />
       </> : null}
       {banner ? <Banner tone="danger">{banner}</Banner> : null}
-      {state === 'rejected' ? <EmptyState icon="close-circle-outline" title="가입 신청이 승인되지 않았어요." description="유효한 초대 코드로 다시 신청하거나 다른 크루를 선택할 수 있어요." actionLabel="크루 선택하기" onAction={() => router.replace('/1-6-create-or-join-crew')} /> : null}
-      {state === 'empty' ? <EmptyState title="가입 신청이 없어요." description="크루를 만들거나 초대 코드로 가입해 보세요." actionLabel="크루 선택하기" onAction={() => router.replace('/1-6-create-or-join-crew')} /> : null}
+      {state === 'rejected' ? <EmptyState icon="close-circle-outline" title="가입 신청이 승인되지 않았어요." actionLabel="크루 선택하기" onAction={() => router.replace('/1-6-create-or-join-crew')} /> : null}
+      {state === 'empty' ? <EmptyState title="가입 신청이 없어요." actionLabel="크루 선택하기" onAction={() => router.replace('/1-6-create-or-join-crew')} /> : null}
 
       <Dialog visible={cancelDialog} onClose={() => { if (!cancelling) setCancelDialog(false); }} title="가입 신청을 취소할까요?">
-        <Txt variant="body">{request?.crew.name}에 다시 가입하려면 초대 코드를 입력해야 해요.</Txt>
         <Button label="계속 기다리기" variant="ghost" disabled={cancelling} onPress={() => setCancelDialog(false)} />
         <Button label="신청 취소" variant="primary" loading={cancelling} disabled={cancelling} onPress={handleCancel} />
       </Dialog>

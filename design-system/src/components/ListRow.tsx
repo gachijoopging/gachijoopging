@@ -1,5 +1,5 @@
 import { memo, type ReactNode } from 'react';
-import { Pressable, View } from 'react-native';
+import { Pressable, View, type PressableProps } from 'react-native';
 import { radius } from '../../tokens/radius.ts';
 import { space, size as sizes } from '../../tokens/spacing.ts';
 import { borderWidth } from '../../tokens/elevation.ts';
@@ -24,6 +24,8 @@ function ListRowBase({
   divider = true,
   chevron = !right,
   accessibilityLabel,
+  accessibilityActions,
+  onAccessibilityAction,
 }: {
   title: string;
   subtitle?: string;
@@ -37,6 +39,12 @@ function ListRowBase({
   chevron?: boolean;
   /** 점·배지처럼 글자가 없는 상태를 읽어 줘야 할 때 (예: "…, 안 읽음") */
   accessibilityLabel?: string;
+  /**
+   * 행 안의 버튼(right 의 더보기 등)은 행이 한 요소로 읽혀 스크린리더가 따로 닿지 못합니다.
+   * 그 동작을 행의 접근성 동작으로 노출합니다.
+   */
+  accessibilityActions?: PressableProps['accessibilityActions'];
+  onAccessibilityAction?: PressableProps['onAccessibilityAction'];
 }) {
   const { colors } = useTheme();
   const body = (
@@ -68,7 +76,13 @@ function ListRowBase({
 
   if (!onPress) return body;
   return (
-    <PressableRow onPress={onPress} disabled={disabled} accessibilityLabel={accessibilityLabel}>
+    <PressableRow
+      onPress={onPress}
+      disabled={disabled}
+      accessibilityLabel={accessibilityLabel}
+      accessibilityActions={accessibilityActions}
+      onAccessibilityAction={onAccessibilityAction}
+    >
       {body}
     </PressableRow>
   );
@@ -78,11 +92,15 @@ function PressableRow({
   onPress,
   disabled,
   accessibilityLabel,
+  accessibilityActions,
+  onAccessibilityAction,
   children,
 }: {
   onPress: () => void;
   disabled?: boolean;
   accessibilityLabel?: string;
+  accessibilityActions?: PressableProps['accessibilityActions'];
+  onAccessibilityAction?: PressableProps['onAccessibilityAction'];
   children: ReactNode;
 }) {
   const ripple = useRipple();
@@ -91,6 +109,8 @@ function PressableRow({
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       accessibilityState={{ disabled: !!disabled }}
+      accessibilityActions={accessibilityActions}
+      onAccessibilityAction={onAccessibilityAction}
       onPress={onPress}
       disabled={disabled}
       android_ripple={disabled ? undefined : ripple}

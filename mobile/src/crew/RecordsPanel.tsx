@@ -1,34 +1,25 @@
-import { File, Paths } from 'expo-file-system';
 import { router } from 'expo-router';
-import * as Sharing from 'expo-sharing';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { RefreshControl, View } from 'react-native';
+import { View } from 'react-native';
 import {
-  AppHeader,
   Avatar,
   Badge,
   Banner,
   BarChart,
-  BottomSheet,
-  Button,
   Card,
   Chip,
   EmptyState,
   ErrorState,
-  Field,
   ListRow,
   Loading,
   MetricSplit,
-  Screen,
-  Snackbar,
   Txt,
   space,
 } from 'design-system/src';
-import { createMockClient, type ApiClient } from '../src/api/client';
-import type { MOCKS } from '../src/api/mocks.generated';
-import { exportFileName, exportRangeError, fetchCrewCsv, formatDateInput } from '../src/crew/export';
-import { RANGE_LABEL, categoryChips, seriesSummary, spokenDistance, totalsLabel, withCommas, type StatsRange } from '../src/crew/records';
-import { formatDistance, formatElapsed } from '../src/format';
+import { createMockClient, type ApiClient } from '../api/client';
+import type { MOCKS } from '../api/mocks.generated';
+import { RANGE_LABEL, categoryChips, seriesSummary, spokenDistance, totalsLabel, withCommas, type StatsRange } from './records';
+import { formatDistance, formatElapsed } from '../format';
 
 type Stats = (typeof MOCKS)['GET /crew/stats']['data'];
 
@@ -36,18 +27,15 @@ const api: ApiClient = createMockClient({ delayMs: 300 });
 const RANGES: StatsRange[] = ['WEEK', 'MONTH', 'ALL'];
 const RANGE_CHIP: Record<StatsRange, string> = { WEEK: '이번 주', MONTH: '이번 달', ALL: '전체' };
 
-export default function CrewRecordsScreen() {
+/** 3-1 모이깅의 기록 탭. refreshKey 가 바뀌면 보던 기간을 다시 받는다(당겨서 새로고침) */
+export function RecordsPanel({ refreshKey }: { refreshKey: number }) {
   const [range, setRange] = useState<StatsRange>('WEEK');
   const [stats, setStats] = useState<Stats | null>(null);
   const [failed, setFailed] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-  const [me, setMe] = useState<{ id: string; isLeader: boolean } | null>(null);
-  const [exporting, setExporting] = useState(false);
-  const [snackbar, setSnackbar] = useState<string | null>(null);
+  const [meId, setMeId] = useState<string | null>(null);
   const latestRange = useRef(range);
 
-  const load = useCallback(async (r: StatsRange, mode: 'first' | 'pull') => {
-    if (mode === 'pull') setRefreshing(true);
+  const load = useCallback(async (r: StatsRange) => {
     try {
       const { data } = await api.get('GET /crew/stats', { range: r });
       if (r !== latestRange.current) return;
@@ -55,31 +43,30 @@ export default function CrewRecordsScreen() {
       setFailed(false);
     } catch {
       if (r === latestRange.current) setFailed(true);
-    } finally {
-      setRefreshing(false);
     }
   }, []);
 
   useEffect(() => {
-    api
-      .get('GET /users/me')
-      .then(({ data }) => setMe({ id: data.id, isLeader: !!data.membership.crew?.isLeader }))
-      .catch(() => {});
+    api.get('GET /users/me').then(({ data }) => setMeId(data.id)).catch(() => {});
   }, []);
 
   useEffect(() => {
     latestRange.current = range;
     setStats(null);
-    void load(range, 'first');
+    void load(range);
   }, [range, load]);
+
+  // 탭을 바꿔 새로 붙을 때는 위의 첫 조회로 충분하다. 붙은 뒤 바뀐 refreshKey 만 다시 받는다
+  const mountedKey = useRef(refreshKey);
+  useEffect(() => {
+    if (refreshKey !== mountedKey.current) void load(latestRange.current);
+  }, [refreshKey, load]);
 
   const activities: number | undefined = stats?.totals.activities;
   const empty = activities === 0;
 
   return (
-    <Screen scroll refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load(range, 'pull')} />}>
-      <AppHeader title="크루 기록" onBack={() => router.back()} />
-
+    <View style={{ gap: space.md }}>
       <View style={{ flexDirection: 'row', gap: space.sm }}>
         {RANGES.map((r) => (
           <Chip
@@ -94,7 +81,7 @@ export default function CrewRecordsScreen() {
 
       {!stats ? (
         failed ? (
-          <ErrorState title="크루 기록을 불러오지 못했어요" onRetry={() => load(range, 'first')} />
+          <ErrorState title="크루 기록을 불러오지 못했어요" onRetry={() => load(range)} />
         ) : (
           <Loading label="크루 기록을 불러오고 있어요" />
         )
@@ -135,7 +122,7 @@ export default function CrewRecordsScreen() {
               <View>
                 <Txt variant="section" bold>크루원 순위</Txt>
                 {stats.ranking.map((row) => {
-                  const mine = row.user.id === me?.id;
+                  const mine = row.user.id === meId;
                   const distance = formatDistance(row.distanceM);
                   return (
                     <ListRow
@@ -158,63 +145,10 @@ export default function CrewRecordsScreen() {
             </>
           )}
 
-          {me?.isLeader ? (
-            <Button
-              label="CSV 내보내기"
-              size="lg"
-              icon="download"
-              fullWidth
-              accessibilityLabel="CSV 내보내기, 크루장만 가능"
-              onPress={() => setExporting(true)}
-            />
-          ) : null}
         </>
       )}
 
-      <ExportSheet
-        visible={exporting}
-        onClose={() => setExporting(false)}
-        onFailed={() => setSnackbar('CSV를 만들지 못했어요. 다시 시도해 주세요.')}
-      />
-      <Snackbar visible={snackbar != null} message={snackbar ?? ''} onDismiss={() => setSnackbar(null)} />
-    </Screen>
+    </View>
   );
 }
 
-function ExportSheet({ visible, onClose, onFailed }: { visible: boolean; onClose: () => void; onFailed: () => void }) {
-  const [from, setFrom] = useState('');
-  const [to, setTo] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-
-  const submit = async () => {
-    const invalid = exportRangeError(from, to);
-    setError(invalid);
-    if (invalid) return;
-    setBusy(true);
-    try {
-      const file = new File(Paths.cache, exportFileName(from, to));
-      file.write(await fetchCrewCsv(from, to));
-      await Sharing.shareAsync(file.uri, { mimeType: 'text/csv', dialogTitle: '기록 내보내기' });
-      onClose();
-    } catch {
-      onFailed();
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <BottomSheet visible={visible} onClose={busy ? () => {} : onClose} title="기록 내보내기">
-      <View style={{ gap: space.md }}>
-        <Field label="시작일" placeholder="2026-09-01" value={from} onChangeText={(v) => setFrom(formatDateInput(v))} keyboardType="number-pad" maxLength={10} editable={!busy} />
-        <Field label="종료일" placeholder="2026-09-30" value={to} onChangeText={(v) => setTo(formatDateInput(v))} keyboardType="number-pad" maxLength={10} editable={!busy} error={error ?? undefined} />
-        <Txt variant="caption" tone="muted">활동 한 회가 한 행으로 내려받아져요.</Txt>
-        <View style={{ flexDirection: 'row', gap: space.sm, justifyContent: 'flex-end' }}>
-          <Button label="취소" variant="ghost" size="md" disabled={busy} onPress={onClose} />
-          <Button label="CSV 내보내기" size="md" loading={busy} disabled={busy} onPress={submit} />
-        </View>
-      </View>
-    </BottomSheet>
-  );
-}
