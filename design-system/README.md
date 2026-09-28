@@ -159,6 +159,8 @@ Pretendard (OFL — 앱 동봉 허용). `mobile/app.json` 의 `expo-font` 플러
 
 ```
 assets/fonts/Pretendard-Regular.ttf
+assets/fonts/Pretendard-Medium.ttf
+assets/fonts/Pretendard-SemiBold.ttf
 assets/fonts/Pretendard-Bold.ttf
 ```
 

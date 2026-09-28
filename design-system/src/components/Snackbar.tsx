@@ -105,7 +105,7 @@ export function Snackbar({
               borderColor: colors.onDark,
             }}
           >
-            <Txt variant="label" bold style={{ color: colors.onDark }}>
+            <Txt variant="label" style={{ color: colors.onDark }}>
               {actionLabel}
             </Txt>
           </Pressable>

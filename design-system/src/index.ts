@@ -4,7 +4,7 @@ export { ThemeProvider, useTheme, useRipple, pressedOpacity, disabledOpacity, de
 export type { Scheme, Theme } from './theme.tsx';
 
 export { Txt } from './components/Text.tsx';
-export type { TextVariant, TextTone, TxtProps } from './components/Text.tsx';
+export type { TextVariant, TextTone, TextWeight, TxtProps } from './components/Text.tsx';
 
 export { Icon } from './components/Icon.tsx';
 export type { IconName, IconProps } from './components/Icon.tsx';
