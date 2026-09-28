@@ -171,6 +171,11 @@ for (const [name, p] of themes) {
     atLeast(p.onDark, p.deep, 4.5, `${name} Snackbar 본문`);
     atLeast(p.onDark, p.deep, 4.5, `${name} Snackbar 액션`);
 
+    // Dot · 글자 없는 상태 점. 서피스·배경, 선택된 달력 칸(deep) 위
+    atLeast(p.deep, p.surface, 3, `${name} Dot 서피스`);
+    atLeast(p.deep, p.bg, 3, `${name} Dot 배경`);
+    atLeast(p.onDark, p.deep, 3, `${name} Dot onDeep`);
+
     // Tile dark
     atLeast(p.onDark, p.deep, 4.5, `${name} Tile dark`);
   });
