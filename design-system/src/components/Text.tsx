@@ -28,6 +28,8 @@ const DEFAULT_WEIGHT: Partial<Record<TextVariant, TextWeight>> = {
   label: 'semibold',
 };
 
+const TABULAR: TextVariant[] = ['counter', 'display', 'metric'];
+
 export type TxtProps = TextProps & {
   variant?: TextVariant;
   tone?: TextTone;
@@ -75,6 +77,8 @@ export function Txt({
     lineHeight: lineHeight[variant],
     fontFamily: fontFamily[resolved],
     color: toneColor[tone],
+    // 바뀌는 숫자가 자릿수마다 폭이 달라 좌우로 흔들리지 않게 고정폭 숫자를 쓴다
+    ...(TABULAR.includes(variant) && { fontVariant: ['tabular-nums'] }),
   };
   return (
     <RNText style={[base, style]} {...rest} />
