@@ -1,5 +1,5 @@
-import { createContext, useContext, type ReactNode } from 'react';
-import { Platform, useColorScheme, type PressableAndroidRippleConfig } from 'react-native';
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { AccessibilityInfo, Platform, useColorScheme, type PressableAndroidRippleConfig } from 'react-native';
 import { light, dark, type Palette } from '../tokens/colors.ts';
 import { shadow, androidElevation, type ShadowLevel } from '../tokens/elevation.ts';
 
@@ -82,4 +82,22 @@ export function depth(level: ShadowLevel, boxShadow: string) {
     return { elevation: androidElevation[level] };
   }
   return { boxShadow };
+}
+
+/**
+ * 시스템의 '애니메이션 제거' 설정. 켜져 있으면 미끄러짐·스프링 대신 즉시 바뀝니다.
+ * 앱을 켜 둔 채 설정을 바꿔도 따라가도록 변경을 구독합니다.
+ */
+export function useReduceMotion(): boolean {
+  const [reduce, setReduce] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    AccessibilityInfo.isReduceMotionEnabled().then((v) => alive && setReduce(v));
+    const sub = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduce);
+    return () => {
+      alive = false;
+      sub.remove();
+    };
+  }, []);
+  return reduce;
 }

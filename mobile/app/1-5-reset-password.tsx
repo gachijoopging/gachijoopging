@@ -105,6 +105,7 @@ export default function ResetPasswordRequestScreen() {
             keyboardType="email-address"
             autoCapitalize="none"
             autoCorrect={false}
+            autoComplete="email"
             textContentType="emailAddress"
             returnKeyType="done"
             onSubmitEditing={handleSubmit}

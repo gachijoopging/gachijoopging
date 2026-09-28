@@ -308,7 +308,7 @@ export function Catalog({ scheme, onScheme }: { scheme: Scheme; onScheme: (s: Sc
           </Card>
           <Card>
             <Txt variant="caption" tone="muted">9월 7일 ~ 9월 13일</Txt>
-            <BarChart values={[40, 0, 77, 120, 64, 0, 95]} accessibilityLabel="이번 주, 총 396개" />
+            <BarChart values={[40, 0, 77, 120, 64, null, null]} labels={['월', '화', '수', '목', '금', '토', '일']} accessibilityLabel="이번 주, 총 301개" />
           </Card>
           <Card>
             <MetricSplit

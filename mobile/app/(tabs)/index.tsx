@@ -5,6 +5,7 @@ import {
   Avatar,
   Button,
   Card,
+  Appear,
   Chip,
   Dot,
   ErrorState,
@@ -65,7 +66,7 @@ export default function HomeScreen() {
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
         <View style={{ flex: 1, gap: space.xs }}>
           <Image source={scheme === 'dark' ? wordmarkDark : wordmark} accessible={false} resizeMode="contain" style={{ width: 110, height: (110 * 301) / 840 }} />
-          <Txt variant="caption" tone="muted">오늘도 가볍게 한 바퀴 🌱</Txt>
+          <Txt variant="caption" tone="muted">오늘도 가볍게 한 바퀴</Txt>
         </View>
         <Chip
           label={home?.crew.name ?? ' '}
@@ -179,10 +180,10 @@ function Sparkline({ values }: { values: readonly number[] }) {
   const max = Math.max(1, ...values);
   const HEIGHT = 32;
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 3, height: HEIGHT }} accessible={false}>
+    <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: space.xs, height: HEIGHT }} accessible={false}>
       {values.map((v, i) => (
-        // 0 은 바닥의 얇은 선으로 남긴다
-        <View key={i} style={{ width: 6, height: Math.max(2, (v / max) * HEIGHT), borderRadius: 3, backgroundColor: colors.deep }} />
+        // 0 은 트랙 색 바닥으로 남긴다 — BarChart 와 같이 "쉰 날"로 읽혀야 데이터 막대와 헷갈리지 않는다
+        <View key={i} style={{ width: 6, height: v > 0 ? Math.max(2, (v / max) * HEIGHT) : 2, borderRadius: radius.pill, backgroundColor: v > 0 ? colors.deep : colors.track }} />
       ))}
     </View>
   );
@@ -213,12 +214,12 @@ function CrewCharacter({ character }: { character: Home['character'] }) {
     >
       <Image source={sprout} resizeMode="contain" style={{ width: 140, height: 140 }} />
       <Txt variant="caption" tone="muted">단계 {character.stage} · {stageName}</Txt>
-      {bubble ? (
-        // 말풍선이 뜨고 질 때 아래 카드가 밀리지 않도록 캐릭터 위에 띄운다
-        <View accessibilityLiveRegion="polite" style={{ position: 'absolute', top: space.sm }}>
+      {/* 말풍선이 뜨고 질 때 아래 카드가 밀리지 않도록 캐릭터 위에 띄운다. 캐릭터 쪽(아래)에서 솟아 같은 길로 들어간다 */}
+      <Appear visible={bubble} style={{ position: 'absolute', top: space.sm }}>
+        <View accessibilityLiveRegion="polite">
           <Chip label={characterBubble(character)} tone="neutral" />
         </View>
-      ) : null}
+      </Appear>
     </Pressable>
   );
 }

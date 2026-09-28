@@ -11,6 +11,7 @@ import {
   ListRow,
   Loading,
   Txt,
+  borderWidth,
   disabledOpacity,
   pressedOpacity,
   radius,
@@ -22,8 +23,10 @@ import {
 import { createMockClient, type ApiClient } from '../api/client';
 import type { MOCKS } from '../api/mocks.generated';
 import {
+  HEAT_OPACITY,
   canGoNextMonth,
   cellLabel,
+  cellMark,
   daySummary,
   heatLevel,
   initialDate,
@@ -214,8 +217,6 @@ function MonthGrid({
   );
 }
 
-const HEAT_OPACITY: Record<HeatLevel, number> = { 0: 0, 1: 0.3, 2: 0.6, 3: 1 };
-
 function DayCell({
   cell,
   heat,
@@ -237,6 +238,7 @@ function DayCell({
   const ripple = useRipple();
   // 앞뒤 달 칸은 자리만 차지한다 — 그 달의 응답에 없는 날짜다
   if (!cell.inMonth) return <View style={{ flex: 1, minHeight: size.minTouch }} />;
+  const mark = cellMark(heat, selected);
   return (
     <Pressable
       accessibilityRole="button"
@@ -255,16 +257,24 @@ function DayCell({
           borderRadius: radius.field,
           overflow: 'hidden',
           backgroundColor: selected ? colors.deep : undefined,
+          borderWidth: isToday ? borderWidth.focus : 0,
+          borderColor: colors[mark],
         }}
       >
         {!selected && heat > 0 ? (
           // 라임 한 색을 불투명도로 세 단계 나눈다. 숫자는 그 위에 있어 흐려지지 않는다
           <View style={{ position: 'absolute', inset: 0, backgroundColor: colors.lime, opacity: HEAT_OPACITY[heat] }} />
         ) : null}
-        <Txt variant="caption" tone={selected ? 'onDark' : 'ink'} bold={cell.activityCount > 0}>
+        <Txt variant="caption" tone={mark} bold={cell.activityCount > 0}>
           {Number(cell.date.slice(8))}
         </Txt>
-        {isToday ? <Dot size={space.xs} /> : null}
+        {/* 라임 농도끼리는 대비가 1.1:1 이라 색만으로 단계를 못 읽는다(SC 1.4.1). 점 개수로 한 번 더 말한다.
+            점이 없는 날도 줄 높이를 남겨 숫자 위치가 칸마다 흔들리지 않게 한다 */}
+        <View style={{ flexDirection: 'row', gap: space.xs / 2, height: space.xs }}>
+          {Array.from({ length: heat }, (_, i) => (
+            <Dot key={i} size={space.xs} tone={mark === 'onDark' ? 'onDeep' : mark} />
+          ))}
+        </View>
       </View>
     </Pressable>
   );
