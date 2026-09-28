@@ -42,7 +42,7 @@ import { kstToday } from '../src/crew/calendar';
 import {
   CHAT_MAX,
   canSendChat,
-  charCounter,
+  chatLimitNotice,
   chatRows,
   chatSession,
   chatTime,
@@ -105,7 +105,10 @@ export default function CrewChatScreen() {
   const socketRef = useRef<ChatSocket | null>(null);
   const listRef = useRef<FlatList<ChatRow>>(null);
   const atBottom = useRef(true);
-  const timers = useRef(new Set<ReturnType<typeof setTimeout>>());
+  const timers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
+  const socketOpen = useRef(false);
+  const alive = useRef(true);
+  const initialScrolled = useRef(false);
   const readTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const update = useCallback((next: (s: ChatState) => ChatState) => {
@@ -124,12 +127,18 @@ export default function CrewChatScreen() {
 
   const transmit = useCallback(
     (id: string, body: string) => {
+      clearTimeout(timers.current.get(id));
+      timers.current.delete(id);
+      // 끊긴 동안은 보내지 않고 전송 중으로 큐에 둔다. 실패는 연결된 채 echo 가 없을 때만이다
+      if (!socketOpen.current) return;
       socketRef.current?.send({ id, text: body });
-      const timer = setTimeout(() => {
-        timers.current.delete(timer);
-        update((s) => markFailed(s, id));
-      }, SEND_TIMEOUT_MS);
-      timers.current.add(timer);
+      timers.current.set(
+        id,
+        setTimeout(() => {
+          timers.current.delete(id);
+          update((s) => markFailed(s, id));
+        }, SEND_TIMEOUT_MS),
+      );
     },
     [update],
   );
@@ -138,6 +147,8 @@ export default function CrewChatScreen() {
     (event: ChatSocketEvent) => {
       if (event.type === 'CHAT_DELETED') return update((s) => markDeleted(s, event.data.seq));
       const fromOther = event.data.author.id !== meRef.current?.author.id;
+      clearTimeout(timers.current.get(event.data.id));
+      timers.current.delete(event.data.id);
       update((s) => receive(s, event.data));
       if (!fromOther) return;
       if (atBottom.current) markRead();
@@ -193,6 +204,7 @@ export default function CrewChatScreen() {
         isLeader: !!crew?.isLeader,
         crewId: crew?.id ?? '',
       };
+      if (!alive.current) return;
       setMe(nextMe);
       const session = chatSession({ meId: nextMe.author.id, crewId: nextMe.crewId });
       update(() => session.unsent.reduce(enqueue, mergeHistory(emptyChat(), 'initial', page)));
@@ -204,6 +216,7 @@ export default function CrewChatScreen() {
       socket.subscribe(onEvent);
       let wasConnecting = false;
       socket.onStatus((status) => {
+        socketOpen.current = status === 'open';
         if (typeof status === 'object') return void onClosed(status.closed, socket);
         if (status === 'connecting') {
           wasConnecting = true;
@@ -215,7 +228,7 @@ export default function CrewChatScreen() {
         wasConnecting = false;
         setSnackbar('연결이 복구됐어요.');
         fillGap().catch(() => {});
-        chatRef.current.items.forEach((i) => i.status === 'sending' && socket.send({ id: i.id, text: i.text }));
+        chatRef.current.items.forEach((i) => i.status === 'sending' && transmit(i.id, i.text));
       });
       session.unsent.forEach((i) => i.status === 'sending' && transmit(i.id, i.text));
 
@@ -233,6 +246,7 @@ export default function CrewChatScreen() {
 
   useEffect(
     () => () => {
+      alive.current = false;
       const current = meRef.current;
       if (current) saveChatSession({ meId: current.author.id, crewId: current.crewId }, chatRef.current, textRef.current);
       timers.current.forEach(clearTimeout);
@@ -293,14 +307,15 @@ export default function CrewChatScreen() {
       markRead();
     }
     atBottom.current = bottom;
-    if (e.contentOffset.y < NEAR_EDGE && olderState === 'idle') void loadOlder();
+    // 처음 맨 아래로 내리기 전의 0 위치에서 이전 페이지를 부르지 않는다
+    if (initialScrolled.current && e.contentOffset.y < NEAR_EDGE && olderState === 'idle') void loadOlder();
   };
 
   const openProfile = (author: ChatMessage['author']) =>
     router.push({ pathname: '/5-4-user-profile', params: { id: author.id } });
 
   const rows = me ? chatRows(chat.items, me.author.id, kstToday()) : [];
-  const counter = charCounter(text);
+  const limitNotice = chatLimitNotice(text);
   const ready = phase === 'ready';
 
   const listHeader = (
@@ -346,7 +361,11 @@ export default function CrewChatScreen() {
             keyboardShouldPersistTaps="handled"
             onScroll={onScroll}
             scrollEventThrottle={100}
-            onContentSizeChange={() => atBottom.current && listRef.current?.scrollToEnd({ animated: false })}
+            onContentSizeChange={() => {
+              if (!atBottom.current) return;
+              listRef.current?.scrollToEnd({ animated: false });
+              initialScrolled.current = true;
+            }}
             renderItem={({ item: row }) =>
               row.type === 'date' ? (
                 <View style={{ paddingVertical: space.sm }}>
@@ -376,14 +395,9 @@ export default function CrewChatScreen() {
       </View>
 
       <View style={{ gap: space.xs, paddingBottom: space.md }}>
-        {counter ? (
-          <Txt
-            variant="micro"
-            tone={counter.full ? 'error' : 'faint'}
-            style={{ alignSelf: 'flex-end' }}
-            accessibilityLabel={`${text.length}자, ${CHAT_MAX}자 중`}
-          >
-            {counter.label}
+        {limitNotice ? (
+          <Txt variant="micro" tone="error" style={{ alignSelf: 'flex-end' }} accessibilityLiveRegion="polite">
+            {limitNotice}
           </Txt>
         ) : null}
         <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: space.sm }}>

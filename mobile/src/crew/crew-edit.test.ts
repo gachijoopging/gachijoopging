@@ -72,3 +72,7 @@ describe('버리기 확인이 필요한 변경', () => {
     expect(crewChanged(original, form({ photoMediaId: 'm002' }))).toBe(true);
   });
 });
+
+test('붙여넣은 \r\n 줄바꿈도 이름에서 지운다', () => {
+  expect(crewPatch(original, form({ name: '여의도\r\n크루' }))).toEqual({ name: '여의도크루' });
+});

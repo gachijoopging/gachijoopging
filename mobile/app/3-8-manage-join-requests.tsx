@@ -1,5 +1,5 @@
 import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { Pressable, RefreshControl, View } from 'react-native';
 import {
   AppHeader,
@@ -52,9 +52,12 @@ export default function ManageJoinRequestsScreen() {
   }, []);
 
   useFocusEffect(useCallback(() => void load('quiet'), [load]));
+  const deciding = useRef(false);
 
   const decide = async () => {
-    if (!confirm) return;
+    // 같은 프레임의 연속 탭은 confirm 이 비워지기 전이라 ref 로 막는다
+    if (!confirm || deciding.current) return;
+    deciding.current = true;
     const { request, decision } = confirm;
     setConfirm(null);
     setBusyId(request.id);
@@ -66,8 +69,10 @@ export default function ManageJoinRequestsScreen() {
     }
     const outcome = joinDecisionOutcome(decision, request.user.nickname, error);
     if (outcome.removeRow) setRequests((prev) => prev?.filter((r) => r.id !== request.id) ?? prev);
+    if (outcome.denied) setIsLeader(false);
     setBusyId(null);
-    setSnackbar(outcome.message);
+    if (outcome.message) setSnackbar(outcome.message);
+    deciding.current = false;
   };
 
   const back = () => (router.canGoBack() ? router.back() : router.replace('/3-2-crew-info'));

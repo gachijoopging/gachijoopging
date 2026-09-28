@@ -60,3 +60,14 @@ describe('목 소켓 끊김', () => {
     expect(seen).toEqual(['open', { closed: 4401 }, 'connecting', 'open']);
   });
 });
+
+test('연결 시도가 예외로 끝나도 다음 간격에 다시 시도한다', async () => {
+  const results: Array<() => Promise<boolean>> = [
+    () => Promise.reject(new Error('network')),
+    async () => true,
+  ];
+  const connect = jest.fn(() => results.shift()!());
+  reconnectWithBackoff(connect);
+  await jest.advanceTimersByTimeAsync(3000);
+  expect(connect).toHaveBeenCalledTimes(2);
+});

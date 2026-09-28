@@ -127,15 +127,14 @@ export function chatRows(items: readonly ChatItem[], meId: string, today: string
 }
 
 export const CHAT_MAX = 500;
-const COUNTER_FROM = 400;
 
 export function canSendChat(text: string): boolean {
   return text.trim().length > 0 && text.length <= CHAT_MAX;
 }
 
-export function charCounter(text: string): { label: string; full: boolean } | null {
-  if (text.length <= COUNTER_FROM) return null;
-  return { label: `${text.length}/${CHAT_MAX}`, full: text.length >= CHAT_MAX };
+/** 한도에 닿아 더 입력되지 않을 때만 그 이유를 알린다 */
+export function chatLimitNotice(text: string): string | null {
+  return text.length >= CHAT_MAX ? '500자까지 입력할 수 있어요.' : null;
 }
 
 /** docs/realtime.md 의 지수 백오프. attempt 는 0부터 */

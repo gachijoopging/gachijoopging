@@ -72,3 +72,13 @@ describe('위임·추방 결과', () => {
     });
   });
 });
+
+describe('가입 신청 처리 — 권한', () => {
+  test('크루장이 아니게 됐으면(403) 행을 두고 권한 거부로 바꾼다', () => {
+    expect(joinDecisionOutcome('APPROVE', '지수', new ApiError('FORBIDDEN'))).toEqual({
+      removeRow: false,
+      message: null,
+      denied: true,
+    });
+  });
+});

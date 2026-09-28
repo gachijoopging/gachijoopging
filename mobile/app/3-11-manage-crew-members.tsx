@@ -1,5 +1,5 @@
 import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, RefreshControl, View } from 'react-native';
 import {
   AppHeader,
@@ -64,8 +64,11 @@ export default function ManageCrewMembersScreen() {
 
   useFocusEffect(useCallback(() => void load('quiet'), [load]));
 
+  const acting = useRef(false);
   const act = async () => {
-    if (!confirm) return;
+    // 같은 프레임의 연속 탭은 confirm 이 비워지기 전이라 ref 로 막는다
+    if (!confirm || acting.current) return;
+    acting.current = true;
     const { member, action } = confirm;
     setConfirm(null);
     setBusyId(member.id);
@@ -76,10 +79,11 @@ export default function ManageCrewMembersScreen() {
     } catch (e) {
       error = e;
     }
-    setBusyId(null);
     const outcome = memberActionOutcome(action, member.nickname, error);
-    // 위임하면 내 역할이 바뀌므로 3-2 로 돌아가 거기서 안내한다. 3-2 는 포커스 때 역할을 다시 받는다
+    // 위임하면 내 역할이 바뀌므로 3-2 로 돌아가 거기서 안내한다. 떠나는 화면은 다시 그리지 않는다(3-10 과 같은 이유)
     if (outcome.next === 'leave') return router.dismissTo({ pathname: '/3-2-crew-info', params: { flash: outcome.message ?? '' } });
+    setBusyId(null);
+    acting.current = false;
     if (outcome.message) setSnackbar(outcome.message);
     if (outcome.next === 'removeRow') setMembers((prev) => prev?.filter((m) => m.id !== member.id) ?? prev);
     if (outcome.next === 'reload') void load('quiet');

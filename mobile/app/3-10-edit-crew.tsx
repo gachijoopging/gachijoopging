@@ -47,7 +47,7 @@ export default function EditCrewScreen() {
   const introRef = useRef<TextInput>(null);
   const [touched, setTouched] = useState<{ name?: boolean; intro?: boolean }>({});
   const touch = (field: 'name' | 'intro') => setTouched((t) => ({ ...t, [field]: true }));
-  usePreventBack(saving);
+  usePreventBack(saving || uploading);
 
   const load = async () => {
     setFailed(false);
@@ -109,11 +109,12 @@ export default function EditCrewScreen() {
   const upload = async (asset: ImagePicker.ImagePickerAsset) => {
     setUploading(true);
     try {
-      const { data } = await api.mutate('POST /media', {
-        mediaId: Crypto.randomUUID(),
-        file: { uri: asset.uri, name: asset.fileName ?? 'crew.jpg', type: asset.mimeType ?? 'image/jpeg' },
-        purpose: 'CREW',
-      });
+      // 계약이 multipart/form-data 다. RN 의 FormData 는 { uri, name, type } 을 파일로 올린다
+      const body = new FormData();
+      body.append('mediaId', Crypto.randomUUID());
+      body.append('purpose', 'CREW');
+      body.append('file', { uri: asset.uri, name: asset.fileName ?? 'crew.jpg', type: asset.mimeType ?? 'image/jpeg' } as unknown as Blob);
+      const { data } = await api.mutate('POST /media', body);
       setPhoto({ uri: asset.uri, mediaId: data.mediaId });
       update({ photoMediaId: data.mediaId });
     } catch {

@@ -1,4 +1,4 @@
-import { canSendChat, charCounter, chatSession, saveChatSession, chatRows, chatTime, emptyChat, reconnectDelayMs, enqueue, markDeleted, markFailed, mergeHistory, receive, retry, type ChatMessage } from './chat';
+import { canSendChat, chatLimitNotice, chatSession, saveChatSession, chatRows, chatTime, emptyChat, reconnectDelayMs, enqueue, markDeleted, markFailed, mergeHistory, receive, retry, type ChatMessage } from './chat';
 
 const sanghyeok = { id: 'u2', nickname: '상혁', photoUrl: null, withdrawn: false };
 const me = { id: 'u1', nickname: '관열', photoUrl: null, withdrawn: false };
@@ -159,10 +159,9 @@ describe('메시지 입력', () => {
     expect(canSendChat('가'.repeat(501))).toBe(false);
   });
 
-  test('남은 글자는 400자를 넘은 뒤부터 보이고 500자에서 붉어진다', () => {
-    expect(charCounter('가'.repeat(400))).toBeNull();
-    expect(charCounter('가'.repeat(487))).toEqual({ label: '487/500', full: false });
-    expect(charCounter('가'.repeat(500))).toEqual({ label: '500/500', full: true });
+  test('글자 수는 보이지 않고, 500자에 닿아 더 입력되지 않을 때만 이유를 알린다', () => {
+    expect(chatLimitNotice('가'.repeat(499))).toBeNull();
+    expect(chatLimitNotice('가'.repeat(500))).toBe('500자까지 입력할 수 있어요.');
   });
 });
 
@@ -202,5 +201,24 @@ describe('화면을 떠났다 돌아오기', () => {
     expect(state.items.map((i) => i.status)).toEqual(['sent', 'sending']);
     state = mergeHistory(state, 'after', { items: [{ ...draft, seq: 2 }], hasMore: false });
     expect(state.items.map((i) => i.status)).toEqual(['sent', 'sent']);
+  });
+});
+
+describe('말풍선 줄 — 경계', () => {
+  const rowsAt = (times: string[]) =>
+    chatRows(
+      mergeHistory(emptyChat(), 'initial', { items: times.map((t, i) => msg(i + 1, sanghyeok, t)), hasMore: true }).items,
+      'u1',
+      '2026-09-28',
+    );
+
+  test('UTC 14:59 와 15:00 은 KST 로 다른 날이라 사이에 구분선이 들어간다', () => {
+    const rows = rowsAt(['2026-09-05T14:59:00Z', '2026-09-05T15:00:00Z']);
+    expect(rows.map((r) => r.type)).toEqual(['date', 'message', 'date', 'message']);
+  });
+
+  test('날짜가 바뀌면 같은 사람이어도 얼굴·이름을 다시 보인다', () => {
+    const rows = rowsAt(['2026-09-05T14:59:00Z', '2026-09-05T15:00:00Z']).filter((r) => r.type === 'message');
+    expect(rows.map((r) => r.type === 'message' && r.showAuthor)).toEqual([true, true]);
   });
 });

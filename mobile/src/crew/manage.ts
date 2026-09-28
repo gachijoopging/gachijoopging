@@ -19,7 +19,7 @@ export function joinDecisionOutcome(
   decision: JoinDecision,
   nickname: string,
   error: unknown,
-): { removeRow: boolean; message: string } {
+): { removeRow: boolean; message: string | null; denied?: true } {
   if (error == null) {
     return {
       removeRow: true,
@@ -27,6 +27,7 @@ export function joinDecisionOutcome(
     };
   }
   if (alreadyChanged(error)) return { removeRow: true, message: '이미 처리된 가입 신청이에요.' };
+  if (error instanceof ApiError && error.code === 'FORBIDDEN') return { removeRow: false, message: null, denied: true };
   return { removeRow: false, message: '가입 신청을 처리하지 못했어요. 다시 시도해 주세요.' };
 }
 

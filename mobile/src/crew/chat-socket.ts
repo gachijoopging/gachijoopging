@@ -25,7 +25,13 @@ export function reconnectWithBackoff(connect: () => Promise<boolean>): () => voi
   const attempt = (n: number) => {
     timer = setTimeout(async () => {
       if (cancelled) return;
-      if (!(await connect()) && !cancelled) attempt(n + 1);
+      let ok = false;
+      try {
+        ok = await connect();
+      } catch {
+        // 네트워크 예외도 실패 한 번으로 치고 다음 간격에 다시 붙는다
+      }
+      if (!ok && !cancelled) attempt(n + 1);
     }, reconnectDelayMs(n));
   };
   attempt(0);
@@ -50,7 +56,7 @@ export type MockChatSocket = ChatSocket & {
   simulateDrop(code?: 4401 | 4403): void;
 };
 
-/** 백엔드 소켓(GAC-50)이 붙기 전까지 쓰는 구현. 보낸 메시지를 그대로 echo 한다 */
+/** 백엔드 소켓이 붙기 전까지 쓰는 구현. 보낸 메시지를 그대로 echo 한다 */
 export function createMockChatSocket({
   author,
   echoDelayMs = 400,

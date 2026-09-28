@@ -7,7 +7,7 @@ type CrewFields = { name: string; intro: string; goalCount: number };
 export type CrewForm = CrewFields & { photoMediaId?: string | null };
 export type CrewPatch = Partial<CrewFields & { photoMediaId: string | null }>;
 
-const cleanName = (name: string) => name.replace(/\n/g, '').trim();
+const cleanName = (name: string) => name.replace(/[\r\n]/g, '').trim();
 
 export function crewFormErrors(form: CrewForm): Partial<Record<keyof CrewFields, string>> {
   const errors: Partial<Record<keyof CrewFields, string>> = {};
