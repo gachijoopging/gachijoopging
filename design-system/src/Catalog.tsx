@@ -415,7 +415,8 @@ export function Catalog({ scheme, onScheme }: { scheme: Scheme; onScheme: (s: Sc
           <ErrorState onRetry={noop} />
           <ErrorState
             title="크루장만 가입 신청을 관리할 수 있어요."
-            description="크루장에게 요청해 주세요."
+            description={null}
+            icon="lock-outline"
             actionLabel="크루 정보로"
             onRetry={noop}
           />
