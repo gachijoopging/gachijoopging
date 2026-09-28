@@ -1,5 +1,5 @@
 import * as Crypto from 'expo-crypto';
-import { router, useFocusEffect, useLocalSearchParams, useNavigation } from 'expo-router';
+import { router, useLocalSearchParams, useNavigation } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { RefreshControl, ScrollView, View } from 'react-native';
 import {
@@ -34,7 +34,7 @@ type Comment = { id: string; author: { id: string; nickname: string; photoUrl: s
 const api: ApiClient = createMockClient({ delayMs: 300 });
 
 export default function NoticeDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, flash } = useLocalSearchParams<{ id: string; flash?: string }>();
   const navigation = useNavigation();
   const [notice, setNotice] = useState<Detail | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
@@ -68,8 +68,14 @@ export default function NoticeDetailScreen() {
     [id],
   );
 
-  // 수정하고 돌아오면 바뀐 제목·본문을 다시 받는다
-  useFocusEffect(useCallback(() => void load('first'), [load]));
+  useEffect(() => {
+    void load('first');
+  }, [load]);
+
+  // 수정하고 돌아오면(flash 가 붙어 온다) 바뀐 제목·본문을 다시 받는다
+  useEffect(() => {
+    if (flash) void load('first');
+  }, [flash, load]);
 
   useEffect(() => {
     api
@@ -89,7 +95,7 @@ export default function NoticeDetailScreen() {
     try {
       const requestId = requestIdFor(id, Crypto.randomUUID);
       const { data } = await api.mutate('POST /notices/{noticeId}/comments', { noticeId: id, id: requestId, text });
-      setComments((prev) => [...prev, data]);
+      setComments((prev) => [...prev.filter((c) => c.id !== data.id), data]);
       clearDraft(id);
       setText('');
     } catch {

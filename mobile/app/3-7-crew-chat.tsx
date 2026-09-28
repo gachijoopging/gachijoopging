@@ -110,6 +110,8 @@ export default function CrewChatScreen() {
   const alive = useRef(true);
   const initialScrolled = useRef(false);
   const readTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // 읽음은 화면 바닥에서 본 메시지까지만 올린다
+  const seenSeq = useRef(0);
 
   const update = useCallback((next: (s: ChatState) => ChatState) => {
     chatRef.current = next(chatRef.current);
@@ -117,10 +119,11 @@ export default function CrewChatScreen() {
   }, []);
 
   const markRead = useCallback(() => {
+    seenSeq.current = Math.max(seenSeq.current, lastSeqOf(chatRef.current.items));
     if (readTimer.current) clearTimeout(readTimer.current);
     readTimer.current = setTimeout(() => {
       readTimer.current = null;
-      const lastSeq = lastSeqOf(chatRef.current.items);
+      const lastSeq = seenSeq.current;
       if (lastSeq > 0) api.mutate('PUT /crew/chat/read', { lastSeq }).catch(() => {});
     }, READ_DEBOUNCE_MS);
   }, []);
@@ -251,7 +254,7 @@ export default function CrewChatScreen() {
       if (current) saveChatSession({ meId: current.author.id, crewId: current.crewId }, chatRef.current, textRef.current);
       timers.current.forEach(clearTimeout);
       if (readTimer.current) clearTimeout(readTimer.current);
-      const lastSeq = lastSeqOf(chatRef.current.items);
+      const lastSeq = seenSeq.current;
       if (lastSeq > 0) api.mutate('PUT /crew/chat/read', { lastSeq }).catch(() => {});
       socketRef.current?.close();
     },

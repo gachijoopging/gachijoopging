@@ -74,11 +74,11 @@ export default function EditCrewScreen() {
   useEffect(
     () =>
       navigation.addListener('beforeRemove', (e) => {
-        if (saved.current || !dirty) return;
+        if (saved.current || denied || !dirty) return;
         e.preventDefault();
         setPendingLeave(() => () => navigation.dispatch(e.data.action));
       }),
-    [navigation, dirty],
+    [navigation, dirty, denied],
   );
 
   const update = (next: Partial<CrewForm>) => setForm((prev) => (prev ? { ...prev, ...next } : prev));

@@ -421,6 +421,14 @@ export function Catalog({ scheme, onScheme }: { scheme: Scheme; onScheme: (s: Sc
             onRetry={noop}
           />
         </Section>
+
+        <Snackbar
+          visible={snack}
+          message="기록을 지웠어요"
+          actionLabel="되돌리기"
+          onAction={closeSnack}
+          onDismiss={closeSnack}
+        />
       </Screen>
 
       <BottomSheet visible={sheet} onClose={() => setSheet(false)} title="모임에 참여할까요?">
@@ -437,13 +445,6 @@ export function Catalog({ scheme, onScheme }: { scheme: Scheme; onScheme: (s: Sc
         </Row>
       </Dialog>
 
-      <Snackbar
-        visible={snack}
-        message="기록을 지웠어요"
-        actionLabel="되돌리기"
-        onAction={closeSnack}
-        onDismiss={closeSnack}
-      />
     </>
   );
 }
