@@ -95,14 +95,18 @@ export default function EditNoticeScreen() {
         clearNoticeDraft(key);
         router.replace({ pathname: '/3-6-notice-detail', params: { id: data.id, flash: '공지를 올렸어요.' } });
       }
+      // 떠나는 화면은 다시 그리지 않는다 (3-10 과 같은 이유 — 전환 중 재렌더가 Fabric 을 죽인다)
+      return;
     } catch (e) {
       if (e instanceof ApiError && e.code === 'FORBIDDEN') setDenied(true);
-      else if (e instanceof ApiError && e.code === 'NOT_FOUND') goneBack();
+      else if (e instanceof ApiError && e.code === 'NOT_FOUND') {
+        clearNoticeDraft(key);
+        return goneBack();
+      }
       else setSnackbar('공지를 저장하지 못했어요. 다시 시도해 주세요.');
-    } finally {
-      busy.current = false;
-      setSaving(false);
     }
+    busy.current = false;
+    setSaving(false);
   };
 
   return (

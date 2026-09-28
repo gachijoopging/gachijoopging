@@ -43,6 +43,7 @@ export default function EditCrewScreen() {
   const [uploading, setUploading] = useState(false);
   const [cameraDenied, setCameraDenied] = useState(false);
   const saved = useRef(false);
+  const busy = useRef(false);
   const introRef = useRef<TextInput>(null);
   const [touched, setTouched] = useState<{ name?: boolean; intro?: boolean }>({});
   const touch = (field: 'name' | 'intro') => setTouched((t) => ({ ...t, [field]: true }));
@@ -83,21 +84,26 @@ export default function EditCrewScreen() {
   const update = (next: Partial<CrewForm>) => setForm((prev) => (prev ? { ...prev, ...next } : prev));
 
   const save = async () => {
-    if (saving || !patch) return;
+    // 같은 프레임의 연속 탭은 saving 상태가 반영되기 전이라 ref 로 막는다
+    if (busy.current || !patch) return;
+    busy.current = true;
     setSaving(true);
     try {
       await api.mutate('PATCH /crew', patch);
       saved.current = true;
+      // 떠나는 화면은 다시 그리지 않는다. 전환 중에 입력·스테퍼가 되살아나면 안드로이드 Fabric 이
+      // 사라지는 뷰를 다시 붙이려다 "child already has a parent" 로 죽는다
       router.dismissTo({ pathname: '/3-2-crew-info', params: { flash: '크루 정보를 저장했어요.' } });
+      return;
     } catch (e) {
       if (e instanceof ApiError && e.code === 'FORBIDDEN') setDenied(true);
       else if (e instanceof ApiError && e.code === 'CONFLICT') setNameError('이미 사용 중인 크루 이름이에요.');
       else if (e instanceof ApiError && e.code === 'VALIDATION') setNameError('크루 이름을 다시 확인해 주세요.');
       else if (form?.photoMediaId) setSnackbar('사진은 준비됐어요. 저장을 다시 시도해 주세요.');
       else setSnackbar('크루 정보를 저장하지 못했어요. 다시 시도해 주세요.');
-    } finally {
-      setSaving(false);
     }
+    busy.current = false;
+    setSaving(false);
   };
 
   const upload = async (asset: ImagePicker.ImagePickerAsset) => {
