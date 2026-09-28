@@ -18,9 +18,7 @@ export function crewFormErrors(form: CrewForm): Partial<Record<keyof CrewFields,
   return errors;
 }
 
-/** 저장할 것이 없거나 입력이 유효하지 않으면 null — 저장 버튼을 끈다 */
-export function crewPatch(original: CrewFields, form: CrewForm): CrewPatch | null {
-  if (Object.keys(crewFormErrors(form)).length > 0) return null;
+function changes(original: CrewFields, form: CrewForm): CrewPatch {
   const patch: CrewPatch = {};
   const name = cleanName(form.name);
   const intro = form.intro.trim();
@@ -28,5 +26,17 @@ export function crewPatch(original: CrewFields, form: CrewForm): CrewPatch | nul
   if (intro !== original.intro) patch.intro = intro;
   if (form.goalCount !== original.goalCount) patch.goalCount = form.goalCount;
   if (form.photoMediaId !== undefined) patch.photoMediaId = form.photoMediaId;
+  return patch;
+}
+
+/** 저장할 것이 없거나 입력이 유효하지 않으면 null — 저장 버튼을 끈다 */
+export function crewPatch(original: CrewFields, form: CrewForm): CrewPatch | null {
+  if (Object.keys(crewFormErrors(form)).length > 0) return null;
+  const patch = changes(original, form);
   return Object.keys(patch).length > 0 ? patch : null;
+}
+
+/** 떠날 때 버리기를 물어야 하는 변경. 유효하지 않은 입력도 사라지므로 포함한다 */
+export function crewChanged(original: CrewFields, form: CrewForm): boolean {
+  return Object.keys(changes(original, form)).length > 0;
 }

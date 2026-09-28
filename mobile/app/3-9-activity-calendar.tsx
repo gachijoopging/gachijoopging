@@ -5,13 +5,14 @@ import {
   AppHeader,
   Avatar,
   Banner,
+  Card,
+  Dot,
   ErrorState,
   IconButton,
   ListRow,
   Loading,
   Screen,
   Txt,
-  borderWidth,
   disabledOpacity,
   pressedOpacity,
   radius,
@@ -103,12 +104,9 @@ export default function ActivityCalendarScreen() {
     >
       <AppHeader title="활동 달력" onBack={() => router.back()} />
 
-      <View
-        style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: space.md }}
-        accessibilityLabel={`${year}년 ${monthNumber}월`}
-      >
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: space.md }}>
         <IconButton icon="chevron-left" label="이전 달" onPress={() => setMonth(shiftMonth(month, -1))} />
-        <Txt variant="section" bold>{`${year}년 ${monthNumber}월`}</Txt>
+        <Txt variant="section" bold accessibilityRole="header">{`${year}년 ${monthNumber}월`}</Txt>
         <IconButton icon="chevron-right" label="다음 달" disabled={!nextEnabled} onPress={() => setMonth(shiftMonth(month, 1))} />
       </View>
 
@@ -121,13 +119,15 @@ export default function ActivityCalendarScreen() {
       ) : (
         <>
           {failed ? <Banner tone="warn">인터넷 연결을 확인해 주세요.</Banner> : null}
-          <MonthGrid
-            cells={monthGrid(month, calendar.days)}
-            maxItems={Math.max(0, ...calendar.days.map((d) => d.items))}
-            selected={selected}
-            today={today}
-            onSelect={setSelected}
-          />
+          <Card>
+            <MonthGrid
+              cells={monthGrid(month, calendar.days)}
+              maxItems={Math.max(0, ...calendar.days.map((d) => d.items))}
+              selected={selected}
+              today={today}
+              onSelect={setSelected}
+            />
+          </Card>
 
           {calendar.days.every((d) => d.activityCount === 0) ? (
             <Txt variant="body" tone="muted">이 달에는 활동 기록이 없어요.</Txt>
@@ -148,11 +148,13 @@ export default function ActivityCalendarScreen() {
                     title={a.user.nickname}
                     subtitle={`${a.items}개 · ${formatDistance(a.distanceM)}`}
                     accessibilityLabel={`${a.user.nickname}, ${a.items}개, ${formatDistance(a.distanceM)}`}
+                    accessibilityActions={[{ name: 'profile', label: '프로필 보기' }]}
+                    onAccessibilityAction={() => openUser(a.user.id)}
                     left={
                       <Pressable
                         accessibilityRole="button"
                         accessibilityLabel={`${a.user.nickname}, 프로필 보기`}
-                        hitSlop={space.sm}
+                        hitSlop={space.md}
                         onPress={() => openUser(a.user.id)}
                       >
                         <Avatar name={a.user.nickname} uri={a.user.photoUrl ?? undefined} size="sm" />
@@ -183,8 +185,6 @@ function MonthGrid({
   today: string;
   onSelect: (date: string) => void;
 }) {
-  const { colors } = useTheme();
-  const heat: Record<HeatLevel, string> = { 0: colors.transparent, 1: colors.lime28, 2: colors.lime35, 3: colors.lime };
   const weeks = Array.from({ length: 6 }, (_, w) => cells.slice(w * 7, w * 7 + 7));
 
   return (
@@ -200,7 +200,7 @@ function MonthGrid({
             <DayCell
               key={cell.date}
               cell={cell}
-              fill={heat[heatLevel(cell.items, maxItems, cell.activityCount)]}
+              heat={heatLevel(cell.items, maxItems, cell.activityCount)}
               selected={cell.date === selected}
               isToday={cell.date === today}
               future={isFutureDate(cell.date, today)}
@@ -214,9 +214,11 @@ function MonthGrid({
   );
 }
 
+const HEAT_OPACITY: Record<HeatLevel, number> = { 0: 0, 1: 0.3, 2: 0.6, 3: 1 };
+
 function DayCell({
   cell,
-  fill,
+  heat,
   selected,
   isToday,
   future,
@@ -224,7 +226,7 @@ function DayCell({
   onPress,
 }: {
   cell: CalendarCell;
-  fill: string;
+  heat: HeatLevel;
   selected: boolean;
   isToday: boolean;
   future: boolean;
@@ -251,14 +253,18 @@ function DayCell({
           alignItems: 'center',
           justifyContent: 'center',
           borderRadius: radius.field,
-          backgroundColor: selected ? colors.deep : fill,
-          borderWidth: isToday ? borderWidth.focus : 0,
-          borderColor: colors.deep,
+          overflow: 'hidden',
+          backgroundColor: selected ? colors.deep : undefined,
         }}
       >
+        {!selected && heat > 0 ? (
+          // 라임 한 색을 불투명도로 세 단계 나눈다. 숫자는 그 위에 있어 흐려지지 않는다
+          <View style={{ position: 'absolute', inset: 0, backgroundColor: colors.lime, opacity: HEAT_OPACITY[heat] }} />
+        ) : null}
         <Txt variant="caption" tone={selected ? 'onDark' : 'ink'} bold={cell.activityCount > 0}>
           {Number(cell.date.slice(8))}
         </Txt>
+        {isToday ? <Dot size={space.xs} /> : null}
       </View>
     </Pressable>
   );

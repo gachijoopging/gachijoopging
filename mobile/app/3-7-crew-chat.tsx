@@ -1,10 +1,11 @@
 import * as Crypto from 'expo-crypto';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   AccessibilityInfo,
   ActivityIndicator,
+  Animated,
   FlatList,
   Pressable,
   View,
@@ -27,8 +28,11 @@ import {
   Screen,
   Snackbar,
   Txt,
+  disabledOpacity,
   gradient,
+  lineHeight,
   radius,
+  size,
   space,
   useTheme,
 } from 'design-system/src';
@@ -61,6 +65,12 @@ const api: ApiClient = createMockClient({ delayMs: 300 });
 /** 전송 실패·다시 보내기를 목으로 보려면 dropEcho 를 켠다 */
 const MOCK_SOCKET = { dropEcho: false };
 const PAGE = 50;
+/** 문서가 정한 말풍선 최대 너비(260dp). 화면 폭과 무관하게 한 줄 길이를 읽기 좋게 묶는다 */
+const BUBBLE_MAX_WIDTH = 260;
+/** 말풍선 꼬리 쪽 모서리. 둥근 반경의 1/4 로 각지게 보인다 */
+const BUBBLE_TAIL_RADIUS = radius.tile / 4;
+/** 상대 말풍선을 이름 열에 맞춘다 — 얼굴 폭 + 얼굴과 이름 사이 */
+const AUTHOR_INDENT = size.avatarSm + space.sm;
 // 전송 실패 판정 시간은 3-7 문서의 미결(운영 파라미터)이다. 확정되면 이 값만 바꾼다
 const SEND_TIMEOUT_MS = 10_000;
 const READ_DEBOUNCE_MS = 1000;
@@ -75,6 +85,7 @@ const firstSeqOf = (items: readonly ChatItem[]) => items.find((i) => i.status ==
 const spokenTime = (iso: string) => chatTime(iso).replace(/:0?(\d+)/, '시 $1분');
 
 export default function CrewChatScreen() {
+  const { colors } = useTheme();
   const [me, setMe] = useState<Me | null>(null);
   const [memberCount, setMemberCount] = useState<number | null>(null);
   const [chat, setChat] = useState<ChatState>(emptyChat);
@@ -197,7 +208,6 @@ export default function CrewChatScreen() {
         if (status === 'connecting') {
           wasConnecting = true;
           setConnected(false);
-          AccessibilityInfo.announceForAccessibility('연결 중');
           return;
         }
         setConnected(true);
@@ -295,9 +305,9 @@ export default function CrewChatScreen() {
 
   const listHeader = (
     <View style={{ alignItems: 'center', gap: space.sm, paddingVertical: space.sm }}>
-      {olderState === 'loading' ? <ActivityIndicator /> : null}
+      {olderState === 'loading' ? <ActivityIndicator color={colors.deep} /> : null}
       {olderState === 'failed' ? (
-        <Pressable accessibilityRole="button" onPress={() => void loadOlder()} style={{ minHeight: 48, justifyContent: 'center' }}>
+        <Pressable accessibilityRole="button" onPress={() => void loadOlder()} style={{ minHeight: size.minTouch, justifyContent: 'center' }}>
           <Txt variant="caption" tone="muted">이전 메시지를 불러오지 못했어요 · 다시 시도</Txt>
         </Pressable>
       ) : null}
@@ -312,11 +322,9 @@ export default function CrewChatScreen() {
         subtitle={memberCount != null ? `크루원 ${memberCount}명` : ' '}
         onBack={() => router.back()}
       />
-      {!connected ? (
-        <View accessibilityLiveRegion="polite">
-          <Banner tone="warn">연결 중…</Banner>
-        </View>
-      ) : null}
+      <Fade visible={!connected}>
+        <Banner tone="warn">연결 중…</Banner>
+      </Fade>
 
       <View style={{ flex: 1 }}>
         {phase === 'loading' ? (
@@ -356,8 +364,7 @@ export default function CrewChatScreen() {
             }
           />
         )}
-        {pill ? (
-          <View style={{ position: 'absolute', bottom: space.sm, alignSelf: 'center' }}>
+        <Fade visible={pill} style={{ position: 'absolute', bottom: space.sm, alignSelf: 'center' }}>
             <Button
               label="새 메시지"
               icon="arrow-down"
@@ -366,11 +373,10 @@ export default function CrewChatScreen() {
               accessibilityLabel="새 메시지, 맨 아래로 이동"
               onPress={scrollToBottom}
             />
-          </View>
-        ) : null}
+        </Fade>
       </View>
 
-      <View style={{ gap: space.xs, paddingBottom: space.md, opacity: ready ? 1 : 0.5 }}>
+      <View style={{ gap: space.xs, paddingBottom: space.md }}>
         {counter ? (
           <Txt
             variant="micro"
@@ -439,13 +445,14 @@ function MessageRow({
   const state = item.status === 'sending' ? '전송 중' : failed ? '전송 실패, 다시 보내려면 두 번 탭' : spokenTime(item.createdAt);
   const label = deleted ? `${who}, 삭제된 메시지` : `${who}, ${item.text}, ${state}`;
   const reportable = !mine && !deleted && !item.author.withdrawn && onReport;
+  const withdrawn = item.author.withdrawn;
 
   const bubbleShape = {
-    maxWidth: 260,
+    maxWidth: BUBBLE_MAX_WIDTH,
     paddingHorizontal: space.md,
     paddingVertical: space.sm,
     borderRadius: radius.tile,
-    ...(mine ? { borderBottomRightRadius: space.xs } : { borderTopLeftRadius: space.xs }),
+    ...(mine ? { borderBottomRightRadius: BUBBLE_TAIL_RADIUS } : { borderTopLeftRadius: BUBBLE_TAIL_RADIUS }),
   };
   const content = (
     <Txt variant="body" tone={mine ? 'onLime' : 'ink'}>
@@ -454,14 +461,21 @@ function MessageRow({
   );
 
   return (
-    <View style={{ alignItems: mine ? 'flex-end' : 'flex-start', gap: space.xs, marginTop: showAuthor ? space.sm : 0 }}>
+    <View
+      style={{
+        alignItems: mine ? 'flex-end' : 'flex-start',
+        gap: space.xs,
+        marginTop: showAuthor ? space.sm : 0,
+        paddingLeft: mine ? 0 : AUTHOR_INDENT,
+      }}
+    >
       {showAuthor ? (
         <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={`${item.author.nickname}, 프로필 보기`}
-          disabled={item.author.withdrawn}
+          accessibilityRole={withdrawn ? undefined : 'button'}
+          accessibilityLabel={withdrawn ? item.author.nickname : `${item.author.nickname}, 프로필 보기`}
+          disabled={withdrawn}
           onPress={() => onOpenProfile(item.author)}
-          style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm, minHeight: 48 }}
+          style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm, minHeight: size.minTouch, marginLeft: -AUTHOR_INDENT }}
         >
           <Avatar name={item.author.nickname} uri={item.author.photoUrl ?? undefined} size="sm" />
           <Txt variant="caption" bold>
@@ -471,11 +485,14 @@ function MessageRow({
       ) : null}
       <Pressable
         accessible
+        accessibilityRole={failed ? 'button' : undefined}
         accessibilityLabel={label}
+        accessibilityActions={reportable ? [{ name: 'longpress', label: '신고하기' }] : undefined}
+        onAccessibilityAction={reportable ? () => onReport(item) : undefined}
         disabled={!failed && !reportable}
         onPress={failed ? () => onRetry(item) : undefined}
         onLongPress={reportable ? () => onReport(item) : undefined}
-        style={{ opacity: failed ? 0.5 : 1 }}
+        style={{ opacity: failed ? disabledOpacity : 1 }}
       >
         {deleted ? (
           <Txt variant="body" tone="faint">
@@ -498,7 +515,7 @@ function MessageRow({
         </View>
       ) : failed ? (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.xs }}>
-          <Icon name="alert-circle" size={14} color={colors.error} />
+          <Icon name="alert-circle" size={lineHeight.micro} color={colors.error} />
           <Txt variant="micro" tone="error">
             전송 실패 · 다시 보내기
           </Txt>
@@ -510,4 +527,27 @@ function MessageRow({
       ) : null}
     </View>
   );
+}
+
+/** 배너·알약이 나타나고 사라질 때 짧게 페이드한다. 움직임 줄이기를 켰으면 바로 바뀐다 */
+function Fade({ visible, style, children }: { visible: boolean; style?: object; children: ReactNode }) {
+  const opacity = useRef(new Animated.Value(visible ? 1 : 0)).current;
+  const [mounted, setMounted] = useState(visible);
+
+  useEffect(() => {
+    if (visible) setMounted(true);
+    let cancelled = false;
+    AccessibilityInfo.isReduceMotionEnabled().then((reduce) => {
+      if (cancelled) return;
+      Animated.timing(opacity, { toValue: visible ? 1 : 0, duration: reduce ? 0 : 150, useNativeDriver: true }).start(
+        ({ finished }) => finished && !visible && setMounted(false),
+      );
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [visible, opacity]);
+
+  if (!mounted) return null;
+  return <Animated.View style={[style, { opacity }]}>{children}</Animated.View>;
 }

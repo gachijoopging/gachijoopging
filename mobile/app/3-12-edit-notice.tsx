@@ -40,6 +40,7 @@ export default function EditNoticeScreen() {
   const [saving, setSaving] = useState(false);
   const [snackbar, setSnackbar] = useState<string | null>(null);
   const busy = useRef(false);
+  const touch = (field: keyof NoticeForm) => setTouched((t) => ({ ...t, [field]: true }));
   const bodyRef = useRef<TextInput>(null);
   usePreventBack(saving);
 
@@ -106,13 +107,14 @@ export default function EditNoticeScreen() {
   };
 
   return (
-    <Screen scroll>
+    <Screen scroll contentStyle={{ flexGrow: 1 }}>
       <AppHeader title={editing ? '공지 수정' : '공지 작성'} onBack={() => router.back()} backDisabled={saving} />
 
       {denied ? (
         <ErrorState
           title="크루장만 공지를 작성할 수 있어요."
-          description="크루장에게 요청해 주세요."
+          description={null}
+          icon="lock-outline"
           actionLabel="공지 목록으로"
           onRetry={() => router.dismissTo('/3-5-notices')}
         />
@@ -130,16 +132,19 @@ export default function EditNoticeScreen() {
               accessibilityLabel={`공지 제목, ${NOTICE_TITLE_MAX}자까지, ${form.title.length}자 입력됨`}
               placeholder="공지 제목을 입력해 주세요."
               value={form.title}
-              onChangeText={(title) => change({ title })}
-              onBlur={() => setTouched((t) => ({ ...t, title: true }))}
+              onChangeText={(title) => {
+                change({ title });
+                touch('title');
+              }}
+              onBlur={() => touch('title')}
               error={touched.title ? errors.title : undefined}
               maxLength={NOTICE_TITLE_MAX}
+              hint={limitHint(form.title, NOTICE_TITLE_MAX, '제목은 100자까지 입력할 수 있어요.')}
               editable={!saving}
               returnKeyType="next"
               submitBehavior="submit"
               onSubmitEditing={() => bodyRef.current?.focus()}
             />
-            <Txt variant="micro" tone="hint" style={{ textAlign: 'right' }}>{`${form.title.length} / ${NOTICE_TITLE_MAX}`}</Txt>
           </View>
 
           <View style={{ gap: space.xs }}>
@@ -149,14 +154,17 @@ export default function EditNoticeScreen() {
               accessibilityLabel={`공지 내용, ${NOTICE_BODY_MAX}자까지, ${form.body.length}자 입력됨`}
               placeholder="크루원에게 알릴 내용을 입력해 주세요."
               value={form.body}
-              onChangeText={(body) => change({ body })}
-              onBlur={() => setTouched((t) => ({ ...t, body: true }))}
+              onChangeText={(body) => {
+                change({ body });
+                touch('body');
+              }}
+              onBlur={() => touch('body')}
               error={touched.body ? errors.body : undefined}
               maxLength={NOTICE_BODY_MAX}
+              hint={limitHint(form.body, NOTICE_BODY_MAX, '내용은 3000자까지 입력할 수 있어요.')}
               multiline
               editable={!saving}
             />
-            <Txt variant="micro" tone="hint" style={{ textAlign: 'right' }}>{`${form.body.length} / ${NOTICE_BODY_MAX}`}</Txt>
           </View>
 
           <View style={{ flex: 1 }} />
@@ -174,4 +182,9 @@ export default function EditNoticeScreen() {
       <Snackbar visible={snackbar != null} message={snackbar ?? ''} onDismiss={() => setSnackbar(null)} />
     </Screen>
   );
+}
+
+/** 한도에 닿으면 더 입력되지 않는 이유를, 그 전에는 글자 수를 보인다 */
+function limitHint(value: string, max: number, atLimit: string): string {
+  return value.length >= max ? atLimit : `${value.length} / ${max}`;
 }

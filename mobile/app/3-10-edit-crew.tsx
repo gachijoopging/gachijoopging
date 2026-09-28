@@ -2,7 +2,7 @@ import * as Crypto from 'expo-crypto';
 import * as ImagePicker from 'expo-image-picker';
 import { router, useNavigation } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Linking, View } from 'react-native';
+import { Linking, View, type TextInput } from 'react-native';
 import {
   AppHeader,
   Avatar,
@@ -21,7 +21,7 @@ import {
   space,
 } from 'design-system/src';
 import { ApiError, createMockClient, type ApiClient } from '../src/api/client';
-import { CREW_INTRO_MAX, CREW_NAME_MAX, crewFormErrors, crewPatch, type CrewForm } from '../src/crew/crew-edit';
+import { CREW_INTRO_MAX, CREW_NAME_MAX, crewChanged, crewFormErrors, crewPatch, type CrewForm } from '../src/crew/crew-edit';
 import { usePreventBack } from '../src/auth/usePreventBack';
 
 type Original = { name: string; intro: string; goalCount: number; photoUrl: string | null };
@@ -44,6 +44,9 @@ export default function EditCrewScreen() {
   const [uploading, setUploading] = useState(false);
   const [cameraDenied, setCameraDenied] = useState(false);
   const saved = useRef(false);
+  const introRef = useRef<TextInput>(null);
+  const [touched, setTouched] = useState<{ name?: boolean; intro?: boolean }>({});
+  const touch = (field: 'name' | 'intro') => setTouched((t) => ({ ...t, [field]: true }));
   usePreventBack(saving);
 
   const load = async () => {
@@ -65,10 +68,7 @@ export default function EditCrewScreen() {
 
   const patch = original && form && goalValid ? crewPatch(original, form) : null;
   const errors = form ? crewFormErrors(form) : {};
-  const dirty =
-    !!original &&
-    !!form &&
-    (form.name !== original.name || form.intro !== original.intro || form.goalCount !== original.goalCount || form.photoMediaId !== undefined);
+  const dirty = !!original && !!form && crewChanged(original, form);
 
   // 저장하지 않은 변경이 있으면 떠나기 전에 묻는다
   useEffect(
@@ -137,13 +137,14 @@ export default function EditCrewScreen() {
   const hasPhoto = !!photoUri;
 
   return (
-    <Screen scroll>
+    <Screen scroll contentStyle={{ flexGrow: 1 }}>
       <AppHeader title="크루 정보 수정" onBack={() => router.back()} backDisabled={saving} />
 
       {denied ? (
         <ErrorState
           title="크루장만 크루 정보를 수정할 수 있어요."
-          description="크루장에게 요청해 주세요."
+          description={null}
+          icon="lock-outline"
           actionLabel="크루 정보로"
           onRetry={() => router.dismissTo('/3-2-crew-info')}
         />
@@ -181,19 +182,24 @@ export default function EditCrewScreen() {
               update({ name });
               setNameError(undefined);
             }}
-            error={nameError ?? errors.name}
+            error={nameError ?? (touched.name ? errors.name : undefined)}
+            onBlur={() => touch('name')}
             maxLength={CREW_NAME_MAX + 10}
             editable={!saving}
             returnKeyType="next"
+            submitBehavior="submit"
+            onSubmitEditing={() => introRef.current?.focus()}
           />
           <Field
             label="소개"
             accessibilityLabel={`크루 소개, ${CREW_INTRO_MAX}자까지`}
+            ref={introRef}
             placeholder="크루를 소개해 주세요."
             value={form.intro}
             onChangeText={(intro) => update({ intro })}
-            error={errors.intro}
-            hint={`${form.intro.trim().length} / ${CREW_INTRO_MAX}`}
+            error={touched.intro ? errors.intro : undefined}
+            onBlur={() => touch('intro')}
+            hint={`${form.intro.length} / ${CREW_INTRO_MAX}`}
             multiline
             editable={!saving}
           />
@@ -205,7 +211,8 @@ export default function EditCrewScreen() {
             onValidityChange={setGoalValid}
             disabled={saving}
           />
-          <Txt variant="caption" tone="muted">{`14일에 ${form.goalCount}개`}</Txt>
+          {/* 스테퍼가 목표를 이미 읽어 주므로 문장은 눈으로만 본다 */}
+          <Txt variant="caption" tone="muted" importantForAccessibility="no-hide-descendants">{`14일에 ${form.goalCount}개`}</Txt>
 
           <View style={{ flex: 1 }} />
           <Button

@@ -17,6 +17,7 @@ import {
   Snackbar,
   Txt,
   space,
+  useTheme,
 } from 'design-system/src';
 import { createMockClient, type ApiClient } from '../src/api/client';
 import type { MOCKS } from '../src/api/mocks.generated';
@@ -32,6 +33,7 @@ function joinedLabel(iso: string): string {
 }
 
 export default function ManageCrewMembersScreen() {
+  const { colors } = useTheme();
   const [members, setMembers] = useState<readonly Member[] | null>(null);
   const [me, setMe] = useState<{ id: string; isLeader: boolean } | null>(null);
   const [failed, setFailed] = useState(false);
@@ -86,6 +88,16 @@ export default function ManageCrewMembersScreen() {
   const openMember = (id: string) =>
     id === me?.id ? router.push('/(tabs)/profile') : router.push({ pathname: '/5-4-user-profile', params: { id } });
 
+  const confirmTitle = !confirm
+    ? ''
+    : confirm.action === 'delegate'
+      ? `${confirm.member.nickname} 님에게 크루장을 넘길까요?`
+      : `${confirm.member.nickname} 님을 크루에서 추방할까요?`;
+  const confirmBody =
+    confirm?.action === 'delegate'
+      ? '위임하면 회원님은 일반 크루원이 돼요.'
+      : '추방해도 활동 기록은 개인 기록과 크루 합산에 남아요. 현재 유효한 초대 코드로 다시 가입 신청할 수 있어요.';
+
   return (
     <Screen scroll refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load('pull')} />}>
       <AppHeader title="크루원 관리" onBack={() => (router.canGoBack() ? router.back() : router.replace('/3-2-crew-info'))} />
@@ -116,9 +128,12 @@ export default function ManageCrewMembersScreen() {
                     .filter(Boolean)
                     .join(', ')}
                   onPress={() => openMember(m.id)}
+                  chevron={menu.length === 0}
+                  accessibilityActions={menu.length > 0 ? [{ name: 'manage', label: '관리' }] : undefined}
+                  onAccessibilityAction={menu.length > 0 ? () => setMenuTarget(m) : undefined}
                   right={
                     busyId === m.id ? (
-                      <ActivityIndicator />
+                      <ActivityIndicator color={colors.deep} />
                     ) : m.isLeader ? (
                       <Badge label="크루장" tone="deep" />
                     ) : menu.length > 0 ? (
@@ -162,24 +177,16 @@ export default function ManageCrewMembersScreen() {
       <Dialog
         visible={confirm != null}
         onClose={() => setConfirm(null)}
-        title={
-          !confirm
-            ? ''
-            : confirm.action === 'delegate'
-              ? `${confirm.member.nickname} 님에게 크루장을 넘길까요?`
-              : `${confirm.member.nickname} 님을 크루에서 추방할까요?`
-        }
+        title={confirmTitle}
       >
-        <Txt variant="body" tone="muted" accessibilityLiveRegion="polite">
-          {confirm?.action === 'delegate'
-            ? '위임하면 회원님은 일반 크루원이 돼요.'
-            : '추방해도 활동 기록은 개인 기록과 크루 합산에 남아요. 현재 유효한 초대 코드로 다시 가입 신청할 수 있어요.'}
+        <Txt variant="body" tone="muted" accessibilityLiveRegion="polite" accessibilityLabel={`${confirmTitle}, ${confirmBody}`}>
+          {confirmBody}
         </Txt>
         <View style={{ flexDirection: 'row', gap: space.sm, justifyContent: 'flex-end' }}>
           <Button label="취소" variant="ghost" size="md" onPress={() => setConfirm(null)} />
           <Button
             label={confirm?.action === 'delegate' ? '위임' : '추방'}
-            variant={confirm?.action === 'delegate' ? 'primary' : 'danger'}
+            variant={confirm?.action === 'delegate' ? 'soft' : 'danger'}
             size="md"
             onPress={act}
           />

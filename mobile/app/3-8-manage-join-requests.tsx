@@ -14,6 +14,7 @@ import {
   Screen,
   Snackbar,
   Txt,
+  size,
   space,
   useRipple,
 } from 'design-system/src';
@@ -71,6 +72,12 @@ export default function ManageJoinRequestsScreen() {
 
   const back = () => (router.canGoBack() ? router.back() : router.replace('/3-2-crew-info'));
 
+  const confirmTitle = confirm
+    ? `${confirm.request.user.nickname} 님의 가입을 ${confirm.decision === 'APPROVE' ? '승인' : '거절'}할까요?`
+    : '';
+  const confirmBody =
+    confirm?.decision === 'APPROVE' ? '승인하면 바로 크루원이 돼요.' : '거절한 뒤에도 현재 유효한 초대 코드로 다시 가입 신청할 수 있어요.';
+
   return (
     <Screen scroll refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load('pull')} />}>
       <AppHeader title="가입 신청 관리" onBack={back} />
@@ -78,7 +85,8 @@ export default function ManageJoinRequestsScreen() {
       {!isLeader ? (
         <ErrorState
           title="크루장만 가입 신청을 관리할 수 있어요."
-          description="크루장에게 요청해 주세요."
+          description={null}
+          icon="lock-outline"
           actionLabel="크루 정보로"
           onRetry={() => router.dismissTo('/3-2-crew-info')}
         />
@@ -110,19 +118,9 @@ export default function ManageJoinRequestsScreen() {
         </>
       )}
 
-      <Dialog
-        visible={confirm != null}
-        onClose={() => setConfirm(null)}
-        title={
-          confirm
-            ? `${confirm.request.user.nickname} 님의 가입을 ${confirm.decision === 'APPROVE' ? '승인' : '거절'}할까요?`
-            : ''
-        }
-      >
-        <Txt variant="body" tone="muted" accessibilityLiveRegion="polite">
-          {confirm?.decision === 'APPROVE'
-            ? '승인하면 바로 크루원이 돼요.'
-            : '거절한 뒤에도 현재 유효한 초대 코드로 다시 가입 신청할 수 있어요.'}
+      <Dialog visible={confirm != null} onClose={() => setConfirm(null)} title={confirmTitle}>
+        <Txt variant="body" tone="muted" accessibilityLiveRegion="polite" accessibilityLabel={`${confirmTitle}, ${confirmBody}`}>
+          {confirmBody}
         </Txt>
         <View style={{ flexDirection: 'row', gap: space.sm, justifyContent: 'flex-end' }}>
           <Button label="취소" variant="ghost" size="md" onPress={() => setConfirm(null)} />
@@ -159,7 +157,7 @@ function RequestRow({
         accessibilityRole="button"
         accessibilityLabel={`${user.nickname}, ${applied}, 프로필 보기`}
         onPress={() => router.push({ pathname: '/5-4-user-profile', params: { id: user.id } })}
-        style={{ flexDirection: 'row', alignItems: 'center', gap: space.md, minHeight: 48 }}
+        style={{ flexDirection: 'row', alignItems: 'center', gap: space.md, minHeight: size.minTouch }}
       >
         <Avatar name={user.nickname} uri={user.photoUrl ?? undefined} size="md" />
         <View style={{ flex: 1, gap: space.xs }}>
@@ -167,7 +165,8 @@ function RequestRow({
           <Txt variant="caption" tone="muted">{applied}</Txt>
         </View>
       </Pressable>
-      <View style={{ flexDirection: 'row', gap: space.sm, justifyContent: 'flex-end' }}>
+      {/* sm 버튼의 hitSlop 이 겹치지 않을 만큼 띄운다. 승인은 되돌릴 수 없어 잘못 눌리면 안 된다 */}
+      <View style={{ flexDirection: 'row', gap: space.xl, justifyContent: 'flex-end' }}>
         <Button
           label="거절"
           variant="ghost"
