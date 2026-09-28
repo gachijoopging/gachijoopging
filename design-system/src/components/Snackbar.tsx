@@ -1,6 +1,5 @@
 import { useEffect, useRef } from 'react';
 import { Animated, Pressable, View, AccessibilityInfo } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { radius } from '../../tokens/radius.ts';
 import { space, screen, size as sizes } from '../../tokens/spacing.ts';
 import { borderWidth } from '../../tokens/elevation.ts';
@@ -32,7 +31,6 @@ export function Snackbar({
   duration?: number;
 }) {
   const { colors, shadows } = useTheme();
-  const insets = useSafeAreaInsets();
   const ripple = useRipple();
   const opacity = useRef(new Animated.Value(0)).current;
   const reduceMotion = useRef(false);
@@ -67,7 +65,8 @@ export function Snackbar({
         position: 'absolute',
         left: screen.horizontal,
         right: screen.horizontal,
-        bottom: insets.bottom + space.lg,
+        // Screen 이 이미 아래 안전 영역을 비워 둔다. 여기서 또 더하면 제스처 바만큼 떠 보인다
+        bottom: space.lg,
         opacity,
       }}
     >

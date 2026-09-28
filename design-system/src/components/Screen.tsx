@@ -89,8 +89,8 @@ export function Screen({
     <SafeAreaView edges={edges} style={[{ flex: 1, backgroundColor: colors.bg }, style]}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
         {body}
+        {floating}
       </KeyboardAvoidingView>
-      {floating}
     </SafeAreaView>
   );
 }
