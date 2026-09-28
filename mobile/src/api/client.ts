@@ -18,7 +18,12 @@ export type VoidMutationKey =
   | 'DELETE /crews/join-requests/mine'
   | 'POST /notifications/read'
   | 'DELETE /notices/{noticeId}'
-  | 'DELETE /notice-comments/{commentId}';
+  | 'DELETE /notice-comments/{commentId}'
+  | 'POST /crew/join-requests/{requestId}'
+  | 'PUT /crew/leader'
+  | 'DELETE /crew/members/{userId}'
+  | 'PATCH /notices/{noticeId}'
+  | 'PUT /crew/chat/read';
 export type MutationKey = MockKey | VoidMutationKey;
 
 export type ApiClient = {
