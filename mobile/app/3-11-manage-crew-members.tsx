@@ -8,6 +8,7 @@ import {
   Banner,
   BottomSheet,
   Button,
+  Card,
   Dialog,
   ErrorState,
   IconButton,
@@ -36,6 +37,7 @@ export default function ManageCrewMembersScreen() {
   const { colors } = useTheme();
   const [members, setMembers] = useState<readonly Member[] | null>(null);
   const [me, setMe] = useState<{ id: string; isLeader: boolean } | null>(null);
+  const [crewInfo, setCrewInfo] = useState<{ inviteCode: string; pendingJoinRequests: number } | null>(null);
   const [failed, setFailed] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [menuTarget, setMenuTarget] = useState<Member | null>(null);
@@ -51,6 +53,10 @@ export default function ManageCrewMembersScreen() {
       api.get('GET /users/me'),
     ]);
     setRefreshing(false);
+    if (crewRes.status === 'fulfilled') {
+      const { inviteCode, pendingJoinRequests } = crewRes.value.data;
+      setCrewInfo({ inviteCode, pendingJoinRequests });
+    }
     if (crewRes.status === 'fulfilled' && meRes.status === 'fulfilled') {
       setMe({ id: meRes.value.data.id, isLeader: crewRes.value.data.isLeader });
     }
@@ -110,8 +116,32 @@ export default function ManageCrewMembersScreen() {
         )
       ) : (
         <>
-          <Txt variant="section" accessibilityRole="header">{`크루원 ${members.length}명`}</Txt>
           {failed ? <Banner tone="warn">인터넷 연결을 확인해 주세요.</Banner> : null}
+          {crewInfo ? (
+            <Card style={{ paddingVertical: 0 }}>
+              <ListRow
+                icon="ticket-outline"
+                title="초대 코드"
+                subtitle={crewInfo.inviteCode}
+                divider={!!me?.isLeader}
+                chevron
+                accessibilityLabel={`초대 코드, ${crewInfo.inviteCode}`}
+                onPress={() => router.push('/3-3-invite-code')}
+              />
+              {me?.isLeader ? (
+                <ListRow
+                  icon="account-clock-outline"
+                  title="가입 신청"
+                  divider={false}
+                  chevron
+                  right={crewInfo.pendingJoinRequests > 0 ? <Badge label={crewInfo.pendingJoinRequests} tone="danger" /> : undefined}
+                  accessibilityLabel={`가입 신청 ${crewInfo.pendingJoinRequests}건`}
+                  onPress={() => router.push('/3-8-manage-join-requests')}
+                />
+              ) : null}
+            </Card>
+          ) : null}
+          <Txt variant="section" accessibilityRole="header">{`크루원 ${members.length}명`}</Txt>
           <View>
             {members.map((m, i) => {
               const menu = me ? memberMenu({ meId: me.id, meIsLeader: me.isLeader, member: m }) : [];
