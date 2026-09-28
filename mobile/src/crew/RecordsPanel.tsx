@@ -18,8 +18,9 @@ import {
 } from 'design-system/src';
 import { createMockClient, type ApiClient } from '../api/client';
 import type { MOCKS } from '../api/mocks.generated';
-import { RANGE_LABEL, categoryChips, seriesSummary, spokenDistance, totalsLabel, withCommas, type StatsRange } from './records';
+import { RANGE_LABEL, categoryChips, chartSlots, seriesSummary, spokenDistance, totalsLabel, withCommas, type StatsRange } from './records';
 import { formatDistance, formatElapsed } from '../format';
+import { kstToday } from './calendar';
 
 type Stats = (typeof MOCKS)['GET /crew/stats']['data'];
 
@@ -73,7 +74,6 @@ export function RecordsPanel({ refreshKey }: { refreshKey: number }) {
             key={r}
             label={RANGE_CHIP[r]}
             selected={r === range}
-            accessibilityLabel={r === range ? `${RANGE_CHIP[r]}, 선택됨` : RANGE_CHIP[r]}
             onPress={() => setRange(r)}
           />
         ))}
@@ -91,7 +91,7 @@ export function RecordsPanel({ refreshKey }: { refreshKey: number }) {
 
           <Card style={{ gap: space.sm }}>
             <BarChart
-              values={stats.series.map((s) => s.items)}
+              {...chartSlots(range, stats.series, kstToday())}
               accessibilityLabel={seriesSummary(range, stats.totals.items)}
             />
             <Txt variant="micro" tone="muted">{RANGE_LABEL[range]}</Txt>

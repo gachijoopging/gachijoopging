@@ -1,4 +1,4 @@
-import { categoryChips, seriesSummary, totalsLabel } from './records';
+import { categoryChips, chartSlots, seriesSummary, totalsLabel } from './records';
 
 describe('크루 기록 카테고리 칩', () => {
   test('수량이 많은 순서로 한글 이름과 개수를 보인다', () => {
@@ -33,5 +33,38 @@ describe('통계 지표 읽기', () => {
     expect(totalsLabel({ items: 3, distanceM: 820, durationSec: 2520, activities: 1 })).toBe(
       '3개, 820미터, 42분, 활동 1회',
     );
+  });
+});
+
+describe('기록 막대 칸', () => {
+  test('이번 주는 월~일 7칸에 요일 자리를 지킨다. 지난 빈 날은 0, 아직 안 온 날은 빈칸', () => {
+    // 2026-09-01 은 화요일
+    const { values, labels } = chartSlots('WEEK', [
+      { date: '2026-09-01', items: 40 },
+      { date: '2026-09-02', items: 0 },
+      { date: '2026-09-03', items: 77 },
+    ], '2026-09-03');
+    expect(values).toEqual([0, 40, 0, 77, null, null, null]);
+    expect(labels).toEqual(['월', '화', '수', '목', '금', '토', '일']);
+  });
+
+  test('이번 달은 그 달 날수만큼 칸을 두고 1·8·15·22·29 일에만 이름을 단다', () => {
+    const { values, labels } = chartSlots('MONTH', [{ date: '2026-09-02', items: 5 }], '2026-09-02');
+    expect(values).toHaveLength(30);
+    expect(values.slice(0, 3)).toEqual([0, 5, null]);
+    expect(labels.filter(Boolean)).toEqual(['1', '8', '15', '22', '29']);
+  });
+
+  test('기록이 없어도 오늘을 기준으로 칸을 그린다', () => {
+    expect(chartSlots('WEEK', [], '2026-09-29').values).toEqual([0, 0, null, null, null, null, null]);
+  });
+
+  test('전체 기간은 받은 달만큼 칸을 두고 달 이름을 단다', () => {
+    const { values, labels } = chartSlots('ALL', [
+      { date: '2026-08-01', items: 90 },
+      { date: '2026-09-01', items: 30 },
+    ], '2026-09-29');
+    expect(values).toEqual([90, 30]);
+    expect(labels).toEqual(['8월', '9월']);
   });
 });

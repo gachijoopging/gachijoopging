@@ -252,6 +252,7 @@ export default function NoticeDetailScreen() {
         <ListRow
           icon="delete-outline"
           title="삭제"
+          tone="danger"
           chevron={false}
           onPress={() => {
             setMenuOpen(false);
@@ -262,7 +263,7 @@ export default function NoticeDetailScreen() {
 
       <BottomSheet visible={commentMenuOpen} onClose={() => setCommentMenuOpen(false)} title="댓글">
         {targetAction === 'delete' ? (
-          <ListRow icon="delete-outline" title="삭제" chevron={false} onPress={() => commentTarget && deleteComment(commentTarget)} />
+          <ListRow icon="delete-outline" title="삭제" tone="danger" chevron={false} onPress={() => commentTarget && deleteComment(commentTarget)} />
         ) : (
           <ListRow
             icon="flag-outline"
