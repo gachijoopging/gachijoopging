@@ -74,6 +74,7 @@ export default function LoginScreen() {
         keyboardType="email-address"
         autoCapitalize="none"
         autoCorrect={false}
+        autoComplete="email"
         textContentType="emailAddress"
         returnKeyType="next"
       />
@@ -89,6 +90,7 @@ export default function LoginScreen() {
         error={passwordError}
         editable={!loading}
         secureTextEntry={secure}
+        autoComplete="current-password"
         textContentType="password"
         returnKeyType="done"
         onSubmitEditing={handleSubmit}

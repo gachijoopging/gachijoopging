@@ -66,6 +66,7 @@ export default function SignUpScreen() {
         keyboardType="email-address"
         autoCapitalize="none"
         autoCorrect={false}
+        autoComplete="email"
         textContentType="emailAddress"
         returnKeyType="next"
       />
@@ -79,6 +80,7 @@ export default function SignUpScreen() {
         error={passwordError}
         editable={!loading}
         secureTextEntry={secure}
+        autoComplete="new-password"
         textContentType="newPassword"
         returnKeyType="next"
         endAdornment={<Chip label={secure ? '보기' : '숨기기'} tone="neutral" onPress={loading ? undefined : () => setSecure((v) => !v)} />}
