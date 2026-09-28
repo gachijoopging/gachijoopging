@@ -70,7 +70,7 @@ const checkbox: CheckboxProps = {
   checked: false,
   onChange: () => {},
 };
-const field: FieldProps = { endAdornment: null };
+const field: FieldProps = { endAdornment: null, multiline: true, maxLines: 4 };
 
 void Switch;
 void Checkbox;
