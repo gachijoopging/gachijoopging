@@ -22,6 +22,7 @@ import {
 } from 'design-system/src';
 import { createMockClient, type ApiClient } from '../src/api/client';
 import type { MOCKS } from '../src/api/mocks.generated';
+import { ExportSheet } from '../src/crew/ExportSheet';
 import { memberActionOutcome, memberMenu, type MemberAction } from '../src/crew/manage';
 
 type Member = (typeof MOCKS)['GET /crew/members']['data'][number];
@@ -44,6 +45,7 @@ export default function ManageCrewMembersScreen() {
   const [confirm, setConfirm] = useState<{ member: Member; action: MemberAction } | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [snackbar, setSnackbar] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
 
   const load = useCallback(async (mode: 'quiet' | 'pull') => {
     if (mode === 'pull') setRefreshing(true);
@@ -129,15 +131,24 @@ export default function ManageCrewMembersScreen() {
                 onPress={() => router.push('/3-3-invite-code')}
               />
               {me?.isLeader ? (
-                <ListRow
-                  icon="account-clock-outline"
-                  title="가입 신청"
-                  divider={false}
-                  chevron
-                  right={crewInfo.pendingJoinRequests > 0 ? <Badge label={crewInfo.pendingJoinRequests} tone="danger" /> : undefined}
-                  accessibilityLabel={`가입 신청 ${crewInfo.pendingJoinRequests}건`}
-                  onPress={() => router.push('/3-8-manage-join-requests')}
-                />
+                <>
+                  <ListRow
+                    icon="account-clock-outline"
+                    title="가입 신청"
+                    chevron
+                    right={crewInfo.pendingJoinRequests > 0 ? <Badge label={crewInfo.pendingJoinRequests} tone="danger" /> : undefined}
+                    accessibilityLabel={`가입 신청 ${crewInfo.pendingJoinRequests}건`}
+                    onPress={() => router.push('/3-8-manage-join-requests')}
+                  />
+                  <ListRow
+                    icon="file-export-outline"
+                    title="기록 내보내기"
+                    divider={false}
+                    chevron
+                    accessibilityLabel="기록 내보내기, CSV"
+                    onPress={() => setExporting(true)}
+                  />
+                </>
               ) : null}
             </Card>
           ) : null}
@@ -219,6 +230,11 @@ export default function ManageCrewMembersScreen() {
         </View>
       </Dialog>
 
+      <ExportSheet
+        visible={exporting}
+        onClose={() => setExporting(false)}
+        onFailed={() => setSnackbar('CSV를 만들지 못했어요. 다시 시도해 주세요.')}
+      />
       <Snackbar visible={snackbar != null} message={snackbar ?? ''} onDismiss={() => setSnackbar(null)} />
     </Screen>
   );

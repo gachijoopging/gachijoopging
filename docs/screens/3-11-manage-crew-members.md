@@ -14,6 +14,7 @@
 ├──────────────────────────────────────┤
 │ ⓪ 초대 코드   HG-7K2P              › │
 │    가입 신청                  [2]  › │ ← 크루장만
+│    기록 내보내기                   › │ ← 크루장만
 │ ② 크루원 18명                         │
 │ ③ (◉) 관열  크루장  412개 │
 │    2026년 9월 1일 가입                 │
@@ -30,6 +31,7 @@
 | ① | 헤더 제목 | "크루원 관리" | `AppHeader` | — |
 | ⓪ | 초대 코드 | `inviteCode` (`GET /crew`) | `Card` + `ListRow` | 3-3 |
 | ⓪ | 가입 신청 | 크루장만. `pendingJoinRequests` 가 1 이상이면 수 배지 | `ListRow` + `Badge` danger | 3-8 |
+| ⓪ | 기록 내보내기 | 크루장만. 기간을 골라 `GET /crew/export` 의 CSV 를 시스템 공유 시트로 보낸다. 시트 규칙은 3-4 문서의 CSV 절과 같다 | `ListRow` + `BottomSheet` | 기간 선택 시트 |
 | ② | 크루원 수 | `GET /crew/members` 배열 길이. "크루원 18명" | `Txt` section | — |
 | ③ | 크루원 행 | `id`·`photoUrl`·`nickname`·`isLeader`·`totalItems`·`joinedAt` (`GET /crew/members`) | `ListRow` + `Avatar` md + `Txt` + `Badge` | 5-4 |
 | ③ | 크루장 배지 | `isLeader` true면 "크루장" | `Badge` deep | — |
