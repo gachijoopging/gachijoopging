@@ -35,7 +35,15 @@
       "expo-notifications",
       "expo-dev-client",
       "@react-native-vector-icons/material-design-icons",
-      "expo-splash-screen",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#DCE6A6"
+        }
+      ],
       "./plugins/with-kakao-maven",
       [
         "expo-image-picker",
