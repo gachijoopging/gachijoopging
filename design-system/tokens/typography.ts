@@ -52,11 +52,20 @@ export const lineHeight = {
  * fontWeight 로 굵기를 합성하지 못해서, 같은 코드가 iOS 에서는 굵고
  * 안드로이드에서는 안 굵은 상태로 갈립니다. 파일 이름과 이 문자열을 일치시키세요:
  *   assets/fonts/Pretendard-Regular.ttf
+ *   assets/fonts/Pretendard-Medium.ttf
+ *   assets/fonts/Pretendard-SemiBold.ttf
  *   assets/fonts/Pretendard-Bold.ttf
+ *
+ * 파일은 Regular·Bold 와 같은 글리프 집합(5,425자)으로 줄인 서브셋입니다. 원본 TTF 는
+ * 굵기마다 2.7MB 라, 새 굵기를 넣을 때도 같은 코드포인트로 잘라야 앱이 불지 않습니다.
  */
 export const fontFamily = {
   /** 본문 */
   regular: 'Pretendard-Regular',
+  /** 강조가 아닌 구분 — 목록 제목, 선택 안 된 라벨 */
+  medium: 'Pretendard-Medium',
+  /** 작은 UI 라벨. 12px 에서 Bold 는 획이 뭉개집니다 */
+  semibold: 'Pretendard-SemiBold',
   /** 제목·숫자 강조 */
   bold: 'Pretendard-Bold',
 } as const;
