@@ -41,6 +41,13 @@ export function heatLevel(items: number, maxItems: number, activityCount = items
   return Math.max(1, Math.min(3, Math.ceil((items / maxItems) * 3))) as HeatLevel;
 }
 
+export const HEAT_OPACITY: Record<HeatLevel, number> = { 0: 0, 1: 0.3, 2: 0.6, 3: 1 };
+
+/** 다크에서 라임은 서피스보다 훨씬 밝다. 진한 칸(2·3) 위의 밝은 ink·deep 은 1~2:1 로 사라져 어두운 onLime 으로 뒤집는다 */
+export function cellMark(heat: HeatLevel, selected: boolean): 'onDark' | 'onLime' | 'ink' {
+  return selected ? 'onDark' : heat >= 2 ? 'onLime' : 'ink';
+}
+
 const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
 
 export function kstToday(now: Date = new Date()): string {

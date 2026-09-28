@@ -23,8 +23,10 @@ import {
 import { createMockClient, type ApiClient } from '../api/client';
 import type { MOCKS } from '../api/mocks.generated';
 import {
+  HEAT_OPACITY,
   canGoNextMonth,
   cellLabel,
+  cellMark,
   daySummary,
   heatLevel,
   initialDate,
@@ -215,8 +217,6 @@ function MonthGrid({
   );
 }
 
-const HEAT_OPACITY: Record<HeatLevel, number> = { 0: 0, 1: 0.3, 2: 0.6, 3: 1 };
-
 function DayCell({
   cell,
   heat,
@@ -238,8 +238,7 @@ function DayCell({
   const ripple = useRipple();
   // 앞뒤 달 칸은 자리만 차지한다 — 그 달의 응답에 없는 날짜다
   if (!cell.inMonth) return <View style={{ flex: 1, minHeight: size.minTouch }} />;
-  // 다크에서 라임은 서피스보다 훨씬 밝다. 진한 칸(2·3) 위의 밝은 ink·deep 은 1~2:1 로 사라져 어두운 onLime 으로 뒤집는다
-  const mark = selected ? 'onDark' : heat >= 2 ? 'onLime' : 'ink';
+  const mark = cellMark(heat, selected);
   return (
     <Pressable
       accessibilityRole="button"

@@ -1,4 +1,5 @@
-import { canGoNextMonth, cellLabel, daySummary, heatLevel, initialDate, isFutureDate, kstToday, monthGrid, shiftMonth } from './calendar';
+import { light, dark } from 'design-system/src';
+import { HEAT_OPACITY, canGoNextMonth, cellLabel, cellMark, daySummary, heatLevel, initialDate, isFutureDate, kstToday, monthGrid, shiftMonth } from './calendar';
 
 const days = [
   { date: '2026-09-02', items: 12, activityCount: 1, activities: [] },
@@ -94,5 +95,24 @@ describe('날짜 문구', () => {
     expect(cellLabel({ date: '2026-09-29', items: 0, activityCount: 0 }, '2026-09-28')).toBe(
       '9월 29일, 활동 없음, 선택할 수 없음',
     );
+  });
+});
+
+describe('날짜 칸 대비', () => {
+  const rgb = (hex: string) => [0, 2, 4].map((i) => parseInt(hex.slice(1 + i, 3 + i), 16));
+  const lum = (c: number[]) =>
+    c.map((v) => (v / 255 <= 0.03928 ? v / 255 / 12.92 : ((v / 255 + 0.055) / 1.055) ** 2.4))
+      .reduce((sum, v, i) => sum + v * [0.2126, 0.7152, 0.0722][i], 0);
+  const ratio = (a: number[], b: number[]) => {
+    const [hi, lo] = [lum(a), lum(b)].sort((x, y) => y - x);
+    return (hi + 0.05) / (lo + 0.05);
+  };
+
+  test.each([['light', light], ['dark', dark]] as const)('%s: 모든 농도에서 숫자·점이 칸 위 4.5:1 이상이다', (_, c) => {
+    for (const heat of [0, 1, 2, 3] as const) {
+      const a = HEAT_OPACITY[heat];
+      const cell = rgb(c.lime).map((v, i) => Math.round(v * a + rgb(c.surface)[i] * (1 - a)));
+      expect(ratio(rgb(c[cellMark(heat, false)]), cell)).toBeGreaterThanOrEqual(4.5);
+    }
   });
 });
