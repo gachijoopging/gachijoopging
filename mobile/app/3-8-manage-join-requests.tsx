@@ -76,11 +76,11 @@ export default function ManageJoinRequestsScreen() {
       <AppHeader title="가입 신청 관리" onBack={back} />
 
       {!isLeader ? (
-        <EmptyState
-          icon="lock-outline"
+        <ErrorState
           title="크루장만 가입 신청을 관리할 수 있어요."
+          description="크루장에게 요청해 주세요."
           actionLabel="크루 정보로"
-          onAction={() => router.replace('/3-2-crew-info')}
+          onRetry={() => router.dismissTo('/3-2-crew-info')}
         />
       ) : !requests ? (
         failed ? (

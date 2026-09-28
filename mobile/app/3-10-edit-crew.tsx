@@ -1,13 +1,15 @@
+import * as Crypto from 'expo-crypto';
+import * as ImagePicker from 'expo-image-picker';
 import { router, useNavigation } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { View } from 'react-native';
+import { Linking, View } from 'react-native';
 import {
   AppHeader,
   Avatar,
+  Banner,
   BottomSheet,
   Button,
   Dialog,
-  EmptyState,
   ErrorState,
   Field,
   ListRow,
@@ -38,6 +40,9 @@ export default function EditCrewScreen() {
   const [photoSheet, setPhotoSheet] = useState(false);
   const [pendingLeave, setPendingLeave] = useState<(() => void) | null>(null);
   const [snackbar, setSnackbar] = useState<string | null>(null);
+  const [photo, setPhoto] = useState<{ uri: string; mediaId: string } | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [cameraDenied, setCameraDenied] = useState(false);
   const saved = useRef(false);
   usePreventBack(saving);
 
@@ -84,8 +89,7 @@ export default function EditCrewScreen() {
     try {
       await api.mutate('PATCH /crew', patch);
       saved.current = true;
-      // 3-2 는 포커스 때 다시 받는다
-      router.back();
+      router.dismissTo({ pathname: '/3-2-crew-info', params: { flash: '크루 정보를 저장했어요.' } });
     } catch (e) {
       if (e instanceof ApiError && e.code === 'FORBIDDEN') setDenied(true);
       else if (e instanceof ApiError && e.code === 'CONFLICT') setNameError('이미 사용 중인 크루 이름이에요.');
@@ -97,19 +101,51 @@ export default function EditCrewScreen() {
     }
   };
 
+  const upload = async (asset: ImagePicker.ImagePickerAsset) => {
+    setUploading(true);
+    try {
+      const { data } = await api.mutate('POST /media', {
+        mediaId: Crypto.randomUUID(),
+        file: { uri: asset.uri, name: asset.fileName ?? 'crew.jpg', type: asset.mimeType ?? 'image/jpeg' },
+        purpose: 'CREW',
+      });
+      setPhoto({ uri: asset.uri, mediaId: data.mediaId });
+      update({ photoMediaId: data.mediaId });
+    } catch {
+      setSnackbar('사진을 올리지 못했어요. 다시 시도해 주세요.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const pick = async (source: 'camera' | 'library') => {
+    setPhotoSheet(false);
+    if (source === 'camera') {
+      const permission = await ImagePicker.requestCameraPermissionsAsync();
+      if (!permission.granted) return setCameraDenied(true);
+    }
+    setCameraDenied(false);
+    // 사진 선택은 OS 사진 선택기라 앨범 전체 권한을 묻지 않는다
+    const options: ImagePicker.ImagePickerOptions = { mediaTypes: ['images'], allowsEditing: true, aspect: [1, 1], quality: 0.8 };
+    const result =
+      source === 'camera' ? await ImagePicker.launchCameraAsync(options) : await ImagePicker.launchImageLibraryAsync(options);
+    if (!result.canceled && result.assets[0]) await upload(result.assets[0]);
+  };
+
   const photoGone = form?.photoMediaId === null;
-  const hasPhoto = !!original?.photoUrl && !photoGone;
+  const photoUri = photo && form?.photoMediaId === photo.mediaId ? photo.uri : photoGone ? undefined : original?.photoUrl ?? undefined;
+  const hasPhoto = !!photoUri;
 
   return (
     <Screen scroll>
       <AppHeader title="크루 정보 수정" onBack={() => router.back()} backDisabled={saving} />
 
       {denied ? (
-        <EmptyState
-          icon="lock-outline"
+        <ErrorState
           title="크루장만 크루 정보를 수정할 수 있어요."
+          description="크루장에게 요청해 주세요."
           actionLabel="크루 정보로"
-          onAction={() => router.back()}
+          onRetry={() => router.dismissTo('/3-2-crew-info')}
         />
       ) : !form || !original ? (
         failed ? (
@@ -120,16 +156,22 @@ export default function EditCrewScreen() {
       ) : (
         <>
           <View style={{ alignItems: 'center', gap: space.sm }}>
-            <Avatar name={form.name || original.name} uri={hasPhoto ? original.photoUrl ?? undefined : undefined} size="xl" />
+            <Avatar name={form.name || original.name} uri={photoUri} size="xl" />
             <Button
               label="대표 사진 변경"
               variant="ghost"
               size="sm"
               accessibilityLabel={hasPhoto ? '크루 대표 사진 변경' : '대표 사진 없음, 사진 추가'}
+              loading={uploading}
               disabled={saving}
               onPress={() => setPhotoSheet(true)}
             />
           </View>
+          {cameraDenied ? (
+            <Banner tone="warn" action={{ label: '설정으로 이동', onPress: () => void Linking.openSettings() }}>
+              사진 권한을 허용해 주세요.
+            </Banner>
+          ) : null}
 
           <Field
             label="크루 이름"
@@ -171,16 +213,15 @@ export default function EditCrewScreen() {
             size="lg"
             fullWidth
             loading={saving}
-            disabled={!patch}
+            disabled={!patch || uploading}
             onPress={save}
           />
         </>
       )}
 
       <BottomSheet visible={photoSheet} onClose={() => setPhotoSheet(false)} title="대표 사진">
-        {/* ponytail: 카메라·사진 선택 모듈(expo-image-picker)이 아직 없다. 들어오면 POST /media purpose CREW → photoMediaId */}
-        <ListRow icon="camera-outline" title="카메라로 촬영" disabled onPress={() => {}} />
-        <ListRow icon="image-outline" title="사진 선택" disabled onPress={() => {}} />
+        <ListRow icon="camera-outline" title="카메라로 촬영" onPress={() => void pick('camera')} />
+        <ListRow icon="image-outline" title="사진 선택" onPress={() => void pick('library')} />
         {hasPhoto ? (
           <ListRow
             icon="delete-outline"

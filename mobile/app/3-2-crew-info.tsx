@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { RefreshControl, View } from 'react-native';
 import {
@@ -14,11 +14,13 @@ import {
   ListRow,
   Loading,
   Screen,
+  Snackbar,
   Txt,
   space,
 } from 'design-system/src';
 import { createMockClient, type ApiClient } from '../src/api/client';
 import type { MOCKS } from '../src/api/mocks.generated';
+import { useFlash } from '../src/ui/useFlash';
 import type { Crew } from './(tabs)/crew';
 
 type Member = (typeof MOCKS)['GET /crew/members']['data'][number];
@@ -33,6 +35,7 @@ export default function CrewInfoScreen() {
   const [failed, setFailed] = useState(false);
   const [membersFailed, setMembersFailed] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [snackbar, setSnackbar] = useFlash();
 
   const loadMembers = useCallback(async () => {
     try {
@@ -55,10 +58,12 @@ export default function CrewInfoScreen() {
     [loadMembers],
   );
 
+  // 수정·위임·추방하고 돌아오면 바뀐 정보와 내 역할을 다시 받는다
+  useFocusEffect(useCallback(() => void load('first'), [load]));
+
   useEffect(() => {
-    void load('first');
     api.get('GET /users/me').then((res) => setMeId(res.data.id)).catch(() => {});
-  }, [load]);
+  }, []);
 
   const openMember = (id: string) =>
     id === meId ? router.push('/(tabs)/profile') : router.push({ pathname: '/5-4-user-profile', params: { id } });
@@ -179,6 +184,8 @@ export default function CrewInfoScreen() {
           <Button label="크루 나가기" variant="ghostDanger" size="md" onPress={() => router.push('/5-7-settings')} />
         </>
       )}
+
+      <Snackbar visible={snackbar != null} message={snackbar ?? ''} onDismiss={() => setSnackbar(null)} />
     </Screen>
   );
 }

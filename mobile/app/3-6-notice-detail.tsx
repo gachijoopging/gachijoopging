@@ -1,5 +1,5 @@
 import * as Crypto from 'expo-crypto';
-import { router, useLocalSearchParams, useNavigation } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams, useNavigation } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { RefreshControl, ScrollView, View } from 'react-native';
 import {
@@ -26,6 +26,7 @@ import type { MOCKS } from '../src/api/mocks.generated';
 import { clearDraft, draftFor, editDraft, requestIdFor } from '../src/crew/comment-draft';
 import { monthDay } from '../src/crew/crew';
 import { COMMENT_MAX, canSendComment, commentAction } from '../src/crew/notice';
+import { useFlash } from '../src/ui/useFlash';
 
 type Detail = (typeof MOCKS)['GET /notices/{noticeId}']['data'];
 type Comment = { id: string; author: { id: string; nickname: string; photoUrl: string | null }; text: string; createdAt: string };
@@ -47,7 +48,7 @@ export default function NoticeDetailScreen() {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [commentTarget, setCommentTarget] = useState<Comment | null>(null);
   const [commentMenuOpen, setCommentMenuOpen] = useState(false);
-  const [snackbar, setSnackbar] = useState<string | null>(null);
+  const [snackbar, setSnackbar] = useFlash();
 
   const load = useCallback(
     async (mode: 'first' | 'pull') => {
@@ -67,13 +68,15 @@ export default function NoticeDetailScreen() {
     [id],
   );
 
+  // 수정하고 돌아오면 바뀐 제목·본문을 다시 받는다
+  useFocusEffect(useCallback(() => void load('first'), [load]));
+
   useEffect(() => {
-    void load('first');
     api
       .get('GET /users/me')
       .then(({ data }) => setMe({ id: data.id, isLeader: !!data.membership.crew?.isLeader }))
       .catch(() => {});
-  }, [load]);
+  }, []);
 
   const changeText = (value: string) => {
     setText(value);
@@ -101,7 +104,7 @@ export default function NoticeDetailScreen() {
     try {
       await api.mutate('DELETE /notices/{noticeId}', { noticeId: id });
       // 이 화면은 사라지므로 삭제 안내는 목록이 띄운다
-      router.dismissTo({ pathname: '/3-5-notices', params: { deleted: '1' } });
+      router.dismissTo({ pathname: '/3-5-notices', params: { flash: '공지를 삭제했어요.' } });
     } catch {
       setSnackbar('공지를 삭제하지 못했어요. 다시 시도해 주세요.');
     }

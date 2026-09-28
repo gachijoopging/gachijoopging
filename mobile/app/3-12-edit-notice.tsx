@@ -1,10 +1,9 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { View } from 'react-native';
+import { View, type TextInput } from 'react-native';
 import {
   AppHeader,
   Button,
-  EmptyState,
   ErrorState,
   Field,
   Loading,
@@ -41,6 +40,7 @@ export default function EditNoticeScreen() {
   const [saving, setSaving] = useState(false);
   const [snackbar, setSnackbar] = useState<string | null>(null);
   const busy = useRef(false);
+  const bodyRef = useRef<TextInput>(null);
   usePreventBack(saving);
 
   const load = async () => {
@@ -68,10 +68,7 @@ export default function EditNoticeScreen() {
     void load();
   }, [id]);
 
-  const goneBack = () => {
-    setSnackbar('삭제된 공지예요.');
-    setTimeout(() => router.dismissTo('/3-5-notices'), 1200);
-  };
+  const goneBack = () => router.dismissTo({ pathname: '/3-5-notices', params: { flash: '삭제된 공지예요.' } });
 
   const change = (next: Partial<NoticeForm>) => {
     if (!form || !key) return;
@@ -92,11 +89,11 @@ export default function EditNoticeScreen() {
       if (id) {
         await api.mutate('PATCH /notices/{noticeId}', { noticeId: id, ...submit });
         clearNoticeDraft(key);
-        router.back();
+        router.dismissTo({ pathname: '/3-6-notice-detail', params: { id, flash: '공지 변경사항을 저장했어요.' } });
       } else {
         const { data } = await api.mutate('POST /crew/notices', submit);
         clearNoticeDraft(key);
-        router.replace({ pathname: '/3-6-notice-detail', params: { id: data.id } });
+        router.replace({ pathname: '/3-6-notice-detail', params: { id: data.id, flash: '공지를 올렸어요.' } });
       }
     } catch (e) {
       if (e instanceof ApiError && e.code === 'FORBIDDEN') setDenied(true);
@@ -113,11 +110,11 @@ export default function EditNoticeScreen() {
       <AppHeader title={editing ? '공지 수정' : '공지 작성'} onBack={() => router.back()} backDisabled={saving} />
 
       {denied ? (
-        <EmptyState
-          icon="lock-outline"
+        <ErrorState
           title="크루장만 공지를 작성할 수 있어요."
+          description="크루장에게 요청해 주세요."
           actionLabel="공지 목록으로"
-          onAction={() => router.dismissTo('/3-5-notices')}
+          onRetry={() => router.dismissTo('/3-5-notices')}
         />
       ) : !form ? (
         failed ? (
@@ -138,12 +135,16 @@ export default function EditNoticeScreen() {
               error={touched.title ? errors.title : undefined}
               maxLength={NOTICE_TITLE_MAX}
               editable={!saving}
+              returnKeyType="next"
+              submitBehavior="submit"
+              onSubmitEditing={() => bodyRef.current?.focus()}
             />
             <Txt variant="micro" tone="hint" style={{ textAlign: 'right' }}>{`${form.title.length} / ${NOTICE_TITLE_MAX}`}</Txt>
           </View>
 
           <View style={{ gap: space.xs }}>
             <Field
+              ref={bodyRef}
               label="내용"
               accessibilityLabel={`공지 내용, ${NOTICE_BODY_MAX}자까지, ${form.body.length}자 입력됨`}
               placeholder="크루원에게 알릴 내용을 입력해 주세요."

@@ -76,11 +76,11 @@ export default function ManageCrewMembersScreen() {
     }
     setBusyId(null);
     const outcome = memberActionOutcome(action, member.nickname, error);
+    // 위임하면 내 역할이 바뀌므로 3-2 로 돌아가 거기서 안내한다. 3-2 는 포커스 때 역할을 다시 받는다
+    if (outcome.next === 'leave') return router.dismissTo({ pathname: '/3-2-crew-info', params: { flash: outcome.message ?? '' } });
     if (outcome.message) setSnackbar(outcome.message);
     if (outcome.next === 'removeRow') setMembers((prev) => prev?.filter((m) => m.id !== member.id) ?? prev);
     if (outcome.next === 'reload') void load('quiet');
-    // 위임하면 내 역할이 바뀌므로 3-2 가 새로 받도록 돌아간다. 안내는 잠깐 보인 뒤 떠난다
-    if (outcome.next === 'leave') setTimeout(() => (router.canGoBack() ? router.back() : router.replace('/3-2-crew-info')), 1200);
   };
 
   const openMember = (id: string) =>

@@ -33,6 +33,7 @@ import {
   useTheme,
 } from 'design-system/src';
 import { createMockClient, type ApiClient } from '../src/api/client';
+import { resolveDestination } from '../src/auth/destination';
 import { kstToday } from '../src/crew/calendar';
 import {
   CHAT_MAX,
@@ -57,6 +58,8 @@ import {
 import { createMockChatSocket, type ChatSocket, type ChatSocketEvent } from '../src/crew/chat-socket';
 
 const api: ApiClient = createMockClient({ delayMs: 300 });
+/** 전송 실패·다시 보내기를 목으로 보려면 dropEcho 를 켠다 */
+const MOCK_SOCKET = { dropEcho: false };
 const PAGE = 50;
 // 전송 실패 판정 시간은 3-7 문서의 미결(운영 파라미터)이다. 확정되면 이 값만 바꾼다
 const SEND_TIMEOUT_MS = 10_000;
@@ -144,6 +147,28 @@ export default function CrewChatScreen() {
     }
   }, [update]);
 
+  const onClosed = useCallback(async (code: 4401 | 4403, socket: ChatSocket) => {
+    if (code === 4401) {
+      // 배너는 "연결 중…" 그대로. 갱신이 실패하면 재로그인으로 가되 초안·미전송 큐는 떠날 때 보존된다
+      setConnected(false);
+      try {
+        await api.mutate('POST /auth/refresh');
+        socket.reconnect();
+      } catch {
+        router.replace('/1-1-start');
+      }
+      return;
+    }
+    // 추방·나가기·해산. 배너 없이 소속 상태대로 보내고 이 화면은 스택에서 지운다
+    try {
+      const { data } = await api.get('GET /users/me');
+      if (router.canDismiss()) router.dismissAll();
+      router.replace(resolveDestination(data));
+    } catch {
+      router.replace('/1-1-start');
+    }
+  }, []);
+
   const load = useCallback(async () => {
     setPhase('loading');
     try {
@@ -163,11 +188,12 @@ export default function CrewChatScreen() {
       textRef.current = session.draft;
       setText(session.draft);
 
-      const socket = createMockChatSocket({ author: nextMe.author, lastSeq: lastSeqOf(chatRef.current.items) });
+      const socket = createMockChatSocket({ ...MOCK_SOCKET, author: nextMe.author, lastSeq: lastSeqOf(chatRef.current.items) });
       socketRef.current = socket;
       socket.subscribe(onEvent);
       let wasConnecting = false;
       socket.onStatus((status) => {
+        if (typeof status === 'object') return void onClosed(status.closed, socket);
         if (status === 'connecting') {
           wasConnecting = true;
           setConnected(false);
@@ -188,7 +214,7 @@ export default function CrewChatScreen() {
     } catch {
       setPhase('error');
     }
-  }, [fillGap, markRead, onEvent, transmit, update]);
+  }, [fillGap, markRead, onClosed, onEvent, transmit, update]);
 
   useEffect(() => {
     void load();
@@ -365,7 +391,7 @@ export default function CrewChatScreen() {
             onChangeText={changeText}
             maxLength={CHAT_MAX}
             editable={ready}
-            numberOfLines={4}
+            maxLines={4}
           />
           <IconButton
             icon="send"
