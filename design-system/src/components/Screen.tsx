@@ -1,4 +1,4 @@
-import type { ReactElement, ReactNode } from 'react';
+import { Children, isValidElement, type ReactElement, type ReactNode } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -11,6 +11,7 @@ import {
 import { SafeAreaView, type Edge } from 'react-native-safe-area-context';
 import { screen, space } from '../../tokens/spacing.ts';
 import { useTheme } from '../theme.tsx';
+import { Snackbar } from './Snackbar.tsx';
 
 /**
  * 화면 바깥 껍데기. 플랫폼 계약이 전부 여기 모입니다.
@@ -21,6 +22,9 @@ import { useTheme } from '../theme.tsx';
  *      안드로이드는 항상 edge-to-edge 라 adjustResize 가 창을 줄이지 않습니다.
  *   3. 최대 폭 — 태블릿에서 입력창과 버튼이 화면 끝까지 늘어나지 않게 막습니다.
  *      Material 은 확장 폭에서 폰 레이아웃을 그대로 늘리지 말라고 합니다.
+ *
+ *   4. 스낵바 — 스크롤 화면에서 자식으로 둔 `Snackbar` 는 스크롤 밖으로 꺼내 그립니다.
+ *      안에 두면 화면 바닥이 아니라 내용 끝에 붙어 내용과 겹칩니다.
  *
  * 화면은 전부 이걸로 감쌉니다. 직접 SafeAreaView 를 쓰지 마세요 — 규칙이 흩어집니다.
  */
@@ -63,6 +67,10 @@ export function Screen({
     gap: space.md,
   };
 
+  const all = Children.toArray(children);
+  const floating = scroll ? all.filter((child) => isValidElement(child) && child.type === Snackbar) : [];
+  const content = scroll ? all.filter((child) => !floating.includes(child)) : children;
+
   const body = scroll ? (
     <ScrollView
       style={{ flex: 1 }}
@@ -71,7 +79,7 @@ export function Screen({
       keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
       refreshControl={refreshControl}
     >
-      {children}
+      {content}
     </ScrollView>
   ) : (
     <View style={[{ flex: 1 }, inner, contentStyle]}>{children}</View>
@@ -82,6 +90,7 @@ export function Screen({
       <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
         {body}
       </KeyboardAvoidingView>
+      {floating}
     </SafeAreaView>
   );
 }
