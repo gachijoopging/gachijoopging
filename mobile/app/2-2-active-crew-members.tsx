@@ -83,7 +83,6 @@ export default function ActiveCrewMembersScreen() {
         <EmptyState
           icon="account-group-outline"
           title="지금 활동 중인 크루원이 없어요"
-          description="크루원과 함께 다음 활동을 시작해 보세요."
         />
       ) : (
         <>
@@ -152,8 +151,6 @@ export default function ActiveCrewMembersScreen() {
           </View>
         </>
       )}
-
-      <Banner tone="neutral">활동 중인 크루원의 위치는 위치 공유를 켠 경우에만 보여요.</Banner>
     </Screen>
   );
 }

@@ -74,7 +74,6 @@ B 확인
 | A① | 뒤로 | 화살표 아이콘 | `AppHeader` — 옛 `ic_back`, 48dp 터치 | 온 곳(1-2 또는 5-7) |
 | A① | 제목·부제 | "비밀번호 재설정" / "계정 복구" 두 줄 | `AppHeader` (옛 `view_screen_header`) | — |
 | A② | 헤드라인 | "가입한 이메일을 알려 주세요" | `Txt` display | — |
-| A② | 설명 | "입력한 주소로 비밀번호 재설정 코드를 보내 드려요." | `Txt` caption muted | — |
 | A③ | 이메일 입력 | 라벨 "이메일", 플레이스홀더 "you@example.com". 이메일 키보드, 자동완성 이메일. 1-2에서 전달한 유효 이메일 또는 5-7 에서 왔으면 `email` (`GET /users/me`) 이 미리 채워진다. 값은 `email` 로 `POST /auth/password-reset` | `Field` | — |
 | A③ | 이메일 오류 | 평소 숨김. 형식이 틀린 채 포커스를 떠나면 "이메일 형식이 올바르지 않아요." | `Field` 의 error | — |
 | A④ | 보내기 버튼 | "재설정 메일 보내기". 이메일이 형식에 맞을 때만 활성 | `Button` primary lg (옛 `bg_button_cta`) | `POST /auth/password-reset` → 204 면 ⑤ 로 전환 |

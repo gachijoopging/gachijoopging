@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { View } from 'react-native';
 import { router, useNavigation } from 'expo-router';
-import { AppHeader, Banner, Button, Field, Screen, Txt } from 'design-system/src';
+import { AppHeader, Banner, Button, Field, Screen } from 'design-system/src';
 import { onboardingApi as api } from '../src/api/onboarding';
 import { mapCrewCreateError } from '../src/auth/errors';
 import { normalizeCrewName, validateCrewName } from '../src/auth/validators';
@@ -68,11 +68,6 @@ export default function CreateCrewScreen() {
         returnKeyType="done"
         onSubmitEditing={handleSubmit}
       />
-      <Txt variant="caption" tone="muted">2~20자로 입력해 주세요.</Txt>
-
-      <Banner tone="neutral">
-        {'크루를 만들면 내가 크루장이 돼요.\n초대 코드는 자동으로 만들어져요.\n소개·사진·목표는 나중에 정할 수 있어요.'}
-      </Banner>
       {banner ? <Banner tone="danger">{banner}</Banner> : null}
 
       <View style={{ flex: 1 }} />

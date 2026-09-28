@@ -167,7 +167,6 @@ export default function NotificationsScreen() {
             <EmptyState
               icon="bell-outline"
               title="알림이 없어요"
-              description="크루 소식과 댓글, 팔로우한 크루원의 활동 시작이 여기에 모여요."
             />
           ) : (
             <>
