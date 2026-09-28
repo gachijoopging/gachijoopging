@@ -11,17 +11,18 @@ import { Txt } from './Text.tsx';
  *
  * 점은 글자 없이 상태만 전하는 비텍스트 UI 라 배경 위 3:1 이 필요합니다(SC 1.4.11).
  * 오렌지는 밝은 서피스 위 2.18:1 이라 점으로 쓸 수 없습니다.
- * `onDeep` 은 선택된 달력 칸처럼 deep 채움 위에 얹힐 때 씁니다.
+ * `onDeep` 은 선택된 달력 칸처럼 deep 채움 위에, `onLime` 은 라임 채움 위에 얹힐 때 씁니다.
+ * `ink` 는 옅은 라임처럼 deep 이 3:1 에 못 미치는 바탕 위에 씁니다.
  */
 function DotBase({
   tone = 'deep',
   size = 8,
 }: {
-  tone?: 'deep' | 'danger' | 'onDeep';
+  tone?: 'deep' | 'danger' | 'onDeep' | 'onLime' | 'ink';
   size?: number;
 }) {
   const { colors } = useTheme();
-  const fills = { deep: colors.deep, danger: colors.error, onDeep: colors.onDark };
+  const fills = { deep: colors.deep, danger: colors.error, onDeep: colors.onDark, onLime: colors.onLime, ink: colors.ink };
   return (
     <View
       style={{
