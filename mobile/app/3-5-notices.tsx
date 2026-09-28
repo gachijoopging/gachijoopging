@@ -71,7 +71,6 @@ export default function NoticesScreen() {
           ) : undefined
         }
       />
-      <Txt variant="caption" tone="muted">크루원 모두에게 알릴 내용을 확인해요.</Txt>
 
       {!notices ? (
         failed ? (
@@ -83,7 +82,6 @@ export default function NoticesScreen() {
         <EmptyState
           icon="bullhorn-outline"
           title="아직 공지가 없어요"
-          description="크루장이 첫 공지를 작성하면 여기에 보여요."
           actionLabel={isLeader ? '공지 작성' : undefined}
           onAction={isLeader ? () => router.push('/3-12-edit-notice') : undefined}
         />

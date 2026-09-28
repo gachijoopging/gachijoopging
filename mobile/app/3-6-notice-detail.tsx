@@ -271,7 +271,6 @@ export default function NoticeDetailScreen() {
       </BottomSheet>
 
       <Dialog visible={confirmDelete} onClose={() => setConfirmDelete(false)} title="이 공지를 삭제할까요?">
-        <Txt variant="body" tone="muted">댓글도 함께 사라져요. 되돌릴 수 없어요.</Txt>
         <View style={{ flexDirection: 'row', gap: space.sm, justifyContent: 'flex-end' }}>
           <Button label="취소" variant="ghost" size="md" onPress={() => setConfirmDelete(false)} />
           <Button label="삭제" variant="danger" size="md" onPress={deleteNotice} />

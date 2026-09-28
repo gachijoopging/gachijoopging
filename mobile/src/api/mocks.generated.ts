@@ -188,8 +188,7 @@ export const MOCKS = {
             "photoUrl": null,
             "withdrawn": false
           },
-          "text": "좋아요",
-          "갈게요!": null,
+          "text": "좋아요, 갈게요!",
           "createdAt": "2026-09-06T06:25:00Z"
         }
       ],

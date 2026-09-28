@@ -185,7 +185,10 @@ function MonthGrid({
   today: string;
   onSelect: (date: string) => void;
 }) {
-  const weeks = Array.from({ length: 6 }, (_, w) => cells.slice(w * 7, w * 7 + 7));
+  // 격자는 늘 6주지만, 그 달 날짜가 하나도 없는 마지막 주는 빈 줄이라 그리지 않는다
+  const weeks = Array.from({ length: 6 }, (_, w) => cells.slice(w * 7, w * 7 + 7)).filter((week) =>
+    week.some((c) => c.inMonth),
+  );
 
   return (
     <View style={{ gap: space.xs }}>

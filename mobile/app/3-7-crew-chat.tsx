@@ -311,7 +311,6 @@ export default function CrewChatScreen() {
           <Txt variant="caption" tone="muted">이전 메시지를 불러오지 못했어요 · 다시 시도</Txt>
         </Pressable>
       ) : null}
-      {chat.reachedStart ? <Chip label="크루원만 참여하는 채팅방이에요" tone="neutral" /> : null}
     </View>
   );
 
@@ -350,8 +349,8 @@ export default function CrewChatScreen() {
             onContentSizeChange={() => atBottom.current && listRef.current?.scrollToEnd({ animated: false })}
             renderItem={({ item: row }) =>
               row.type === 'date' ? (
-                <View style={{ alignItems: 'center', paddingVertical: space.sm }}>
-                  <Chip label={row.label} tone="neutral" />
+                <View style={{ paddingVertical: space.sm }}>
+                  <CenteredChip label={row.label} />
                 </View>
               ) : (
                 <MessageRow
@@ -550,4 +549,13 @@ function Fade({ visible, style, children }: { visible: boolean; style?: object; 
 
   if (!mounted) return null;
   return <Animated.View style={[style, { opacity }]}>{children}</Animated.View>;
+}
+
+/** Chip 은 스스로 왼쪽에 붙는다(alignSelf). 감싼 쪽을 가운데로 둬야 가운데에 온다 */
+function CenteredChip({ label }: { label: string }) {
+  return (
+    <View style={{ alignSelf: 'center' }}>
+      <Chip label={label} tone="neutral" />
+    </View>
+  );
 }

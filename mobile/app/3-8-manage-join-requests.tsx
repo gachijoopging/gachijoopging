@@ -75,8 +75,6 @@ export default function ManageJoinRequestsScreen() {
   const confirmTitle = confirm
     ? `${confirm.request.user.nickname} 님의 가입을 ${confirm.decision === 'APPROVE' ? '승인' : '거절'}할까요?`
     : '';
-  const confirmBody =
-    confirm?.decision === 'APPROVE' ? '승인하면 바로 크루원이 돼요.' : '거절한 뒤에도 현재 유효한 초대 코드로 다시 가입 신청할 수 있어요.';
 
   return (
     <Screen scroll refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load('pull')} />}>
@@ -100,7 +98,6 @@ export default function ManageJoinRequestsScreen() {
         <EmptyState
           icon="account-clock-outline"
           title="대기 중인 가입 신청이 없어요"
-          description="새 신청이 들어오면 여기에서 승인하거나 거절할 수 있어요."
         />
       ) : (
         <>
@@ -114,14 +111,10 @@ export default function ManageJoinRequestsScreen() {
               onDecide={(decision) => setConfirm({ request: r, decision })}
             />
           ))}
-          <Banner tone="neutral">승인된 사람은 바로 크루원이 돼요.</Banner>
         </>
       )}
 
       <Dialog visible={confirm != null} onClose={() => setConfirm(null)} title={confirmTitle}>
-        <Txt variant="body" tone="muted" accessibilityLiveRegion="polite" accessibilityLabel={`${confirmTitle}, ${confirmBody}`}>
-          {confirmBody}
-        </Txt>
         <View style={{ flexDirection: 'row', gap: space.sm, justifyContent: 'flex-end' }}>
           <Button label="취소" variant="ghost" size="md" onPress={() => setConfirm(null)} />
           <Button

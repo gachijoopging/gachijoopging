@@ -17,7 +17,6 @@ import {
   NumberStepper,
   Screen,
   Snackbar,
-  Txt,
   space,
 } from 'design-system/src';
 import { ApiError, createMockClient, type ApiClient } from '../src/api/client';
@@ -199,7 +198,6 @@ export default function EditCrewScreen() {
             onChangeText={(intro) => update({ intro })}
             error={touched.intro ? errors.intro : undefined}
             onBlur={() => touch('intro')}
-            hint={`${form.intro.length} / ${CREW_INTRO_MAX}`}
             multiline
             editable={!saving}
           />
@@ -211,8 +209,6 @@ export default function EditCrewScreen() {
             onValidityChange={setGoalValid}
             disabled={saving}
           />
-          {/* 스테퍼가 목표를 이미 읽어 주므로 문장은 눈으로만 본다 */}
-          <Txt variant="caption" tone="muted" importantForAccessibility="no-hide-descendants">{`14일에 ${form.goalCount}개`}</Txt>
 
           <View style={{ flex: 1 }} />
           <Button
@@ -243,7 +239,6 @@ export default function EditCrewScreen() {
       </BottomSheet>
 
       <Dialog visible={pendingLeave != null} onClose={() => setPendingLeave(null)} title="변경사항을 버릴까요?">
-        <Txt variant="body" tone="muted">저장하지 않은 변경사항은 사라져요.</Txt>
         <View style={{ flexDirection: 'row', gap: space.sm, justifyContent: 'flex-end' }}>
           <Button label="계속 수정" variant="ghost" size="md" onPress={() => setPendingLeave(null)} />
           <Button

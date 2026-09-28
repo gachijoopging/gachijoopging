@@ -9,7 +9,6 @@ import {
   Loading,
   Screen,
   Snackbar,
-  Txt,
   space,
 } from 'design-system/src';
 import { ApiError, createMockClient, type ApiClient } from '../src/api/client';
@@ -139,7 +138,7 @@ export default function EditNoticeScreen() {
               onBlur={() => touch('title')}
               error={touched.title ? errors.title : undefined}
               maxLength={NOTICE_TITLE_MAX}
-              hint={limitHint(form.title, NOTICE_TITLE_MAX, '제목은 100자까지 입력할 수 있어요.')}
+              hint={atLimit(form.title, NOTICE_TITLE_MAX, '제목은 100자까지 입력할 수 있어요.')}
               editable={!saving}
               returnKeyType="next"
               submitBehavior="submit"
@@ -161,7 +160,7 @@ export default function EditNoticeScreen() {
               onBlur={() => touch('body')}
               error={touched.body ? errors.body : undefined}
               maxLength={NOTICE_BODY_MAX}
-              hint={limitHint(form.body, NOTICE_BODY_MAX, '내용은 3000자까지 입력할 수 있어요.')}
+              hint={atLimit(form.body, NOTICE_BODY_MAX, '내용은 3000자까지 입력할 수 있어요.')}
               multiline
               editable={!saving}
             />
@@ -184,7 +183,7 @@ export default function EditNoticeScreen() {
   );
 }
 
-/** 한도에 닿으면 더 입력되지 않는 이유를, 그 전에는 글자 수를 보인다 */
-function limitHint(value: string, max: number, atLimit: string): string {
-  return value.length >= max ? atLimit : `${value.length} / ${max}`;
+/** 한도에 닿아 더 입력되지 않을 때만 그 이유를 보인다 */
+function atLimit(value: string, max: number, message: string): string | undefined {
+  return value.length >= max ? message : undefined;
 }

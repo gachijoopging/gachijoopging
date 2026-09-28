@@ -93,10 +93,6 @@ export default function ManageCrewMembersScreen() {
     : confirm.action === 'delegate'
       ? `${confirm.member.nickname} 님에게 크루장을 넘길까요?`
       : `${confirm.member.nickname} 님을 크루에서 추방할까요?`;
-  const confirmBody =
-    confirm?.action === 'delegate'
-      ? '위임하면 회원님은 일반 크루원이 돼요.'
-      : '추방해도 활동 기록은 개인 기록과 크루 합산에 남아요. 현재 유효한 초대 코드로 다시 가입 신청할 수 있어요.';
 
   return (
     <Screen scroll refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load('pull')} />}>
@@ -149,7 +145,6 @@ export default function ManageCrewMembersScreen() {
               );
             })}
           </View>
-          {me?.isLeader ? <Banner tone="neutral">추방해도 활동 기록과 크루 합산은 남아요.</Banner> : null}
         </>
       )}
 
@@ -179,9 +174,6 @@ export default function ManageCrewMembersScreen() {
         onClose={() => setConfirm(null)}
         title={confirmTitle}
       >
-        <Txt variant="body" tone="muted" accessibilityLiveRegion="polite" accessibilityLabel={`${confirmTitle}, ${confirmBody}`}>
-          {confirmBody}
-        </Txt>
         <View style={{ flexDirection: 'row', gap: space.sm, justifyContent: 'flex-end' }}>
           <Button label="취소" variant="ghost" size="md" onPress={() => setConfirm(null)} />
           <Button

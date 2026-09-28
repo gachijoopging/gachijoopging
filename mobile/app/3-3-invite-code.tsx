@@ -82,7 +82,6 @@ export default function InviteCodeScreen() {
         <>
           <View style={{ gap: space.xs }}>
             <Txt variant="display">크루원에게 이 코드를 보내세요</Txt>
-            <Txt variant="caption" tone="muted">크루장이 승인하면 크루원이 돼요.</Txt>
           </View>
 
           {failed ? <Banner tone="warn">인터넷 연결을 확인해 주세요.</Banner> : null}
@@ -121,28 +120,20 @@ export default function InviteCodeScreen() {
             </View>
           </Card>
 
-          <View style={{ gap: space.sm }}>
-            <Banner tone="warn">
-              코드를 재발급하면 기존 코드는 새 가입 신청에 사용할 수 없어요. 이미 접수된 신청은 유지돼요.
-            </Banner>
-            {isLeader ? (
-              <Button
-                label="새 코드 만들기"
-                variant="ghost"
-                size="md"
-                loading={reissuing}
-                disabled={reissuing}
-                onPress={() => setConfirming(true)}
-              />
-            ) : null}
-          </View>
+          {isLeader ? (
+            <Button
+              label="새 코드 만들기"
+              variant="ghost"
+              size="md"
+              loading={reissuing}
+              disabled={reissuing}
+              onPress={() => setConfirming(true)}
+            />
+          ) : null}
         </>
       )}
 
       <Dialog visible={confirming} onClose={() => setConfirming(false)} title="새 초대 코드를 만들까요?">
-        <Txt variant="body" tone="muted">
-          기존 코드는 새 신청에 사용할 수 없어요. 이미 접수된 신청은 유지돼요. 새로 신청할 사람에게 새 코드를 알려 주세요.
-        </Txt>
         <View style={{ flexDirection: 'row', gap: space.sm, justifyContent: 'flex-end' }}>
           <Button label="취소" variant="ghost" size="md" onPress={() => setConfirming(false)} />
           <Button label="새 코드 만들기" size="md" onPress={reissue} />
