@@ -94,10 +94,11 @@ export function BottomSheet({
     if (landing > height.current / 2) {
       releaseVelocity.current = vy;
       live.current.onClose();
-      // 부르는 쪽이 닫지 않기로 했으면(처리 중 등) 제자리로 돌아온다
-      requestAnimationFrame(() => {
-        if (live.current.visible) springBack(vy);
-      });
+      // 부르는 쪽이 다시 그리기 전에 되돌리면 위로 튀었다가 닫힌다. 먼저 내려 보내고,
+      // 다 내려갔는데도 닫지 않기로 했으면(처리 중 등) 그때 제자리로 돌아온다
+      Animated.spring(y, { toValue: height.current, velocity: vy, ...motion.fling, useNativeDriver: true }).start(
+        ({ finished }) => finished && live.current.visible && springBack(0),
+      );
       return;
     }
     springBack(vy);

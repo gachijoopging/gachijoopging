@@ -79,6 +79,7 @@ export function Snackbar({
           <Pressable
             accessibilityRole="button"
             onPress={onAction}
+            disabled={!visible}
             hitSlop={12}
             android_ripple={ripple}
             style={{
