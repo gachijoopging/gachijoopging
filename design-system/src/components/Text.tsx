@@ -17,7 +17,7 @@ export type TextTone =
 /** counter·display·title·metric·label 은 원본에서 굵게 씁니다. */
 const BOLD: TextVariant[] = ['counter', 'display', 'title', 'metric', 'label'];
 
-const TABULAR: TextVariant[] = ['counter', 'metric'];
+const TABULAR: TextVariant[] = ['counter', 'display', 'metric'];
 
 export type TxtProps = TextProps & {
   variant?: TextVariant;
