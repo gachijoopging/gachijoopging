@@ -1,6 +1,6 @@
 export * from '../tokens/index.ts';
 
-export { ThemeProvider, useTheme, useRipple, pressedOpacity, disabledOpacity, depth } from './theme.tsx';
+export { ThemeProvider, useTheme, useRipple, useReduceMotion, pressedOpacity, disabledOpacity, depth } from './theme.tsx';
 export type { Scheme, Theme } from './theme.tsx';
 
 export { Txt } from './components/Text.tsx';
@@ -72,3 +72,4 @@ export type { BarChartProps } from './components/BarChart.tsx';
 
 export { MetricSplit } from './components/MetricSplit.tsx';
 export type { MetricItem, MetricSplitProps } from './components/MetricSplit.tsx';
+export { Appear } from './components/Appear.tsx';

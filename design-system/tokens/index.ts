@@ -18,3 +18,5 @@ export type { FontSize } from './typography.ts';
 
 export { shadow, androidElevation, borderWidth } from './elevation.ts';
 export type { ShadowLevel } from './elevation.ts';
+
+export { motion, projectedDistance, rubberband } from './motion.ts';
