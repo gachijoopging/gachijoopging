@@ -60,6 +60,7 @@ import {
   type ChatState,
 } from '../src/crew/chat';
 import { createMockChatSocket, type ChatSocket, type ChatSocketEvent } from '../src/crew/chat-socket';
+import { useFlash } from '../src/ui/useFlash';
 
 const api: ApiClient = createMockClient({ delayMs: 300 });
 /** 전송 실패·다시 보내기를 목으로 보려면 dropEcho 를 켠다 */
@@ -95,7 +96,7 @@ export default function CrewChatScreen() {
   const [text, setText] = useState('');
   const [pill, setPill] = useState(false);
   const [reportTarget, setReportTarget] = useState<ChatItem | null>(null);
-  const [snackbar, setSnackbar] = useState<string | null>(null);
+  const [snackbar, setSnackbar] = useFlash();
 
   const chatRef = useRef(chat);
   chatRef.current = chat;
@@ -432,7 +433,7 @@ export default function CrewChatScreen() {
           onPress={() => {
             const target = reportTarget;
             setReportTarget(null);
-            if (target) router.push({ pathname: '/6-1-report', params: { targetType: 'CHAT_MESSAGE', targetId: target.id } });
+            if (target) router.push({ pathname: '/6-1-report', params: { targetType: 'CHAT_MESSAGE', targetId: target.id, nickname: target.author.nickname, photoUrl: target.author.photoUrl ?? '', text: target.text } });
           }}
         />
       </BottomSheet>

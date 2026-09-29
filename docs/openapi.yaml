@@ -1224,6 +1224,35 @@ paths:
                     properties:
                       items: { type: array, items: { $ref: '#/components/schemas/Report' } }
                       nextCursor: { type: string, nullable: true }
+              example:
+                data:
+                  items:
+                    - id: r001
+                      reporter: { id: 3c9e…, nickname: 지수, photoUrl: null, withdrawn: false }
+                      targetType: POST
+                      targetId: p001
+                      targetPreview: 오늘 여의도 3km. 꽁초가 유난히 많았다
+                      reason: INAPPROPRIATE_PHOTO
+                      memo: null
+                      createdAt: '2026-09-02T05:10:00Z'
+                    - id: r002
+                      reporter: { id: 5f1a…, nickname: 민수, photoUrl: null, withdrawn: false }
+                      targetType: USER
+                      targetId: 8a2d…
+                      targetPreview: 상혁
+                      reason: OTHER
+                      memo: 채팅에서 계속 광고 링크를 올려요
+                      createdAt: '2026-09-03T11:40:00Z'
+                    - id: r003
+                      reporter: { id: 3c9e…, nickname: 지수, photoUrl: null, withdrawn: false }
+                      targetType: CHAT_MESSAGE
+                      targetId: 00000000-0000-4000-8000-000000000101
+                      targetPreview: 내일 여의도 9시 어때요?
+                      reason: SPAM
+                      memo: null
+                      createdAt: '2026-09-04T02:00:00Z'
+                  nextCursor: null
+        '403': { $ref: '#/components/responses/Error' }
   /crew/reports/{reportId}:
     post:
       tags: [reports]
