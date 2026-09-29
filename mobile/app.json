@@ -36,6 +36,12 @@
       ],
       "expo-notifications",
       [
+        "expo-camera",
+        {
+          "cameraPermission": "쓰레기 촬영과 AI 분류에 카메라를 사용해요."
+        }
+      ],
+      [
         "expo-location",
         {
           "isAndroidForegroundServiceEnabled": true,

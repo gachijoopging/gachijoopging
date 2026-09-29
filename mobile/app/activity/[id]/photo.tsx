@@ -1,16 +1,17 @@
 // 화면 4-4 · docs/screens/4-4-take-photo.md
 import * as Crypto from 'expo-crypto';
-import * as ImagePicker from 'expo-image-picker';
+import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as Linking from 'expo-linking';
 import { useNetworkState } from 'expo-network';
 import { router, useFocusEffect, useLocalSearchParams, useNavigation } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Image, ScrollView, View } from 'react-native';
 import {
   Banner,
   Button,
   CaptureButton,
   EmptyState,
+  Loading,
   Icon,
   IconButton,
   Progress,
@@ -38,7 +39,11 @@ export default function TakePhotoScreen() {
   const { colors } = useTheme();
   const network = useNetworkState();
   const offline = network.isConnected === false || network.isInternetReachable === false;
-  const [perm, setPerm] = useState<Perm>('unknown');
+  const [permission, requestPermission] = useCameraPermissions();
+  const camera = useRef<CameraView>(null);
+  const [cameraReady, setCameraReady] = useState(false);
+  // 다른 화면에 가 있으면 프리뷰를 내린다 — 카메라 프리뷰는 한 번에 하나만 살 수 있다
+  const [focused, setFocused] = useState(true);
   const [shot, setShot] = useState<Shot | null>(null);
   const [shooting, setShooting] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -46,21 +51,27 @@ export default function TakePhotoScreen() {
   const [rejected, setRejected] = useState(false);
   const [snackbar, setSnackbar] = useState<{ text: string; retry?: boolean } | null>(null);
 
-  const readPerm = useCallback(async (ask: boolean) => {
-    const p = ask ? await ImagePicker.requestCameraPermissionsAsync() : await ImagePicker.getCameraPermissionsAsync();
-    // 한 번 거절했지만 다시 물을 수 있으면 권한 카드를 보여야 한다 — 아직 안 물은 것과 다르다
-    setPerm(p.granted ? 'granted' : !p.canAskAgain ? 'blocked' : p.status === 'undetermined' ? 'unknown' : 'denied');
-    return p;
-  }, []);
+  // 한 번 거절했지만 다시 물을 수 있으면 권한 카드를 보여야 한다 — 아직 안 물은 것과 다르다
+  const perm: Perm = !permission
+    ? 'unknown'
+    : permission.granted
+      ? 'granted'
+      : !permission.canAskAgain
+        ? 'blocked'
+        : permission.status === 'undetermined'
+          ? 'unknown'
+          : 'denied';
 
-  // 처음이면 바로 묻는다. 설정에서 돌아오면 다시 확인한다
+  // 처음이면 바로 묻는다. 설정에서 돌아오면 훅이 다시 읽는다
+  useEffect(() => {
+    if (permission && !permission.granted && permission.canAskAgain && permission.status === 'undetermined') void requestPermission();
+  }, [permission, requestPermission]);
+
   useFocusEffect(
     useCallback(() => {
-      void (async () => {
-        const p = await readPerm(false);
-        if (!p.granted && p.canAskAgain && p.status === 'undetermined') await readPerm(true);
-      })();
-    }, [readPerm]),
+      setFocused(true);
+      return () => setFocused(false);
+    }, []),
   );
 
   // 올리는 동안은 나가지 못한다. 미리보기에서 뒤로는 1단계로 돌아간다
@@ -78,16 +89,16 @@ export default function TakePhotoScreen() {
   );
 
   const shoot = async () => {
-    if (shooting) return;
+    if (shooting || !camera.current) return;
     setShooting(true);
     try {
-      const res = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.8, exif: false });
-      if (!res.canceled && res.assets[0]) {
-        setShot({ uri: res.assets[0].uri, takenAt: new Date().toISOString(), mediaId: Crypto.randomUUID() });
+      const photo = await camera.current.takePictureAsync({ quality: 0.8, exif: false });
+      if (photo?.uri) {
+        setShot({ uri: photo.uri, takenAt: new Date().toISOString(), mediaId: Crypto.randomUUID() });
         setRejected(false);
       }
     } catch {
-      setSnackbar({ text: '카메라를 열 수 없어요' });
+      setSnackbar({ text: '사진을 찍지 못했어요. 다시 시도해 주세요.' });
     } finally {
       setShooting(false);
     }
@@ -141,7 +152,7 @@ export default function TakePhotoScreen() {
               : '쓰레기 촬영과 AI 분류에 카메라를 사용해요.'
           }
           actionLabel={perm === 'blocked' ? '설정으로 이동' : '카메라 권한 허용'}
-          onAction={() => (perm === 'blocked' ? void Linking.openSettings() : void readPerm(true))}
+          onAction={() => (perm === 'blocked' ? void Linking.openSettings() : void requestPermission())}
         />
       </View>
     ) : shot ? (
@@ -155,15 +166,24 @@ export default function TakePhotoScreen() {
         ) : null}
       </View>
     ) : (
-      <View
-        style={{ flex: 1, backgroundColor: colors.camera.scrim, alignItems: 'center', justifyContent: 'center' }}
-        accessible
-        accessibilityLabel="촬영 틀, 촬영 버튼을 누르면 카메라가 열려요"
-      >
-        <Corners color={colors.lime} />
-        <Txt variant="body" bold tone="onPhoto" style={{ textAlign: 'center', paddingHorizontal: space.xl }}>
-          {'촬영 버튼을 누르면 카메라가 열려요\n쓰레기를 화면 중앙에 놓고 찍어 주세요'}
-        </Txt>
+      <View style={{ flex: 1 }} accessible accessibilityRole="image" accessibilityLabel="카메라 미리보기, 쓰레기를 화면 중앙에 놓아 주세요">
+        {perm === 'granted' && focused ? (
+          <CameraView ref={camera} facing="back" style={{ flex: 1 }} onCameraReady={() => setCameraReady(true)} />
+        ) : null}
+        {/* 프리뷰가 밝아도 안내가 읽히게 어두운 막을 얹는다. 사진에는 들어가지 않는다 */}
+        <View
+          pointerEvents="none"
+          style={{ position: 'absolute', inset: 0, backgroundColor: colors.camera.scrim, alignItems: 'center', justifyContent: 'center' }}
+        >
+          <Corners color={colors.lime} />
+          {cameraReady ? (
+            <Txt variant="body" bold tone="onPhoto" style={{ textAlign: 'center', paddingHorizontal: space.xl, textShadowColor: colors.inkShadow, textShadowRadius: space.xs }}>
+              쓰레기를 화면 중앙에 놓아 주세요
+            </Txt>
+          ) : (
+            <Loading label="카메라 준비 중" />
+          )}
+        </View>
       </View>
     );
 
@@ -217,7 +237,7 @@ export default function TakePhotoScreen() {
           </View>
         ) : (
           <View style={{ alignItems: 'center' }}>
-            <CaptureButton disabled={perm !== 'granted' || shooting} onPress={shoot} />
+            <CaptureButton disabled={perm !== 'granted' || !cameraReady || shooting} onPress={shoot} />
           </View>
         )}
       </ScrollView>
