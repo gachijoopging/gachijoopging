@@ -154,7 +154,7 @@ export default function ActivityDetailScreen() {
               style={{ height: MAP_HEIGHT, borderRadius: radius.card, overflow: 'hidden' }}
             >
               {path.length >= 2 && appKey ? (
-                <KakaoMapView appKey={appKey} center={path[0]} path={path} style={{ flex: 1 }} />
+                <KakaoMapView appKey={appKey} center={path[0]} segments={[path]} style={{ flex: 1 }} />
               ) : (
                 <Tile style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
                   <Txt variant="caption" tone="muted">경로 없음</Txt>

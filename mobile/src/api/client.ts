@@ -41,7 +41,10 @@ export type VoidMutationKey =
   | 'DELETE /posts/{postId}'
   | 'DELETE /comments/{commentId}'
   | 'DELETE /activities/{id}'
-  | 'DELETE /activities/{id}/items/{itemId}';
+  | 'DELETE /activities/{id}/items/{itemId}'
+  | 'POST /activities/{id}/pause'
+  | 'POST /activities/{id}/resume'
+  | 'POST /activities/{id}/live';
 export type MutationKey = MockKey | VoidMutationKey;
 
 export type ApiClient = {
