@@ -9,7 +9,7 @@ import { activityMetrics, activitySummaryLabel } from '../../src/plogging/start'
 
 const api: ApiClient = createMockClient({ delayMs: 300 });
 
-// ponytail: 대기 그림은 GAC-34. 그전까지 홈과 같은 새싹 한 장
+// ponytail: 대기 그림이 정해지기 전까지 홈과 같은 새싹 한 장
 const sprout = require('../../../design-system/assets/character/sprout.png');
 
 /** 4-1. 줍깅 버튼을 처음 누른 사람에게만 보이는 온보딩이다. 그 뒤로 줍깅 버튼은 이 화면을 거치지 않는다. */

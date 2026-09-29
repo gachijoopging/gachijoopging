@@ -96,7 +96,7 @@ export function PloggingLauncher({ children }: { children: ReactNode }) {
         onDone={onDone}
       />
       {/* 하단 내비 위에 띄운다 */}
-      <View pointerEvents="box-none" style={{ position: 'absolute', left: 0, right: 0, bottom: size.bottomNavHeight + space.md * 2, height: 120 }}>
+      <View pointerEvents="box-none" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: size.bottomNavHeight + space.md * 2 }}>
         <Snackbar
           visible={noCrew}
           message="크루에 소속돼야 활동을 시작할 수 있어요"

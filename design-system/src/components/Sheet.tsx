@@ -44,6 +44,8 @@ export function BottomSheet({
   const grabbedAt = useRef(0);
   const releaseVelocity = useRef(0);
   const titleRef = useRef<Text>(null);
+  // 닫힌 채 마운트되거나 모션 설정이 바뀌어도 닫는 효과가 돈다. 열렸던 적이 있을 때만 onClosed
+  const opened = useRef(false);
   const live = useRef({ visible, onClose, dismissible, onClosed });
   live.current = { visible, onClose, dismissible, onClosed };
 
@@ -57,7 +59,10 @@ export function BottomSheet({
   }, [y]);
 
   useEffect(() => {
-    if (visible) setMounted(true);
+    if (visible) {
+      setMounted(true);
+      opened.current = true;
+    }
     const to = visible ? 0 : height.current;
     if (reduce) {
       y.setValue(to);
@@ -98,6 +103,8 @@ export function BottomSheet({
 
   function finishClose() {
     setMounted(false);
+    if (!opened.current) return;
+    opened.current = false;
     live.current.onClosed?.();
   }
 

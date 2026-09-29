@@ -31,7 +31,7 @@ type Home = (typeof MOCKS)['GET /crew/home']['data'];
 const api: ApiClient = createMockClient({ delayMs: 300 });
 const wordmark = require('../../../design-system/assets/logo-wordmark.png');
 const wordmarkDark = require('../../../design-system/assets/logo-wordmark-dark.png');
-// ponytail: 단계별 그림은 GAC-34. 그전까지 새싹 한 장에 단계 이름만 붙인다
+// ponytail: 단계별 그림이 정해지기 전까지 새싹 한 장에 단계 이름만 붙인다
 const sprout = require('../../../design-system/assets/character/sprout.png');
 const STAGE_NAME = ['축 처짐', '보통', '신남', '반짝', '파티'] as const;
 const BUBBLE_MS = 3000;
