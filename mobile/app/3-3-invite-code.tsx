@@ -133,12 +133,17 @@ export default function InviteCodeScreen() {
         </>
       )}
 
-      <Dialog visible={confirming} onClose={() => setConfirming(false)} title="새 초대 코드를 만들까요?">
-        <View style={{ flexDirection: 'row', gap: space.sm, justifyContent: 'flex-end' }}>
-          <Button label="취소" variant="ghost" size="md" onPress={() => setConfirming(false)} />
-          <Button label="새 코드 만들기" size="md" onPress={reissue} />
-        </View>
-      </Dialog>
+      <Dialog
+        visible={confirming}
+        onClose={() => setConfirming(false)}
+        title="새 초대 코드를 만들까요?"
+        actions={
+          <>
+            <Button label="취소" variant="ghost" size="md" onPress={() => setConfirming(false)} />
+            <Button label="새 코드 만들기" size="md" onPress={reissue} />
+          </>
+        }
+      />
 
       <Snackbar visible={snackbar != null} message={snackbar ?? ''} onDismiss={() => setSnackbar(null)} />
     </Screen>

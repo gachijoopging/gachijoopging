@@ -277,12 +277,17 @@ export default function NoticeDetailScreen() {
         )}
       </BottomSheet>
 
-      <Dialog visible={confirmDelete} onClose={() => setConfirmDelete(false)} title="이 공지를 삭제할까요?">
-        <View style={{ flexDirection: 'row', gap: space.sm, justifyContent: 'flex-end' }}>
-          <Button label="취소" variant="ghost" size="md" onPress={() => setConfirmDelete(false)} />
-          <Button label="삭제" variant="danger" size="md" onPress={deleteNotice} />
-        </View>
-      </Dialog>
+      <Dialog
+        visible={confirmDelete}
+        onClose={() => setConfirmDelete(false)}
+        title="이 공지를 삭제할까요?"
+        actions={
+          <>
+            <Button label="취소" variant="ghost" size="md" onPress={() => setConfirmDelete(false)} />
+            <Button label="삭제" variant="danger" size="md" onPress={deleteNotice} />
+          </>
+        }
+      />
 
       <Snackbar visible={snackbar != null} message={snackbar ?? ''} onDismiss={() => setSnackbar(null)} />
     </Screen>

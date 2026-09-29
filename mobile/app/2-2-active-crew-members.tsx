@@ -18,6 +18,7 @@ import {
   Screen,
   Txt,
   radius,
+  size,
   space,
 } from 'design-system/src';
 import { KakaoMapView } from '../modules/kakao-map';
@@ -38,6 +39,7 @@ export default function ActiveCrewMembersScreen() {
   const [failed, setFailed] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [mapFailed, setMapFailed] = useState(false);
 
   const load = useCallback(async () => {
     setRefreshing(true);
@@ -89,12 +91,16 @@ export default function ActiveCrewMembersScreen() {
           <Txt variant="subtitle">지금 {members.length}명이 활동 중이에요</Txt>
 
           <View
-            style={{ height: 260, borderRadius: radius.card, overflow: 'hidden' }}
+            style={{ height: size.mapFrame, borderRadius: radius.card, overflow: 'hidden' }}
             accessibilityLabel="지도, 활동 중인 크루원 위치"
           >
             {markers.length === 0 ? (
               <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
                 <Txt variant="caption" tone="muted">공유 중인 위치가 없어요</Txt>
+              </View>
+            ) : mapFailed ? (
+              <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+                <Txt variant="caption" tone="muted">지도를 불러오지 못했어요</Txt>
               </View>
             ) : appKey ? (
               <KakaoMapView
@@ -102,6 +108,7 @@ export default function ActiveCrewMembersScreen() {
                 center={{ latitude: markers[0].latitude, longitude: markers[0].longitude }}
                 markers={markers}
                 onMarkerPress={(e) => setSelectedId(e.nativeEvent.id)}
+                onMapError={() => setMapFailed(true)}
                 style={{ flex: 1 }}
               />
             ) : (

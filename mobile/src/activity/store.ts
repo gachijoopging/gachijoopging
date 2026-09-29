@@ -67,3 +67,18 @@ export function subscribe(listener: (s: Stored) => void): () => void {
   listeners.add(listener);
   return () => listeners.delete(listener);
 }
+
+/**
+ * 내 정보로 계정을 연다. 받지 못하면(오프라인 재실행) 마지막 계정을 연다 —
+ * 그러지 않으면 기기에 남은 활동·큐를 못 보고 새 활동을 열거나 기록을 잃는다.
+ */
+export async function openAccount(fetchUserId: () => Promise<string>): Promise<string | null> {
+  try {
+    const id = await fetchUserId();
+    loadAccount(id);
+    return id;
+  } catch {
+    loadLastAccount();
+    return account;
+  }
+}

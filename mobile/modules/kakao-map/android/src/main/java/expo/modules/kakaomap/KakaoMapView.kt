@@ -11,6 +11,7 @@ import com.kakao.vectormap.KakaoMapSdk
 import com.kakao.vectormap.LatLng
 import com.kakao.vectormap.MapLifeCycleCallback
 import com.kakao.vectormap.MapView
+import com.kakao.vectormap.camera.CameraAnimation
 import com.kakao.vectormap.camera.CameraUpdateFactory
 import com.kakao.vectormap.label.Label
 import com.kakao.vectormap.label.LabelOptions
@@ -49,6 +50,8 @@ class KakaoMapView(context: Context, appContext: AppContext) : ExpoView(context,
   private var meAccuracy: Polygon? = null
   /** 첫 이동만 확대 수준을 정한다. 그 뒤로는 사용자가 맞춘 확대를 지킨다 */
   private var cameraPlaced = false
+  /** 따라가기 중 점마다 순간이동하면 지도가 1초 간격으로 끊긴다. 모션 줄이기면 끈다 */
+  var animateCamera = true
   private var pendingMarkers: List<Marker> = emptyList()
   /** id 로 추가·이동·제거를 가른다. 소켓 갱신마다 전부 다시 그리지 않기 위해서다 */
   private val labels = mutableMapOf<String, Pair<Marker, Label>>()
@@ -116,9 +119,13 @@ class KakaoMapView(context: Context, appContext: AppContext) : ExpoView(context,
 
   private fun moveCamera(target: LatLng) {
     val kakaoMap = map ?: return
-    val update = if (cameraPlaced) CameraUpdateFactory.newCenterPosition(target) else CameraUpdateFactory.newCenterPosition(target, ZOOM_LEVEL)
-    cameraPlaced = true
-    kakaoMap.moveCamera(update)
+    if (!cameraPlaced) {
+      cameraPlaced = true
+      kakaoMap.moveCamera(CameraUpdateFactory.newCenterPosition(target, ZOOM_LEVEL))
+      return
+    }
+    val update = CameraUpdateFactory.newCenterPosition(target)
+    if (animateCamera) kakaoMap.moveCamera(update, CameraAnimation.from(CAMERA_MS)) else kakaoMap.moveCamera(update)
   }
 
   /** 일시정지로 끊긴 구간은 이어 긋지 않는다. 매번 통째로 다시 그린다 — 한 활동의 점 수로는 충분히 가볍다 */
@@ -226,6 +233,7 @@ class KakaoMapView(context: Context, appContext: AppContext) : ExpoView(context,
 
   private companion object {
     const val ZOOM_LEVEL = 16
+    const val CAMERA_MS = 300
     const val PATH_WIDTH_DP = 8f
     const val PATH_COLOR = 0xFF6FBF3F.toInt()
     const val MARKER_DP = 32f

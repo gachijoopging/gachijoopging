@@ -218,17 +218,18 @@ export default function ManageCrewMembersScreen() {
         visible={confirm != null}
         onClose={() => setConfirm(null)}
         title={confirmTitle}
-      >
-        <View style={{ flexDirection: 'row', gap: space.sm, justifyContent: 'flex-end' }}>
-          <Button label="취소" variant="ghost" size="md" onPress={() => setConfirm(null)} />
-          <Button
-            label={confirm?.action === 'delegate' ? '위임' : '추방'}
-            variant={confirm?.action === 'delegate' ? 'soft' : 'danger'}
-            size="md"
-            onPress={act}
-          />
-        </View>
-      </Dialog>
+        actions={
+          <>
+            <Button label="취소" variant="ghost" size="md" onPress={() => setConfirm(null)} />
+            <Button
+              label={confirm?.action === 'delegate' ? '위임' : '추방'}
+              variant={confirm?.action === 'delegate' ? 'soft' : 'danger'}
+              size="md"
+              onPress={act}
+            />
+          </>
+        }
+      />
 
       <ExportSheet
         visible={exporting}

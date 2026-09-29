@@ -17,7 +17,9 @@ import {
   Snackbar,
   Tile,
   Txt,
+  borderWidth,
   radius,
+  size,
   space,
   useTheme,
 } from 'design-system/src';
@@ -45,7 +47,8 @@ export default function TakePhotoScreen() {
 
   const readPerm = useCallback(async (ask: boolean) => {
     const p = ask ? await ImagePicker.requestCameraPermissionsAsync() : await ImagePicker.getCameraPermissionsAsync();
-    setPerm(p.granted ? 'granted' : p.canAskAgain ? (ask ? 'denied' : 'unknown') : 'blocked');
+    // 한 번 거절했지만 다시 물을 수 있으면 권한 카드를 보여야 한다 — 아직 안 물은 것과 다르다
+    setPerm(p.granted ? 'granted' : !p.canAskAgain ? 'blocked' : p.status === 'undetermined' ? 'unknown' : 'denied');
     return p;
   }, []);
 
@@ -142,19 +145,23 @@ export default function TakePhotoScreen() {
       </View>
     ) : shot ? (
       <View style={{ flex: 1 }}>
-        <Image source={{ uri: shot.uri }} style={{ flex: 1 }} resizeMode="cover" accessibilityLabel="방금 찍은 사진" />
+        <Image source={{ uri: shot.uri }} style={{ flex: 1 }} resizeMode="cover" accessible accessibilityRole="image" accessibilityLabel="방금 찍은 사진" />
         {uploading ? (
           <View style={{ position: 'absolute', left: space.lg, right: space.lg, bottom: space.lg, gap: space.xs }} accessibilityLiveRegion="polite">
             <Progress value={progress} label={`올리는 중, ${Math.round(progress * 100)}%`} />
-            <Txt variant="caption" tone="onPhoto">올리는 중</Txt>
+            <Txt variant="caption" tone="onPhoto" accessibilityLabel="사진을 올리고 있어요">올리는 중</Txt>
           </View>
         ) : null}
       </View>
     ) : (
-      <View style={{ flex: 1, backgroundColor: colors.camera.scrim, alignItems: 'center', justifyContent: 'center' }} accessibilityLabel="카메라 미리보기">
+      <View
+        style={{ flex: 1, backgroundColor: colors.camera.scrim, alignItems: 'center', justifyContent: 'center' }}
+        accessible
+        accessibilityLabel="촬영 틀, 촬영 버튼을 누르면 카메라가 열려요"
+      >
         <Corners color={colors.lime} />
         <Txt variant="body" bold tone="onPhoto" style={{ textAlign: 'center', paddingHorizontal: space.xl }}>
-          쓰레기를 화면 중앙에 놓아 주세요
+          {'촬영 버튼을 누르면 카메라가 열려요\n쓰레기를 화면 중앙에 놓고 찍어 주세요'}
         </Txt>
       </View>
     );
@@ -179,9 +186,9 @@ export default function TakePhotoScreen() {
         <View
           style={{
             flex: 1,
-            minHeight: 280,
+            minHeight: size.captureFrameMin,
             borderRadius: radius.card,
-            borderWidth: 2,
+            borderWidth: borderWidth.focus,
             borderStyle: 'dashed',
             borderColor: colors.lime,
             backgroundColor: colors.camera.frame,
@@ -192,7 +199,7 @@ export default function TakePhotoScreen() {
         </View>
 
         <Tile tone="dark" style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
-          <Icon name="creation" size={20} color={colors.lime} />
+          <Icon name="creation" size={size.iconCard} color={colors.lime} />
           <Txt variant="caption" tone="onPhoto" style={{ flex: 1 }}>
             쓰레기가 겹치지 않게 펼쳐 찍으면 AI 가 더 잘 찾아요.
           </Txt>
@@ -227,8 +234,8 @@ export default function TakePhotoScreen() {
 
 /** 네 귀의 ㄱ자 가이드. 장식이라 읽지 않는다 */
 function Corners({ color }: { color: string }) {
-  const len = space['2xl'];
-  const w = 3;
+  const len = size.cornerGuide;
+  const w = size.cornerGuideStroke;
   const inset = space.lg;
   const base = { position: 'absolute' as const, width: len, height: len, borderColor: color };
   return (

@@ -9,15 +9,15 @@ import {
   Card,
   Chip,
   Dialog,
-  Icon,
   NumberStepper,
   Screen,
-  Tile,
   Txt,
+  size,
   space,
   useTheme,
 } from 'design-system/src';
-import { CATEGORIES, CATEGORY_ICON, CATEGORY_LABEL, type Category } from '../src/category';
+import { CATEGORIES, CATEGORY_LABEL, type Category } from '../src/category';
+import { CategoryTile } from '../src/activity/CategoryTile';
 import { recordPickup } from '../src/activity/actions';
 import { aiBanner, groupDetections, itemsFromCounts, QUANTITY_MAX, totalOf, type Counts, type Inference } from '../src/activity/pickup';
 
@@ -29,8 +29,6 @@ const BANNERS = {
   check: { tone: 'warn', text: '확인 필요 표시가 있는 종류와 수량을 확인해 주세요.' },
 } as const;
 
-/** 사진이 세로로 길어도 버튼을 밀어내지 않도록 */
-const PHOTO_MAX_HEIGHT = 520;
 
 export default function AiClassificationReviewScreen() {
   const { id, media: raw, localUri } = useLocalSearchParams<{ id: string; media: string; localUri?: string }>();
@@ -95,8 +93,10 @@ export default function AiClassificationReviewScreen() {
           <Image
             // 방금 찍은 사진은 기기에 있다 — 서버 사본을 기다리지 않는다
             source={{ uri: localUri ?? media.url }}
-            style={{ width: '100%', aspectRatio: 1, maxHeight: PHOTO_MAX_HEIGHT, backgroundColor: colors.neutral }}
+            style={{ width: '100%', aspectRatio: 1, maxHeight: size.photoMaxHeight, backgroundColor: colors.neutral }}
             resizeMode="cover"
+            accessible
+            accessibilityRole="image"
             accessibilityLabel="방금 촬영한 수거물"
           />
           <View style={{ position: 'absolute', left: space.md, bottom: space.md }} importantForAccessibility="no-hide-descendants">
@@ -123,30 +123,25 @@ export default function AiClassificationReviewScreen() {
             const name = CATEGORY_LABEL[c];
             const status = g ? (g.needsCheck ? '확인 필요' : 'AI') : null;
             return (
-              <Tile
+              <CategoryTile
                 key={c}
-                tone="surface"
-                style={{ flexBasis: '47%', flexGrow: 1, gap: space.sm, borderWidth: 2, borderColor: n > 0 ? colors.deep : colors.border }}
+                category={c}
+                selected={n > 0}
+                headerLabel={[name, `${n}개`, status === '확인 필요' ? '확인 필요' : null].filter(Boolean).join(', ')}
+                aside={status ? <Chip tone={status === '확인 필요' ? 'warn' : 'lime'} label={status} /> : null}
               >
-                <View
-                  accessible
-                  accessibilityLabel={[name, `${n}개`, status === '확인 필요' ? '확인 필요' : null].filter(Boolean).join(', ')}
-                  style={{ flexDirection: 'row', alignItems: 'center', gap: space.xs, flexWrap: 'wrap' }}
-                >
-                  <Icon name={CATEGORY_ICON[c]} size={18} />
-                  <Txt variant="label">{name}</Txt>
-                  {status ? <Chip tone={status === '확인 필요' ? 'warn' : 'lime'} label={status} /> : null}
-                </View>
                 <NumberStepper
                   label={name}
                   hideLabel
+                  decrementLabel={`${name} 빼기`}
+                  incrementLabel={`${name} 더하기`}
                   value={n}
                   min={0}
                   max={QUANTITY_MAX}
                   onChange={(v) => setCounts((m) => ({ ...m, [c]: v }))}
                   onValidityChange={(ok) => setInvalid((m) => ({ ...m, [c]: !ok }))}
                 />
-              </Tile>
+              </CategoryTile>
             );
           })}
         </View>
@@ -174,20 +169,26 @@ export default function AiClassificationReviewScreen() {
         </View>
       </ScrollView>
 
-      <Dialog visible={confirmLeave} onClose={() => setConfirmLeave(false)} title="촬영 결과를 버릴까요?">
+      <Dialog
+        visible={confirmLeave}
+        onClose={() => setConfirmLeave(false)}
+        title="촬영 결과를 버릴까요?"
+        actions={
+          <>
+            <Button label="계속 분류" variant="ghost" size="md" onPress={() => setConfirmLeave(false)} />
+            <Button
+              label="버리고 돌아가기"
+              variant="danger"
+              size="md"
+              onPress={() => {
+                setConfirmLeave(false);
+                backToActivity();
+              }}
+            />
+          </>
+        }
+      >
         <Txt variant="body">입력한 줍기 수량을 버릴까요? 업로드된 사진은 남을 수 있어요.</Txt>
-        <View style={{ flexDirection: 'row', gap: space.sm, justifyContent: 'flex-end', marginTop: space.md }}>
-          <Button label="계속 분류" variant="ghost" size="md" onPress={() => setConfirmLeave(false)} />
-          <Button
-            label="버리고 돌아가기"
-            variant="danger"
-            size="md"
-            onPress={() => {
-              setConfirmLeave(false);
-              backToActivity();
-            }}
-          />
-        </View>
       </Dialog>
     </Screen>
   );

@@ -1,12 +1,13 @@
 import Constants from 'expo-constants';
 import { router, useFocusEffect, useLocalSearchParams, useNavigation } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { ScrollView, View, useWindowDimensions } from 'react-native';
+import { ScrollView, View } from 'react-native';
 import {
   AppHeader,
   Banner,
   BottomSheet,
   Button,
+  Card,
   Chip,
   Dialog,
   EmptyState,
@@ -17,9 +18,11 @@ import {
   NumberStepper,
   Screen,
   Snackbar,
+  Switch,
   Tile,
   Txt,
   radius,
+  size,
   space,
 } from 'design-system/src';
 import { KakaoMapView } from '../modules/kakao-map';
@@ -36,6 +39,7 @@ import {
   type EditableItem,
 } from '../src/feed/activity-detail';
 import { PhotoPager } from '../src/feed/PhotoPager';
+import { ShareCard, useShareImage } from '../src/activity/ShareCard';
 import { formatDistance } from '../src/format';
 import { useFlash } from '../src/ui/useFlash';
 
@@ -46,7 +50,9 @@ type Detail = {
   user: { id: string; nickname: string };
   status: 'IN_PROGRESS' | 'ENDED';
   startedAt: string;
+  endedAt: string | null;
   durationSec: number;
+  pausedSec: number;
   distanceM: number;
   steps: number | null;
   locationShared: boolean;
@@ -59,7 +65,6 @@ type Detail = {
 
 const api: ApiClient = createMockClient({ delayMs: 300 });
 const CATEGORIES = Object.keys(CATEGORY_LABEL) as Category[];
-const MAP_HEIGHT = 200;
 
 export default function ActivityDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -72,6 +77,10 @@ export default function ActivityDetailScreen() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [includeRoute, setIncludeRoute] = useState(false);
+  const [mapFailed, setMapFailed] = useState(false);
+  const [sharing, setSharing] = useState(false);
+  const shareImage = useShareImage();
   const [snackbar, setSnackbar] = useFlash();
   const appKey = Constants.expoConfig?.extra?.kakaoNativeAppKey ?? '';
 
@@ -113,10 +122,17 @@ export default function ActivityDetailScreen() {
     }
   };
 
-  const share = () => {
-    if (!activity) return;
-    // 공유 이미지는 5-6 이 만든다. 경로 포함은 거기서 따로 고르며 기본은 끔
-    router.push({ pathname: '/5-6-create-post', params: { activityId: activity.id } });
+  const share = async () => {
+    if (!activity || sharing) return;
+    setSharing(true);
+    try {
+      const imageUri = await shareImage.capture();
+      router.push({ pathname: '/5-6-create-post', params: { imageUri } });
+    } catch {
+      setSnackbar('공유 이미지를 만들지 못했어요. 다시 시도해 주세요.');
+    } finally {
+      setSharing(false);
+    }
   };
 
   const path = activity ? routeToPath(activity.route) : [];
@@ -151,19 +167,19 @@ export default function ActivityDetailScreen() {
             <View
               accessible
               accessibilityLabel={path.length >= 2 ? '활동 경로 지도' : '경로 없음'}
-              style={{ height: MAP_HEIGHT, borderRadius: radius.card, overflow: 'hidden' }}
+              style={{ height: size.mapFrame, borderRadius: radius.card, overflow: 'hidden' }}
             >
-              {path.length >= 2 && appKey ? (
-                <KakaoMapView appKey={appKey} center={path[0]} segments={[path]} style={{ flex: 1 }} />
+              {path.length >= 2 && appKey && !mapFailed ? (
+                <KakaoMapView appKey={appKey} center={path[0]} segments={[path]} onMapError={() => setMapFailed(true)} style={{ flex: 1 }} />
               ) : (
                 <Tile style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-                  <Txt variant="caption" tone="muted">경로 없음</Txt>
+                  <Txt variant="caption" tone="muted">{path.length >= 2 ? '지도를 불러오지 못했어요' : '경로 없음'}</Txt>
                 </Tile>
               )}
             </View>
           </View>
 
-          <Tile tone="surface">
+          <Card>
             <MetricSplit
               divider="dashed"
               accessibilityLabel={metricsLabel(activity)}
@@ -175,7 +191,7 @@ export default function ActivityDetailScreen() {
                 ...(activity.steps != null ? [{ value: activity.steps.toLocaleString('ko-KR'), label: '걸음' }] : []),
               ]}
             />
-          </Tile>
+          </Card>
 
           <View style={{ gap: space.sm }}>
             <Txt variant="section" bold accessibilityRole="header">줍기 항목</Txt>
@@ -199,12 +215,15 @@ export default function ActivityDetailScreen() {
           </View>
 
           {!activity.locationShared ? (
-            <View style={{ alignSelf: 'flex-start' }}>
-              <Chip label="경로를 크루원에게 공유하지 않은 활동이에요" tone="neutral" icon="map-marker-off-outline" />
-            </View>
+            <Banner tone="neutral">경로를 크루원에게 공유하지 않은 활동이에요</Banner>
           ) : null}
 
-          {own && ended && me?.hasCrew ? <Button label="피드에 공유하기" fullWidth onPress={share} /> : null}
+          {own && ended && me?.hasCrew ? (
+            <View style={{ gap: space.sm }}>
+              {path.length >= 2 ? <Switch label="공유 이미지에 경로 포함" value={includeRoute} onValueChange={setIncludeRoute} /> : null}
+              <Button label="피드에 공유하기" fullWidth loading={sharing} disabled={sharing} onPress={share} />
+            </View>
+          ) : null}
         </ScrollView>
       )}
 
@@ -220,13 +239,36 @@ export default function ActivityDetailScreen() {
         />
       </BottomSheet>
 
-      <Dialog visible={confirmDelete} onClose={() => !deleting && setConfirmDelete(false)} title="활동 기록을 삭제할까요?">
+      <Dialog
+        visible={confirmDelete}
+        onClose={() => !deleting && setConfirmDelete(false)}
+        title="활동 기록을 삭제할까요?"
+        actions={
+          <>
+            <Button label="취소" variant="ghost" size="md" disabled={deleting} onPress={() => setConfirmDelete(false)} />
+            <Button label="삭제" variant="danger" size="md" loading={deleting} disabled={deleting} onPress={deleteActivity} />
+          </>
+        }
+      >
         <Txt variant="body">줍기·시간·거리와 활동 사진이 삭제돼요. 이미 게시한 이미지는 남아요.</Txt>
-        <View style={{ flexDirection: 'row', gap: space.sm, justifyContent: 'flex-end' }}>
-          <Button label="취소" variant="ghost" size="md" disabled={deleting} onPress={() => setConfirmDelete(false)} />
-          <Button label="삭제" variant="danger" size="md" loading={deleting} disabled={deleting} onPress={deleteActivity} />
-        </View>
       </Dialog>
+
+      {activity && own && ended ? (
+        <ShareCard
+          cardRef={shareImage.ref}
+          includeRoute={includeRoute}
+          data={{
+            startedAt: activity.startedAt,
+            endedAt: activity.endedAt ?? activity.startedAt,
+            durationSec: activity.durationSec,
+            pausedSec: activity.pausedSec,
+            distanceM: activity.distanceM,
+            steps: activity.steps,
+            itemCount: activity.itemCount,
+            segments: path.length >= 2 ? [path] : [],
+          }}
+        />
+      ) : null}
 
       {activity ? (
         <ItemsSheet
@@ -264,7 +306,6 @@ function ItemsSheet({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [removeTarget, setRemoveTarget] = useState<string | null>(null);
-  const { height } = useWindowDimensions();
 
   useEffect(() => {
     if (!visible) return;
@@ -314,7 +355,7 @@ function ItemsSheet({
 
   return (
     <BottomSheet visible={visible} onClose={onClose} title="줍기 항목 수정" dismissible={!busy}>
-      <ScrollView style={{ maxHeight: height * 0.6 }} contentContainerStyle={{ gap: space.lg }} keyboardShouldPersistTaps="handled">
+      <View style={{ gap: space.lg }}>
         {error ? (
           <View accessibilityLiveRegion="polite">
             <Banner tone="danger">{error}</Banner>
@@ -332,6 +373,7 @@ function ItemsSheet({
                     key={c}
                     label={CATEGORY_LABEL[c]}
                     selected={it.category === c}
+                    accessibilityRole="radio"
                     disabled={busy}
                     accessibilityLabel={`항목 ${n + 1} 카테고리, ${CATEGORY_LABEL[c]}`}
                     onPress={() => patch(it.id, { category: c })}
@@ -354,24 +396,33 @@ function ItemsSheet({
             </View>
           ))
         )}
-      </ScrollView>
-      <View style={{ flexDirection: 'row', gap: space.sm, marginTop: space.md }}>
-        <Button label="닫기" variant="ghost" disabled={busy} onPress={onClose} style={{ flex: 1 }} />
-        <Button
-          label={error ? '다시 시도' : '저장'}
-          loading={busy}
-          disabled={busy || changedItems(saved, edited).length === 0}
-          onPress={save}
-          style={{ flex: 1 }}
-        />
+      </View>
+      <View style={{ flexDirection: 'row', gap: space.sm }}>
+        <View style={{ flex: 1 }}>
+          <Button label="닫기" variant="ghost" fullWidth disabled={busy} onPress={onClose} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Button
+            label={error ? '다시 시도' : '저장'}
+            fullWidth
+            loading={busy}
+            disabled={busy || changedItems(saved, edited).length === 0}
+            onPress={save}
+          />
+        </View>
       </View>
 
-      <Dialog visible={removeTarget != null} onClose={() => !busy && setRemoveTarget(null)} title="이 항목을 삭제할까요?">
-        <View style={{ flexDirection: 'row', gap: space.sm, justifyContent: 'flex-end' }}>
-          <Button label="취소" variant="ghost" size="md" disabled={busy} onPress={() => setRemoveTarget(null)} />
-          <Button label="삭제" variant="danger" size="md" loading={busy} disabled={busy} onPress={() => removeTarget && remove(removeTarget)} />
-        </View>
-      </Dialog>
+      <Dialog
+        visible={removeTarget != null}
+        onClose={() => !busy && setRemoveTarget(null)}
+        title="이 항목을 삭제할까요?"
+        actions={
+          <>
+            <Button label="취소" variant="ghost" size="md" disabled={busy} onPress={() => setRemoveTarget(null)} />
+            <Button label="삭제" variant="danger" size="md" loading={busy} disabled={busy} onPress={() => removeTarget && remove(removeTarget)} />
+          </>
+        }
+      />
     </BottomSheet>
   );
 }

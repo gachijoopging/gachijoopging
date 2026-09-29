@@ -13,6 +13,8 @@ export type KakaoMapViewProps = {
   /** 내 위치 점과 오차 반경(m) 원. null 이면 지운다 */
   myLocation?: (LatLng & { accuracy: number | null }) | null;
   markers?: MapMarker[];
+  /** 카메라를 옮길 때 이어서 움직인다. 모션 줄이기면 false. 첫 배치는 항상 바로 */
+  animateCamera?: boolean;
   onMapReady?: () => void;
   onMapError?: (event: { nativeEvent: { message: string } }) => void;
   onMarkerPress?: (event: { nativeEvent: { id: string } }) => void;

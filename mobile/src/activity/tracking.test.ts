@@ -1,6 +1,6 @@
 import type { ApiClient } from '../api/client';
 import { enqueue, type Op } from './outbox';
-import { getStored, loadAccount, updateStored } from './store';
+import { getStored, loadAccount, openAccount, updateStored } from './store';
 import { syncOutbox } from './tracking';
 
 jest.mock('expo-file-system', () => {
@@ -76,5 +76,19 @@ describe('큐 보내기', () => {
     const ok = await syncOutbox(client(() => Promise.reject(new Error('offline'))));
     expect(ok).toBe(false);
     expect(getStored().outbox).toEqual([pause]);
+  });
+});
+
+describe('계정 열기', () => {
+  test('내 정보를 못 받아도(오프라인 재실행) 마지막 계정의 기기 기록을 연다', async () => {
+    loadAccount('u-last');
+    updateStored((st) => ({ ...st, outbox: enqueue(st.outbox, pause) }));
+    const id = await openAccount(() => Promise.reject(new Error('offline')));
+    expect(id).toBe('u-last');
+    expect(getStored().outbox).toEqual([pause]);
+  });
+
+  test('받으면 그 계정을 연다', async () => {
+    expect(await openAccount(async () => 'u-new')).toBe('u-new');
   });
 });

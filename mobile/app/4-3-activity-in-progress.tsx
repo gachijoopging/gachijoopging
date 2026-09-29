@@ -8,6 +8,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
+  Appear,
   Banner,
   Button,
   CaptureButton,
@@ -15,6 +16,7 @@ import {
   Chip,
   Dialog,
   Dot,
+  IconButton,
   IconCircle,
   MetricSplit,
   Screen,
@@ -24,6 +26,7 @@ import {
   radius,
   size,
   space,
+  useReduceMotion,
   useRipple,
   useTheme,
 } from 'design-system/src';
@@ -46,7 +49,7 @@ import {
   type BannerKind,
   type Session,
 } from '../src/activity/session';
-import { getStored, loadAccount, subscribe, updateStored } from '../src/activity/store';
+import { getStored, openAccount, subscribe, updateStored } from '../src/activity/store';
 import { startTracking, stopTracking, syncOutbox, tick } from '../src/activity/tracking';
 import { formatClock, formatDistance } from '../src/format';
 import { crewMarkers } from '../src/live/live';
@@ -71,6 +74,7 @@ export default function ActivityInProgressScreen() {
   const { id, startedAt, shared, quick } = useLocalSearchParams<{ id: string; startedAt?: string; shared?: string; quick?: string }>();
   const { colors, shadows } = useTheme();
   const insets = useSafeAreaInsets();
+  const reduceMotion = useReduceMotion();
   const appKey: string = Constants.expoConfig?.extra?.kakaoNativeAppKey ?? '';
   const network = useNetworkState();
   const offline = network.isConnected === false || network.isInternetReachable === false;
@@ -103,10 +107,10 @@ export default function ActivityInProgressScreen() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const me = await api.get('GET /users/me').catch(() => null);
-      if (cancelled || !me) return;
-      setMyId(me.data.id);
-      const stored = loadAccount(me.data.id);
+      const userId = await openAccount(() => api.get('GET /users/me').then((r) => r.data.id));
+      if (cancelled || !userId) return;
+      setMyId(userId);
+      const stored = getStored();
       if (stored.session?.activityId === id && stored.ended) {
         // 종료 대기 중인 활동을 진행 중으로 다시 열지 않는다
         router.replace({ pathname: '/4-7-activity-summary', params: { id } });
@@ -115,10 +119,10 @@ export default function ActivityInProgressScreen() {
       if (stored.session?.activityId !== id) {
         const t = Date.now();
         const fresh = startedAt
-          ? newSession({ id, startedAt, pausedSec: 0, paused: false, pausedAt: null, itemCount: 0, locationShared: shared === 'true' }, me.data.id, t)
+          ? newSession({ id, startedAt, pausedSec: 0, paused: false, pausedAt: null, itemCount: 0, locationShared: shared === 'true' }, userId, t)
           : await api
               .get('GET /activities/current')
-              .then(({ data }) => (data?.id === id ? { ...newSession(data, me.data.id, t), distanceM: data.distanceM } : null))
+              .then(({ data }) => (data?.id === id ? { ...newSession(data, userId, t), distanceM: data.distanceM } : null))
               .catch(() => null);
         if (cancelled || !fresh) return;
         updateStored((st) => ({ ...st, session: fresh, ended: null }));
@@ -265,7 +269,11 @@ export default function ActivityInProgressScreen() {
         <View
           style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: colors.neutral }}
           accessible
-          accessibilityLabel="지도, 내 경로와 활동 중인 크루원"
+          accessibilityLabel={`지도, 내 경로와 활동 중인 크루원 ${markers.length}명`}
+          accessibilityHint={markers.length ? '크루원 정보는 동작 메뉴에서 들을 수 있어요' : undefined}
+          // 크루원 마커는 네이티브 라벨이라 스크린리더가 닿지 못한다. 지도에 크루원별 동작을 달아 말풍선을 연다
+          accessibilityActions={others?.filter((m) => m.locationShared && m.location).map((m) => ({ name: m.user.id, label: `${m.user.nickname} 정보 듣기` }))}
+          onAccessibilityAction={(e) => openBubble(e.nativeEvent.actionName)}
         >
           {mapFailed ? (
             <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
@@ -274,6 +282,7 @@ export default function ActivityInProgressScreen() {
           ) : (
             <KakaoMapView
               appKey={appKey}
+              animateCamera={!reduceMotion}
               center={follow && here ? { latitude: here.latitude, longitude: here.longitude } : undefined}
               segments={session?.segments ?? []}
               myLocation={here}
@@ -308,26 +317,34 @@ export default function ActivityInProgressScreen() {
             <MetricSplit items={metrics} divider="dashed" accessibilityLabel={session ? metricsLabel(session, now) : '기록을 불러오고 있어요'} />
           </Card>
 
-          {banner === 'locationOff' ? (
-            <Banner
-              tone="danger"
-              action={{ label: '설정 열기', accessibilityLabel: '위치 설정 열기', onPress: () => void Linking.openSettings() }}
-            >
-              위치가 꺼져 있어요. 거리와 경로를 기록할 수 없어요
-            </Banner>
-          ) : banner ? (
-            <View accessibilityLiveRegion="polite" style={{ alignSelf: 'flex-start' }}>
-              <Chip tone={BANNER_TEXT[banner].tone} icon={BANNER_TEXT[banner].icon} label={BANNER_TEXT[banner].text} />
-            </View>
-          ) : null}
+          <Appear visible={!!banner} rise={0} pointerEvents="box-none">
+            {banner === 'locationOff' ? (
+              <Banner
+                tone="danger"
+                action={{ label: '설정 열기', accessibilityLabel: '위치 설정 열기', onPress: () => void Linking.openSettings() }}
+              >
+                위치가 꺼져 있어요. 거리와 경로를 기록할 수 없어요
+              </Banner>
+            ) : banner ? (
+              <View accessibilityLiveRegion="polite" style={{ alignSelf: 'flex-start' }}>
+                <Chip tone={BANNER_TEXT[banner].tone} icon={BANNER_TEXT[banner].icon} label={BANNER_TEXT[banner].text} />
+              </View>
+            ) : null}
+          </Appear>
 
-          {bubble ? (
-            <Card style={{ alignSelf: 'center' }}>
-              <Txt variant="label" accessibilityLiveRegion="polite">
-                {[bubble.user.nickname, bubble.paused ? '일시정지 중' : null, formatDistance(bubble.distanceM), `${bubble.itemCount}개`].filter(Boolean).join(' · ')}
-              </Txt>
-            </Card>
-          ) : null}
+          <Appear visible={!!bubble} rise={space.xs} style={{ alignSelf: 'center' }}>
+            {bubble ? (
+              <Card>
+                <Txt
+                  variant="label"
+                  accessibilityLiveRegion="polite"
+                  accessibilityLabel={[bubble.user.nickname, bubble.paused ? '일시정지 중' : null, formatDistance(bubble.distanceM).replace('km', '킬로미터').replace(/m$/, '미터'), `${bubble.itemCount}개`].filter(Boolean).join(', ')}
+                >
+                  {[bubble.user.nickname, bubble.paused ? '일시정지 중' : null, formatDistance(bubble.distanceM), `${bubble.itemCount}개`].filter(Boolean).join(' · ')}
+                </Txt>
+              </Card>
+            ) : null}
+          </Appear>
         </View>
 
         <View style={{ flex: 1 }} pointerEvents="box-none" />
@@ -342,12 +359,9 @@ export default function ActivityInProgressScreen() {
               onPress={() => setQuickOpen(true)}
             />
             {!follow && here ? (
-              <RoundButton
-                icon="crosshairs-gps"
-                label="내 위치로 이동"
-                onPress={() => setFollow(true)}
-                style={floating}
-              />
+              <View style={{ ...floating, borderRadius: size.iconButton / 2 }}>
+                <IconButton icon="crosshairs-gps" label="내 위치로 이동" tone="surface" onPress={() => setFollow(true)} />
+              </View>
             ) : null}
           </View>
 
@@ -371,8 +385,8 @@ export default function ActivityInProgressScreen() {
               onPress={() => router.push('/3-7-crew-chat')}
             />
             <View style={{ alignItems: 'center', marginTop: -(size.captureFab / 2) }}>
-              <CaptureButton onPress={() => router.push({ pathname: '/4-4-take-photo', params: { id } })} />
-              <Txt variant="label">쓰레기 촬영</Txt>
+              <CaptureButton accessibilityLabel="쓰레기 촬영" onPress={() => router.push({ pathname: '/4-4-take-photo', params: { id } })} />
+              <Txt variant="label" importantForAccessibility="no">쓰레기 촬영</Txt>
             </View>
             <BarAction
               icon={paused ? 'play' : 'pause'}
@@ -385,13 +399,19 @@ export default function ActivityInProgressScreen() {
         </View>
       </View>
 
-      <Dialog visible={confirmEnd} onClose={() => !ending && setConfirmEnd(false)} title="활동을 종료할까요?">
+      <Dialog
+        visible={confirmEnd}
+        onClose={() => !ending && setConfirmEnd(false)}
+        title="활동을 종료할까요?"
+        actions={
+          <>
+            <Button label="계속 줍기" variant="ghost" size="md" onPress={() => setConfirmEnd(false)} disabled={ending} />
+            <Button label="종료하기" variant="danger" size="md" loading={ending} disabled={ending} onPress={end} />
+          </>
+        }
+      >
         <Txt variant="body">지금까지 주운 기록이 저장돼요. 종료 후에는 이어서 담을 수 없어요.</Txt>
         {endFailed ? <Banner tone="danger">기록을 저장하지 못했어요. 다시 시도해 주세요.</Banner> : null}
-        <View style={{ flexDirection: 'row', gap: space.sm, justifyContent: 'flex-end', marginTop: space.md }}>
-          <Button label="계속 줍기" variant="ghost" size="md" onPress={() => setConfirmEnd(false)} disabled={ending} />
-          <Button label="종료하기" variant="danger" size="md" loading={ending} disabled={ending} onPress={end} />
-        </View>
       </Dialog>
 
       <QuickPickupSheet visible={quickOpen} onClose={() => setQuickOpen(false)} session={session} />
@@ -426,7 +446,10 @@ function BarAction({
       style={{ alignItems: 'center', gap: space.xs, minWidth: size.minTouch }}
     >
       <View>
-        <IconCircle icon={icon} tone={tone} size="lg" />
+        {/* 일시정지 ↔ 재개가 바뀐 것을 제자리 페이드로 알린다 */}
+        <Appear visible rise={0} replayKey={icon}>
+          <IconCircle icon={icon} tone={tone} size="lg" />
+        </Appear>
         {dot ? (
           <View style={{ position: 'absolute', top: 0, right: 0 }}>
             <Dot />
@@ -434,21 +457,6 @@ function BarAction({
         ) : null}
       </View>
       <Txt variant="micro">{label}</Txt>
-    </Pressable>
-  );
-}
-
-function RoundButton({ icon, label, onPress, style }: { icon: 'crosshairs-gps'; label: string; onPress: () => void; style: object }) {
-  const ripple = useRipple(undefined, true);
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      onPress={onPress}
-      android_ripple={ripple}
-      style={{ ...style, width: size.minTouch, height: size.minTouch, borderRadius: size.minTouch / 2, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}
-    >
-      <IconCircle icon={icon} tone="surface" size="md" />
     </Pressable>
   );
 }

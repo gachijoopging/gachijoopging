@@ -119,17 +119,22 @@ export default function ManageJoinRequestsScreen() {
         </>
       )}
 
-      <Dialog visible={confirm != null} onClose={() => setConfirm(null)} title={confirmTitle}>
-        <View style={{ flexDirection: 'row', gap: space.sm, justifyContent: 'flex-end' }}>
-          <Button label="취소" variant="ghost" size="md" onPress={() => setConfirm(null)} />
-          <Button
-            label={confirm?.decision === 'APPROVE' ? '승인' : '거절'}
-            variant={confirm?.decision === 'APPROVE' ? 'primary' : 'danger'}
-            size="md"
-            onPress={decide}
-          />
-        </View>
-      </Dialog>
+      <Dialog
+        visible={confirm != null}
+        onClose={() => setConfirm(null)}
+        title={confirmTitle}
+        actions={
+          <>
+            <Button label="취소" variant="ghost" size="md" onPress={() => setConfirm(null)} />
+            <Button
+              label={confirm?.decision === 'APPROVE' ? '승인' : '거절'}
+              variant={confirm?.decision === 'APPROVE' ? 'primary' : 'danger'}
+              size="md"
+              onPress={decide}
+            />
+          </>
+        }
+      />
 
       <Snackbar visible={snackbar != null} message={snackbar ?? ''} onDismiss={() => setSnackbar(null)} />
     </Screen>

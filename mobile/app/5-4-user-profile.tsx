@@ -25,7 +25,7 @@ import { ApiError, createMockClient, type ApiClient } from '../src/api/client';
 import type { MOCKS } from '../src/api/mocks.generated';
 import { RecordsList } from '../src/profile/MyProfile';
 import { ActivityCalendar, PostGrid, StatsTile, nearBottom, usePaged, type ActivityCard, type Post } from '../src/profile/ProfileParts';
-import { safetyRows, type SafetyRow } from '../src/profile/profile';
+import { INTRO_FOLD, safetyRows, type SafetyRow } from '../src/profile/profile';
 
 type Profile = Omit<(typeof MOCKS)['GET /crew/members/{userId}']['data'], 'isLeader' | 'following' | 'blocked' | 'activeDays'> & {
   isLeader: boolean;
@@ -41,7 +41,6 @@ const TABS: { value: Tab; label: string }[] = [
   { value: 'records', label: '기록' },
   { value: 'posts', label: '게시물' },
 ];
-const INTRO_FOLD = 40;
 
 function joinedLabel(iso: string): string {
   const d = new Date(Date.parse(iso) + 9 * 60 * 60 * 1000);
@@ -228,9 +227,15 @@ export default function UserProfileScreen() {
       />
 
       {gone ? (
-        <ErrorState title="프로필을 찾을 수 없어요" description="삭제되었거나 볼 수 없는 계정이에요." icon="account-off-outline" actionLabel="뒤로 가기" onRetry={() => router.back()} />
+        <EmptyState
+          icon="account-off-outline"
+          title="프로필을 찾을 수 없어요"
+          description="삭제되었거나 볼 수 없는 계정이에요."
+          actionLabel="돌아가기"
+          onAction={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)'))}
+        />
       ) : !profile ? (
-        failed ? <ErrorState onRetry={loadProfile} /> : <Loading label="불러오는 중…" />
+        failed ? <ErrorState title="프로필을 불러오지 못했어요" onRetry={loadProfile} /> : <Loading label="프로필을 불러오고 있어요" />
       ) : (
         <ScrollView
           style={{ flex: 1 }}
@@ -244,7 +249,7 @@ export default function UserProfileScreen() {
           {failed ? <Banner tone="warn">인터넷 연결을 확인해 주세요.</Banner> : null}
 
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.md }}>
-            <Avatar name={profile.nickname} uri={profile.photoUrl ?? undefined} size="lg" />
+            <Avatar name={profile.nickname} uri={profile.photoUrl ?? undefined} size="lg" decorative />
             <View style={{ flex: 1, gap: space.xs }}>
               <View
                 accessible
@@ -281,17 +286,16 @@ export default function UserProfileScreen() {
           ) : null}
 
           {profile.blocked ? (
-            <View accessibilityLiveRegion="polite" style={{ gap: space.xs }}>
-              <Banner tone="danger">차단한 크루원이에요. 내 게시물·댓글·채팅·위치 화면에서 보이지 않아요.</Banner>
-              <Button label="차단 해제" variant="ghost" size="sm" disabled={busy} onPress={unblock} style={{ alignSelf: 'flex-end' }} />
-            </View>
+            <Banner tone="danger" action={{ label: '차단 해제', onPress: unblock }}>
+              차단한 크루원이에요. 내 게시물·댓글·채팅·위치 화면에서 보이지 않아요.
+            </Banner>
           ) : null}
 
           <StatsTile stats={profile} />
           <Tabs items={TABS} value={tab} onChange={setTab} fullWidth />
 
           {profile.blocked ? (
-            <EmptyState icon="eye-off-outline" title="차단한 크루원의 개인 콘텐츠는 숨겨져요" description="차단을 해제하면 다시 볼 수 있어요." />
+            <EmptyState icon="eye-off-outline" title="차단한 크루원의 개인 콘텐츠는 숨겨져요" />
           ) : tab === 'records' ? (
             <>
               <ActivityCalendar activeDays={profile.activeDays} />
@@ -302,13 +306,13 @@ export default function UserProfileScreen() {
               />
             </>
           ) : !posts.items ? (
-            posts.failed ? <ErrorState onRetry={posts.reload} /> : <Loading label="불러오는 중…" />
+            posts.failed ? <ErrorState title="게시물을 불러오지 못했어요" onRetry={posts.reload} /> : <Loading label="게시물을 불러오고 있어요" />
           ) : posts.items.length === 0 ? (
             <EmptyState icon="image-multiple-outline" title="아직 올린 게시물이 없어요" description={`${name}님이 크루에 올린 게시물이 여기 모여요.`} />
           ) : (
             <>
               <PostGrid posts={posts.items} onOpen={(postId) => router.push({ pathname: '/5-2-post-detail', params: { id: postId } })} />
-              {posts.loadingMore ? <Loading label="불러오는 중…" /> : null}
+              {posts.loadingMore ? <Loading label="게시물을 불러오고 있어요" /> : null}
             </>
           )}
         </ScrollView>
@@ -329,17 +333,20 @@ export default function UserProfileScreen() {
               />
             ))
           : null}
-        <ListRow icon="close" title="닫기" chevron={false} onPress={() => setSheet(false)} />
       </BottomSheet>
 
-      <Dialog visible={confirm != null} onClose={() => !busy && setConfirm(null)} title={confirm ? CONFIRM[confirm].title(name) : ''}>
+      <Dialog
+        visible={confirm != null}
+        onClose={() => !busy && setConfirm(null)}
+        title={confirm ? CONFIRM[confirm].title(name) : ''}
+        actions={
+          <>
+            <Button label="취소" variant="ghost" size="md" disabled={busy} onPress={() => setConfirm(null)} />
+            {confirm ? <Button label={CONFIRM[confirm].action} variant="danger" size="md" loading={busy} onPress={() => run(confirm)} /> : null}
+          </>
+        }
+      >
         {confirm ? <Txt variant="body">{CONFIRM[confirm].body}</Txt> : null}
-        <View style={{ flexDirection: 'row', gap: space.sm, justifyContent: 'flex-end' }}>
-          <Button label="취소" variant="ghost" size="md" disabled={busy} onPress={() => setConfirm(null)} />
-          {confirm ? (
-            <Button label={CONFIRM[confirm].action} variant="danger" size="md" loading={busy} onPress={() => run(confirm)} />
-          ) : null}
-        </View>
       </Dialog>
 
       <Snackbar visible={snackbar != null} message={snackbar ?? ''} onDismiss={() => setSnackbar(null)} />

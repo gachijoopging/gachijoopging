@@ -1,7 +1,7 @@
 import Constants from 'expo-constants';
 import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
-import { View } from 'react-native';
+import { useCallback, useRef, useState } from 'react';
+import { Pressable, View } from 'react-native';
 import {
   AppHeader,
   Banner,
@@ -15,10 +15,15 @@ import {
   Snackbar,
   Switch,
   Txt,
+  borderWidth,
+  pressedOpacity,
+  size,
   space,
+  useRipple,
+  useTheme,
 } from 'design-system/src';
 import { ApiError, createMockClient, type ApiClient } from '../src/api/client';
-import { accountGate, leaveConfirm, leaveFailure } from '../src/profile/profile';
+import { accountGate, leaveConfirm, leaveFailure, lockSetting } from '../src/profile/profile';
 import { getStored } from '../src/activity/store';
 
 type Me = {
@@ -78,6 +83,7 @@ export default function SettingsScreen() {
   const [modal, setModal] = useState<Modal | null>(null);
   const [busy, setBusy] = useState(false);
   const [snackbar, setSnackbar] = useState<string | null>(null);
+  const sending = useRef<SettingKey[]>([]);
 
   const load = useCallback(async () => {
     try {
@@ -100,14 +106,19 @@ export default function SettingsScreen() {
   useFocusEffect(useCallback(() => void load(), [load]));
 
   const toggle = async (key: SettingKey) => {
-    if (!me) return;
-    const before = me[key];
-    setMe({ ...me, [key]: !before });
+    // 보내는 동안 다시 누르면 같은 값을 두 번 보낸다 — 응답이 올 때까지 그 키만 잠근다
+    const locked = lockSetting(sending.current, key);
+    if (!me || !locked) return;
+    sending.current = locked;
+    const next = !me[key];
+    setMe((m) => (m ? { ...m, [key]: next } : m));
     try {
-      await api.mutate('PATCH /users/me', { [key]: !before });
+      await api.mutate('PATCH /users/me', { [key]: next });
     } catch {
-      setMe((m) => (m ? { ...m, [key]: before } : m));
+      setMe((m) => (m ? { ...m, [key]: !next } : m));
       setSnackbar('설정을 저장하지 못했어요.');
+    } finally {
+      sending.current = sending.current.filter((k) => k !== key);
     }
   };
 
@@ -171,27 +182,23 @@ export default function SettingsScreen() {
       <AppHeader title="설정" onBack={() => router.back()} />
 
       {!me ? (
-        failed ? <ErrorState onRetry={load} /> : <Loading label="불러오는 중" />
+        failed ? <ErrorState title="내 정보를 불러오지 못했어요" onRetry={load} /> : <Loading label="내 정보를 불러오고 있어요" />
       ) : (
         <>
           {failed ? <Banner tone="warn">인터넷 연결을 확인해 주세요.</Banner> : null}
           <Card padded={false}>
             <ListRow title="프로필 수정" subtitle="닉네임과 사진을 바꿔요." onPress={() => router.push('/5-8-edit-profile')} />
-            <ListRow
+            <ToggleRow
               title="위치 공유 기본값"
               subtitle="활동을 시작할 때 미리 선택돼요."
-              chevron={false}
-              accessibilityLabel={`위치 공유 기본값, ${me.shareLocationDefault ? '켜짐' : '꺼짐'}`}
-              onPress={() => toggle('shareLocationDefault')}
-              right={<Switch label="위치 공유 기본값" value={me.shareLocationDefault} onValueChange={() => toggle('shareLocationDefault')} />}
+              value={me.shareLocationDefault}
+              onToggle={() => toggle('shareLocationDefault')}
             />
-            <ListRow
+            <ToggleRow
               title="활동 시작 알림"
               subtitle="팔로우한 크루원이 활동을 시작하면 알려줘요."
-              chevron={false}
-              accessibilityLabel={`활동 시작 알림, ${me.notifyActivityStart ? '켜짐' : '꺼짐'}`}
-              onPress={() => toggle('notifyActivityStart')}
-              right={<Switch label="활동 시작 알림" value={me.notifyActivityStart} onValueChange={() => toggle('notifyActivityStart')} />}
+              value={me.notifyActivityStart}
+              onToggle={() => toggle('notifyActivityStart')}
             />
             <ListRow title="차단 관리" divider={false} onPress={() => router.push('/5-9-manage-blocks')} />
           </Card>
@@ -199,6 +206,7 @@ export default function SettingsScreen() {
           <Card padded={false}>
             <ListRow
               title="크루 나가기"
+              tone="danger"
               subtitle={me.crewName ? `${me.crewName}에서 나가요.` : undefined}
               accessibilityLabel={me.crewName ? `크루 나가기, ${me.crewName}에서 나가기` : '크루 나가기'}
               disabled={busy}
@@ -208,7 +216,7 @@ export default function SettingsScreen() {
               <ListRow title="비밀번호 재설정" subtitle="재설정 메일을 보낼 수 있어요." onPress={() => router.push('/1-5-reset-password')} />
             ) : null}
             <ListRow title="로그아웃" disabled={busy} onPress={() => ask('logout')} />
-            <ListRow title="회원 탈퇴" divider={false} accessibilityLabel="회원 탈퇴, 계정을 삭제해요" disabled={busy} onPress={() => ask('withdraw')} />
+            <ListRow title="회원 탈퇴" tone="danger" divider={false} accessibilityLabel="회원 탈퇴, 계정을 삭제해요" disabled={busy} onPress={() => ask('withdraw')} />
           </Card>
         </>
       )}
@@ -219,41 +227,32 @@ export default function SettingsScreen() {
         visible={modal?.kind === 'blocked'}
         onClose={() => setModal(null)}
         title="먼저 활동 종료와 동기화를 완료해 주세요"
+        actions={<Button label="확인" size="md" onPress={() => setModal(null)} />}
       >
         {modal?.kind === 'blocked' ? <Txt variant="body">{BLOCKED[modal.action]}</Txt> : null}
-        <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
-          <Button label="확인" size="md" onPress={() => setModal(null)} />
-        </View>
       </Dialog>
 
-      <Dialog visible={modal?.kind === 'checkFailed'} onClose={() => setModal(null)} title="기록 상태를 확인하지 못했어요">
+      <Dialog
+        visible={modal?.kind === 'checkFailed'}
+        onClose={() => setModal(null)}
+        title="기록 상태를 확인하지 못했어요"
+        actions={
+          <>
+            <Button label="닫기" variant="ghost" size="md" onPress={() => setModal(null)} />
+            <Button label="다시 시도" size="md" loading={busy} onPress={() => modal?.kind === 'checkFailed' && void ask(modal.action)} />
+          </>
+        }
+      >
         <Txt variant="body">연결 상태를 확인하고 다시 시도해 주세요. 기록은 그대로 남아 있어요.</Txt>
-        <View style={{ flexDirection: 'row', gap: space.sm, justifyContent: 'flex-end' }}>
-          <Button label="닫기" variant="ghost" size="md" onPress={() => setModal(null)} />
-          <Button
-            label="다시 시도"
-            size="md"
-            loading={busy}
-            onPress={() => modal?.kind === 'checkFailed' && void ask(modal.action)}
-          />
-        </View>
       </Dialog>
 
       <Dialog
         visible={modal?.kind === 'confirm'}
         onClose={() => !busy && setModal(null)}
         title={modal?.kind === 'confirm' ? (modal.dissolve ? DISSOLVE.title : CONFIRM[modal.action].title) : ''}
-      >
-        {modal?.kind === 'confirm' ? (
-          <>
-            <Txt variant="body">
-              {modal.dissolve
-                ? modal.action === 'withdraw'
-                  ? DISSOLVE.withdraw
-                  : DISSOLVE.leave
-                : CONFIRM[modal.action].body(me?.crewName ?? '')}
-            </Txt>
-            <View style={{ flexDirection: 'row', gap: space.sm, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+        actions={
+          modal?.kind === 'confirm' ? (
+            <>
               <Button label={CONFIRM[modal.action].cancel} variant="ghost" size="md" disabled={busy} onPress={() => setModal(null)} />
               <Button
                 label={modal.dissolve && modal.action === 'leave' ? DISSOLVE.ok : CONFIRM[modal.action].ok}
@@ -262,27 +261,80 @@ export default function SettingsScreen() {
                 loading={busy}
                 onPress={() => commit(modal.action)}
               />
-            </View>
-          </>
+            </>
+          ) : null
+        }
+      >
+        {modal?.kind === 'confirm' ? (
+          <Txt variant="body">
+            {modal.dissolve
+              ? modal.action === 'withdraw'
+                ? DISSOLVE.withdraw
+                : DISSOLVE.leave
+              : CONFIRM[modal.action].body(me?.crewName ?? '')}
+          </Txt>
         ) : null}
       </Dialog>
 
-      <Dialog visible={modal?.kind === 'delegate'} onClose={() => setModal(null)} title="위임한 뒤에 나갈 수 있어요">
+      <Dialog
+        visible={modal?.kind === 'delegate'}
+        onClose={() => setModal(null)}
+        title="위임한 뒤에 나갈 수 있어요"
+        actions={
+          <>
+            <Button label="닫기" variant="ghost" size="md" onPress={() => setModal(null)} />
+            <Button
+              label="크루원 관리로 이동"
+              size="md"
+              onPress={() => {
+                setModal(null);
+                router.push('/3-11-manage-crew-members');
+              }}
+            />
+          </>
+        }
+      >
         <Txt variant="body">크루장은 다른 크루원에게 위임한 뒤에만 크루를 나갈 수 있어요.</Txt>
-        <View style={{ flexDirection: 'row', gap: space.sm, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-          <Button label="닫기" variant="ghost" size="md" onPress={() => setModal(null)} />
-          <Button
-            label="크루원 관리로 이동"
-            size="md"
-            onPress={() => {
-              setModal(null);
-              router.push('/3-11-manage-crew-members');
-            }}
-          />
-        </View>
       </Dialog>
 
       <Snackbar visible={snackbar != null} message={snackbar ?? ''} onDismiss={() => setSnackbar(null)} />
     </Screen>
+  );
+}
+
+/**
+ * 켜고 끄는 설정 한 줄. 행 전체가 스위치 하나로 읽히게 역할·상태를 행에 두고,
+ * 안의 스위치는 보이기만 한다 — 두 곳에 초점이 가면 같은 설정을 두 번 듣는다
+ */
+function ToggleRow({ title, subtitle, value, onToggle }: { title: string; subtitle: string; value: boolean; onToggle: () => void }) {
+  const { colors } = useTheme();
+  const ripple = useRipple();
+  return (
+    <Pressable
+      accessibilityRole="switch"
+      accessibilityLabel={title}
+      accessibilityHint={subtitle}
+      accessibilityState={{ checked: value }}
+      onPress={onToggle}
+      android_ripple={ripple}
+      style={({ pressed }) => ({
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: space.md,
+        minHeight: size.iconButton,
+        paddingVertical: space.md,
+        borderBottomWidth: borderWidth.hairline,
+        borderBottomColor: colors.border,
+        opacity: pressedOpacity(pressed),
+      })}
+    >
+      <View style={{ flex: 1, gap: 1 }}>
+        <Txt variant="bodyLg">{title}</Txt>
+        <Txt variant="caption" tone="hint">{subtitle}</Txt>
+      </View>
+      <View importantForAccessibility="no-hide-descendants">
+        <Switch label={title} hideLabel value={value} onValueChange={onToggle} />
+      </View>
+    </Pressable>
   );
 }

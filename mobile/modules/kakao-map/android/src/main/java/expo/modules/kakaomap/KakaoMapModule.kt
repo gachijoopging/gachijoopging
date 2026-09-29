@@ -15,6 +15,10 @@ class KakaoMapModule : Module() {
         view.setAppKey(appKey)
       }
 
+      Prop("animateCamera") { view: KakaoMapView, animate: Boolean ->
+        view.animateCamera = animate
+      }
+
       Prop("center") { view: KakaoMapView, center: Map<String, Double>? ->
         val lat = center?.get("latitude") ?: return@Prop
         val lng = center?.get("longitude") ?: return@Prop

@@ -72,7 +72,7 @@ export default function ManageBlocksScreen() {
       <AppHeader title="차단 관리" subtitle={list ? `차단 ${list.length}명` : undefined} onBack={() => router.back()} />
 
       {!list ? (
-        failed ? <ErrorState onRetry={() => load('quiet')} /> : <Loading label="불러오는 중…" />
+        failed ? <ErrorState title="차단 목록을 불러오지 못했어요" onRetry={() => load('quiet')} /> : <Loading label="차단 목록을 불러오고 있어요" />
       ) : (
         <>
           {failed ? <Banner tone="warn">인터넷 연결을 확인해 주세요.</Banner> : null}
@@ -86,7 +86,7 @@ export default function ManageBlocksScreen() {
                     <ListRow
                       title={u.nickname}
                       subtitle={ROW_DESC}
-                      left={<Avatar name={u.nickname} uri={u.photoUrl ?? undefined} size="sm" />}
+                      left={<Avatar name={u.nickname} uri={u.photoUrl ?? undefined} size="sm" withdrawn={u.withdrawn} decorative />}
                       divider={i < list.length - 1}
                       chevron={false}
                       accessibilityLabel={u.withdrawn ? `${u.nickname}, 차단됨` : `${u.nickname}, 차단됨, 게시물·댓글·채팅·위치에서 숨김, 프로필 보기`}

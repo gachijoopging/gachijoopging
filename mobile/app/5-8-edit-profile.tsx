@@ -153,7 +153,7 @@ export default function EditProfileScreen() {
       <AppHeader title="프로필 수정" onBack={() => router.back()} backDisabled={saving} />
 
       {!original ? (
-        failed ? <ErrorState onRetry={load} /> : <Loading label="불러오는 중" />
+        failed ? <ErrorState title="내 정보를 불러오지 못했어요" onRetry={load} /> : <Loading label="내 정보를 불러오고 있어요" />
       ) : (
         <>
           <Pressable
@@ -246,22 +246,25 @@ export default function EditProfileScreen() {
         ) : null}
       </BottomSheet>
 
-      <Dialog visible={pendingLeave != null} onClose={() => setPendingLeave(null)} title="나갈까요?">
+      <Dialog visible={pendingLeave != null} onClose={() => setPendingLeave(null)} title="나갈까요?"
+        actions={
+          <>
+            <Button label="취소" variant="ghost" size="md" onPress={() => setPendingLeave(null)} />
+            <Button
+              label="나가기"
+              variant="danger"
+              size="md"
+              onPress={() => {
+                const leave = pendingLeave;
+                setPendingLeave(null);
+                saved.current = true;
+                leave?.();
+              }}
+            />
+          </>
+        }
+      >
         <Txt variant="body">저장하지 않은 변경사항이 사라져요.</Txt>
-        <View style={{ flexDirection: 'row', gap: space.sm, justifyContent: 'flex-end' }}>
-          <Button label="취소" variant="ghost" size="md" onPress={() => setPendingLeave(null)} />
-          <Button
-            label="나가기"
-            variant="danger"
-            size="md"
-            onPress={() => {
-              const leave = pendingLeave;
-              setPendingLeave(null);
-              saved.current = true;
-              leave?.();
-            }}
-          />
-        </View>
       </Dialog>
 
       <Snackbar visible={snackbar != null} message={snackbar ?? ''} onDismiss={() => setSnackbar(null)} />

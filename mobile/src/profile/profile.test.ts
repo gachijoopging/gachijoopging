@@ -1,6 +1,9 @@
 import { ApiError } from '../api/client';
 import {
   POST_PHOTO_MAX,
+  EMPTY_DRAFT,
+  parseDraft,
+  lockSetting,
   accountGate,
   activeDaysGrid,
   activityTitle,
@@ -167,5 +170,29 @@ describe('5-6 업로드 진행', () => {
       ]),
     ).toEqual(['m2', 'm1']);
     expect(readyMediaIds([])).toEqual([]);
+  });
+});
+
+describe('게시물 초안 복원', () => {
+  test('저장한 초안을 그대로 되살린다', () => {
+    const d = { text: '안녕', photos: [{ key: 'a', uri: 'file://a', name: 'a.jpg', type: 'image/jpeg', mediaId: null, failed: false }], visibility: 'PRIVATE', requestId: 'r1' };
+    expect(parseDraft(JSON.stringify(d))).toEqual(d);
+  });
+
+  test('깨졌거나 없으면 빈 초안', () => {
+    expect(parseDraft(null)).toEqual(EMPTY_DRAFT);
+    expect(parseDraft('{oops')).toEqual(EMPTY_DRAFT);
+  });
+
+  test('모르는 공개 범위는 크루 전체로', () => {
+    expect(parseDraft(JSON.stringify({ text: 'x', visibility: 'WORLD' })).visibility).toBe('CREW');
+  });
+});
+
+describe('설정 토글 잠금', () => {
+  test('보내는 중인 키는 다시 누르지 못한다', () => {
+    expect(lockSetting([], 'a')).toEqual(['a']);
+    expect(lockSetting(['a'], 'a')).toBeNull();
+    expect(lockSetting(['a'], 'b')).toEqual(['a', 'b']);
   });
 });

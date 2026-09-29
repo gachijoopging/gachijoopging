@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Image, Pressable, View } from 'react-native';
 import { Avatar, Card, Chip, Icon, Tile, Txt, pressedOpacity, radius, size, space, useRipple, useTheme } from 'design-system/src';
 import { relativeTime } from '../notifications/notifications';
-import { authorLink, type Post } from './feed';
+import { authorLink, displayName, type Post } from './feed';
 
 const PHOTO_HEIGHT = 190;
 
@@ -11,35 +11,29 @@ type Props = {
   meId: string | undefined;
   /** 내 게시물 탭은 전부 내 글이라 "내 글" 표시를 그리지 않는다 */
   mineTab: boolean;
-  liking: boolean;
   onOpen: (focusComment?: boolean) => void;
   onAuthor: () => void;
   onLike: () => void;
 };
 
 /** 5-1 피드 카드. 작성자 줄·알약은 따로 누르고 나머지 본문 영역이 상세로 간다 */
-export function PostCard({ post, meId, mineTab, liking, onOpen, onAuthor, onLike }: Props) {
+export function PostCard({ post, meId, mineTab, onOpen, onAuthor, onLike }: Props) {
   const { colors } = useTheme();
   const ripple = useRipple();
   const [photoFailed, setPhotoFailed] = useState(false);
   const link = authorLink(post.author, meId);
   const when = relativeTime(post.createdAt);
+  const name = displayName(post.author);
   const photos = post.media.length;
 
   const authorRow = (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm, flexShrink: 1 }}>
-      {post.author.withdrawn ? (
-        <View style={{ width: size.avatarMd, height: size.avatarMd, borderRadius: radius.pill, backgroundColor: colors.neutral, alignItems: 'center', justifyContent: 'center' }}>
-          <Icon name="account-outline" color={colors.inkMuted} />
-        </View>
-      ) : (
-        <Avatar name={post.author.nickname} uri={post.author.photoUrl ?? undefined} size="md" />
-      )}
-      <Txt variant="body" bold numberOfLines={1} style={{ flexShrink: 1 }}>{post.author.nickname}</Txt>
+      <Avatar name={post.author.nickname} uri={post.author.photoUrl ?? undefined} size="md" withdrawn={post.author.withdrawn} decorative />
+      <Txt variant="body" bold numberOfLines={1} style={{ flexShrink: 1 }}>{name}</Txt>
     </View>
   );
 
-  const bodyLabel = [post.author.nickname, when, photos > 0 ? `사진 ${photos}장` : '', post.text, '게시물 보기']
+  const bodyLabel = [name, when, photos > 0 ? `사진 ${photos}장` : '', post.text, '게시물 보기']
     .filter(Boolean)
     .join(', ');
 
@@ -57,14 +51,19 @@ export function PostCard({ post, meId, mineTab, liking, onOpen, onAuthor, onLike
             {authorRow}
           </Pressable>
         ) : (
-          <View accessible accessibilityLabel={post.author.nickname} style={{ minHeight: size.minTouch, justifyContent: 'center', flexShrink: 1 }}>
+          <View accessible accessibilityLabel={name} style={{ minHeight: size.minTouch, justifyContent: 'center', flexShrink: 1 }}>
             {authorRow}
           </View>
         )}
-        {!mineTab && post.author.id === meId ? <Chip label="내 글" tone="neutral" /> : null}
+        {/* Chip 은 스스로 flex-start 로 붙어 줄 가운데에서 뜬다. 감싸서 줄 정렬을 따르게 한다 */}
+        {!mineTab && post.author.id === meId ? (
+          <View>
+            <Chip label="내 글" tone="neutral" />
+          </View>
+        ) : null}
         {post.visibility === 'PRIVATE' ? (
-          <View accessible accessibilityLabel="나만 보기">
-            <Chip label="나만 보기" tone="neutral" icon="lock-outline" />
+          <View>
+            <Chip label="나만 보기" tone="neutral" icon="lock-outline" accessibilityLabel="나만 보기" />
           </View>
         ) : null}
         <View style={{ flex: 1 }} />
@@ -108,11 +107,10 @@ export function PostCard({ post, meId, mineTab, liking, onOpen, onAuthor, onLike
 
       <View style={{ flexDirection: 'row', gap: space.sm }}>
         <Chip
-          label={`고마워요 ${post.likeCount}`}
+          label={`좋아요 ${post.likeCount}`}
           icon={post.liked ? 'heart' : 'heart-outline'}
           selected={post.liked}
-          disabled={liking}
-          accessibilityLabel={`고마워요 ${post.likeCount}, ${post.liked ? '눌림' : '안 눌림'}`}
+          accessibilityLabel={`좋아요 ${post.likeCount}, ${post.liked ? '눌림' : '안 눌림'}`}
           onPress={onLike}
         />
         <Chip

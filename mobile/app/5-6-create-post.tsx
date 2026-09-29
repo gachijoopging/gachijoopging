@@ -1,8 +1,9 @@
 import * as Crypto from 'expo-crypto';
+import { File, Paths } from 'expo-file-system';
 import * as ImagePicker from 'expo-image-picker';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Image, Pressable, ScrollView, View } from 'react-native';
+import { LayoutAnimation, Pressable, ScrollView, View } from 'react-native';
 import {
   AppHeader,
   Banner,
@@ -14,33 +15,60 @@ import {
   Screen,
   SelectRow,
   Field,
+  Spinner,
+  Thumb,
   Txt,
   borderWidth,
   pressedOpacity,
   radius,
+  size,
   space,
+  useReduceMotion,
   useRipple,
   useTheme,
 } from 'design-system/src';
 import { ApiError, createMockClient, type ApiClient } from '../src/api/client';
 import { usePreventBack } from '../src/auth/usePreventBack';
-import { POST_PHOTO_MAX, POST_TEXT_MAX, canPost, movePhoto, photosToUpload, readyMediaIds } from '../src/profile/profile';
+import { EMPTY_DRAFT, POST_PHOTO_MAX, POST_TEXT_MAX, canPost, movePhoto, parseDraft, photosToUpload, readyMediaIds, type DraftPhoto, type PostDraft } from '../src/profile/profile';
 
-type Photo = { key: string; uri: string; name: string; type: string; mediaId: string | null; failed: boolean };
-type Visibility = 'CREW' | 'PRIVATE';
-type Draft = { text: string; photos: Photo[]; visibility: Visibility; requestId: string | null };
+type Photo = DraftPhoto;
+type Visibility = PostDraft['visibility'];
 
 const api: ApiClient = createMockClient({ delayMs: 300 });
-const THUMB = 64;
-const EMPTY: Draft = { text: '', photos: [], visibility: 'CREW', requestId: null };
+const THUMB = size.thumbMd;
+// 뒤로 가거나 앱을 다시 켜도 쓰던 글이 남게 기기에 둔다. 게시에 성공하면 지운다
+const draftFile = new File(Paths.document, 'post-draft.json');
 
-// ponytail: 메모리에만 둔다. 앱을 다시 켜면 사라진다 — 재실행 뒤에도 필요하면 AsyncStorage 로 옮긴다
-let draft: Draft = EMPTY;
+function readDraft(): PostDraft {
+  try {
+    return parseDraft(draftFile.exists ? draftFile.textSync() : null);
+  } catch {
+    return EMPTY_DRAFT;
+  }
+}
+
+function saveDraft(draft: PostDraft) {
+  try {
+    draftFile.write(JSON.stringify(draft));
+  } catch {
+    // 초안 저장 실패는 작성을 막지 않는다
+  }
+}
+
+function clearDraft() {
+  try {
+    if (draftFile.exists) draftFile.delete();
+  } catch {
+    // 남아도 다음 작성에서 덮어쓴다
+  }
+}
 
 export default function CreatePostScreen() {
   const { imageUri } = useLocalSearchParams<{ imageUri?: string }>();
   const { colors } = useTheme();
   const ripple = useRipple();
+  const reduce = useReduceMotion();
+  const [draft] = useState(readDraft);
   const [text, setText] = useState(draft.text);
   const [photos, setPhotos] = useState<Photo[]>(() =>
     imageUri && !draft.photos.some((p) => p.uri === imageUri)
@@ -58,8 +86,13 @@ export default function CreatePostScreen() {
 
   // 뒤로 가도 작성 중인 내용을 들고 있다가 다시 들어오면 되살린다
   useEffect(() => {
-    draft = { text, photos, visibility, requestId: requestId.current };
+    saveDraft({ text, photos, visibility, requestId: requestId.current });
   }, [text, photos, visibility]);
+
+  // 썸네일이 순간이동하지 않게 줄 재배치를 짧게 잇는다
+  const animateRow = () => {
+    if (!reduce) LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+  };
 
   const updatePhoto = (key: string, patch: Partial<Photo>) =>
     setPhotos((prev) => prev.map((p) => (p.key === key ? { ...p, ...patch } : p)));
@@ -119,9 +152,9 @@ export default function CreatePostScreen() {
       if (!mediaIds) return;
       // 응답이 유실돼 다시 눌러도 같은 id 라 서버가 중복 게시를 흡수한다
       requestId.current ??= Crypto.randomUUID();
-      draft = { ...draft, requestId: requestId.current };
+      saveDraft({ text, photos, visibility, requestId: requestId.current });
       await api.mutate('POST /crew/posts', { id: requestId.current, text: text.trim(), visibility, mediaIds });
-      draft = EMPTY;
+      clearDraft();
       router.dismissTo({ pathname: '/(tabs)/feed', params: { flash: '게시물을 올렸어요' } });
     } catch (e) {
       if (e instanceof ApiError && e.code === 'NO_CREW') return router.replace('/1-6-create-or-join-crew');
@@ -170,7 +203,7 @@ export default function CreatePostScreen() {
                   height: THUMB,
                   borderRadius: radius.tile,
                   borderWidth: borderWidth.hairline,
-                  borderColor: colors.borderDashed,
+                  borderColor: colors.borderDotted,
                   borderStyle: 'dashed',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -181,12 +214,14 @@ export default function CreatePostScreen() {
               </Pressable>
             ) : null}
             {photos.map((p, i) => (
-              <View key={p.key} style={{ width: THUMB, height: THUMB }}>
+              // 삭제 버튼이 썸네일 밖으로 걸치면 안드로이드는 그 부분의 터치를 받지 않는다. 여백을 둬 버튼을 안에 넣는다
+              <View key={p.key} style={{ width: THUMB + space.md, height: THUMB + space.md, paddingTop: space.md, paddingRight: space.md }}>
                 <Pressable
                   accessibilityRole="button"
                   accessibilityLabel={i === 0 ? `대표 사진, ${i + 1}번째` : `${i + 1}번째 사진, 순서 선택`}
                   accessibilityState={{ selected: selected === i }}
                   disabled={posting}
+                  android_ripple={ripple}
                   onPress={() => setSelected(selected === i ? null : i)}
                   style={{
                     flex: 1,
@@ -196,29 +231,31 @@ export default function CreatePostScreen() {
                     borderColor: colors.deep,
                   }}
                 >
-                  <Image source={{ uri: p.uri }} accessible={false} style={{ width: '100%', height: '100%', backgroundColor: colors.tint }} />
+                  <Thumb uri={p.uri} size="md" />
                   {i === 0 ? (
                     <View style={{ position: 'absolute', left: space.xs / 2, bottom: space.xs / 2 }}>
                       <Chip label="대표" tone="deep" />
                     </View>
                   ) : null}
                   {posting && p.mediaId == null && !p.failed ? (
-                    <View style={{ position: 'absolute', inset: 0, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.scrim }}>
-                      <ActivityIndicator color={colors.onDark} />
+                    <View style={{ position: 'absolute', inset: 0, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface85 }}>
+                      <Spinner />
                     </View>
                   ) : null}
                 </Pressable>
                 {p.failed && !posting ? (
-                  <View style={{ position: 'absolute', inset: 0, alignItems: 'center', justifyContent: 'center' }}>
+                  <View style={{ position: 'absolute', top: space.md, left: 0, right: space.md, bottom: 0, alignItems: 'center', justifyContent: 'center' }}>
                     <IconButton icon="alert-circle" label="업로드 실패, 다시 시도하려면 두 번 탭" tone="surface" onPress={publish} />
                   </View>
                 ) : null}
-                <View style={{ position: 'absolute', top: -space.md, right: -space.md }}>
+                <View style={{ position: 'absolute', top: 0, right: 0 }}>
                   <IconButton
                     icon="close"
                     label={`${i + 1}번째 사진 삭제`}
+                    tone="surface"
                     disabled={posting}
                     onPress={() => {
+                      animateRow();
                       setSelected(null);
                       setPhotos((prev) => prev.filter((x) => x.key !== p.key));
                     }}
@@ -230,25 +267,27 @@ export default function CreatePostScreen() {
           {selected != null && photos[selected] ? (
             <View style={{ flexDirection: 'row', gap: space.sm }}>
               <Button
-                label="앞으로"
+                label="앞으로 옮기기"
                 variant="ghost"
                 size="sm"
                 icon="arrow-left"
                 accessibilityLabel={`${selected + 1}번째 사진 앞으로 이동`}
                 disabled={selected === 0}
                 onPress={() => {
+                  animateRow();
                   setPhotos((prev) => [...movePhoto(prev, selected, -1)]);
                   setSelected(selected - 1);
                 }}
               />
               <Button
-                label="뒤로"
+                label="뒤로 옮기기"
                 variant="ghost"
                 size="sm"
                 icon="arrow-right"
                 accessibilityLabel={`${selected + 1}번째 사진 뒤로 이동`}
                 disabled={selected === photos.length - 1}
                 onPress={() => {
+                  animateRow();
                   setPhotos((prev) => [...movePhoto(prev, selected, 1)]);
                   setSelected(selected + 1);
                 }}

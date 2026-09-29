@@ -93,3 +93,15 @@ export function byCategoryChips(byCategory: Counts): { category: Category; count
 export function summaryDuration(sec: number): string {
   return sec < 60 ? '1분 미만' : formatElapsed(sec);
 }
+
+const WEEKDAY_FULL = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'];
+const spokenTime = (d: Date) => `${d.getUTCHours()}시 ${d.getUTCMinutes()}분`;
+
+/** 스크린리더용 메타. "09:02 – 09:48 ·" 같은 기호를 그대로 읽지 않게 문장으로 */
+export function summaryMetaSpoken({ startedAt, endedAt, pausedSec, steps }: { startedAt: string; endedAt: string; pausedSec: number; steps: number | null }): string {
+  const s = kst(startedAt);
+  const parts = [`${s.getUTCMonth() + 1}월 ${s.getUTCDate()}일 ${WEEKDAY_FULL[s.getUTCDay()]} ${spokenTime(s)}부터 ${spokenTime(kst(endedAt))}까지`];
+  if (pausedSec >= 60) parts.push(`일시정지 ${Math.floor(pausedSec / 60)}분`);
+  if (steps != null) parts.push(`${steps.toLocaleString('en-US')}걸음`);
+  return parts.join(', ');
+}

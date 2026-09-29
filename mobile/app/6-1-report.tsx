@@ -1,7 +1,7 @@
 import * as Crypto from 'expo-crypto';
 import { router, useLocalSearchParams, useNavigation } from 'expo-router';
-import { useState } from 'react';
-import { Image, View } from 'react-native';
+import { useRef, useState } from 'react';
+import { View } from 'react-native';
 import {
   AppHeader,
   Avatar,
@@ -11,9 +11,8 @@ import {
   Field,
   Screen,
   SelectRow,
+  Thumb,
   Txt,
-  radius,
-  size,
   space,
 } from 'design-system/src';
 import { createMockClient, type ApiClient } from '../src/api/client';
@@ -48,6 +47,7 @@ export default function ReportScreen() {
   const [reason, setReason] = useState<ReportReason | null>(() => reportDraftFor(targetType, targetId).reason);
   const [memo, setMemo] = useState(() => reportDraftFor(targetType, targetId).memo);
   const [sending, setSending] = useState(false);
+  const inFlight = useRef(false);
   const [banner, setBanner] = useState<{ message: string; duplicate: boolean } | null>(null);
   const navigation = useNavigation();
   usePreventBack(sending);
@@ -59,7 +59,9 @@ export default function ReportScreen() {
   };
 
   const submit = async () => {
-    if (sending || !canSubmitReport(reason, memo)) return;
+    // 같은 프레임의 연속 탭은 sending 이 반영되기 전이라 ref 로 막는다
+    if (inFlight.current || !canSubmitReport(reason, memo)) return;
+    inFlight.current = true;
     setSending(true);
     setBanner(null);
     let error: unknown = null;
@@ -80,6 +82,7 @@ export default function ReportScreen() {
       clearReportDraft(targetType, targetId);
       return backWithFlash(outcome.message);
     }
+    inFlight.current = false;
     setSending(false);
     setBanner({ message: outcome.message, duplicate: outcome.kind === 'duplicate' });
   };
@@ -104,7 +107,7 @@ export default function ReportScreen() {
         <Card accessible accessibilityLabel={['신고 대상', nickname, quote].filter(Boolean).join(', ')} style={{ gap: space.sm }}>
           <Txt variant="caption" tone="muted">신고 대상</Txt>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.md }}>
-            <Avatar name={nickname} uri={photoUrl || undefined} size="sm" />
+            <Avatar name={nickname} uri={photoUrl || undefined} size="sm" decorative />
             <View style={{ flex: 1, gap: space.xs }}>
               <Txt variant="body" bold>{nickname}</Txt>
               {quote ? (
@@ -112,10 +115,7 @@ export default function ReportScreen() {
               ) : null}
             </View>
             {targetType === 'POST' && thumbUrl ? (
-              <Image
-                source={{ uri: thumbUrl }}
-                style={{ width: size.iconCircleMd, height: size.iconCircleMd, borderRadius: radius.field }}
-              />
+              <Thumb uri={thumbUrl} size="sm" />
             ) : null}
           </View>
         </Card>

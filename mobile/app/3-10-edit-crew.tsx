@@ -245,22 +245,27 @@ export default function EditCrewScreen() {
         ) : null}
       </BottomSheet>
 
-      <Dialog visible={pendingLeave != null} onClose={() => setPendingLeave(null)} title="변경사항을 버릴까요?">
-        <View style={{ flexDirection: 'row', gap: space.sm, justifyContent: 'flex-end' }}>
-          <Button label="계속 수정" variant="ghost" size="md" onPress={() => setPendingLeave(null)} />
-          <Button
-            label="버리기"
-            variant="danger"
-            size="md"
-            onPress={() => {
-              const leave = pendingLeave;
-              setPendingLeave(null);
-              saved.current = true;
-              leave?.();
-            }}
-          />
-        </View>
-      </Dialog>
+      <Dialog
+        visible={pendingLeave != null}
+        onClose={() => setPendingLeave(null)}
+        title="변경사항을 버릴까요?"
+        actions={
+          <>
+            <Button label="계속 수정" variant="ghost" size="md" onPress={() => setPendingLeave(null)} />
+            <Button
+              label="버리기"
+              variant="danger"
+              size="md"
+              onPress={() => {
+                const leave = pendingLeave;
+                setPendingLeave(null);
+                saved.current = true;
+                leave?.();
+              }}
+            />
+          </>
+        }
+      />
 
       <Snackbar visible={snackbar != null} message={snackbar ?? ''} onDismiss={() => setSnackbar(null)} />
     </Screen>

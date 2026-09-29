@@ -185,14 +185,14 @@ describe('위치가 돌아오면', () => {
 });
 
 describe('지표 카드 읽기', () => {
-  test('네 칸을 한 문장으로, 걸음 미측정은 "걸음수 없음"', () => {
+  test('네 칸을 한 문장으로, 걸음 미측정은 "걸음수 없음". 초는 빼서 초점이 있는 동안 매초 다시 읽히지 않게', () => {
     const s = addItems(started(), [{ category: 'CAN', quantity: 17 }]);
-    expect(metricsLabel(s, at(2530))).toBe('줍기 17개, 활동 시간 42분 10초, 이동 거리 0미터, 걸음수 없음');
+    expect(metricsLabel(s, at(2530))).toBe('줍기 17개, 활동 시간 42분, 이동 거리 0미터, 걸음수 없음');
   });
 
   test('1시간 넘으면 시간부터, 1km 넘으면 킬로미터', () => {
     const s = { ...started(), distanceM: 2100, steps: 3200 };
-    expect(metricsLabel(s, at(3730))).toBe('줍기 0개, 활동 시간 1시간 2분 10초, 이동 거리 2.1킬로미터, 3200걸음');
+    expect(metricsLabel(s, at(3730))).toBe('줍기 0개, 활동 시간 1시간 2분, 이동 거리 2.1킬로미터, 3200걸음');
   });
 });
 

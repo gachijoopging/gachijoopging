@@ -5,7 +5,7 @@ import { File, Paths } from 'expo-file-system';
 import { Snackbar, size, space } from 'design-system/src';
 import { createMockClient, type ApiClient } from '../api/client';
 import { useLocationGate } from '../auth/useLocationGate';
-import { getStored, loadAccount } from '../activity/store';
+import { getStored, openAccount } from '../activity/store';
 import { syncOutbox } from '../activity/tracking';
 import { ploggingEntry } from './entry';
 import { StartSheet } from './StartSheet';
@@ -47,15 +47,10 @@ export function PloggingLauncher({ children }: { children: ReactNode }) {
   const requireLocation = useLocationGate();
 
   useEffect(() => {
-    api
-      .get('GET /users/me')
-      .then((me) => {
-        loadAccount(me.data.id);
-        // 지난 실행에서 못 보낸 줍기·종료가 있으면 앱을 켤 때 이어서 보낸다
-        void syncOutbox();
-        setShareDefault(me.data.settings.shareLocationDefault);
-      })
-      .catch(() => {});
+    const me = api.get('GET /users/me');
+    me.then((r) => setShareDefault(r.data.settings.shareLocationDefault)).catch(() => {});
+    // 지난 실행에서 못 보낸 줍기·종료가 있으면 앱을 켤 때 이어서 보낸다
+    void openAccount(() => me.then((r) => r.data.id)).then(() => syncOutbox());
   }, []);
 
   const start = useCallback(() => requireLocation(() => setOpen(true)), [requireLocation]);

@@ -6,6 +6,7 @@ import {
   itemsFromCounts,
   parseQuantity,
   summaryMeta,
+  summaryMetaSpoken,
   summaryDuration,
   totalOf,
   undoPickup,
@@ -101,5 +102,13 @@ describe('요약 활동 시간', () => {
     expect(summaryDuration(59)).toBe('1분 미만');
     expect(summaryDuration(2520)).toBe('42분');
     expect(summaryDuration(4320)).toBe('1시간 12분');
+  });
+});
+
+describe('요약 메타 읽기', () => {
+  test('기호 없이 문장으로 — "9월 7일 월요일 9시 2분부터 9시 48분까지, 일시정지 4분, 4,100걸음"', () => {
+    const at = { startedAt: '2026-09-07T00:02:00Z', endedAt: '2026-09-07T00:48:00Z' };
+    expect(summaryMetaSpoken({ ...at, pausedSec: 240, steps: 4100 })).toBe('9월 7일 월요일 9시 2분부터 9시 48분까지, 일시정지 4분, 4,100걸음');
+    expect(summaryMetaSpoken({ ...at, pausedSec: 0, steps: null })).toBe('9월 7일 월요일 9시 2분부터 9시 48분까지');
   });
 });

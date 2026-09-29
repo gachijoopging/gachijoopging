@@ -125,7 +125,7 @@ export default function ReviewReportScreen() {
         />
       ) : (
         <>
-          <Txt variant="section" accessibilityRole="header">{`불러온 대기 신고 ${reports.length}건`}</Txt>
+          <Txt variant="section" bold accessibilityRole="header">{`처리할 신고 ${reports.length}건`}</Txt>
           {failed ? <Banner tone="warn">인터넷 연결을 확인해 주세요.</Banner> : null}
           {reports.map((r) => (
             <ReportRow
@@ -141,17 +141,20 @@ export default function ReviewReportScreen() {
         </>
       )}
 
-      <Dialog visible={confirm != null} onClose={() => setConfirm(null)} title={confirm ? CONFIRM[confirm.action].title(confirm.report) : ''}>
+      <Dialog visible={confirm != null} onClose={() => setConfirm(null)} title={confirm ? CONFIRM[confirm.action].title(confirm.report) : ''}
+        actions={
+          <>
+            <Button label="취소" variant="ghost" size="md" onPress={() => setConfirm(null)} />
+            <Button
+              label={confirm ? CONFIRM[confirm.action].label : ''}
+              variant={confirm?.action === 'DISMISS' ? 'primary' : 'danger'}
+              size="md"
+              onPress={act}
+            />
+          </>
+        }
+      >
         <Txt variant="body">{confirm ? CONFIRM[confirm.action].body : ''}</Txt>
-        <View style={{ flexDirection: 'row', gap: space.sm, justifyContent: 'flex-end' }}>
-          <Button label="취소" variant="ghost" size="md" onPress={() => setConfirm(null)} />
-          <Button
-            label={confirm ? CONFIRM[confirm.action].label : ''}
-            variant={confirm?.action === 'DISMISS' ? 'primary' : 'danger'}
-            size="md"
-            onPress={act}
-          />
-        </View>
       </Dialog>
 
       <Snackbar visible={snackbar != null} message={snackbar ?? ''} onDismiss={() => setSnackbar(null)} />
@@ -208,7 +211,7 @@ function ReportRow({
         <View accessible style={{ gap: space.sm }}>
           <Txt variant="label" tone="muted">신고 내용</Txt>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
-            <Avatar name={report.reporter.nickname} uri={report.reporter.photoUrl ?? undefined} size="sm" />
+            <Avatar name={report.reporter.nickname} uri={report.reporter.photoUrl ?? undefined} size="sm" decorative />
             <Txt variant="caption">{`신고자 ${report.reporter.nickname}`}</Txt>
           </View>
           <Txt variant="caption" tone={report.memo ? 'ink' : 'muted'}>{report.memo ?? '상세 메모 없음'}</Txt>
@@ -220,6 +223,7 @@ function ReportRow({
           <Button
             label={ACTION_LABEL[dismiss].label}
             variant="ghost"
+            fullWidth
             style={{ flex: 1 }}
             disabled={busy || locked}
             accessibilityLabel={ACTION_LABEL[dismiss].a11y}
@@ -227,6 +231,9 @@ function ReportRow({
           />
           <Button
             label={ACTION_LABEL[resolve].label}
+            // 대상 삭제·추방은 되돌릴 수 없다. 권장 행동처럼 보이지 않게 위험 색
+            variant="danger"
+            fullWidth
             style={{ flex: 1 }}
             loading={busy}
             disabled={busy || locked}

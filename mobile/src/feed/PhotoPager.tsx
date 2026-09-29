@@ -4,7 +4,7 @@ import { Chip, Icon, IconButton, radius, screen, size, space, useTheme } from 'd
 
 /** 원본 비율을 지키되 너무 납작하거나 길어지지 않게 막는 범위 (5-2 배치) */
 const MIN_H = 220;
-const MAX_H = 520;
+const MAX_H = size.photoMaxHeight;
 
 type Photo = { url: string; thumbUrl: string };
 
@@ -27,15 +27,16 @@ export function PhotoPager({
   const list = useRef<FlatList<Photo>>(null);
   const total = photos.length;
 
+  // 첫 사진으로 한 번만 정한다. 넘길 때마다 바꾸면 카드가 튀고 아래 본문이 밀린다 — 다른 비율은 contain 이 흡수
+  const first = photos[0]?.url;
   useEffect(() => {
-    const photo = photos[index];
-    if (!photo) return;
+    if (!first) return;
     Image.getSize(
-      photo.url,
+      first,
       (w, h) => setHeight(Math.min(MAX_H, Math.max(MIN_H, (width * h) / w))),
       () => {},
     );
-  }, [photos, index, width]);
+  }, [first, width]);
 
   const go = (next: number) => {
     const i = Math.max(0, Math.min(total - 1, next));

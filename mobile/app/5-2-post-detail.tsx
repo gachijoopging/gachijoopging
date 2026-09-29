@@ -13,24 +13,21 @@ import {
   EmptyState,
   ErrorState,
   Field,
-  Icon,
   IconButton,
   Loading,
   Screen,
   Snackbar,
   Txt,
   pressedOpacity,
-  radius,
   size,
   space,
   useRipple,
-  useTheme,
 } from 'design-system/src';
 import { ApiError, createMockClient, type ApiClient } from '../src/api/client';
 import { clearDraft, draftFor, editDraft, requestIdFor } from '../src/crew/comment-draft';
 import { COMMENT_MAX, canSendComment } from '../src/crew/notice';
 import { PhotoPager } from '../src/feed/PhotoPager';
-import { authorLink, manageAction, photoLabel, toggleLike, type Comment, type Post, type UserBrief } from '../src/feed/feed';
+import { authorLink, displayName, manageAction, photoLabel, syncLike, toggleLike, type Comment, type LikeSync, type Post, type UserBrief } from '../src/feed/feed';
 import { leaveForMembership } from '../src/feed/leave';
 import { relativeTime } from '../src/notifications/notifications';
 import { useFlash } from '../src/ui/useFlash';
@@ -50,7 +47,7 @@ export default function PostDetailScreen() {
   const [failed, setFailed] = useState(false);
   const [gone, setGone] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [liking, setLiking] = useState(false);
+  const liking = useRef<LikeSync | null>(null);
   const [text, setText] = useState(() => draftFor(draftKey).text);
   const [pending, setPending] = useState<Pending | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -103,21 +100,27 @@ export default function PostDetailScreen() {
   };
 
   const like = async () => {
-    if (!post || liking) return;
-    setLiking(true);
+    if (!post) return;
+    // 연타해도 요청은 마지막 상태 하나로 모인다. 보내는 동안의 탭은 원하는 값만 바꾼다
+    const running = liking.current;
+    const st = running ?? { server: post.liked, wanted: post.liked };
+    st.wanted = !st.wanted;
     setPost((p) => p && toggleLike(p));
+    if (running) return;
+    liking.current = st;
     try {
-      await api.mutate(post.liked ? 'DELETE /posts/{postId}/like' : 'PUT /posts/{postId}/like', { postId: id });
+      await syncLike(st, (key) => api.mutate(key, { postId: id }));
     } catch (e) {
       if (e instanceof ApiError && e.code === 'NOT_FOUND') markGone();
       else {
-        setPost((p) => p && toggleLike(p));
+        setPost((p) => p && (p.liked === st.server ? p : toggleLike(p)));
         setSnackbar('좋아요를 반영하지 못했어요');
       }
     } finally {
-      setLiking(false);
+      liking.current = null;
     }
   };
+
 
   const changeText = (value: string) => {
     setText(value);
@@ -198,9 +201,9 @@ export default function PostDetailScreen() {
         />
       ) : !post ? (
         failed ? (
-          <ErrorState title="불러오지 못했어요" description="연결 상태를 확인하고 다시 시도해 주세요." onRetry={() => load('first')} />
+          <ErrorState title="게시물을 불러오지 못했어요" description="연결 상태를 확인하고 다시 시도해 주세요." onRetry={() => load('first')} />
         ) : (
-          <Loading label="불러오는 중" />
+          <Loading label="게시물을 불러오고 있어요" />
         )
       ) : (
         <>
@@ -219,7 +222,7 @@ export default function PostDetailScreen() {
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
                     <AuthorFace author={post.author} size="md" />
                     <View style={{ flexShrink: 1 }}>
-                      <Txt variant="body" bold numberOfLines={1}>{post.author.nickname}</Txt>
+                      <Txt variant="body" bold numberOfLines={1}>{displayName(post.author)}</Txt>
                       <Txt variant="caption" tone="muted">{meta}</Txt>
                     </View>
                   </View>
@@ -227,7 +230,7 @@ export default function PostDetailScreen() {
                 <View style={{ flex: 1 }} />
                 {/* 권한 판별(GET /users/me)이 없으면 시트 내용을 정할 수 없어 흐리게 둔다 */}
                 {post.author.withdrawn && !me?.isLeader && me ? null : (
-                  <IconButton icon="dots-vertical" label="더보기" tone="tint" disabled={!postAction} onPress={() => setMenuOpen(true)} />
+                  <IconButton icon="dots-horizontal" label="더보기" tone="tint" disabled={!postAction} onPress={() => setMenuOpen(true)} />
                 )}
               </View>
 
@@ -239,7 +242,6 @@ export default function PostDetailScreen() {
                   label={`좋아요 ${post.likeCount}`}
                   icon={post.liked ? 'heart' : 'heart-outline'}
                   selected={post.liked}
-                  disabled={liking}
                   accessibilityLabel={`좋아요 ${post.likeCount}, ${post.liked ? '선택됨' : '선택 안 됨'}`}
                   onPress={like}
                 />
@@ -385,32 +387,34 @@ export default function PostDetailScreen() {
           setCommentTarget(null);
         }}
         title={confirm === 'comment' ? '댓글을 삭제할까요?' : '게시물을 삭제할까요?'}
+        actions={
+          <>
+            <Button
+              label="취소"
+              variant="ghost"
+              size="md"
+              disabled={deleting}
+              onPress={() => {
+                setConfirm(null);
+                setCommentTarget(null);
+              }}
+            />
+            <Button
+              label="삭제"
+              variant="danger"
+              size="md"
+              loading={deleting}
+              disabled={deleting}
+              onPress={confirm === 'comment' ? deleteComment : deletePost}
+            />
+          </>
+        }
       >
         {confirm === 'post' ? (
           <Txt variant="body">
             {mine ? '피드에서 바로 사라지고, 알림으로 들어와도 삭제된 게시물로 보여요.' : '피드에서 바로 사라지고 작성자에게 삭제 알림이 가요.'}
           </Txt>
         ) : null}
-        <View style={{ flexDirection: 'row', gap: space.sm, justifyContent: 'flex-end' }}>
-          <Button
-            label="취소"
-            variant="ghost"
-            size="md"
-            disabled={deleting}
-            onPress={() => {
-              setConfirm(null);
-              setCommentTarget(null);
-            }}
-          />
-          <Button
-            label="삭제"
-            variant="danger"
-            size="md"
-            loading={deleting}
-            disabled={deleting}
-            onPress={confirm === 'comment' ? deleteComment : deletePost}
-          />
-        </View>
       </Dialog>
 
       <Snackbar visible={snackbar != null} message={snackbar ?? ''} onDismiss={() => setSnackbar(null)} />
@@ -418,20 +422,14 @@ export default function PostDetailScreen() {
   );
 }
 
+/** 옆 이름·부모 라벨이 이미 누구인지 읽으므로 얼굴은 장식이다 */
 function AuthorFace({ author, size: s }: { author: UserBrief; size: 'sm' | 'md' }) {
-  const { colors } = useTheme();
-  if (!author.withdrawn) return <Avatar name={author.nickname} uri={author.photoUrl ?? undefined} size={s} />;
-  const d = s === 'sm' ? size.avatarSm : size.avatarMd;
-  return (
-    <View style={{ width: d, height: d, borderRadius: radius.pill, backgroundColor: colors.neutral, alignItems: 'center', justifyContent: 'center' }}>
-      <Icon name="account-outline" size={d * 0.6} color={colors.inkMuted} />
-    </View>
-  );
+  return <Avatar name={author.nickname} uri={author.photoUrl ?? undefined} size={s} withdrawn={author.withdrawn} decorative />;
 }
 
 function AuthorButton({ author, mine, onPress, children }: { author: UserBrief; mine: boolean; onPress: () => void; children: ReactNode }) {
   const ripple = useRipple();
-  const label = author.withdrawn ? author.nickname : mine ? `${author.nickname}(나)` : `${author.nickname}, 프로필 보기`;
+  const label = author.withdrawn ? displayName(author) : mine ? `${author.nickname}(나)` : `${author.nickname}, 프로필 보기`;
   if (author.withdrawn || mine) {
     return (
       <View accessible accessibilityLabel={label} style={{ minHeight: size.minTouch, justifyContent: 'center', flexShrink: 1 }}>
@@ -469,7 +467,7 @@ function CommentRow({
   const when = sending ? '전송 중' : relativeTime(comment.createdAt);
   return (
     <Pressable
-      accessibilityLabel={`${comment.author.nickname}, ${when}, ${comment.text}`}
+      accessibilityLabel={`${displayName(comment.author)}, ${when}, ${comment.text}`}
       accessibilityHint={onLongPress ? '관리하려면 길게 누르기' : undefined}
       onLongPress={onLongPress}
       disabled={sending || !onLongPress}
@@ -481,7 +479,7 @@ function CommentRow({
       </AuthorButton>
       <View style={{ flex: 1, gap: space.xs }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.xs }}>
-          <Txt variant="caption" bold>{comment.author.nickname}</Txt>
+          <Txt variant="caption" bold>{displayName(comment.author)}</Txt>
           <Txt variant={sending ? 'micro' : 'caption'} tone={sending ? 'faint' : 'muted'}>{`· ${when}`}</Txt>
         </View>
         <Txt variant="body">{comment.text}</Txt>
