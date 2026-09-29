@@ -139,11 +139,11 @@ export function MyProfile({ recordsOnly = false }: { recordsOnly?: boolean }) {
   return (
     <Screen>
       {recordsOnly ? (
-        <AppHeader title="내 활동 기록" onBack={() => (router.canGoBack() ? router.back() : router.replace('/1-6-create-or-join-crew'))} />
+        <AppHeader title="내 활동 기록" onBack={() => (router.canGoBack() ? router.back() : router.replace('/crew-choice'))} />
       ) : (
         <AppHeader
           title="내 정보"
-          action={<IconButton icon="cog-outline" label="설정" onPress={() => router.push('/5-7-settings')} />}
+          action={<IconButton icon="cog-outline" label="설정" onPress={() => router.push('/settings')} />}
         />
       )}
       {offline ? <Banner tone="warn">인터넷 연결을 확인해 주세요.</Banner> : null}
@@ -170,7 +170,7 @@ export function MyProfile({ recordsOnly = false }: { recordsOnly?: boolean }) {
                 accessibilityRole="button"
                 accessibilityLabel="프로필 사진, 프로필 수정으로 이동"
                 android_ripple={ripple}
-                onPress={() => router.push('/5-8-edit-profile')}
+                onPress={() => router.push('/settings/profile')}
                 style={({ pressed }) => ({ borderRadius: radius.pill, overflow: 'hidden', opacity: pressedOpacity(pressed) })}
               >
                 <Avatar name={me.nickname} uri={me.photoUrl ?? undefined} size="lg" decorative />
@@ -199,10 +199,10 @@ export function MyProfile({ recordsOnly = false }: { recordsOnly?: boolean }) {
                   icon="chevron-right"
                   iconEnd
                   accessibilityLabel={`${me.crew.name}, 크루 정보 보기`}
-                  onPress={() => router.push('/3-2-crew-info')}
+                  onPress={() => router.push('/crew/info')}
                 />
               ) : <View />}
-              <Button label="프로필 수정" size="sm" onPress={() => router.push('/5-8-edit-profile')} />
+              <Button label="프로필 수정" size="sm" onPress={() => router.push('/settings/profile')} />
             </View>
           </View>
         )}
@@ -217,7 +217,7 @@ export function MyProfile({ recordsOnly = false }: { recordsOnly?: boolean }) {
         {tab === 'records' ? (
           <RecordsList
             list={records}
-            onOpen={(id) => router.push({ pathname: '/5-3-activity-detail', params: { id } })}
+            onOpen={(id) => router.push({ pathname: '/records/[id]', params: { id } })}
             onMenu={setMenuFor}
             onStart={recordsOnly ? undefined : () => router.push('/(tabs)/plogging')}
           />
@@ -231,7 +231,7 @@ export function MyProfile({ recordsOnly = false }: { recordsOnly?: boolean }) {
           />
         ) : (
           <>
-            <PostGrid posts={posts.items} onOpen={(id) => router.push({ pathname: '/5-2-post-detail', params: { id } })} />
+            <PostGrid posts={posts.items} onOpen={(id) => router.push({ pathname: '/posts/[id]', params: { id } })} />
             {posts.loadingMore ? <Loading label="게시물을 불러오고 있어요" /> : null}
           </>
         )}

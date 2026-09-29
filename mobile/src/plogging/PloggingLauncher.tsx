@@ -32,7 +32,7 @@ export function usePloggingLauncher(): Launcher {
 }
 
 const resume = (id: string, params: { flash?: string; startedAt?: string; shared?: string } = {}) =>
-  router.push({ pathname: '/4-3-activity-in-progress', params: { id, ...params } });
+  router.push({ pathname: '/activity/[id]', params: { id, ...params } });
 
 /** 시작 시트는 어느 탭 위에서든 뜨므로 탭 레이아웃이 한 벌만 가진다. */
 export function PloggingLauncher({ children }: { children: ReactNode }) {
@@ -121,7 +121,7 @@ export function PloggingLauncher({ children }: { children: ReactNode }) {
           visible={noCrew}
           message="크루에 소속돼야 활동을 시작할 수 있어요"
           actionLabel="크루 찾기"
-          onAction={() => { setNoCrew(false); router.replace('/1-6-create-or-join-crew'); }}
+          onAction={() => { setNoCrew(false); router.replace('/crew-choice'); }}
           onDismiss={() => setNoCrew(false)}
         />
         <Snackbar

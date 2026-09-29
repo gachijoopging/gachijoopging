@@ -63,7 +63,8 @@ export function MetricSplit({ items, divider = 'none', accessibilityLabel }: Met
             <Txt variant="metric" bold tone={it.muted ? 'muted' : 'ink'} numberOfLines={1} adjustsFontSizeToFit>
               {it.value}
             </Txt>
-            <Txt variant="caption" tone="muted">
+            {/* 4칸에서 "활동 시간" 이 두 줄로 접히면 칸 높이가 어긋난다. 한 줄로 줄여 맞춘다 */}
+            <Txt variant="caption" tone="muted" numberOfLines={1} adjustsFontSizeToFit>
               {it.label}
             </Txt>
           </View>

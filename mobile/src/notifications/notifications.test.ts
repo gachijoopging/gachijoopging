@@ -34,23 +34,23 @@ describe('알림을 누르면 가는 곳', () => {
   const item = (type: string, targetType: string, id: string | null = 'x1') => ({ type, target: { type: targetType, id } });
 
   test.each([
-    ['JOIN_REQUEST', 'JOIN_REQUESTS', { pathname: '/3-8-manage-join-requests' }],
-    ['REPORT', 'REPORTS', { pathname: '/6-2-review-report', params: { id: 'x1' } }],
-    ['NOTICE', 'NOTICE', { pathname: '/3-6-notice-detail', params: { id: 'x1' } }],
-    ['COMMENT', 'POST', { pathname: '/5-2-post-detail', params: { id: 'x1' } }],
-    ['CHAT', 'CHAT', { pathname: '/3-7-crew-chat' }],
-    ['ACTIVITY_STARTED', 'LIVE', { pathname: '/2-2-active-crew-members' }],
+    ['JOIN_REQUEST', 'JOIN_REQUESTS', { pathname: '/crew/join-requests' }],
+    ['REPORT', 'REPORTS', { pathname: '/crew/reports', params: { id: 'x1' } }],
+    ['NOTICE', 'NOTICE', { pathname: '/crew/notices/[id]', params: { id: 'x1' } }],
+    ['COMMENT', 'POST', { pathname: '/posts/[id]', params: { id: 'x1' } }],
+    ['CHAT', 'CHAT', { pathname: '/crew/chat' }],
+    ['ACTIVITY_STARTED', 'LIVE', { pathname: '/crew/live' }],
   ])('%s 는 대상 화면으로 간다', (type, targetType, expected) => {
     expect(notificationDestination(item(type, targetType), 'MEMBER')).toEqual(expected);
   });
 
   test('가입 승인은 크루원이면 홈, 아니면 크루 선택으로 간다', () => {
     expect(notificationDestination(item('JOIN_APPROVED', 'CREW'), 'MEMBER')).toEqual({ pathname: '/(tabs)' });
-    expect(notificationDestination(item('JOIN_APPROVED', 'CREW'), 'NONE')).toEqual({ pathname: '/1-6-create-or-join-crew' });
+    expect(notificationDestination(item('JOIN_APPROVED', 'CREW'), 'NONE')).toEqual({ pathname: '/crew-choice' });
   });
 
   test('가입 거절은 비소속이면 거절 안내, 이미 가입했으면 홈으로 간다', () => {
-    expect(notificationDestination(item('JOIN_REJECTED', 'CREW'), 'NONE')).toEqual({ pathname: '/1-9-pending-approval' });
+    expect(notificationDestination(item('JOIN_REJECTED', 'CREW'), 'NONE')).toEqual({ pathname: '/pending-approval' });
     expect(notificationDestination(item('JOIN_REJECTED', 'CREW'), 'MEMBER')).toEqual({ pathname: '/(tabs)' });
   });
 

@@ -147,12 +147,12 @@ export default function FeedScreen() {
 
 
   const openAuthor = (post: Post) =>
-    post.author.id === meId ? router.push('/(tabs)/profile') : router.push({ pathname: '/5-4-user-profile', params: { id: post.author.id } });
+    post.author.id === meId ? router.push('/(tabs)/profile') : router.push({ pathname: '/users/[id]', params: { id: post.author.id } });
 
   const openPost = (post: Post, focusComment?: boolean) =>
-    router.push({ pathname: '/5-2-post-detail', params: { id: post.id, ...(focusComment ? { focus: 'comment' } : {}) } });
+    router.push({ pathname: '/posts/[id]', params: { id: post.id, ...(focusComment ? { focus: 'comment' } : {}) } });
 
-  const write = () => router.push('/5-6-create-post');
+  const write = () => router.push('/posts/new');
   const empty = emptyCopy(scope, before != null);
   const pill = before ? beforeLabel(before, today) : null;
 

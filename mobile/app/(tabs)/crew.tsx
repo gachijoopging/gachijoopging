@@ -86,7 +86,7 @@ export default function CrewScreen() {
           <IconButton
             icon="bell-outline"
             label={unread > 0 ? `알림, 안 읽음 ${unread}개` : '알림'}
-            onPress={() => router.push('/2-3-notifications')}
+            onPress={() => router.push('/notifications')}
           />
           {unread > 0 ? (
             <View style={{ position: 'absolute', top: space.sm, right: space.sm }} pointerEvents="none">
@@ -99,7 +99,7 @@ export default function CrewScreen() {
       {crew ? (
         <>
           <Card
-            onPress={() => router.push('/3-2-crew-info')}
+            onPress={() => router.push('/crew/info')}
             accessibilityLabel={`${crew.name}, 크루원 ${crew.memberCount}명, 14일 목표 ${crew.goalCount}개, 크루 정보 보기`}
           >
             {/* 누르는 Card 는 style 을 바깥 틀에만 주므로 배치는 안쪽 View 에서 한다 */}
@@ -132,13 +132,13 @@ export default function CrewScreen() {
                   divider={false}
                   chevron={false}
                   accessibilityLabel={`최신 공지, ${crew.pinnedNotice.title}`}
-                  onPress={() => router.push({ pathname: '/3-6-notice-detail', params: { id: crew.pinnedNotice!.id } })}
+                  onPress={() => router.push({ pathname: '/crew/notices/[id]', params: { id: crew.pinnedNotice!.id } })}
                 />
               </View>
-              <LinkText label="전체 ›" tone="muted" accessibilityLabel="공지 전체 보기" onPress={() => router.push('/3-5-notices')} />
+              <LinkText label="전체 ›" tone="muted" accessibilityLabel="공지 전체 보기" onPress={() => router.push('/crew/notices')} />
             </View>
           ) : (
-            <ListRow icon="bullhorn-outline" title="공지" divider={false} chevron onPress={() => router.push('/3-5-notices')} />
+            <ListRow icon="bullhorn-outline" title="공지" divider={false} chevron onPress={() => router.push('/crew/notices')} />
           )}
           <View style={{ height: borderWidth.hairline, backgroundColor: colors.border }} />
           <ListRow
@@ -148,7 +148,7 @@ export default function CrewScreen() {
             chevron
             right={crew.unreadChat > 0 ? <Dot /> : undefined}
             accessibilityLabel={crew.unreadChat > 0 ? `크루 채팅, 안 읽은 메시지 ${crew.unreadChat}개` : '크루 채팅'}
-            onPress={() => router.push('/3-7-crew-chat')}
+            onPress={() => router.push('/crew/chat')}
           />
           </Card>
 

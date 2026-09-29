@@ -1,3 +1,4 @@
+import type { Href } from 'expo-router';
 import type { MembershipStatus } from '../auth/destination';
 
 const MINUTE = 60_000;
@@ -18,7 +19,8 @@ export function relativeTime(createdAt: string, now: Date = new Date()): string 
 }
 
 type Target = { type: string; id: string | null };
-export type NotificationDestination = { pathname: string; params?: { id: string } };
+/** 알림을 누르면 갈 곳. 라우트 파일과 어긋나면 typed routes 가 컴파일에서 잡는다 */
+export type NotificationDestination = Href;
 
 /** null 이면 이동하지 않고 알림 목록에 남는다 */
 export function notificationDestination(
@@ -26,23 +28,22 @@ export function notificationDestination(
   membership: MembershipStatus,
 ): NotificationDestination | null {
   const { type, id } = item.target;
-  const withId = (pathname: string) => (id ? { pathname, params: { id } } : null);
   switch (type) {
     case 'JOIN_REQUESTS':
-      return { pathname: '/3-8-manage-join-requests' };
+      return { pathname: '/crew/join-requests' };
     case 'REPORTS':
-      return withId('/6-2-review-report');
+      return id ? { pathname: '/crew/reports', params: { id } } : null;
     case 'NOTICE':
-      return withId('/3-6-notice-detail');
+      return id ? { pathname: '/crew/notices/[id]', params: { id } } : null;
     case 'POST':
-      return withId('/5-2-post-detail');
+      return id ? { pathname: '/posts/[id]', params: { id } } : null;
     case 'CHAT':
-      return { pathname: '/3-7-crew-chat' };
+      return { pathname: '/crew/chat' };
     case 'LIVE':
-      return { pathname: '/2-2-active-crew-members' };
+      return { pathname: '/crew/live' };
     case 'CREW':
       if (membership === 'MEMBER') return { pathname: '/(tabs)' };
-      return { pathname: item.type === 'JOIN_REJECTED' ? '/1-9-pending-approval' : '/1-6-create-or-join-crew' };
+      return { pathname: item.type === 'JOIN_REJECTED' ? '/pending-approval' : '/crew-choice' };
     default:
       return null;
   }

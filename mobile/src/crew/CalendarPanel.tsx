@@ -99,7 +99,7 @@ export function CalendarPanel({ refreshKey }: { refreshKey: number }) {
   const day: Day | undefined = calendar?.days.find((d) => d.date === selected);
 
   const openUser = (id: string) =>
-    id === meId ? router.push('/(tabs)/profile') : router.push({ pathname: '/5-4-user-profile', params: { id } });
+    id === meId ? router.push('/(tabs)/profile') : router.push({ pathname: '/users/[id]', params: { id } });
 
   return (
     <View style={{ gap: space.md }}>
@@ -160,7 +160,7 @@ export function CalendarPanel({ refreshKey }: { refreshKey: number }) {
                         <Avatar name={a.user.nickname} uri={a.user.photoUrl ?? undefined} size="sm" />
                       </Pressable>
                     }
-                    onPress={() => router.push({ pathname: '/5-3-activity-detail', params: { id: a.activityId } })}
+                    onPress={() => router.push({ pathname: '/records/[id]', params: { id: a.activityId } })}
                   />
                 ))
               )}

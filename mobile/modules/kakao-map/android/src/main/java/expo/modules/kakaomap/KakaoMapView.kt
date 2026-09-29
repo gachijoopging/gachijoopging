@@ -57,6 +57,17 @@ class KakaoMapView(context: Context, appContext: AppContext) : ExpoView(context,
   private val labels = mutableMapOf<String, Pair<Marker, Label>>()
 
   /** 키가 와야 SDK 를 초기화할 수 있고, 초기화 전에는 지도를 띄울 수 없다. */
+  // 창에서 빠지면 렌더 스레드를 멈추고, 다시 붙으면 잇는다. 안 하면 배경에서 GL 을 돌리고 복귀 때 검게 남는다
+  override fun onAttachedToWindow() {
+    super.onAttachedToWindow()
+    if (map != null) mapView.resume()
+  }
+
+  override fun onDetachedFromWindow() {
+    if (map != null) mapView.pause()
+    super.onDetachedFromWindow()
+  }
+
   fun setAppKey(appKey: String) {
     if (started || appKey.isBlank()) return
     started = true

@@ -35,7 +35,7 @@ export function tick(now: number) {
   if (!session || ended || now - lastLiveAt < LIVE_EVERY_MS) return;
   lastLiveAt = now;
   const { title, body } = trackingNotice(session, now);
-  updateTrackingNotification(TRACKING_TASK, title, body, `gachijoopging://4-3-activity-in-progress?id=${session.activityId}`);
+  updateTrackingNotification(TRACKING_TASK, title, body, `gachijoopging://activity/${session.activityId}`);
   const { activityId, ...live } = livePayload(session, now);
   // 위치 전송은 쌓아 두지 않는다 — 마지막 값만 의미가 있다
   api.mutate('POST /activities/{id}/live', { id: activityId, ...live }).catch(() => {});
