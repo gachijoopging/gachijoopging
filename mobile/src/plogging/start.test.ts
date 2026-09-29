@@ -58,9 +58,9 @@ describe('활동 시작', () => {
     mutate: post as never,
   });
 
-  test('201 이면 시작', async () => {
+  test('201 이면 시작 — 시계는 앱이 보낸 시작 시각과 공유 설정으로 연다', async () => {
     await expect(startActivity(client(async () => ({ data: { ...base, id: 'u1' } })), body))
-      .resolves.toEqual({ kind: 'started', id: 'u1' });
+      .resolves.toEqual({ kind: 'started', id: 'u1', startedAt: body.startedAt, locationShared: true });
   });
 
   test('네트워크 실패는 실패', async () => {

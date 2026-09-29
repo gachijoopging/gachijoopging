@@ -19,6 +19,7 @@ import {
 } from 'design-system/src';
 import { ApiError, createMockClient, type ApiClient } from '../src/api/client';
 import { accountGate, leaveConfirm, leaveFailure } from '../src/profile/profile';
+import { getStored } from '../src/activity/store';
 
 type Me = {
   hasPassword: boolean;
@@ -118,9 +119,11 @@ export default function SettingsScreen() {
         api.get('GET /activities/current'),
         action === 'logout' || !me.isLeader ? null : api.get('GET /crew'),
       ]);
-      // ponytail: 오프라인 줍기 큐(GAC-45)가 들어오면 그 대기 수를 여기 넣는다
-      const unsyncedCount = 0;
-      if (accountGate({ hasCurrentActivity: current != null, unsyncedCount }) === 'blocked') {
+      const local = getStored();
+      const unsyncedCount = local.outbox.length;
+      // 서버가 모르는 오프라인 진행 중 활동도 막는다 — 나가면 그 기록을 잃는다
+      const hasCurrentActivity = current != null || (local.session != null && !local.ended);
+      if (accountGate({ hasCurrentActivity, unsyncedCount }) === 'blocked') {
         setModal({ kind: 'blocked', action });
         return;
       }

@@ -29,10 +29,19 @@
       [
         "expo-font",
         {
-          "fonts": ["../design-system/assets/fonts"]
+          "fonts": [
+            "../design-system/assets/fonts"
+          ]
         }
       ],
       "expo-notifications",
+      [
+        "expo-location",
+        {
+          "isAndroidForegroundServiceEnabled": true,
+          "isAndroidBackgroundLocationEnabled": false
+        }
+      ],
       "expo-dev-client",
       "@react-native-vector-icons/material-design-icons",
       [
@@ -48,7 +57,7 @@
       [
         "expo-image-picker",
         {
-          "cameraPermission": "크루 대표 사진을 촬영하려면 카메라 권한이 필요해요.",
+          "cameraPermission": "쓰레기 촬영과 AI 분류, 크루 대표 사진 촬영에 카메라를 사용해요.",
           "microphonePermission": false
         }
       ]

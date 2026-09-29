@@ -40,8 +40,8 @@ export const MOCKS = {
       "photos": [
         {
           "id": "p1",
-          "url": "https://cdn…/a100/p1.jpg",
-          "thumbUrl": "https://cdn…/a100/p1_t.jpg",
+          "url": "https://cdn.example.com/a100/p1.jpg",
+          "thumbUrl": "https://cdn.example.com/a100/p1_t.jpg",
           "takenAt": "2026-09-05T09:10:00Z"
         }
       ],
@@ -375,7 +375,7 @@ export const MOCKS = {
           "durationSec": 2520,
           "distanceM": 3100,
           "itemCount": 27,
-          "thumbUrl": "https://cdn…/a100/p1_t.jpg"
+          "thumbUrl": "https://cdn.example.com/a100/p1_t.jpg"
         },
         {
           "id": "a099",
@@ -404,17 +404,33 @@ export const MOCKS = {
           "visibility": "CREW",
           "media": [
             {
-              "url": "https://cdn…/po77/1.jpg",
-              "thumbUrl": "https://cdn…/po77/1_t.jpg"
+              "url": "https://cdn.example.com/po77/1.jpg",
+              "thumbUrl": "https://cdn.example.com/po77/1_t.jpg"
             }
           ],
           "likeCount": 6,
           "liked": true,
           "commentCount": 2,
           "createdAt": "2026-09-06T11:00:00Z"
+        },
+        {
+          "id": "po78",
+          "author": {
+            "id": "6f1c…",
+            "nickname": "관열",
+            "photoUrl": null,
+            "withdrawn": false
+          },
+          "text": "다음 주엔 망원 쪽을 돌아볼 생각. 같이 갈 사람?",
+          "visibility": "PRIVATE",
+          "media": [],
+          "likeCount": 0,
+          "liked": false,
+          "commentCount": 0,
+          "createdAt": "2026-09-05T02:00:00Z"
         }
       ],
-      "nextCursor": "eyJ…"
+      "nextCursor": null
     }
   },
   "GET /crew/notices": {
@@ -455,17 +471,33 @@ export const MOCKS = {
           "visibility": "CREW",
           "media": [
             {
-              "url": "https://cdn…/po77/1.jpg",
-              "thumbUrl": "https://cdn…/po77/1_t.jpg"
+              "url": "https://cdn.example.com/po77/1.jpg",
+              "thumbUrl": "https://cdn.example.com/po77/1_t.jpg"
             }
           ],
           "likeCount": 6,
           "liked": true,
           "commentCount": 2,
           "createdAt": "2026-09-06T11:00:00Z"
+        },
+        {
+          "id": "po78",
+          "author": {
+            "id": "6f1c…",
+            "nickname": "관열",
+            "photoUrl": null,
+            "withdrawn": false
+          },
+          "text": "다음 주엔 망원 쪽을 돌아볼 생각. 같이 갈 사람?",
+          "visibility": "PRIVATE",
+          "media": [],
+          "likeCount": 0,
+          "liked": false,
+          "commentCount": 0,
+          "createdAt": "2026-09-05T02:00:00Z"
         }
       ],
-      "nextCursor": "eyJ…"
+      "nextCursor": null
     }
   },
   "GET /crew/stats": {
@@ -633,12 +665,63 @@ export const MOCKS = {
       "count": 1
     }
   },
+  "GET /posts/{postId}": {
+    "data": {
+      "id": "po77",
+      "author": {
+        "id": "8a2d…",
+        "nickname": "상혁",
+        "photoUrl": null,
+        "withdrawn": false
+      },
+      "text": "오늘 여의도 3km. 꽁초가 유난히 많았다",
+      "visibility": "CREW",
+      "media": [
+        {
+          "url": "https://cdn.example.com/po77/1.jpg",
+          "thumbUrl": "https://cdn.example.com/po77/1_t.jpg"
+        },
+        {
+          "url": "https://cdn.example.com/po77/2.jpg",
+          "thumbUrl": "https://cdn.example.com/po77/2_t.jpg"
+        }
+      ],
+      "likeCount": 6,
+      "liked": true,
+      "commentCount": 2,
+      "createdAt": "2026-09-06T11:00:00Z",
+      "comments": [
+        {
+          "id": "c1",
+          "author": {
+            "id": "9b3e…",
+            "nickname": "지수",
+            "photoUrl": null,
+            "withdrawn": false
+          },
+          "text": "오늘 많이 주우셨네요!",
+          "createdAt": "2026-09-06T12:00:00Z"
+        },
+        {
+          "id": "c2",
+          "author": {
+            "id": "0c4f…",
+            "nickname": "탈퇴한 크루원",
+            "photoUrl": null,
+            "withdrawn": true
+          },
+          "text": "다음엔 같이 가요",
+          "createdAt": "2026-09-06T13:00:00Z"
+        }
+      ]
+    }
+  },
   "GET /users/me": {
     "data": {
       "id": "6f1c…",
       "nickname": "관열",
       "intro": "한강 서쪽 담당",
-      "photoUrl": "https://cdn…/p/6f1c.jpg",
+      "photoUrl": "https://cdn.example.com/p/6f1c.jpg",
       "email": "kwan@example.com",
       "profileComplete": true,
       "hasPassword": true,
@@ -669,7 +752,7 @@ export const MOCKS = {
           "durationSec": 2520,
           "distanceM": 3100,
           "itemCount": 27,
-          "thumbUrl": "https://cdn…/a100/p1_t.jpg"
+          "thumbUrl": "https://cdn.example.com/a100/p1_t.jpg"
         },
         {
           "id": "a099",
@@ -709,6 +792,19 @@ export const MOCKS = {
         "2026-09-03",
         "2026-08-28"
       ]
+    }
+  },
+  "PATCH /activities/{id}/items/{itemId}": {
+    "data": {
+      "itemCount": 27,
+      "byCategory": {
+        "CIGARETTE": 14,
+        "PLASTIC": 6,
+        "CAN": 3,
+        "PAPER": 2,
+        "VINYL": 2
+      },
+      "items": []
     }
   },
   "PATCH /crew": {
@@ -774,6 +870,47 @@ export const MOCKS = {
       "locationShared": true,
       "itemCount": 0,
       "byCategory": {}
+    }
+  },
+  "POST /activities/{id}/end": {
+    "data": {
+      "id": "2b7e4c1a-9f3d-4e8b-a6c2-5d1f0e9b8a73",
+      "status": "ENDED",
+      "startedAt": "2026-09-29T09:00:00+09:00",
+      "endedAt": "2026-09-29T09:42:10+09:00",
+      "durationSec": 2530,
+      "pausedSec": 0,
+      "paused": false,
+      "pausedAt": null,
+      "distanceM": 2100,
+      "steps": null,
+      "locationShared": true,
+      "itemCount": 17,
+      "byCategory": {
+        "CIGARETTE": 9,
+        "PLASTIC": 5,
+        "CAN": 3
+      }
+    }
+  },
+  "POST /activities/{id}/items": {
+    "data": {
+      "itemCount": 3,
+      "byCategory": {
+        "CIGARETTE": 3
+      },
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000001",
+          "photoId": null,
+          "category": "CIGARETTE",
+          "quantity": 3,
+          "source": "MANUAL",
+          "aiConfidence": null,
+          "unclassified": false,
+          "bbox": null
+        }
+      ]
     }
   },
   "POST /auth/google": {
@@ -886,8 +1023,8 @@ export const MOCKS = {
     "data": {
       "mediaId": "m001",
       "photoId": "p1",
-      "url": "https://cdn…/a100/p1.jpg",
-      "thumbUrl": "https://cdn…/a100/p1_t.jpg",
+      "url": "https://cdn.example.com/a100/p1.jpg",
+      "thumbUrl": "https://cdn.example.com/a100/p1_t.jpg",
       "inference": {
         "status": "OK",
         "modelVersion": "yolo26s-1024-v1",
@@ -938,6 +1075,19 @@ export const MOCKS = {
       },
       "text": "저도 참여할게요.",
       "createdAt": "2026-09-01T12:00:00Z"
+    }
+  },
+  "POST /posts/{postId}/comments": {
+    "data": {
+      "id": "c3",
+      "author": {
+        "id": "6f1c…",
+        "nickname": "관열",
+        "photoUrl": null,
+        "withdrawn": false
+      },
+      "text": "저도 다음엔 갈게요",
+      "createdAt": "2026-09-06T14:00:00Z"
     }
   },
 } as const;

@@ -9,3 +9,15 @@ export const CATEGORY_LABEL: Record<Category, string> = {
   VINYL: '비닐',
   GENERAL: '일반',
 };
+
+export const CATEGORY_ICON = {
+  CIGARETTE: 'smoking',
+  CAN: 'cup',
+  PLASTIC: 'bottle-soda-outline',
+  PAPER: 'file-document-outline',
+  GLASS: 'bottle-wine-outline',
+  VINYL: 'shopping-outline',
+  GENERAL: 'trash-can-outline',
+} as const satisfies Record<Category, string>;
+
+export const CATEGORIES = Object.keys(CATEGORY_LABEL) as Category[];
