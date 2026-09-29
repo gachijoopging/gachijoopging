@@ -51,7 +51,10 @@ export { ListRow, SelectRow } from './components/ListRow.tsx';
 
 export { Progress } from './components/Progress.tsx';
 
-export { Loading, EmptyState, ErrorState, DashedBox } from './components/States.tsx';
+export { Loading, Spinner, EmptyState, ErrorState, DashedBox } from './components/States.tsx';
+
+export { Thumb } from './components/Thumb.tsx';
+export type { ThumbSize } from './components/Thumb.tsx';
 
 export { Screen, CONTENT_MAX_WIDTH } from './components/Screen.tsx';
 export type { ScreenProps } from './components/Screen.tsx';

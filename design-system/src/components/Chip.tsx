@@ -40,12 +40,14 @@ export type ChipProps = {
   iconEnd?: boolean;
   /** 글자만으로 누른 결과를 알 수 없을 때 (예: "한강줍깅크루, 크루 정보 보기") */
   accessibilityLabel?: string;
+  /** 하나만 고르는 칩 묶음이면 'radio'. 선택 상태는 checked 로 읽힙니다 */
+  accessibilityRole?: 'button' | 'radio';
 };
 
 const VISUAL_HEIGHT = 32;
 const SLOP = (sizes.minTouch - VISUAL_HEIGHT) / 2;
 
-function ChipBase({ label, tone = 'soft', icon, selected, onPress, disabled, iconEnd, accessibilityLabel }: ChipProps) {
+function ChipBase({ label, tone = 'soft', icon, selected, onPress, disabled, iconEnd, accessibilityLabel, accessibilityRole = 'button' }: ChipProps) {
   const { colors } = useTheme();
   const ripple = useRipple();
 
@@ -88,13 +90,20 @@ function ChipBase({ label, tone = 'soft', icon, selected, onPress, disabled, ico
     </>
   );
 
-  if (!onPress) return <View style={shell}>{body}</View>;
+  // 누를 수 없는 칩도 "캔 1" 처럼 글자만으로 뜻이 부족하면 라벨을 읽혀야 한다
+  if (!onPress) {
+    return (
+      <View style={shell} accessible={!!accessibilityLabel} accessibilityLabel={accessibilityLabel}>
+        {body}
+      </View>
+    );
+  }
 
   return (
     <Pressable
-      accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
-      accessibilityState={{ selected: !!selected, disabled: !!disabled }}
+      accessibilityRole={accessibilityRole}
+      accessibilityState={accessibilityRole === 'radio' ? { checked: !!selected, disabled: !!disabled } : { selected: !!selected, disabled: !!disabled }}
       onPress={onPress}
       disabled={disabled}
       hitSlop={{ top: SLOP, bottom: SLOP, left: space.xs, right: space.xs }}

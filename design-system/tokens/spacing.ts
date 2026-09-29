@@ -75,6 +75,22 @@ export const size = {
   /** 라디오 표시. 바깥 원과 안쪽 점 */
   radio: 20,
   radioDot: 10,
+  /** 카드 머리에서 이름 옆에 서는 아이콘 (label 옆) */
+  iconCard: 18,
+  /** 정사각 사진 썸네일. sm 은 목록 행·미리보기 카드, md 는 사진 고르기 줄 */
+  thumbSm: 40,
+  thumbMd: 64,
+  /** 세로로 긴 사진이 본문과 버튼을 밀어내지 않게 하는 상한 */
+  photoMaxHeight: 520,
+  /** 본문 안 지도 틀 (활동 요약·기록 상세·활동 중인 크루원) */
+  mapFrame: 248,
+  /** 촬영 프리뷰 틀. 큰 글자에서 먼저 줄어드는 자리라 하한만 둡니다 */
+  captureFrameMin: 280,
+  /** 촬영 틀 네 귀의 ㄱ자 가이드. 길이와 선 굵기 */
+  cornerGuide: 26,
+  cornerGuideStroke: 3,
+  /** 공유 이미지 경로 선 굵기 */
+  routeStroke: 4,
 } as const;
 
 /**
