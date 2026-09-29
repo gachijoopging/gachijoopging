@@ -4,12 +4,24 @@ import type { JoinRequestStatus } from '../auth/pending-request';
 
 type MeData = (typeof MOCKS)['GET /users/me']['data'];
 type JoinRequestData = (typeof MOCKS)['GET /crews/join-requests/mine']['data'];
+/** docs/openapi.yaml 의 Activity 중 4-1 이 쓰는 필드. 목 example 은 리터럴이라 그대로 쓰면 타입이 좁다 */
+export type Activity = {
+  id: string;
+  status: 'IN_PROGRESS' | 'ENDED';
+  startedAt: string;
+  pausedSec: number;
+  paused: boolean;
+  pausedAt: string | null;
+  distanceM: number;
+  itemCount: number;
+  locationShared: boolean;
+};
 export type ApiResponse<K extends MockKey> =
   K extends 'GET /users/me' ? { data: Omit<MeData, 'membership'> & {
     membership: { status: MembershipStatus; crew: MeData['membership']['crew'] | null };
   } } : K extends 'GET /crews/join-requests/mine' ? {
     data: (Omit<JoinRequestData, 'status'> & { status: JoinRequestStatus }) | null;
-  } : (typeof MOCKS)[K];
+  } : K extends 'GET /activities/current' ? { data: Activity | null } : (typeof MOCKS)[K];
 
 /** 목에 example 이 없는 204 전용 경로. 성공해도 돌려줄 데이터가 없다 */
 export type VoidMutationKey =

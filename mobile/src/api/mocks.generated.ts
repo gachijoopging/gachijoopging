@@ -74,6 +74,9 @@ export const MOCKS = {
       ]
     }
   },
+  "GET /activities/current": {
+    "data": null
+  },
   "GET /crew": {
     "data": {
       "id": "c001",
@@ -659,6 +662,23 @@ export const MOCKS = {
         "status": "NONE",
         "crew": null
       }
+    }
+  },
+  "POST /activities": {
+    "data": {
+      "id": "2b7e4c1a-9f3d-4e8b-a6c2-5d1f0e9b8a73",
+      "status": "IN_PROGRESS",
+      "startedAt": "2026-09-29T09:00:00+09:00",
+      "endedAt": null,
+      "durationSec": 0,
+      "pausedSec": 0,
+      "paused": false,
+      "pausedAt": null,
+      "distanceM": 0,
+      "steps": null,
+      "locationShared": true,
+      "itemCount": 0,
+      "byCategory": {}
     }
   },
   "POST /auth/google": {
