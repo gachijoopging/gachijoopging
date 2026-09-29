@@ -8,11 +8,15 @@ export type KakaoMapViewProps = {
   appKey: string;
   /** 지도 가운데. 바뀌면 카메라가 그 점으로 옮겨간다. 점을 찍으려면 markers 를 쓴다 */
   center?: LatLng;
-  /** 경로 선. 두 점 미만이면 그리지 않는다 */
-  path?: LatLng[];
+  /** 경로 선. 구간마다 따로 긋고 구간 사이는 잇지 않는다. 두 점 미만인 구간은 그리지 않는다 */
+  segments?: LatLng[][];
+  /** 내 위치 점과 오차 반경(m) 원. null 이면 지운다 */
+  myLocation?: (LatLng & { accuracy: number | null }) | null;
   markers?: MapMarker[];
   onMapReady?: () => void;
   onMapError?: (event: { nativeEvent: { message: string } }) => void;
   onMarkerPress?: (event: { nativeEvent: { id: string } }) => void;
+  /** 사용자가 손으로 지도를 옮기거나 확대했다. 코드가 옮긴 카메라에는 오지 않는다 */
+  onUserGesture?: () => void;
   style?: object;
 };

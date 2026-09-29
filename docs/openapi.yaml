@@ -194,7 +194,7 @@ paths:
                   id: 6f1c…
                   nickname: 관열
                   intro: 한강 서쪽 담당
-                  photoUrl: https://cdn…/p/6f1c.jpg
+                  photoUrl: https://cdn.example.com/p/6f1c.jpg
                   email: kwan@example.com
                   profileComplete: true
                   hasPassword: true
@@ -267,6 +267,12 @@ paths:
           content:
             application/json:
               schema: { type: object, properties: { data: { $ref: '#/components/schemas/MemberStats' } } }
+              example:
+                data:
+                  totalItems: 412
+                  totalDistanceM: 38400
+                  totalActivities: 12
+                  activeDays: [2026-09-05, 2026-09-03, 2026-08-28]
   /users/me/social:
     put:
       tags: [me]
@@ -312,6 +318,10 @@ paths:
                 type: object
                 properties:
                   data: { type: array, items: { $ref: '#/components/schemas/UserBrief' } }
+              example:
+                data:
+                  - { id: 3b7e…, nickname: 지수, photoUrl: null, withdrawn: false }
+                  - { id: 0d4a…, nickname: 탈퇴한 크루원, photoUrl: null, withdrawn: true }
   /users/{userId}/block:
     put:
       tags: [me]
@@ -528,6 +538,21 @@ paths:
           content:
             application/json:
               schema: { type: object, properties: { data: { $ref: '#/components/schemas/MemberProfile' } } }
+              example:
+                data:
+                  id: 8a2d…
+                  nickname: 상혁
+                  photoUrl: null
+                  withdrawn: false
+                  isLeader: false
+                  joinedAt: 2026-09-02T00:00:00Z
+                  following: true
+                  intro: 여의도 저녁 줍깅
+                  blocked: false
+                  totalItems: 380
+                  totalDistanceM: 31200
+                  totalActivities: 10
+                  activeDays: [2026-09-06, 2026-09-04, 2026-08-30]
     delete:
       tags: [members]
       summary: "[크루장] 추방"
@@ -698,6 +723,12 @@ paths:
           content:
             application/json:
               schema: { type: object, properties: { data: { $ref: '#/components/schemas/ActivitySummary' } } }
+              example:
+                data:
+                  itemCount: 3
+                  byCategory: { CIGARETTE: 3 }
+                  items:
+                    - { id: 00000000-0000-4000-8000-000000000001, photoId: null, category: CIGARETTE, quantity: 3, source: MANUAL, aiConfidence: null, unclassified: false, bbox: null }
   /activities/{id}/items/{itemId}:
     patch:
       tags: [activities]
@@ -723,6 +754,8 @@ paths:
           content:
             application/json:
               schema: { type: object, properties: { data: { $ref: '#/components/schemas/ActivitySummary' } } }
+              example:
+                data: { itemCount: 27, byCategory: { CIGARETTE: 14, PLASTIC: 6, CAN: 3, PAPER: 2, VINYL: 2 }, items: [] }
     delete:
       tags: [activities]
       summary: 줍기 삭제
@@ -784,6 +817,21 @@ paths:
           content:
             application/json:
               schema: { type: object, properties: { data: { $ref: '#/components/schemas/Activity' } } }
+              example:
+                data:
+                  id: 2b7e4c1a-9f3d-4e8b-a6c2-5d1f0e9b8a73
+                  status: ENDED
+                  startedAt: 2026-09-29T09:00:00+09:00
+                  endedAt: 2026-09-29T09:42:10+09:00
+                  durationSec: 2530
+                  pausedSec: 0
+                  paused: false
+                  pausedAt: null
+                  distanceM: 2100
+                  steps: null
+                  locationShared: true
+                  itemCount: 17
+                  byCategory: { CIGARETTE: 9, PLASTIC: 5, CAN: 3 }
   /activities/{id}:
     get:
       tags: [activities]
@@ -814,7 +862,7 @@ paths:
                   byCategory: { CIGARETTE: 14, PLASTIC: 6, CAN: 3, PAPER: 2, VINYL: 2 }
                   route: [[126.93, 37.52], [126.931, 37.521]]
                   photos:
-                    - { id: p1, url: https://cdn…/a100/p1.jpg, thumbUrl: https://cdn…/a100/p1_t.jpg, takenAt: 2026-09-05T09:10:00Z }
+                    - { id: p1, url: https://cdn.example.com/a100/p1.jpg, thumbUrl: https://cdn.example.com/a100/p1_t.jpg, takenAt: 2026-09-05T09:10:00Z }
                   items:
                     - { id: 00000000-0000-4000-8000-000000000001, photoId: p1, category: PLASTIC, quantity: 2, source: AI, aiConfidence: 0.91, unclassified: false, bbox: { x: 0.2, y: 0.3, w: 0.2, h: 0.25 } }
                     - { id: 00000000-0000-4000-8000-000000000002, photoId: null, category: CIGARETTE, quantity: 5, source: MANUAL, aiConfidence: null, unclassified: false, bbox: null }
@@ -873,8 +921,8 @@ paths:
                 data:
                   mediaId: m001
                   photoId: p1
-                  url: https://cdn…/a100/p1.jpg
-                  thumbUrl: https://cdn…/a100/p1_t.jpg
+                  url: https://cdn.example.com/a100/p1.jpg
+                  thumbUrl: https://cdn.example.com/a100/p1_t.jpg
                   inference:
                     status: OK
                     modelVersion: yolo26s-1024-v1
@@ -923,6 +971,17 @@ paths:
           content:
             application/json:
               schema: { type: object, properties: { data: { $ref: '#/components/schemas/Post' } } }
+              example:
+                data:
+                  id: 5d0e…
+                  author: { id: 6f1c…, nickname: 관열, photoUrl: null, withdrawn: false }
+                  text: 오늘도 한강 한 바퀴
+                  visibility: CREW
+                  media: []
+                  likeCount: 0
+                  liked: false
+                  commentCount: 0
+                  createdAt: 2026-09-06T12:00:00Z
   /posts/{postId}:
     get:
       tags: [posts]
@@ -942,6 +1001,22 @@ paths:
                       - type: object
                         properties:
                           comments: { type: array, items: { $ref: '#/components/schemas/Comment' } }
+              example:
+                data:
+                  id: po77
+                  author: { id: 8a2d…, nickname: 상혁, photoUrl: null, withdrawn: false }
+                  text: 오늘 여의도 3km. 꽁초가 유난히 많았다
+                  visibility: CREW
+                  media:
+                    - { url: https://cdn.example.com/po77/1.jpg, thumbUrl: https://cdn.example.com/po77/1_t.jpg }
+                    - { url: https://cdn.example.com/po77/2.jpg, thumbUrl: https://cdn.example.com/po77/2_t.jpg }
+                  likeCount: 6
+                  liked: true
+                  commentCount: 2
+                  createdAt: 2026-09-06T11:00:00Z
+                  comments:
+                    - { id: c1, author: { id: 9b3e…, nickname: 지수, photoUrl: null, withdrawn: false }, text: 오늘 많이 주우셨네요!, createdAt: 2026-09-06T12:00:00Z }
+                    - { id: c2, author: { id: 0c4f…, nickname: 탈퇴한 크루원, photoUrl: null, withdrawn: true }, text: 다음엔 같이 가요, createdAt: 2026-09-06T13:00:00Z }
     delete:
       tags: [posts]
       summary: 삭제 — 작성자 또는 크루장(Q39). 크루장이 지우면 작성자에게 POST_REMOVED 알림
@@ -970,6 +1045,8 @@ paths:
           content:
             application/json:
               schema: { type: object, properties: { data: { $ref: '#/components/schemas/Comment' } } }
+              example:
+                data: { id: c3, author: { id: 6f1c…, nickname: 관열, photoUrl: null, withdrawn: false }, text: 저도 다음엔 갈게요, createdAt: 2026-09-06T14:00:00Z }
   /comments/{commentId}:
     delete:
       tags: [posts]
@@ -1522,6 +1599,12 @@ components:
                 properties:
                   items: { type: array, items: { $ref: '#/components/schemas/ActivityCard' } }
                   nextCursor: { type: string, nullable: true }
+          example:
+            data:
+              items:
+                - { id: a100, startedAt: 2026-09-04T09:02:00Z, durationSec: 2520, distanceM: 3100, itemCount: 27, thumbUrl: https://cdn.example.com/a100/p1_t.jpg }
+                - { id: a099, startedAt: 2026-09-02T22:10:00Z, durationSec: 1080, distanceM: 1200, itemCount: 0, thumbUrl: null }
+              nextCursor: null
     PostPage:
       description: 게시물 목록
       content:
@@ -1541,12 +1624,21 @@ components:
                   author: { id: 8a2d…, nickname: 상혁, photoUrl: null, withdrawn: false }
                   text: 오늘 여의도 3km. 꽁초가 유난히 많았다
                   visibility: CREW
-                  media: [{ url: https://cdn…/po77/1.jpg, thumbUrl: https://cdn…/po77/1_t.jpg }]
+                  media: [{ url: https://cdn.example.com/po77/1.jpg, thumbUrl: https://cdn.example.com/po77/1_t.jpg }]
                   likeCount: 6
                   liked: true
                   commentCount: 2
                   createdAt: 2026-09-06T11:00:00Z
-              nextCursor: eyJ…
+                - id: po78
+                  author: { id: 6f1c…, nickname: 관열, photoUrl: null, withdrawn: false }
+                  text: 다음 주엔 망원 쪽을 돌아볼 생각. 같이 갈 사람?
+                  visibility: PRIVATE
+                  media: []
+                  likeCount: 0
+                  liked: false
+                  commentCount: 0
+                  createdAt: 2026-09-05T02:00:00Z
+              nextCursor: null
 
   schemas:
     Category:

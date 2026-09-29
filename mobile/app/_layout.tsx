@@ -1,3 +1,4 @@
+import '../src/activity/tracking';
 import { Stack } from 'expo-router';
 import { ThemeProvider } from 'design-system/src';
 

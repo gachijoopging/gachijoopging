@@ -22,7 +22,7 @@ export function activitySummaryLabel(activity: Activity, now: number): string {
 }
 
 export type StartResult =
-  | { kind: 'started'; id: string }
+  | { kind: 'started'; id: string; startedAt: string; locationShared: boolean }
   | { kind: 'resumed'; id: string }
   | { kind: 'noCrew' }
   | { kind: 'failed' };
@@ -38,7 +38,7 @@ export async function startActivity(
 ): Promise<StartResult> {
   try {
     const res = await api.mutate('POST /activities', body);
-    return { kind: 'started', id: res.data.id };
+    return { kind: 'started', id: res.data.id, startedAt: body.startedAt, locationShared: body.locationShared };
   } catch (e) {
     if (e instanceof ApiError && e.code === 'NO_CREW') return { kind: 'noCrew' };
     if (!(e instanceof ApiError && e.code === 'CONFLICT')) return { kind: 'failed' };

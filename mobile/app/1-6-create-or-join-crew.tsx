@@ -1,7 +1,8 @@
 import { useCallback, useRef, useState } from 'react';
 import { AppState, BackHandler, View } from 'react-native';
 import { router, useFocusEffect, useNavigation } from 'expo-router';
-import { AppHeader, Banner, Button, Card, Icon, Screen, Txt, space } from 'design-system/src';
+import { AppHeader, Banner, Button, Card, Icon, Screen, Snackbar, Txt, space } from 'design-system/src';
+import { useFlash } from '../src/ui/useFlash';
 import { onboardingApi as api } from '../src/api/onboarding';
 import { resolveDestination } from '../src/auth/destination';
 import { finishOnboarding, type OnboardingNavigation } from '../src/auth/navigation';
@@ -33,6 +34,7 @@ export default function CreateOrJoinCrewScreen() {
   const busy = useRef(false);
   const [checking, setChecking] = useState(false);
   const [error, setError] = useState(false);
+  const [flash, setFlash] = useFlash();
 
   const checkMembership = useCallback(async (next?: '/1-7-create-crew' | '/1-8-enter-invite-code') => {
     if (busy.current) return;
@@ -99,9 +101,10 @@ export default function CreateOrJoinCrewScreen() {
         variant="ghost"
         size="lg"
         fullWidth
-        disabled
         accessibilityLabel="내 활동 기록 보기, 이전 크루의 내 기록 포함"
+        onPress={() => router.push('/5-5-my-records')}
       />
+      <Snackbar visible={flash != null} message={flash ?? ''} onDismiss={() => setFlash(null)} />
     </Screen>
   );
 }

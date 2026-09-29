@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Image, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { Banner, Button, LinkText, Screen, Txt, radius, space, useTheme } from 'design-system/src';
+import { Banner, Button, LinkText, Screen, Snackbar, Txt, radius, space, useTheme } from 'design-system/src';
+import { useFlash } from '../src/ui/useFlash';
 import { onboardingApi as api } from '../src/api/onboarding';
 import { resolveDestination } from '../src/auth/destination';
 
@@ -19,6 +20,7 @@ export default function StartScreen() {
   const [loadingProvider, setLoadingProvider] = useState<Provider | null>(null);
   const [socialError, setSocialError] = useState(false);
   const busy = loadingProvider !== null;
+  const [flash, setFlash] = useFlash();
 
   async function handleSocial(provider: Provider) {
     setSocialError(false);
@@ -111,6 +113,7 @@ export default function StartScreen() {
             />
           </View>
         </View>
+        <Snackbar visible={flash != null} message={flash ?? ''} onDismiss={() => setFlash(null)} />
       </Screen>
     </View>
   );

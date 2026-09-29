@@ -5,6 +5,8 @@ import { File, Paths } from 'expo-file-system';
 import { Snackbar, size, space } from 'design-system/src';
 import { createMockClient, type ApiClient } from '../api/client';
 import { useLocationGate } from '../auth/useLocationGate';
+import { getStored, loadAccount } from '../activity/store';
+import { syncOutbox } from '../activity/tracking';
 import { ploggingEntry } from './entry';
 import { StartSheet } from './StartSheet';
 import type { StartResult } from './start';
@@ -29,12 +31,14 @@ export function usePloggingLauncher(): Launcher {
   return launcher;
 }
 
-const resume = (id: string, flash?: string) => router.push({ pathname: '/4-3-activity-in-progress', params: { id, flash } });
+const resume = (id: string, params: { flash?: string; startedAt?: string; shared?: string } = {}) =>
+  router.push({ pathname: '/4-3-activity-in-progress', params: { id, ...params } });
 
 /** 시작 시트는 어느 탭 위에서든 뜨므로 탭 레이아웃이 한 벌만 가진다. */
 export function PloggingLauncher({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
   const [noCrew, setNoCrew] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   // /users/me 를 못 받으면 공유를 끈 채로 연다 — 모르는 상태에서 위치를 먼저 내보내지 않는다
   const [shareDefault, setShareDefault] = useState(false);
   const busy = useRef(false);
@@ -43,7 +47,15 @@ export function PloggingLauncher({ children }: { children: ReactNode }) {
   const requireLocation = useLocationGate();
 
   useEffect(() => {
-    api.get('GET /users/me').then((me) => setShareDefault(me.data.settings.shareLocationDefault)).catch(() => {});
+    api
+      .get('GET /users/me')
+      .then((me) => {
+        loadAccount(me.data.id);
+        // 지난 실행에서 못 보낸 줍기·종료가 있으면 앱을 켤 때 이어서 보낸다
+        void syncOutbox();
+        setShareDefault(me.data.settings.shareLocationDefault);
+      })
+      .catch(() => {});
   }, []);
 
   const start = useCallback(() => requireLocation(() => setOpen(true)), [requireLocation]);
@@ -54,8 +66,14 @@ export function PloggingLauncher({ children }: { children: ReactNode }) {
     try {
       // 조회에 실패하면 없는 것으로 보고 시트를 연다. 실제로 진행 중이면 시작 요청이 409 로 그 활동을 찾아 준다
       const current = await api.get('GET /activities/current').then((r) => r.data).catch(() => null);
-      const entry = ploggingEntry({ onboarded: onboardedFlag.exists, current });
+      const { session, ended, outbox } = getStored();
+      const local = session ? { activityId: session.activityId, ended: !!ended, unsynced: outbox.length > 0 } : null;
+      const entry = ploggingEntry({ onboarded: onboardedFlag.exists, current, local });
       if (entry.kind === 'resume') resume(entry.id);
+      else if (entry.kind === 'syncing') {
+        setSyncing(true);
+        void syncOutbox();
+      }
       else if (entry.kind === 'onboarding') router.navigate('/(tabs)/plogging');
       else start();
     } finally {
@@ -74,7 +92,14 @@ export function PloggingLauncher({ children }: { children: ReactNode }) {
 
   function onDone(result: Exclude<StartResult, { kind: 'failed' }>) {
     if (result.kind === 'noCrew') return closeThen(() => setNoCrew(true));
-    closeThen(() => resume(result.id, result.kind === 'resumed' ? '진행 중인 활동이 있어 이어서 시작해요' : undefined));
+    closeThen(() =>
+      resume(
+        result.id,
+        result.kind === 'started'
+          ? { startedAt: result.startedAt, shared: String(result.locationShared) }
+          : { flash: '진행 중인 활동이 있어 이어서 시작해요' },
+      ),
+    );
   }
 
   const value = useMemo(() => ({ enter: () => void enter(), start, markOnboarded }), [enter, start, markOnboarded]);
@@ -103,6 +128,11 @@ export function PloggingLauncher({ children }: { children: ReactNode }) {
           actionLabel="크루 찾기"
           onAction={() => { setNoCrew(false); router.replace('/1-6-create-or-join-crew'); }}
           onDismiss={() => setNoCrew(false)}
+        />
+        <Snackbar
+          visible={syncing}
+          message="지난 활동을 저장하고 있어요. 연결되면 새로 시작할 수 있어요"
+          onDismiss={() => setSyncing(false)}
         />
       </View>
     </LauncherContext.Provider>

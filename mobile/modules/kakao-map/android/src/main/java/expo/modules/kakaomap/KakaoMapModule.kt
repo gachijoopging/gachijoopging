@@ -9,24 +9,32 @@ class KakaoMapModule : Module() {
     Name("KakaoMap")
 
     View(KakaoMapView::class) {
-      Events("onMapReady", "onMapError", "onMarkerPress")
+      Events("onMapReady", "onMapError", "onMarkerPress", "onUserGesture")
 
       Prop("appKey") { view: KakaoMapView, appKey: String ->
         view.setAppKey(appKey)
       }
 
-      Prop("center") { view: KakaoMapView, center: Map<String, Double> ->
-        val lat = center["latitude"] ?: return@Prop
-        val lng = center["longitude"] ?: return@Prop
+      Prop("center") { view: KakaoMapView, center: Map<String, Double>? ->
+        val lat = center?.get("latitude") ?: return@Prop
+        val lng = center?.get("longitude") ?: return@Prop
         view.setCenter(lat, lng)
       }
 
-      Prop("path") { view: KakaoMapView, path: List<Map<String, Double>> ->
-        view.setPath(path.mapNotNull {
-          val lat = it["latitude"] ?: return@mapNotNull null
-          val lng = it["longitude"] ?: return@mapNotNull null
-          LatLng.from(lat, lng)
+      Prop("segments") { view: KakaoMapView, segments: List<List<Map<String, Double>>> ->
+        view.setSegments(segments.map { segment ->
+          segment.mapNotNull {
+            val lat = it["latitude"] ?: return@mapNotNull null
+            val lng = it["longitude"] ?: return@mapNotNull null
+            LatLng.from(lat, lng)
+          }
         })
+      }
+
+      Prop("myLocation") { view: KakaoMapView, me: Map<String, Double?>? ->
+        val lat = me?.get("latitude")
+        val lng = me?.get("longitude")
+        view.setMyLocation(if (lat != null && lng != null) LatLng.from(lat, lng) else null, me?.get("accuracy"))
       }
 
       Prop("markers") { view: KakaoMapView, markers: List<Map<String, Any?>> ->

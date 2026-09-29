@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
+import com.kakao.vectormap.GestureType
 import com.kakao.vectormap.KakaoMap
 import com.kakao.vectormap.KakaoMapReadyCallback
 import com.kakao.vectormap.KakaoMapSdk
@@ -17,11 +18,16 @@ import com.kakao.vectormap.label.LabelStyle
 import com.kakao.vectormap.label.LabelStyles
 import com.kakao.vectormap.label.LabelTextBuilder
 import com.kakao.vectormap.label.LabelTextStyle
+import com.kakao.vectormap.route.RouteLine
 import com.kakao.vectormap.route.RouteLineOptions
 import com.kakao.vectormap.route.RouteLineSegment
 import com.kakao.vectormap.route.RouteLineStyle
 import com.kakao.vectormap.route.RouteLineStyles
 import com.kakao.vectormap.route.RouteLineStylesSet
+import com.kakao.vectormap.shape.DotPoints
+import com.kakao.vectormap.shape.Polygon
+import com.kakao.vectormap.shape.PolygonOptions
+import com.kakao.vectormap.shape.PolygonStyles
 import expo.modules.kotlin.AppContext
 import expo.modules.kotlin.viewevent.EventDispatcher
 import expo.modules.kotlin.views.ExpoView
@@ -30,12 +36,19 @@ class KakaoMapView(context: Context, appContext: AppContext) : ExpoView(context,
   private val onMapReady by EventDispatcher()
   private val onMapError by EventDispatcher()
   private val onMarkerPress by EventDispatcher()
+  private val onUserGesture by EventDispatcher()
 
   private val mapView = MapView(context).also { addView(it) }
   private var map: KakaoMap? = null
   private var started = false
   private var pendingCenter: LatLng? = null
-  private var pendingPath: List<LatLng> = emptyList()
+  private var pendingSegments: List<List<LatLng>> = emptyList()
+  private var pendingMe: Pair<LatLng, Double?>? = null
+  private var routeLine: RouteLine? = null
+  private var meLabel: Label? = null
+  private var meAccuracy: Polygon? = null
+  /** 첫 이동만 확대 수준을 정한다. 그 뒤로는 사용자가 맞춘 확대를 지킨다 */
+  private var cameraPlaced = false
   private var pendingMarkers: List<Marker> = emptyList()
   /** id 로 추가·이동·제거를 가른다. 소켓 갱신마다 전부 다시 그리지 않기 위해서다 */
   private val labels = mutableMapOf<String, Pair<Marker, Label>>()
@@ -44,8 +57,13 @@ class KakaoMapView(context: Context, appContext: AppContext) : ExpoView(context,
   fun setAppKey(appKey: String) {
     if (started || appKey.isBlank()) return
     started = true
-    KakaoMapSdk.init(context, appKey)
-    start()
+    // SDK 는 arm 계열 .so 만 싣는다. x86 에뮬레이터에서 앱째 죽지 않고 지도 자리만 실패로 알린다
+    try {
+      KakaoMapSdk.init(context, appKey)
+      start()
+    } catch (e: Throwable) {
+      onMapError(mapOf("message" to (e.message ?: e.javaClass.simpleName)))
+    }
   }
 
   fun setCenter(lat: Double, lng: Double) {
@@ -53,8 +71,13 @@ class KakaoMapView(context: Context, appContext: AppContext) : ExpoView(context,
     if (map == null) pendingCenter = target else moveCamera(target)
   }
 
-  fun setPath(points: List<LatLng>) {
-    if (map == null) pendingPath = points else drawPath(points)
+  fun setSegments(segments: List<List<LatLng>>) {
+    if (map == null) pendingSegments = segments else drawSegments(segments)
+  }
+
+  fun setMyLocation(position: LatLng?, accuracy: Double?) {
+    val me = position?.let { it to accuracy }
+    if (map == null) pendingMe = me else drawMe(me)
   }
 
   fun setMarkers(markers: List<Marker>) {
@@ -73,8 +96,12 @@ class KakaoMapView(context: Context, appContext: AppContext) : ExpoView(context,
         override fun onMapReady(kakaoMap: KakaoMap) {
           map = kakaoMap
           pendingCenter?.let { moveCamera(it) }
-          if (pendingPath.isNotEmpty()) drawPath(pendingPath)
+          drawSegments(pendingSegments)
+          drawMe(pendingMe)
           drawMarkers(pendingMarkers)
+          kakaoMap.setOnCameraMoveStartListener { _, gesture ->
+            if (gesture != GestureType.Unknown) onUserGesture(mapOf())
+          }
           kakaoMap.setOnLabelClickListener { _, _, label ->
             val id = labels.entries.firstOrNull { it.value.second == label }?.key
               ?: return@setOnLabelClickListener false
@@ -89,19 +116,61 @@ class KakaoMapView(context: Context, appContext: AppContext) : ExpoView(context,
 
   private fun moveCamera(target: LatLng) {
     val kakaoMap = map ?: return
-    kakaoMap.moveCamera(CameraUpdateFactory.newCenterPosition(target, ZOOM_LEVEL))
+    val update = if (cameraPlaced) CameraUpdateFactory.newCenterPosition(target) else CameraUpdateFactory.newCenterPosition(target, ZOOM_LEVEL)
+    cameraPlaced = true
+    kakaoMap.moveCamera(update)
   }
 
-  private fun drawPath(points: List<LatLng>) {
-    if (points.size < 2) return
-    val kakaoMap = map ?: return
+  /** 일시정지로 끊긴 구간은 이어 긋지 않는다. 매번 통째로 다시 그린다 — 한 활동의 점 수로는 충분히 가볍다 */
+  private fun drawSegments(segments: List<List<LatLng>>) {
+    val layer = map?.routeLineManager?.layer ?: return
+    routeLine?.let { layer.remove(it) }
+    routeLine = null
+    val drawable = segments.filter { it.size >= 2 }
+    if (drawable.isEmpty()) return
     val stylesSet = RouteLineStylesSet.from(
-      RouteLineStyles.from(RouteLineStyle.from(PATH_WIDTH_DP, PATH_COLOR)),
+      RouteLineStyles.from(RouteLineStyle.from(dp(PATH_WIDTH_DP), PATH_COLOR)),
     )
-    val segment = RouteLineSegment.from(points).setStyles(stylesSet.getStyles(0))
-    kakaoMap.routeLineManager?.layer?.addRouteLine(
-      RouteLineOptions.from(segment).setStylesSet(stylesSet),
-    )
+    val lines = drawable.map { RouteLineSegment.from(it).setStyles(stylesSet.getStyles(0)) }
+    routeLine = layer.addRouteLine(RouteLineOptions.from(lines).setStylesSet(stylesSet))
+  }
+
+  private fun drawMe(me: Pair<LatLng, Double?>?) {
+    val kakaoMap = map ?: return
+    val labelLayer = kakaoMap.labelManager?.layer ?: return
+    val shapeLayer = kakaoMap.shapeManager?.layer
+    meAccuracy?.let { shapeLayer?.remove(it) }
+    meAccuracy = null
+    if (me == null) {
+      meLabel?.let { labelLayer.remove(it) }
+      meLabel = null
+      return
+    }
+    val (position, accuracy) = me
+    if (accuracy != null && accuracy > 0) {
+      meAccuracy = shapeLayer?.addPolygon(
+        PolygonOptions.from(DotPoints.fromCircle(position, accuracy.toFloat()), PolygonStyles.from(ACCURACY_FILL)),
+      )
+    }
+    val existing = meLabel
+    if (existing != null) {
+      existing.moveTo(position)
+      return
+    }
+    val style = LabelStyle.from(meDot())
+    val styles = kakaoMap.labelManager?.addLabelStyles(LabelStyles.from(style)) ?: LabelStyles.from(style)
+    meLabel = labelLayer.addLabel(LabelOptions.from(ME_ID, position).setStyles(styles))
+  }
+
+  private fun meDot(): Bitmap {
+    val size = dp(ME_DP).toInt()
+    val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+    val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = ON_DEEP }
+    canvas.drawCircle(size / 2f, size / 2f, size / 2f, paint)
+    paint.color = DEEP
+    canvas.drawCircle(size / 2f, size / 2f, size / 2f - dp(3f), paint)
+    return bitmap
   }
 
   private fun drawMarkers(markers: List<Marker>) {
@@ -160,6 +229,9 @@ class KakaoMapView(context: Context, appContext: AppContext) : ExpoView(context,
     const val PATH_WIDTH_DP = 8f
     const val PATH_COLOR = 0xFF6FBF3F.toInt()
     const val MARKER_DP = 32f
+    const val ME_DP = 18f
+    const val ME_ID = "__me"
+    const val ACCURACY_FILL = 0x333D431F
     // design-system/tokens/colors.ts 라이트 테마. 네이티브는 토큰을 못 읽는다
     const val DEEP = 0xFF3D431F.toInt()
     const val ON_DEEP = 0xFFF4F04B.toInt()
