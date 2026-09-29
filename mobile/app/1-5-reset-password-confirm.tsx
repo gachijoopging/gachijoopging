@@ -76,6 +76,7 @@ export default function ResetPasswordConfirmScreen() {
         error={passwordError}
         editable={!loading}
         secureTextEntry={secure}
+        autoComplete="new-password"
         textContentType="newPassword"
         returnKeyType="next"
       />
@@ -94,6 +95,7 @@ export default function ResetPasswordConfirmScreen() {
         error={confirmError}
         editable={!loading}
         secureTextEntry={secure}
+        autoComplete="new-password"
         textContentType="newPassword"
         returnKeyType="done"
         onSubmitEditing={handleSubmit}

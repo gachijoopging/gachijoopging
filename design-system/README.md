@@ -152,13 +152,15 @@ const depth =
 
 ## 폰트
 
-Pretendard (OFL — 앱 동봉 허용). `mobile/app/src/main/res/font/` 에 있습니다.
+Pretendard (OFL — 앱 동봉 허용). `mobile/app.json` 의 `expo-font` 플러그인이 이 폴더의 `assets/fonts/` 를 앱 빌드에 넣습니다.
 
 굵기는 `fontWeight` 가 아니라 패밀리 이름으로 고릅니다. 안드로이드 RN 은 `fontWeight` 로
 굵기를 합성하지 못해서, 같은 코드가 iOS 에서만 굵어집니다. 파일 이름을 맞추세요:
 
 ```
 assets/fonts/Pretendard-Regular.ttf
+assets/fonts/Pretendard-Medium.ttf
+assets/fonts/Pretendard-SemiBold.ttf
 assets/fonts/Pretendard-Bold.ttf
 ```
 

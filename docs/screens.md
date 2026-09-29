@@ -76,12 +76,12 @@ flowchart TD
 | 3-1 | 모이깅 | 재조립 ← fragment_meet | [3-1-crew.md](screens/3-1-crew.md) | 승인 |
 | 3-2 | 크루 정보 | 재조립 ← fragment_meet_manage | [3-2-crew-info.md](screens/3-2-crew-info.md) | 승인 |
 | 3-3 | 초대 코드 | 재조립 ← fragment_meet_manage | [3-3-invite-code.md](screens/3-3-invite-code.md) | 승인 |
-| 3-4 | 크루 기록 | 재조립 ← fragment_group_record | [3-4-crew-records.md](screens/3-4-crew-records.md) | 승인 |
+| 3-4 | 크루 기록 | 재조립 ← fragment_group_record | [3-4-crew-records.md](screens/3-4-crew-records.md) (3-1 탭으로 통합) | 승인 |
 | 3-5 | 공지 목록 | 재조립 ← fragment_feed | [3-5-notices.md](screens/3-5-notices.md) | 승인 |
 | 3-6 | 공지 상세 | 재조립 ← fragment_post_detail | [3-6-notice-detail.md](screens/3-6-notice-detail.md) | 승인 |
 | 3-7 | 크루 채팅 | fragment_chat | [3-7-crew-chat.md](screens/3-7-crew-chat.md) | 승인 |
 | 3-8 | 가입 신청 관리 | 재조립 ← fragment_friends | [3-8-manage-join-requests.md](screens/3-8-manage-join-requests.md) | 승인 |
-| 3-9 | 활동 달력 | 신규 | [3-9-activity-calendar.md](screens/3-9-activity-calendar.md) | 승인 |
+| 3-9 | 활동 달력 | 신규 | [3-9-activity-calendar.md](screens/3-9-activity-calendar.md) (3-1 탭으로 통합) | 승인 |
 | 3-10 | 크루 정보 수정 | 재조립 ← fragment_meet_edit | [3-10-edit-crew.md](screens/3-10-edit-crew.md) | 승인 |
 | 3-11 | 크루원 목록·관리 | 재조립 ← fragment_meet_manage | [3-11-manage-crew-members.md](screens/3-11-manage-crew-members.md) | 승인 |
 | 3-12 | 공지 작성·수정 | 재조립 ← fragment_publish | [3-12-edit-notice.md](screens/3-12-edit-notice.md) | 승인 |
@@ -106,7 +106,7 @@ flowchart TD
 
 ## 공통
 
-- 하단 탭 5개: 홈 · 피드 · 줍깅 · 모이깅 · 내 정보. 원본 `view_bottom_nav`. 줍깅은 활동 중이면 배지
+- 하단 탭 5개: 홈 · 피드 · 줍깅 · 모이깅 · 내 정보. 원본 `view_bottom_nav`. 줍깅은 활동 중이면 배지. 줍깅 버튼은 처음 한 번만 4-1 온보딩을 보이고, 그 뒤로는 진행 중이면 4-3, 아니면 지금 탭 위에 4-2 시트를 띄운다
 - 배경 알림창(활동 중): 거리 · 시간 · 개수 · 일시정지 여부. 포그라운드 서비스 알림. 걸음수는 측정값이 있을 때 보조 정보로 표시하고 미지원·권한 거부가 활동을 막지 않는다
 - 회원 상태에 따라 가입 미완료 → 해당 단계, 비소속 → 1-6, 승인 대기 → 1-9, 소속 → 홈으로 간다. 위치 권한은 이 분기를 막지 않고 4-2에서만 요청한다
 - 1-6의 내 활동 기록은 5-5를 기록 전용으로 재사용한다. 비소속 상태에는 크루 기능·활동 시작을 노출하지 않으며 5-3 본인 상세로 이어진다

@@ -74,6 +74,9 @@ export const MOCKS = {
       ]
     }
   },
+  "GET /activities/current": {
+    "data": null
+  },
   "GET /crew": {
     "data": {
       "id": "c001",
@@ -97,6 +100,102 @@ export const MOCKS = {
       },
       "unreadChat": 5,
       "isLeader": true
+    }
+  },
+  "GET /crew/calendar": {
+    "data": {
+      "days": [
+        {
+          "date": "2026-09-02",
+          "items": 12,
+          "activityCount": 1,
+          "activities": [
+            {
+              "activityId": "a098",
+              "user": {
+                "id": "8a2d…",
+                "nickname": "상혁",
+                "photoUrl": null,
+                "withdrawn": false
+              },
+              "items": 12,
+              "distanceM": 900
+            }
+          ]
+        },
+        {
+          "date": "2026-09-05",
+          "items": 47,
+          "activityCount": 2,
+          "activities": [
+            {
+              "activityId": "a100",
+              "user": {
+                "id": "6f1c…",
+                "nickname": "관열",
+                "photoUrl": null,
+                "withdrawn": false
+              },
+              "items": 32,
+              "distanceM": 2100
+            },
+            {
+              "activityId": "a101",
+              "user": {
+                "id": "8a2d…",
+                "nickname": "상혁",
+                "photoUrl": null,
+                "withdrawn": false
+              },
+              "items": 15,
+              "distanceM": 1300
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "GET /crew/chat/messages": {
+    "data": {
+      "items": [
+        {
+          "seq": 101,
+          "id": "00000000-0000-4000-8000-000000000101",
+          "author": {
+            "id": "8a2d…",
+            "nickname": "상혁",
+            "photoUrl": null,
+            "withdrawn": false
+          },
+          "text": "내일 여의도 9시 어때요?",
+          "createdAt": "2026-09-06T06:24:00Z"
+        },
+        {
+          "seq": 102,
+          "id": "00000000-0000-4000-8000-000000000102",
+          "author": {
+            "id": "8a2d…",
+            "nickname": "상혁",
+            "photoUrl": null,
+            "withdrawn": false
+          },
+          "text": "봉투는 제가 챙길게요.",
+          "createdAt": "2026-09-06T06:24:30Z"
+        },
+        {
+          "seq": 103,
+          "id": "00000000-0000-4000-8000-000000000103",
+          "author": {
+            "id": "6f1c…",
+            "nickname": "관열",
+            "photoUrl": null,
+            "withdrawn": false
+          },
+          "text": "좋아요, 갈게요!",
+          "createdAt": "2026-09-06T06:25:00Z"
+        }
+      ],
+      "hasMore": false
     }
   },
   "GET /crew/home": {
@@ -148,6 +247,40 @@ export const MOCKS = {
       },
       "unreadNotifications": 3
     }
+  },
+  "GET /crew/join-requests": {
+    "data": [
+      {
+        "id": "jr002",
+        "crew": {
+          "id": "c001",
+          "name": "한강줍깅크루"
+        },
+        "user": {
+          "id": "9b3e…",
+          "nickname": "지수",
+          "photoUrl": null,
+          "withdrawn": false
+        },
+        "status": "PENDING",
+        "createdAt": "2026-09-02T09:00:00Z"
+      },
+      {
+        "id": "jr003",
+        "crew": {
+          "id": "c001",
+          "name": "한강줍깅크루"
+        },
+        "user": {
+          "id": "7c4f…",
+          "nickname": "민수",
+          "photoUrl": null,
+          "withdrawn": false
+        },
+        "status": "PENDING",
+        "createdAt": "2026-09-01T09:00:00Z"
+      }
+    ]
   },
   "GET /crew/live": {
     "data": [
@@ -238,6 +371,29 @@ export const MOCKS = {
         }
       ],
       "nextCursor": "eyJ…"
+    }
+  },
+  "GET /crew/notices": {
+    "data": {
+      "items": [
+        {
+          "id": "n01",
+          "title": "9월 정기 활동 안내",
+          "preview": "9월 첫째 주 토요일, 여의도에서 모여요.",
+          "pinned": true,
+          "commentCount": 2,
+          "createdAt": "2026-09-01T09:00:00Z"
+        },
+        {
+          "id": "n00",
+          "title": "새 크루원 환영합니다",
+          "preview": "소개를 확인해 주세요.",
+          "pinned": false,
+          "commentCount": 0,
+          "createdAt": "2026-08-28T09:00:00Z"
+        }
+      ],
+      "nextCursor": null
     }
   },
   "GET /crew/posts": {
@@ -358,6 +514,41 @@ export const MOCKS = {
       }
     }
   },
+  "GET /notices/{noticeId}": {
+    "data": {
+      "id": "n01",
+      "title": "9월 정기 활동 안내",
+      "preview": "9월 첫째 주 토요일, 여의도에서 모여요.",
+      "pinned": true,
+      "commentCount": 2,
+      "createdAt": "2026-09-01T09:00:00Z",
+      "body": "9월 첫째 주 토요일, 여의도에서 모여요.\n오전 8시 여의나루역 2번 출구 앞입니다. 집게와 봉투는 크루에서 준비해요.",
+      "comments": [
+        {
+          "id": "nc1",
+          "author": {
+            "id": "8a2d…",
+            "nickname": "상혁",
+            "photoUrl": null,
+            "withdrawn": false
+          },
+          "text": "확인했습니다!",
+          "createdAt": "2026-09-01T10:00:00Z"
+        },
+        {
+          "id": "nc2",
+          "author": {
+            "id": "6f1c…",
+            "nickname": "관열",
+            "photoUrl": null,
+            "withdrawn": false
+          },
+          "text": "비 오면 일요일로 미뤄요.",
+          "createdAt": "2026-09-01T11:00:00Z"
+        }
+      ]
+    }
+  },
   "GET /notifications": {
     "data": {
       "pending": {
@@ -393,6 +584,11 @@ export const MOCKS = {
       "nextCursor": null
     }
   },
+  "GET /notifications/unread-count": {
+    "data": {
+      "count": 1
+    }
+  },
   "GET /users/me": {
     "data": {
       "id": "6f1c…",
@@ -420,6 +616,31 @@ export const MOCKS = {
       }
     }
   },
+  "PATCH /crew": {
+    "data": {
+      "id": "c001",
+      "name": "한강줍깅크루",
+      "intro": "매주 토요일 아침 여의도",
+      "photoUrl": null,
+      "leader": {
+        "id": "6f1c…",
+        "nickname": "관열",
+        "photoUrl": null,
+        "withdrawn": false
+      },
+      "memberCount": 18,
+      "goalCount": 300,
+      "inviteCode": "HG-7K2P",
+      "pendingJoinRequests": 2,
+      "pinnedNotice": {
+        "id": "n01",
+        "title": "9월 정기 활동 안내",
+        "createdAt": "2026-09-01T09:00:00Z"
+      },
+      "unreadChat": 5,
+      "isLeader": true
+    }
+  },
   "PATCH /users/me": {
     "data": {
       "id": "9c2f…",
@@ -441,6 +662,23 @@ export const MOCKS = {
         "status": "NONE",
         "crew": null
       }
+    }
+  },
+  "POST /activities": {
+    "data": {
+      "id": "2b7e4c1a-9f3d-4e8b-a6c2-5d1f0e9b8a73",
+      "status": "IN_PROGRESS",
+      "startedAt": "2026-09-29T09:00:00+09:00",
+      "endedAt": null,
+      "durationSec": 0,
+      "pausedSec": 0,
+      "paused": false,
+      "pausedAt": null,
+      "distanceM": 0,
+      "steps": null,
+      "locationShared": true,
+      "itemCount": 0,
+      "byCategory": {}
     }
   },
   "POST /auth/google": {
@@ -476,6 +714,21 @@ export const MOCKS = {
       "accessToken": "eyJhbGciOiJIUzI1NiJ9.mock…",
       "refreshToken": "8f2a9c1e-mock-refresh…",
       "isNew": false
+    }
+  },
+  "POST /crew/invite-code": {
+    "data": {
+      "inviteCode": "HG-9QX4"
+    }
+  },
+  "POST /crew/notices": {
+    "data": {
+      "id": "n02",
+      "title": "10월 정기 활동 안내",
+      "preview": "10월 첫째 주 토요일에 모여요.",
+      "pinned": true,
+      "commentCount": 0,
+      "createdAt": "2026-09-28T09:00:00Z"
     }
   },
   "POST /crews": {
@@ -559,6 +812,19 @@ export const MOCKS = {
           }
         ]
       }
+    }
+  },
+  "POST /notices/{noticeId}/comments": {
+    "data": {
+      "id": "00000000-0000-4000-8000-0000000000c3",
+      "author": {
+        "id": "6f1c…",
+        "nickname": "관열",
+        "photoUrl": null,
+        "withdrawn": false
+      },
+      "text": "저도 참여할게요.",
+      "createdAt": "2026-09-01T12:00:00Z"
     }
   },
 } as const;

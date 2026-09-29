@@ -1,10 +1,10 @@
 export * from '../tokens/index.ts';
 
-export { ThemeProvider, useTheme, useRipple, pressedOpacity, disabledOpacity, depth } from './theme.tsx';
+export { ThemeProvider, useTheme, useRipple, useReduceMotion, pressedOpacity, disabledOpacity, depth } from './theme.tsx';
 export type { Scheme, Theme } from './theme.tsx';
 
 export { Txt } from './components/Text.tsx';
-export type { TextVariant, TextTone, TxtProps } from './components/Text.tsx';
+export type { TextVariant, TextTone, TextWeight, TxtProps } from './components/Text.tsx';
 
 export { Icon } from './components/Icon.tsx';
 export type { IconName, IconProps } from './components/Icon.tsx';
@@ -67,5 +67,9 @@ export type { LinkTextProps } from './components/LinkText.tsx';
 export { IconCircle } from './components/IconCircle.tsx';
 export type { IconCircleTone, IconCircleSize } from './components/IconCircle.tsx';
 
+export { BarChart } from './components/BarChart.tsx';
+export type { BarChartProps } from './components/BarChart.tsx';
+
 export { MetricSplit } from './components/MetricSplit.tsx';
 export type { MetricItem, MetricSplitProps } from './components/MetricSplit.tsx';
+export { Appear } from './components/Appear.tsx';

@@ -171,6 +171,11 @@ for (const [name, p] of themes) {
     atLeast(p.onDark, p.deep, 4.5, `${name} Snackbar 본문`);
     atLeast(p.onDark, p.deep, 4.5, `${name} Snackbar 액션`);
 
+    // Dot · 글자 없는 상태 점. 서피스·배경, 선택된 달력 칸(deep) 위
+    atLeast(p.deep, p.surface, 3, `${name} Dot 서피스`);
+    atLeast(p.deep, p.bg, 3, `${name} Dot 배경`);
+    atLeast(p.onDark, p.deep, 3, `${name} Dot onDeep`);
+
     // Tile dark
     atLeast(p.onDark, p.deep, 4.5, `${name} Tile dark`);
   });
@@ -182,6 +187,9 @@ for (const [name, p] of themes) {
     atLeast(p.deep, p.surface, 3, `${name} 선택 채움 · 라디오 채운 점`);
     atLeast(p.inkHint, p.surface, 3, `${name} 라디오 미선택 윤곽`);
     atLeast(p.error, p.surface, 3, `${name} Field 오류 테두리`);
+    // Button ghost · 채움이 없어 테두리만이 버튼 경계다. 화면 배경과 카드 양쪽에 놓인다
+    atLeast(p.inkHint, p.bg, 3, `${name} Button ghost 테두리 (배경)`);
+    atLeast(p.inkHint, p.surface, 3, `${name} Button ghost 테두리 (카드)`);
     atLeast(p.border, p.surface, 1.2, `${name} 카드 테두리 (층 신호)`);
 
     // IconCircle · 아이콘은 비텍스트라 3:1. tint 는 반투명이라 서피스 위에 얹어 봅니다

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { View } from 'react-native';
 import { router } from 'expo-router';
-import { AppHeader, Banner, Button, Chip, Field, Screen, Txt, space } from 'design-system/src';
+import { AppHeader, Banner, Button, Field, Screen, Txt, space } from 'design-system/src';
 import { onboardingApi as api } from '../src/api/onboarding';
 import { AgreementFields } from '../src/auth/AgreementFields';
 import { resolveDestination } from '../src/auth/destination';
@@ -41,12 +41,8 @@ export default function NicknameScreen() {
       <AppHeader title="닉네임 설정" backDisabled={loading} />
 
       <View style={{ alignItems: 'center', gap: space.sm }}>
-        <Chip label="🌱 프로필 만들기" tone="deep" />
         <Txt variant="title" bold style={{ textAlign: 'center' }}>
           어떻게 불러 드릴까요?
-        </Txt>
-        <Txt variant="body" tone="muted" style={{ textAlign: 'center' }}>
-          닉네임은 피드와 크루에서 보여요.
         </Txt>
       </View>
 

@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { Keyboard, View } from 'react-native';
 import { router, useNavigation } from 'expo-router';
-import { AppHeader, Avatar, Banner, Button, Card, Chip, Field, Screen, Txt, space } from 'design-system/src';
+import { AppHeader, Avatar, Banner, Button, Card, Field, Screen, Txt, space } from 'design-system/src';
 import { ApiError } from '../src/api/client';
 import { onboardingApi as api } from '../src/api/onboarding';
 import { normalizeInviteCode, validateInviteCode } from '../src/auth/validators';
@@ -94,19 +94,14 @@ export default function EnterInviteCodeScreen() {
 
   const isPreview = stage === 'preview' && preview;
   const title = isPreview ? '이 크루가 맞나요?' : '초대 코드를 입력해 주세요';
-  const description = isPreview ? '크루장이 승인하면 크루원이 돼요.' : '크루장에게 받은 코드로 크루를 찾아요.';
 
   return (
     <Screen scroll>
       <AppHeader title="크루 가입하기" onBack={loading ? undefined : () => router.back()} backDisabled={loading} />
 
       <View style={{ alignItems: 'center', gap: space.sm }}>
-        <Chip label="🌱 크루 가입하기" tone="deep" />
         <Txt variant="title" bold style={{ textAlign: 'center' }}>
           {title}
-        </Txt>
-        <Txt variant="body" tone="muted" style={{ textAlign: 'center' }}>
-          {description}
         </Txt>
       </View>
 

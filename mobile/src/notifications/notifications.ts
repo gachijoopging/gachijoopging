@@ -1,0 +1,75 @@
+import type { MembershipStatus } from '../auth/destination';
+
+const MINUTE = 60_000;
+const HOUR = 60 * MINUTE;
+
+export function relativeTime(createdAt: string, now: Date = new Date()): string {
+  const then = new Date(createdAt);
+  const diff = now.getTime() - then.getTime();
+  if (diff < MINUTE) return '방금';
+  if (diff < HOUR) return `${Math.floor(diff / MINUTE)}분 전`;
+  if (diff < 24 * HOUR) return `${Math.floor(diff / HOUR)}시간 전`;
+  const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+  if (then.toDateString() === yesterday.toDateString()) return '어제';
+  const md = `${then.getMonth() + 1}월 ${then.getDate()}일`;
+  return then.getFullYear() === now.getFullYear()
+    ? md
+    : `${then.getFullYear()}.${then.getMonth() + 1}.${then.getDate()}`;
+}
+
+type Target = { type: string; id: string | null };
+export type NotificationDestination = { pathname: string; params?: { id: string } };
+
+/** null 이면 이동하지 않고 알림 목록에 남는다 */
+export function notificationDestination(
+  item: { type: string; target: Target },
+  membership: MembershipStatus,
+): NotificationDestination | null {
+  const { type, id } = item.target;
+  const withId = (pathname: string) => (id ? { pathname, params: { id } } : null);
+  switch (type) {
+    case 'JOIN_REQUESTS':
+      return { pathname: '/3-8-manage-join-requests' };
+    case 'REPORTS':
+      return withId('/6-2-review-report');
+    case 'NOTICE':
+      return withId('/3-6-notice-detail');
+    case 'POST':
+      return withId('/5-2-post-detail');
+    case 'CHAT':
+      return { pathname: '/3-7-crew-chat' };
+    case 'LIVE':
+      return { pathname: '/2-2-active-crew-members' };
+    case 'CREW':
+      if (membership === 'MEMBER') return { pathname: '/(tabs)' };
+      return { pathname: item.type === 'JOIN_REJECTED' ? '/1-9-pending-approval' : '/1-6-create-or-join-crew' };
+    default:
+      return null;
+  }
+}
+
+/** unreadCount 가 null 이면 `GET /notifications/unread-count` 가 실패한 것이다 */
+export type ReadState<T extends { id: number; unread: boolean }> = { items: T[]; unreadCount: number | null };
+
+export function markRead<T extends { id: number; unread: boolean }>(state: ReadState<T>, id: number): ReadState<T> {
+  const target = state.items.find((i) => i.id === id);
+  if (!target?.unread) return state;
+  return {
+    items: state.items.map((i) => (i.id === id ? { ...i, unread: false } : i)),
+    unreadCount: state.unreadCount == null ? null : Math.max(0, state.unreadCount - 1),
+  };
+}
+
+/** 읽음 요청이 실패했을 때. 이미 안 읽음이면 수를 두 번 올리지 않는다 */
+export function markUnread<T extends { id: number; unread: boolean }>(state: ReadState<T>, id: number): ReadState<T> {
+  const target = state.items.find((i) => i.id === id);
+  if (!target || target.unread) return state;
+  return {
+    items: state.items.map((i) => (i.id === id ? { ...i, unread: true } : i)),
+    unreadCount: state.unreadCount == null ? null : state.unreadCount + 1,
+  };
+}
+
+export function markAllRead<T extends { id: number; unread: boolean }>(state: ReadState<T>): ReadState<T> {
+  return { items: state.items.map((i) => ({ ...i, unread: false })), unreadCount: 0 };
+}

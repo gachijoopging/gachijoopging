@@ -17,7 +17,7 @@
         "android.permission.ACCESS_COARSE_LOCATION"
       ],
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#6DE78C",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -26,12 +26,32 @@
     },
     "plugins": [
       "expo-router",
-      "expo-font",
+      [
+        "expo-font",
+        {
+          "fonts": ["../design-system/assets/fonts"]
+        }
+      ],
       "expo-notifications",
       "expo-dev-client",
       "@react-native-vector-icons/material-design-icons",
-      "expo-splash-screen",
-      "./plugins/with-kakao-maven"
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#DCE6A6"
+        }
+      ],
+      "./plugins/with-kakao-maven",
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "크루 대표 사진을 촬영하려면 카메라 권한이 필요해요.",
+          "microphonePermission": false
+        }
+      ]
     ]
   }
 }

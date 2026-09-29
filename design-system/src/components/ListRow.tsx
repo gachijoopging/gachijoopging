@@ -1,5 +1,5 @@
 import { memo, type ReactNode } from 'react';
-import { Pressable, View } from 'react-native';
+import { Pressable, View, type PressableProps } from 'react-native';
 import { radius } from '../../tokens/radius.ts';
 import { space, size as sizes } from '../../tokens/spacing.ts';
 import { borderWidth } from '../../tokens/elevation.ts';
@@ -22,6 +22,11 @@ function ListRowBase({
   onPress,
   disabled,
   divider = true,
+  chevron = !right,
+  tone,
+  accessibilityLabel,
+  accessibilityActions,
+  onAccessibilityAction,
 }: {
   title: string;
   subtitle?: string;
@@ -31,6 +36,21 @@ function ListRowBase({
   onPress?: () => void;
   disabled?: boolean;
   divider?: boolean;
+  /** 누르는 행의 끝 chevron. right 를 줘도 이동하는 행이면 켠다 */
+  chevron?: boolean;
+  /**
+   * 되돌릴 수 없는 동작(삭제 등). 제목과 아이콘을 error 색으로 칠해 다른 행과 가른다.
+   * 시트·카드(surface) 위에서만 쓴다 — 화면 배경(bg) 위 error 는 3.76:1 로 본문 하한에 못 미친다
+   */
+  tone?: 'danger';
+  /** 점·배지처럼 글자가 없는 상태를 읽어 줘야 할 때 (예: "…, 안 읽음") */
+  accessibilityLabel?: string;
+  /**
+   * 행 안의 버튼(right 의 더보기 등)은 행이 한 요소로 읽혀 스크린리더가 따로 닿지 못합니다.
+   * 그 동작을 행의 접근성 동작으로 노출합니다.
+   */
+  accessibilityActions?: PressableProps['accessibilityActions'];
+  onAccessibilityAction?: PressableProps['onAccessibilityAction'];
 }) {
   const { colors } = useTheme();
   const body = (
@@ -45,40 +65,58 @@ function ListRowBase({
         borderBottomColor: colors.border,
       }}
     >
-      {left ?? (icon ? <Icon name={icon} size={22} color={colors.inkMuted} /> : null)}
+      {left ?? (icon ? <Icon name={icon} size={22} color={tone === 'danger' ? colors.error : colors.inkMuted} /> : null)}
       {/* 제목과 부제를 한 줄 묶음으로 읽히게 하는 광학 간격. xs(4)면 두 항목으로 갈라져 보입니다. */}
       <View style={{ flex: 1, gap: 1 }}>
-        <Txt variant="bodyLg">{title}</Txt>
+        <Txt variant="bodyLg" tone={tone === 'danger' ? 'error' : 'ink'}>{title}</Txt>
         {subtitle ? (
           <Txt variant="caption" tone="hint">
             {subtitle}
           </Txt>
         ) : null}
       </View>
-      {right ?? (onPress ? <Icon name="chevron-right" size={20} color={colors.inkHint} /> : null)}
+      {right}
+      {onPress && chevron ? <Icon name="chevron-right" size={20} color={colors.inkHint} /> : null}
     </View>
   );
 
   if (!onPress) return body;
   return (
-    <PressableRow onPress={onPress} disabled={disabled}>{body}</PressableRow>
+    <PressableRow
+      onPress={onPress}
+      disabled={disabled}
+      accessibilityLabel={accessibilityLabel}
+      accessibilityActions={accessibilityActions}
+      onAccessibilityAction={onAccessibilityAction}
+    >
+      {body}
+    </PressableRow>
   );
 }
 
 function PressableRow({
   onPress,
   disabled,
+  accessibilityLabel,
+  accessibilityActions,
+  onAccessibilityAction,
   children,
 }: {
   onPress: () => void;
   disabled?: boolean;
+  accessibilityLabel?: string;
+  accessibilityActions?: PressableProps['accessibilityActions'];
+  onAccessibilityAction?: PressableProps['onAccessibilityAction'];
   children: ReactNode;
 }) {
   const ripple = useRipple();
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
       accessibilityState={{ disabled: !!disabled }}
+      accessibilityActions={accessibilityActions}
+      onAccessibilityAction={onAccessibilityAction}
       onPress={onPress}
       disabled={disabled}
       android_ripple={disabled ? undefined : ripple}

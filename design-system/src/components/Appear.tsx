@@ -1,0 +1,58 @@
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { Animated, type StyleProp, type ViewStyle } from 'react-native';
+import { motion } from '../../tokens/motion.ts';
+import { space } from '../../tokens/spacing.ts';
+import { useReduceMotion } from '../theme.tsx';
+
+/**
+ * 나타났다 사라지는 것. 들어온 자리로 나갑니다 — `rise` 만큼 아래에서 올라왔으면 같은 길로 내려갑니다.
+ *
+ * 사라질 때는 움직임이 끝난 뒤에 떼어 냅니다. `visible` 이 false 가 되자마자 떼면
+ * 퇴장이 그려지지 않습니다. 퇴장 중에 다시 true 가 되면 지금 위치에서 되돌아옵니다.
+ */
+export function Appear({
+  visible,
+  rise = space.md,
+  pointerEvents,
+  style,
+  children,
+}: {
+  visible: boolean;
+  /** 아래에서 떠오르는 거리. 0 이면 제자리에서 흐려졌다 선명해진다 */
+  rise?: number;
+  pointerEvents?: 'box-none' | 'none' | 'auto';
+  style?: StyleProp<ViewStyle>;
+  children: ReactNode;
+}) {
+  const reduce = useReduceMotion();
+  const progress = useRef(new Animated.Value(visible ? 1 : 0)).current;
+  const [mounted, setMounted] = useState(visible);
+
+  useEffect(() => {
+    if (visible) setMounted(true);
+    if (reduce) {
+      progress.setValue(visible ? 1 : 0);
+      if (!visible) setMounted(false);
+      return;
+    }
+    Animated.spring(progress, { toValue: visible ? 1 : 0, ...motion.settle, useNativeDriver: true }).start(
+      ({ finished }) => finished && !visible && setMounted(false),
+    );
+  }, [visible, reduce, progress]);
+
+  if (!mounted) return null;
+  return (
+    <Animated.View
+      pointerEvents={pointerEvents}
+      style={[
+        style,
+        {
+          opacity: progress,
+          transform: [{ translateY: progress.interpolate({ inputRange: [0, 1], outputRange: [rise, 0] }) }],
+        },
+      ]}
+    >
+      {children}
+    </Animated.View>
+  );
+}
