@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { AccessibilityInfo, Animated, Dimensions, KeyboardAvoidingView, Modal, PanResponder, Pressable, View, findNodeHandle, type Text } from 'react-native';
+import { AccessibilityInfo, Animated, Dimensions, KeyboardAvoidingView, Modal, PanResponder, Pressable, ScrollView, View, findNodeHandle, type Text } from 'react-native';
 import { radius } from '../../tokens/radius.ts';
 import { space, screen, size as sizes } from '../../tokens/spacing.ts';
 import { motion, projectedDistance, rubberband } from '../../tokens/motion.ts';
@@ -179,6 +179,7 @@ export function BottomSheet({
             paddingHorizontal: screen.horizontal,
             paddingBottom: space['3xl'],
             gap: space.lg,
+            maxHeight: '90%',
             transform: [{ translateY: y }],
             ...depth('overlay', shadows.overlay),
           }}
@@ -197,7 +198,10 @@ export function BottomSheet({
             />
             {shown.current.title ? <Txt ref={titleRef} variant="title" accessibilityRole="header">{shown.current.title}</Txt> : null}
           </View>
-          {shown.current.children}
+          {/* 내용이 화면보다 길어도 시트가 화면 위로 넘치지 않게 본문만 스크롤한다. 손잡이·제목은 끌기 자리라 고정 */}
+          <ScrollView style={{ flexShrink: 1 }} contentContainerStyle={{ gap: space.lg }} keyboardShouldPersistTaps="handled" bounces={false}>
+            {shown.current.children}
+          </ScrollView>
         </Animated.View>
       </KeyboardAvoidingView>
     </Modal>
