@@ -368,9 +368,25 @@ export const MOCKS = {
           "liked": true,
           "commentCount": 2,
           "createdAt": "2026-09-06T11:00:00Z"
+        },
+        {
+          "id": "po78",
+          "author": {
+            "id": "6f1c…",
+            "nickname": "관열",
+            "photoUrl": null,
+            "withdrawn": false
+          },
+          "text": "다음 주엔 망원 쪽을 돌아볼 생각. 같이 갈 사람?",
+          "visibility": "PRIVATE",
+          "media": [],
+          "likeCount": 0,
+          "liked": false,
+          "commentCount": 0,
+          "createdAt": "2026-09-05T02:00:00Z"
         }
       ],
-      "nextCursor": "eyJ…"
+      "nextCursor": null
     }
   },
   "GET /crew/notices": {
@@ -419,9 +435,25 @@ export const MOCKS = {
           "liked": true,
           "commentCount": 2,
           "createdAt": "2026-09-06T11:00:00Z"
+        },
+        {
+          "id": "po78",
+          "author": {
+            "id": "6f1c…",
+            "nickname": "관열",
+            "photoUrl": null,
+            "withdrawn": false
+          },
+          "text": "다음 주엔 망원 쪽을 돌아볼 생각. 같이 갈 사람?",
+          "visibility": "PRIVATE",
+          "media": [],
+          "likeCount": 0,
+          "liked": false,
+          "commentCount": 0,
+          "createdAt": "2026-09-05T02:00:00Z"
         }
       ],
-      "nextCursor": "eyJ…"
+      "nextCursor": null
     }
   },
   "GET /crew/stats": {
@@ -589,6 +621,57 @@ export const MOCKS = {
       "count": 1
     }
   },
+  "GET /posts/{postId}": {
+    "data": {
+      "id": "po77",
+      "author": {
+        "id": "8a2d…",
+        "nickname": "상혁",
+        "photoUrl": null,
+        "withdrawn": false
+      },
+      "text": "오늘 여의도 3km. 꽁초가 유난히 많았다",
+      "visibility": "CREW",
+      "media": [
+        {
+          "url": "https://cdn…/po77/1.jpg",
+          "thumbUrl": "https://cdn…/po77/1_t.jpg"
+        },
+        {
+          "url": "https://cdn…/po77/2.jpg",
+          "thumbUrl": "https://cdn…/po77/2_t.jpg"
+        }
+      ],
+      "likeCount": 6,
+      "liked": true,
+      "commentCount": 2,
+      "createdAt": "2026-09-06T11:00:00Z",
+      "comments": [
+        {
+          "id": "c1",
+          "author": {
+            "id": "9b3e…",
+            "nickname": "지수",
+            "photoUrl": null,
+            "withdrawn": false
+          },
+          "text": "오늘 많이 주우셨네요!",
+          "createdAt": "2026-09-06T12:00:00Z"
+        },
+        {
+          "id": "c2",
+          "author": {
+            "id": "0c4f…",
+            "nickname": "탈퇴한 크루원",
+            "photoUrl": null,
+            "withdrawn": true
+          },
+          "text": "다음엔 같이 가요",
+          "createdAt": "2026-09-06T13:00:00Z"
+        }
+      ]
+    }
+  },
   "GET /users/me": {
     "data": {
       "id": "6f1c…",
@@ -614,6 +697,19 @@ export const MOCKS = {
           "isLeader": true
         }
       }
+    }
+  },
+  "PATCH /activities/{id}/items/{itemId}": {
+    "data": {
+      "itemCount": 27,
+      "byCategory": {
+        "CIGARETTE": 14,
+        "PLASTIC": 6,
+        "CAN": 3,
+        "PAPER": 2,
+        "VINYL": 2
+      },
+      "items": []
     }
   },
   "PATCH /crew": {
@@ -825,6 +921,19 @@ export const MOCKS = {
       },
       "text": "저도 참여할게요.",
       "createdAt": "2026-09-01T12:00:00Z"
+    }
+  },
+  "POST /posts/{postId}/comments": {
+    "data": {
+      "id": "c3",
+      "author": {
+        "id": "6f1c…",
+        "nickname": "관열",
+        "photoUrl": null,
+        "withdrawn": false
+      },
+      "text": "저도 다음엔 갈게요",
+      "createdAt": "2026-09-06T14:00:00Z"
     }
   },
 } as const;
