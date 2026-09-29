@@ -1,3 +1,4 @@
+import type { Ref } from 'react';
 import { Text as RNText, type TextProps, type TextStyle } from 'react-native';
 import { fontSize, lineHeight, fontFamily } from '../../tokens/typography.ts';
 import { useTheme } from '../theme.tsx';
@@ -37,6 +38,8 @@ export type TxtProps = TextProps & {
   bold?: boolean;
   /** 주면 `bold` 보다 우선합니다 */
   weight?: TextWeight;
+  /** 스크린리더 포커스를 옮길 때 */
+  ref?: Ref<RNText>;
 };
 
 /**

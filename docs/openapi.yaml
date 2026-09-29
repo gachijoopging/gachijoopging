@@ -621,6 +621,21 @@ paths:
           content:
             application/json:
               schema: { type: object, properties: { data: { $ref: '#/components/schemas/Activity' } } }
+              example:
+                data:
+                  id: 2b7e4c1a-9f3d-4e8b-a6c2-5d1f0e9b8a73
+                  status: IN_PROGRESS
+                  startedAt: '2026-09-29T09:00:00+09:00'
+                  endedAt: null
+                  durationSec: 0
+                  pausedSec: 0
+                  paused: false
+                  pausedAt: null
+                  distanceM: 0
+                  steps: null
+                  locationShared: true
+                  itemCount: 0
+                  byCategory: {}
         '200':
           description: 같은 UUID의 활동을 돌려준다
           content:
@@ -638,7 +653,9 @@ paths:
           description: 없으면 data null
           content:
             application/json:
-              schema: { type: object, properties: { data: { $ref: '#/components/schemas/Activity', nullable: true } } }
+              schema: { type: object, properties: { data: { anyOf: [{ $ref: '#/components/schemas/Activity' }, { type: object, nullable: true, enum: [null] }] } } }
+              example:
+                data: null
   /activities/{id}/pause:
     post:
       tags: [activities]

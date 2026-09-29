@@ -62,6 +62,10 @@ export const size = {
   appBar: 56,
   /** 체크박스 상자. 터치 영역은 행 전체라 minTouch 보다 작아도 됩니다 */
   checkbox: 24,
+  /** 줄 안에 글자와 나란히 서는 상태 아이콘 (caption 옆) */
+  iconInline: 16,
+  /** 홈·빈 상태 캐릭터 그림 */
+  character: 140,
   captureFab: 76,
   /** 촬영 버튼을 배경에서 떼어내는 서피스 색 테두리 */
   captureRing: 6,

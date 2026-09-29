@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Animated, Dimensions, KeyboardAvoidingView, Modal, PanResponder, Pressable, View } from 'react-native';
+import { AccessibilityInfo, Animated, Dimensions, KeyboardAvoidingView, Modal, PanResponder, Pressable, View, findNodeHandle, type Text } from 'react-native';
 import { radius } from '../../tokens/radius.ts';
 import { space, screen, size as sizes } from '../../tokens/spacing.ts';
 import { motion, projectedDistance, rubberband } from '../../tokens/motion.ts';
@@ -21,11 +21,17 @@ export function BottomSheet({
   onClose,
   title,
   children,
+  dismissible = true,
+  onClosed,
 }: {
   visible: boolean;
   onClose: () => void;
   title?: string;
   children: ReactNode;
+  /** false 면 스크림·끌기·뒤로가기로 닫히지 않는다. 처리 중에 끌면 저항만 주고 제자리로 돌아온다 */
+  dismissible?: boolean;
+  /** 내려가는 움직임까지 끝난 뒤. 닫고 다음 화면으로 갈 때 시트가 그 위에 겹쳐 보이지 않게 여기서 넘어간다 */
+  onClosed?: () => void;
 }) {
   const { colors, shadows } = useTheme();
   const reduce = useReduceMotion();
@@ -37,8 +43,9 @@ export function BottomSheet({
   const offset = useRef(0);
   const grabbedAt = useRef(0);
   const releaseVelocity = useRef(0);
-  const live = useRef({ visible, onClose });
-  live.current = { visible, onClose };
+  const titleRef = useRef<Text>(null);
+  const live = useRef({ visible, onClose, dismissible, onClosed });
+  live.current = { visible, onClose, dismissible, onClosed };
 
   // 부르는 쪽은 닫으면서 대상을 비운다(title 이 '' 가 되는 식). 내려가는 동안 내용이 무너지지 않게 쥔다
   const shown = useRef({ title, children });
@@ -54,7 +61,7 @@ export function BottomSheet({
     const to = visible ? 0 : height.current;
     if (reduce) {
       y.setValue(to);
-      if (!visible) setMounted(false);
+      if (!visible) finishClose();
       return;
     }
     const velocity = releaseVelocity.current;
@@ -64,7 +71,7 @@ export function BottomSheet({
       velocity,
       ...(velocity ? motion.fling : motion.sheet),
       useNativeDriver: true,
-    }).start(({ finished }) => finished && !visible && setMounted(false));
+    }).start(({ finished }) => finished && !visible && finishClose());
   }, [visible, reduce, y]);
 
   const drag = useRef(
@@ -80,16 +87,23 @@ export function BottomSheet({
       },
       onPanResponderMove: (_, g) => {
         const next = grabbedAt.current + g.dy;
-        // 위로는 더 열 곳이 없다. 딱 멈추지 않고 저항만 커진다
-        y.setValue(next < 0 ? rubberband(next, height.current) - grabbedAt.current : g.dy);
+        // 위로는 더 열 곳이 없다. 닫을 수 없을 때는 아래로도 그렇다. 딱 멈추지 않고 저항만 커진다
+        const resist = next < 0 || !live.current.dismissible;
+        y.setValue(resist ? rubberband(next, height.current) - grabbedAt.current : g.dy);
       },
       onPanResponderRelease: (_, g) => settle(g.vy),
       onPanResponderTerminate: (_, g) => settle(g.vy),
     }),
   ).current;
 
+  function finishClose() {
+    setMounted(false);
+    live.current.onClosed?.();
+  }
+
   function settle(vy: number) {
     y.flattenOffset();
+    if (!live.current.dismissible) return springBack(0);
     const landing = offset.current + projectedDistance(vy);
     if (landing > height.current / 2) {
       releaseVelocity.current = vy;
@@ -124,7 +138,12 @@ export function BottomSheet({
       // 비쳐 보입니다. 안드로이드는 이 값을 줘야 창이 시스템 바 밑으로 확장됩니다.
       statusBarTranslucent
       navigationBarTranslucent
-      onRequestClose={onClose}
+      onRequestClose={dismissible ? onClose : () => {}}
+      // 열리면 제목부터 읽히게 한다. 포커스가 시트 밖(뒤 화면)에 남아 있으면 무엇이 떴는지 모른다
+      onShow={() => {
+        const node = findNodeHandle(titleRef.current);
+        if (node) AccessibilityInfo.setAccessibilityFocus(node);
+      }}
     >
       {/* 반투명 시스템 바를 쓰는 Modal 창은 안드로이드에서도 키보드에 맞춰 줄지 않아,
           Screen 과 달리 두 플랫폼 모두 padding 으로 시트를 키보드 위로 올린다 */}
@@ -134,8 +153,9 @@ export function BottomSheet({
           style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: colors.scrim, opacity: scrimOpacity }}
         />
         <Pressable
-          accessibilityLabel="닫기"
-          onPress={onClose}
+          accessibilityLabel={dismissible ? '닫기' : undefined}
+          importantForAccessibility={dismissible ? 'auto' : 'no-hide-descendants'}
+          onPress={dismissible ? onClose : undefined}
           style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
         />
         <Animated.View
@@ -168,7 +188,7 @@ export function BottomSheet({
                 alignSelf: 'center',
               }}
             />
-            {shown.current.title ? <Txt variant="title">{shown.current.title}</Txt> : null}
+            {shown.current.title ? <Txt ref={titleRef} variant="title" accessibilityRole="header">{shown.current.title}</Txt> : null}
           </View>
           {shown.current.children}
         </Animated.View>

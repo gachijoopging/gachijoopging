@@ -17,6 +17,7 @@ import {
   Txt,
   pressedOpacity,
   radius,
+  size,
   space,
   useRipple,
   useTheme,
@@ -212,7 +213,7 @@ function CrewCharacter({ character }: { character: Home['character'] }) {
       accessibilityHint="목표 진행을 들으려면 두 번 탭"
       style={({ pressed }) => ({ alignItems: 'center', gap: space.sm, paddingVertical: space.lg, borderRadius: radius.card, overflow: 'hidden', opacity: pressedOpacity(pressed) })}
     >
-      <Image source={sprout} resizeMode="contain" style={{ width: 140, height: 140 }} />
+      <Image source={sprout} resizeMode="contain" style={{ width: size.character, height: size.character }} />
       <Txt variant="caption" tone="muted">단계 {character.stage} · {stageName}</Txt>
       {/* 말풍선이 뜨고 질 때 아래 카드가 밀리지 않도록 캐릭터 위에 띄운다. 캐릭터 쪽(아래)에서 솟아 같은 길로 들어간다 */}
       <Appear visible={bubble} style={{ position: 'absolute', top: space.sm }}>
