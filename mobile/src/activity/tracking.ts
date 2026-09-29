@@ -1,4 +1,5 @@
 import * as Location from 'expo-location';
+import * as Network from 'expo-network';
 import * as TaskManager from 'expo-task-manager';
 import { updateTrackingNotification } from '../../modules/tracking-notification';
 import { createMockClient, type ApiClient } from '../api/client';
@@ -81,21 +82,30 @@ function send(client: ApiClient, op: Op): Promise<unknown> {
   }
 }
 
-let syncing: Promise<void> | null = null;
+let syncing: Promise<boolean> | null = null;
 
-/** 큐를 순서대로 비운다. 동시에 두 번 돌지 않는다 — 같은 줍기를 두 번 보내지 않게 */
-export function syncOutbox(client: ApiClient = api): Promise<void> {
+/**
+ * 큐를 순서대로 비운다. 동시에 두 번 돌지 않는다 — 같은 줍기를 두 번 보내지 않게.
+ * 도는 동안 새로 쌓인 것도 이어서 보낸다. 다 보냈으면 true, 중간에 막히면 false
+ */
+export function syncOutbox(client: ApiClient = api): Promise<boolean> {
   syncing ??= (async () => {
     try {
-      const q = getStored().outbox;
-      if (q.length === 0) return;
-      const sent = new Set<Op>();
-      await flush(q, async (op) => {
-        await send(client, op);
-        sent.add(op);
-      });
-      // 보내는 동안 새로 쌓이거나 되돌려 바뀐 것은 남긴다 — 실제로 보낸 것만 뺀다
-      if (sent.size) updateStored((st) => ({ ...st, outbox: st.outbox.filter((op) => !sent.has(op)) }));
+      const net = await Network.getNetworkStateAsync().catch(() => null);
+      // 연결이 없으면 요청마다 시간 초과를 기다리지 않고 바로 대기로 둔다
+      if (net && (net.isConnected === false || net.isInternetReachable === false)) return false;
+      for (;;) {
+        const q = getStored().outbox;
+        if (q.length === 0) return true;
+        const sent = new Set<Op>();
+        await flush(q, async (op) => {
+          await send(client, op);
+          sent.add(op);
+        });
+        // 보내는 동안 되돌려 바뀐 것은 남긴다 — 실제로 보낸 것만 뺀다
+        if (sent.size) updateStored((st) => ({ ...st, outbox: st.outbox.filter((op) => !sent.has(op)) }));
+        if (sent.size < q.length) return false;
+      }
     } finally {
       syncing = null;
     }

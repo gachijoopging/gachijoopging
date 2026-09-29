@@ -40,8 +40,8 @@ export const MOCKS = {
       "photos": [
         {
           "id": "p1",
-          "url": "https://cdn…/a100/p1.jpg",
-          "thumbUrl": "https://cdn…/a100/p1_t.jpg",
+          "url": "https://cdn.example.com/a100/p1.jpg",
+          "thumbUrl": "https://cdn.example.com/a100/p1_t.jpg",
           "takenAt": "2026-09-05T09:10:00Z"
         }
       ],
@@ -360,8 +360,8 @@ export const MOCKS = {
           "visibility": "CREW",
           "media": [
             {
-              "url": "https://cdn…/po77/1.jpg",
-              "thumbUrl": "https://cdn…/po77/1_t.jpg"
+              "url": "https://cdn.example.com/po77/1.jpg",
+              "thumbUrl": "https://cdn.example.com/po77/1_t.jpg"
             }
           ],
           "likeCount": 6,
@@ -411,8 +411,8 @@ export const MOCKS = {
           "visibility": "CREW",
           "media": [
             {
-              "url": "https://cdn…/po77/1.jpg",
-              "thumbUrl": "https://cdn…/po77/1_t.jpg"
+              "url": "https://cdn.example.com/po77/1.jpg",
+              "thumbUrl": "https://cdn.example.com/po77/1_t.jpg"
             }
           ],
           "likeCount": 6,
@@ -594,7 +594,7 @@ export const MOCKS = {
       "id": "6f1c…",
       "nickname": "관열",
       "intro": "한강 서쪽 담당",
-      "photoUrl": "https://cdn…/p/6f1c.jpg",
+      "photoUrl": "https://cdn.example.com/p/6f1c.jpg",
       "email": "kwan@example.com",
       "profileComplete": true,
       "hasPassword": true,
@@ -814,8 +814,8 @@ export const MOCKS = {
     "data": {
       "mediaId": "m001",
       "photoId": "p1",
-      "url": "https://cdn…/a100/p1.jpg",
-      "thumbUrl": "https://cdn…/a100/p1_t.jpg",
+      "url": "https://cdn.example.com/a100/p1.jpg",
+      "thumbUrl": "https://cdn.example.com/a100/p1_t.jpg",
       "inference": {
         "status": "OK",
         "modelVersion": "yolo26s-1024-v1",

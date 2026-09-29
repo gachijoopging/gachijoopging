@@ -1,11 +1,14 @@
 import { File, Paths } from 'expo-file-system';
-import { restore, type Op } from './outbox';
+import { restore, type EndBody, type Op } from './outbox';
 import type { Session } from './session';
 
-/** 계정 하나의 기기 기록. 끝난 활동도 큐가 비기 전까지는 session 이 남아 4-7 이 읽는다 */
-export type Stored = { session: Session | null; ended: boolean; outbox: Op[] };
+/**
+ * 계정 하나의 기기 기록. ended 는 종료 스냅샷 — 종료 요청이 큐에서 먼저 빠져도
+ * 4-7 은 이 값으로 그리고, 재시도 때 새로 계산하지 않는다.
+ */
+export type Stored = { session: Session | null; ended: EndBody | null; outbox: Op[] };
 
-const EMPTY: Stored = { session: null, ended: false, outbox: [] };
+const EMPTY: Stored = { session: null, ended: null, outbox: [] };
 // 배경 task 는 화면 없이 깨어나므로 어느 계정의 파일을 열지 이 파일로 안다
 const owner = new File(Paths.document, 'activity-owner');
 
@@ -20,7 +23,7 @@ export function parseStored(text: string | null): Stored | null {
   try {
     const raw = JSON.parse(text);
     if (typeof raw !== 'object' || raw == null) return null;
-    return { session: raw.session ?? null, ended: !!raw.ended, outbox: restore(JSON.stringify(raw.outbox ?? [])) };
+    return { session: raw.session ?? null, ended: raw.ended || null, outbox: restore(JSON.stringify(raw.outbox ?? [])) };
   } catch {
     return null;
   }
