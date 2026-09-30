@@ -1,7 +1,7 @@
 import type { ApiClient } from '../api/client';
 import { enqueue, type Op } from './outbox';
 import { getStored, loadAccount, openAccount, updateStored } from './store';
-import { syncOutbox } from './tracking';
+import { startTracking, syncOutbox } from './tracking';
 
 jest.mock('expo-file-system', () => {
   const disk = new Map<string, string>();
@@ -30,7 +30,13 @@ jest.mock('expo-file-system', () => {
 });
 let mockOnline = true;
 jest.mock('expo-network', () => ({ getNetworkStateAsync: async () => ({ isConnected: mockOnline, isInternetReachable: mockOnline }) }));
-jest.mock('expo-location', () => ({}));
+const mockLoc = { started: false, startCalls: 0 };
+jest.mock('expo-location', () => ({
+  Accuracy: { BestForNavigation: 6 },
+  hasStartedLocationUpdatesAsync: async () => mockLoc.started,
+  startLocationUpdatesAsync: async () => { mockLoc.startCalls++; mockLoc.started = true; },
+  stopLocationUpdatesAsync: async () => { mockLoc.started = false; },
+}));
 jest.mock('expo-task-manager', () => ({ defineTask: () => {} }));
 jest.mock('../../modules/tracking-notification', () => ({ updateTrackingNotification: () => false }));
 
@@ -90,5 +96,32 @@ describe('계정 열기', () => {
 
   test('받으면 그 계정을 연다', async () => {
     expect(await openAccount(async () => 'u-new')).toBe('u-new');
+  });
+});
+
+describe('추적 시작', () => {
+  beforeEach(() => {
+    mockLoc.started = false;
+    mockLoc.startCalls = 0;
+    loadAccount(`u${Math.random()}`);
+    updateStored((st) => ({ ...st, session: { activityId: 'a1', itemCount: 0, distanceM: 0, steps: null, paused: false, startedAt: new Date().toISOString(), pausedSec: 0, pausedAt: null, locationShared: true, byCategory: {}, segments: [[]], filter: { last: null, recent: [] }, here: null, lastPassAt: null, searchingSince: null, droppingSince: null, userId: 'u' } as never, ended: null }));
+  });
+
+  test('이미 등록된 task 여도 다시 시작을 요청한다 — 첫 등록이 배경에서 되면 포그라운드 서비스가 빠진 채 남는다', async () => {
+    mockLoc.started = true;
+    await startTracking();
+    expect(mockLoc.startCalls).toBe(1);
+  });
+
+  test('여러 번 불러도 요청은 매번 나간다(멱등한 재등록이 서비스를 되살린다)', async () => {
+    await startTracking();
+    await startTracking();
+    expect(mockLoc.startCalls).toBe(2);
+  });
+
+  test('세션이 없으면 시작하지 않는다', async () => {
+    updateStored((st) => ({ ...st, session: null }));
+    expect(await startTracking()).toBe(false);
+    expect(mockLoc.startCalls).toBe(0);
   });
 });

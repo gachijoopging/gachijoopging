@@ -49,8 +49,15 @@ export function PloggingLauncher({ children }: { children: ReactNode }) {
   useEffect(() => {
     const me = api.get('GET /users/me');
     me.then((r) => setShareDefault(r.data.settings.shareLocationDefault)).catch(() => {});
-    // 지난 실행에서 못 보낸 줍기·종료가 있으면 앱을 켤 때 이어서 보낸다
-    void openAccount(() => me.then((r) => r.data.id)).then(() => syncOutbox());
+    // 지난 실행에서 못 보낸 줍기·종료가 있으면 앱을 켤 때 이어서 보낸다.
+    // 진행 중인 활동이 기기에 남아 있으면 홈을 거치지 않고 곧장 4-3 으로 — 홈이 먼저 뜨면 활동이 끝난 줄 안다
+    void openAccount(() => me.then((r) => r.data.id)).then(() => {
+      void syncOutbox();
+      const { session, ended, outbox } = getStored();
+      const local = session ? { activityId: session.activityId, ended: !!ended, unsynced: outbox.length > 0 } : null;
+      const entry = ploggingEntry({ onboarded: onboardedFlag.exists, current: null, local });
+      if (entry.kind === 'resume') resume(entry.id);
+    });
   }, []);
 
   const start = useCallback(() => requireLocation(() => setOpen(true)), [requireLocation]);
