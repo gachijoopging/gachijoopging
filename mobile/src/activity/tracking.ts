@@ -47,10 +47,9 @@ export async function tick(now: number) {
 }
 
 export async function startTracking(): Promise<boolean> {
-  const { session } = getStored();
-  if (!session) return false;
+  const { session, ended } = getStored();
+  if (!session || ended) return false;
   try {
-    if (await Location.hasStartedLocationUpdatesAsync(TRACKING_TASK)) return true;
     const { title, body } = trackingNotice(session, Date.now());
     await Location.startLocationUpdatesAsync(TRACKING_TASK, {
       accuracy: Location.Accuracy.BestForNavigation,
