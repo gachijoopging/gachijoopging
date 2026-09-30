@@ -5,7 +5,7 @@ import { File, Paths } from 'expo-file-system';
 import { Snackbar, size, space } from 'design-system/src';
 import { createMockClient, type ApiClient } from '../api/client';
 import { useLocationGate } from '../auth/useLocationGate';
-import { getStored, loadAccount } from '../activity/store';
+import { getStored, loadAccount, loadLastAccount } from '../activity/store';
 import { syncOutbox } from '../activity/tracking';
 import { ploggingEntry } from './entry';
 import { StartSheet } from './StartSheet';
@@ -47,6 +47,7 @@ export function PloggingLauncher({ children }: { children: ReactNode }) {
   const requireLocation = useLocationGate();
 
   useEffect(() => {
+    loadLastAccount();
     api
       .get('GET /users/me')
       .then((me) => {
@@ -56,7 +57,21 @@ export function PloggingLauncher({ children }: { children: ReactNode }) {
       .catch(() => {});
   }, []);
 
-  const start = useCallback(() => requireLocation(() => setOpen(true)), [requireLocation]);
+  const start = useCallback(() => {
+    const { session, ended, outbox } = loadLastAccount() ?? getStored();
+    const entry = ploggingEntry({
+      onboarded: true,
+      current: null,
+      local: session ? { activityId: session.activityId, ended, unsynced: outbox.length > 0 } : null,
+    });
+    if (entry.kind === 'resume') return resume(entry.id);
+    if (entry.kind === 'syncing') {
+      setSyncing(true);
+      void syncOutbox();
+      return;
+    }
+    requireLocation(() => setOpen(true));
+  }, [requireLocation]);
 
   const enter = useCallback(async () => {
     if (busy.current) return;

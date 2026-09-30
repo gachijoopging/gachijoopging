@@ -30,10 +30,10 @@ const read = (f: File) => (f.exists ? f.textSync() : null);
 
 export function loadAccount(userId: string): Stored {
   if (account === userId) return state;
-  account = userId;
   owner.write(userId);
   // 본 파일을 쓰다 죽었으면 임시 파일이 온전한 마지막 판이다
-  state = parseStored(read(fileOf(userId))) ?? parseStored(read(fileOf(userId, '.tmp'))) ?? EMPTY;
+  state = parseStored(read(fileOf(userId, '.tmp'))) ?? parseStored(read(fileOf(userId))) ?? EMPTY;
+  account = userId;
   return state;
 }
 
@@ -50,12 +50,16 @@ export function updateStored(fn: (s: Stored) => Stored): Stored {
   if (!account) return state;
   const next = fn(state);
   if (next === state) return state;
-  state = next;
   const text = JSON.stringify(next);
   const tmp = fileOf(account, '.tmp');
+  if (tmp.exists) fileOf(account).write(JSON.stringify(state));
   tmp.write(text);
-  fileOf(account).write(text);
-  tmp.delete();
+  // 임시 파일이 최신 기록이다. 본 파일 갱신 실패에도 재실행에서 복구한다.
+  try {
+    fileOf(account).write(text);
+    tmp.delete();
+  } catch {}
+  state = next;
   listeners.forEach((l) => l(next));
   return next;
 }
