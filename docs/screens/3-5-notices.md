@@ -30,7 +30,7 @@
 | ① | 헤더 제목 | "공지" | `AppHeader` | — |
 | ① | 작성 버튼 | 크루장만 "작성" | `Button` primary sm + `Icon`(plus) | 3-12 |
 | ③ | 최신 공지 행 | 최신 작성 공지를 뜻하는 읽기 전용 `pinned` true인 `title`·`preview`·`commentCount`·`createdAt` (`GET /crew/notices`) | `Card` + `Icon`(pin) + `Txt` + `Badge` | 3-6 |
-| ④ | 일반 공지 행 | `pinned` false인 `title`·`preview`·`commentCount`·`createdAt` (`GET /crew/notices`) | `ListRow` + `Txt` + `Icon`(comment-outline) | 3-6 |
+| ④ | 일반 공지 행 | `pinned` false인 `title`·`preview`·`commentCount`·`createdAt` (`GET /crew/notices`). ③④ 모두 `preview` 는 2줄 끝 말줄임 | `ListRow` + `Txt` + `Icon`(comment-outline) | 3-6 |
 | ③·④ | 댓글 수 | "댓글 `commentCount`개" | `Txt` micro | 3-6 |
 | ③·④ | 날짜 | `createdAt`을 "9월 1일"로 표시 | `Txt` micro muted | — |
 
@@ -77,4 +77,4 @@
 
 ## 미결
 
-- `preview`의 최대 길이·말줄임 줄 수는 계약에 없다. 현재는 2줄 말줄임으로 본다
+- 없음

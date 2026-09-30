@@ -60,7 +60,16 @@ erDiagram
 | status | text | ACTIVE · DELETED |
 | created_at · updated_at · deleted_at | timestamptz | |
 
-약관·개인정보의 필수/선택 동의는 가입 완료 전 필요하나 실제 전문·버전·동의 저장/조회 계약은 미정이다. 닉네임 완료 상태로 동의 완료를 대신하지 않으며 동의 테이블·필드는 별도 설계 의존성으로 남긴다.
+**user_agreements** — 약관·개인정보 동의 이력. 닉네임 완료 상태로 동의 완료를 대신하지 않는다. API `complete` 는 필수 `type` 마다 현재 버전 행의 `agreed` 가 true 인지로 파생한다.
+
+| 컬럼 | 타입 | 제약 |
+|---|---|---|
+| user_id | uuid | → users |
+| type | text | TERMS · PRIVACY · MARKETING |
+| version | text | 동의한 문서 버전 |
+| agreed | boolean | NOT NULL. 선택 항목 철회는 false 로 갱신 |
+| agreed_at | timestamptz | |
+| PK | | (user_id, type, version) |
 
 비밀번호 재설정 성공 시 모든 기기의 access/refresh 세션을 무효화하고 재로그인을 요구한다. 소셜 전용 계정에 새 비밀번호를 만드는 기능은 없다. 세션 무효화의 실제 저장/검증 방식은 구현에서 결정한다.
 
@@ -75,11 +84,11 @@ erDiagram
 | 컬럼 | 타입 | 제약 |
 |---|---|---|
 | id | uuid | PK |
-| name | text | UNIQUE NOT NULL |
+| name | text | UNIQUE NOT NULL. 앞뒤 공백·줄바꿈 제거 뒤 저장. 중복은 API 409 CREW_NAME_TAKEN |
 | intro | text | NOT NULL DEFAULT '' |
 | photo_media_id | uuid | → media |
 | leader_id | uuid | NOT NULL → users. 크루장은 한 명(Q21) |
-| invite_code | text | UNIQUE NOT NULL. 재발급하면 바뀐다 |
+| invite_code | text | UNIQUE NOT NULL. 대문자·하이픈 포함 형식(`HG-7K2P`)으로 저장. 시간 만료 없음, 재발급하면 바뀐다 |
 | goal_count | int | NOT NULL DEFAULT 200 — 최근 14일 목표(Q19·20). 창 길이 14 는 코드 상수 |
 | created_at · updated_at · deleted_at | timestamptz | |
 

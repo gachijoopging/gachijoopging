@@ -24,12 +24,13 @@ import type { MOCKS } from '../../src/api/mocks.generated';
 import { monthDay } from '../../src/crew/crew';
 import { joinDecisionOutcome, type JoinDecision } from '../../src/crew/manage';
 
-type JoinRequest = (typeof MOCKS)['GET /crew/join-requests']['data'][number];
+type JoinRequest = (typeof MOCKS)['GET /crew/join-requests']['data']['items'][number];
 
 const api: ApiClient = createMockClient({ delayMs: 300 });
 
 export default function ManageJoinRequestsScreen() {
   const [requests, setRequests] = useState<readonly JoinRequest[] | null>(null);
+  const [pending, setPending] = useState(0);
   const [isLeader, setIsLeader] = useState(true);
   const [failed, setFailed] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -41,9 +42,13 @@ export default function ManageJoinRequestsScreen() {
     if (mode === 'pull') setRefreshing(true);
     const [crewRes, listRes] = await Promise.allSettled([api.get('GET /crew'), api.get('GET /crew/join-requests')]);
     setRefreshing(false);
-    if (crewRes.status === 'fulfilled') setIsLeader(crewRes.value.data.isLeader);
+    if (crewRes.status === 'fulfilled') {
+      setIsLeader(crewRes.value.data.isLeader);
+      setPending(crewRes.value.data.pendingJoinRequests);
+    }
     if (listRes.status === 'fulfilled') {
-      setRequests(listRes.value.data);
+      // ponytail: nextCursor 로 다음 장 받기는 목이 한 장뿐이라 백엔드 연결 때 붙인다
+      setRequests(listRes.value.data.items);
       setFailed(false);
     } else if (listRes.reason instanceof ApiError && listRes.reason.code === 'FORBIDDEN') {
       setIsLeader(false);
@@ -69,7 +74,10 @@ export default function ManageJoinRequestsScreen() {
       error = e;
     }
     const outcome = joinDecisionOutcome(decision, request.user.nickname, error);
-    if (outcome.removeRow) setRequests((prev) => prev?.filter((r) => r.id !== request.id) ?? prev);
+    if (outcome.removeRow) {
+      setRequests((prev) => prev?.filter((r) => r.id !== request.id) ?? prev);
+      setPending((n) => Math.max(0, n - 1));
+    }
     if (outcome.denied) setIsLeader(false);
     setBusyId(null);
     if (outcome.message) setSnackbar(outcome.message);
@@ -107,7 +115,7 @@ export default function ManageJoinRequestsScreen() {
         />
       ) : (
         <>
-          <Txt variant="section" accessibilityRole="header">{`대기 중인 가입 신청 ${requests.length}건`}</Txt>
+          <Txt variant="section" accessibilityRole="header">{`대기 중인 가입 신청 ${pending}건`}</Txt>
           {failed ? <Banner tone="warn">인터넷 연결을 확인해 주세요.</Banner> : null}
           {requests.map((r) => (
             <RequestRow

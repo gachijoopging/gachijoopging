@@ -33,8 +33,8 @@
 |---|---|---|---|---|
 | ① | 뒤로 버튼 | "뒤로" | `AppHeader` | 진입 화면 |
 | ① | 헤더 제목 | "가입 신청 관리" | `AppHeader` | — |
-| ② | 대기 수 | `GET /crew/join-requests` 배열 길이. "대기 중인 가입 신청 2건" | `Txt` section | — |
-| ③ | 신청 행 | `id`·`user.photoUrl`·`user.nickname`·`createdAt`·`status` (`GET /crew/join-requests`) | `Card` + `Avatar` md + `Txt` | 신청자 → 5-4 |
+| ② | 대기 수 | `pendingJoinRequests` (`GET /crew`). "대기 중인 가입 신청 2건". 승인·거절 성공마다 1 줄인다 | `Txt` section | — |
+| ③ | 신청 행 | `id`·`user.photoUrl`·`user.nickname`·`createdAt`·`status` (`GET /crew/join-requests`, 먼저 신청한 순) | `Card` + `Avatar` md + `Txt` | 신청자 → 5-4 |
 | ③ | 신청자 아바타·닉네임 | `user.photoUrl` null이면 `user.nickname` 첫 글자 | `Avatar` md + `Txt` body strong | 5-4 |
 | ③ | 신청 시각 | `createdAt`을 "9월 2일 가입 신청"으로 표시 | `Txt` caption muted | — |
 | ③ | 거절 버튼 | "거절" | `Button` ghost sm | 거절 확인 → `POST /crew/join-requests/{requestId}` (`decision` REJECT) |
@@ -48,7 +48,7 @@
 |---|---|---|
 | 첫 진입 로딩 | ①은 보이고 ②·③ 자리에 `Loading` "가입 신청을 불러오고 있어요" | ① 뒤로 |
 | 새로고침 | 당겨서 새로고침. 기존 행은 남기고 상단 스피너 | 행·뒤로 |
-| 빈 | 배열이 비어 있음. `EmptyState` "대기 중인 가입 신청이 없어요" | 뒤로 |
+| 빈 | 첫 페이지 `items` 가 비어 있음. `EmptyState` "대기 중인 가입 신청이 없어요" | 뒤로 |
 | 오류 | `GET /crew/join-requests` 4xx·5xx면 `ErrorState` "가입 신청을 불러오지 못했어요" / [다시 시도] | 다시 시도 |
 | 오프라인 | 이전 행이 있으면 그대로, ② 아래 `Banner` "인터넷 연결을 확인해 주세요.". 없으면 오류 상태 | 이전 행·뒤로 |
 | 권한 거부 | 크루원이 직접 진입하거나 403 FORBIDDEN이면 `ErrorState` "크루장만 가입 신청을 관리할 수 있어요." / [크루 정보로] | 크루 정보로 → 3-2 |
@@ -64,14 +64,15 @@
 
 ## 인터랙션
 
-- 스크롤: 신청 행이 화면보다 많으면 세로 스크롤
-- 당겨서 새로고침: 있음. `GET /crew/join-requests` 재조회
+- 스크롤: 신청 행이 화면보다 많으면 세로 스크롤. 끝에 닿으면 `nextCursor` 로 다음 페이지를 붙인다(null 이면 멈춤)
+- 당겨서 새로고침: 있음. `GET /crew` 와 `GET /crew/join-requests` 첫 페이지 재조회
 - 길게 누르기: 없음
 - 시트: 없음. 승인·거절 확인은 대화상자
 - 뒤로 가기: 진입 화면으로 팝한다. 대화상자가 떠 있으면 먼저 닫는다
 - 키보드: 없음
 - 행 탭: 신청자 아바타·닉네임 영역은 5-4 타인 프로필로 푸시한다. 승인·거절 버튼 영역은 프로필로 이동하지 않는다
 - 전환: 5-4는 푸시. 처리 성공은 목록 안에서 행만 바꾼다
+- 가입 신청 거절 사유는 남기지 않는다(1-9 와 같다)
 
 ## 접근성
 
@@ -92,5 +93,4 @@
 
 ## 미결
 
-- 가입 신청을 처리할 때 거절 사유를 남길지 계약에 없다
-- 신청이 매우 많을 때 페이지네이션이 없다. 현재 계약은 배열 전체를 받는다
+- 없음

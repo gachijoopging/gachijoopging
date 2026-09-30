@@ -19,13 +19,14 @@ import {
 import { createMockClient, type ApiClient } from '../../src/api/client';
 import type { MOCKS } from '../../src/api/mocks.generated';
 
-type Blocked = (typeof MOCKS)['GET /users/me/blocked']['data'][number];
+type Blocked = (typeof MOCKS)['GET /users/me/blocked']['data']['items'][number];
 
 const api: ApiClient = createMockClient({ delayMs: 300 });
 const ROW_DESC = '차단됨 · 게시물·댓글·채팅·위치에서 숨김';
 
 export default function ManageBlocksScreen() {
   const [list, setList] = useState<readonly Blocked[] | null>(null);
+  const [total, setTotal] = useState(0);
   const [failed, setFailed] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [snackbar, setSnackbar] = useState<string | null>(null);
@@ -35,7 +36,9 @@ export default function ManageBlocksScreen() {
     if (mode === 'pull') setRefreshing(true);
     try {
       const { data } = await api.get('GET /users/me/blocked');
-      setList(data);
+      // ponytail: nextCursor 로 다음 장 받기는 목이 한 장뿐이라 백엔드 연결 때 붙인다
+      setList(data.items);
+      setTotal(data.total);
       setFailed(false);
     } catch {
       setFailed(true);
@@ -55,6 +58,7 @@ export default function ManageBlocksScreen() {
     setList(list.filter((u) => u.id !== user.id));
     try {
       await api.mutate('DELETE /users/{userId}/block', { userId: user.id });
+      setTotal((n) => Math.max(0, n - 1));
       setSnackbar('차단을 해제했어요');
     } catch {
       setList((prev) => {
@@ -70,7 +74,7 @@ export default function ManageBlocksScreen() {
 
   return (
     <Screen scroll refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load('pull')} />}>
-      <AppHeader title="차단 관리" subtitle={list ? `차단 ${list.length}명` : undefined} onBack={() => router.back()} />
+      <AppHeader title="차단 관리" subtitle={list ? `차단 ${total}명` : undefined} onBack={() => router.back()} />
 
       {!list ? (
         failed ? <ErrorState title="차단 목록을 불러오지 못했어요" onRetry={() => load('quiet')} /> : <Loading label="차단 목록을 불러오고 있어요" />

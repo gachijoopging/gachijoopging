@@ -32,7 +32,7 @@
 | ① | 뒤로 버튼 | "뒤로" | `AppHeader` | 2-3 또는 진입 화면 |
 | ① | 헤더 제목 | "신고 처리" | `AppHeader` | — |
 | ② | 불러온 대기 수 | `GET /crew/reports`에서 현재까지 불러온 `items` 길이. "불러온 대기 신고 1건". 다음 장이 있으면 전체 수로 표현하지 않는다 | `Txt` section | — |
-| ③ | 신고 행 | `id`·`reporter.photoUrl`·`reporter.nickname`·`targetType`·`targetPreview`·`reason`·`memo`·`createdAt` (`GET /crew/reports`) | `Card` + `Avatar` sm + `Txt` + `Badge` | ④ 펼치기 |
+| ③ | 신고 행 | `id`·`reporter.photoUrl`·`reporter.nickname`·`targetType`·`targetPreview`·`reason`·`memo`·`createdAt` (`GET /crew/reports`, 먼저 접수된 순. 기한·자동 만료 없음) | `Card` + `Avatar` sm + `Txt` + `Badge` | ④ 펼치기 |
 | ③ | 대상 요약 | `targetType`별 "게시물 신고"·"댓글 신고"·"공지 댓글 신고"·"크루 채팅 신고"·"사용자 신고". 아래는 `targetPreview`. 대상 작성자 이름이 별도 필드로 없으므로 신고자 닉네임을 대상 이름으로 쓰지 않는다 | `Txt` body strong + `Txt` caption | — |
 | ③ | 사유·접수 시각 | `reason`을 "스팸·도배"·"혐오·욕설"·"부적절한 사진"·"사생활 침해"·"기타"로, `createdAt`을 "9월 2일"로 표시 | `Badge` warn + `Txt` micro | — |
 | ④ | 신고 상세 | `reporter.nickname`·`targetPreview`·`memo`. memo null이면 "상세 메모 없음" | `Card` + `Txt` | — |
@@ -93,5 +93,4 @@
 
 ## 미결
 
-- 목록의 서버 정렬 기준·처리 기한·자동 만료 정책은 별도 운영 결정이다. 앱이 임의로 신고를 만료시키지 않는다
-- 구현 시 추방과 USER 신고 일괄 완료의 일관성, 처리 결과 알림, 다른 기기 처리 후 재조회를 검증한다
+- 없음

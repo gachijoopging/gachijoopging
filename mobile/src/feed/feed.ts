@@ -35,16 +35,31 @@ export function toggleLike<T extends { liked: boolean; likeCount: number }>(post
     : { ...post, liked: true, likeCount: post.likeCount + 1 };
 }
 
-export function beforeLabel(date: string, today: string): string {
+export type DateRange = { from: string; to: string };
+/** 고르는 중인 기간 — 시작일만 누른 상태면 to 가 null */
+export type RangeDraft = { from: string; to: string | null };
+
+function dayLabel(date: string, today: string): string {
   const [y, m, d] = date.split('-').map(Number);
-  const md = `${m}월 ${d}일 이전`;
+  const md = `${m}월 ${d}일`;
   return date.slice(0, 4) === today.slice(0, 4) ? md : `${y}년 ${md}`;
+}
+
+export function rangeLabel({ from, to }: DateRange, today: string, spoken = false): string {
+  if (from === to) return dayLabel(from, today);
+  return spoken ? `${dayLabel(from, today)}부터 ${dayLabel(to, today)}까지` : `${dayLabel(from, today)} ~ ${dayLabel(to, today)}`;
+}
+
+/** 시작일 → 종료일 순서로 두 번 누른다. 시작일보다 앞을 누르면 그 날이 새 시작일이다 */
+export function tapRange(draft: RangeDraft | null, date: string): RangeDraft {
+  if (!draft || draft.to != null || date < draft.from) return { from: date, to: null };
+  return { from: draft.from, to: date };
 }
 
 export type FeedScope = 'CREW' | 'MINE';
 
 export function emptyCopy(scope: FeedScope, filtered: boolean): { title: string; description: string; write: boolean } {
-  if (filtered) return { title: '그 날 이전 게시물이 없어요', description: '다른 날짜를 고르거나 필터를 지워 보세요.', write: false };
+  if (filtered) return { title: '이 기간에 올라온 게시물이 없어요', description: '다른 기간을 고르거나 필터를 지워 보세요.', write: false };
   return scope === 'CREW'
     ? { title: '아직 크루 소식이 없어요', description: '첫 게시물을 남겨 보세요.', write: true }
     : { title: '아직 올린 글이 없어요', description: '나만 보기로 올린 글도 여기에 모여요.', write: true };

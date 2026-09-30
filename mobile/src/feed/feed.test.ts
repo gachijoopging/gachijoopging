@@ -1,9 +1,10 @@
 import {
   authorLink,
-  beforeLabel,
   emptyCopy,
   manageAction,
   photoLabel,
+  rangeLabel,
+  tapRange,
   toggleLike,
   likeRequest,
   syncLike,
@@ -64,21 +65,47 @@ describe('좋아요 토글', () => {
   });
 });
 
-describe('날짜 필터 알약', () => {
-  test('같은 해면 월·일만', () => {
-    expect(beforeLabel('2026-09-06', '2026-09-29')).toBe('9월 6일 이전');
+describe('기간 필터 알약', () => {
+  test('같은 해면 월·일만, 기간은 물결로 잇는다', () => {
+    expect(rangeLabel({ from: '2026-09-01', to: '2026-09-06' }, '2026-09-29')).toBe('9월 1일 ~ 9월 6일');
   });
 
-  test('해가 다르면 연도를 붙인다', () => {
-    expect(beforeLabel('2025-09-06', '2026-09-29')).toBe('2025년 9월 6일 이전');
+  test('하루면 날짜 하나', () => {
+    expect(rangeLabel({ from: '2026-09-06', to: '2026-09-06' }, '2026-09-29')).toBe('9월 6일');
+  });
+
+  test('올해가 아닌 날짜에는 연도를 붙인다', () => {
+    expect(rangeLabel({ from: '2025-12-30', to: '2026-01-02' }, '2026-09-29')).toBe('2025년 12월 30일 ~ 1월 2일');
+  });
+
+  test('읽을 때는 부터·까지', () => {
+    expect(rangeLabel({ from: '2026-09-01', to: '2026-09-06' }, '2026-09-29', true)).toBe('9월 1일부터 9월 6일까지');
+  });
+});
+
+describe('기간 고르기', () => {
+  test('두 번 누르면 시작일 → 종료일', () => {
+    expect(tapRange(tapRange(null, '2026-09-01'), '2026-09-06')).toEqual({ from: '2026-09-01', to: '2026-09-06' });
+  });
+
+  test('같은 날을 두 번 누르면 하루', () => {
+    expect(tapRange({ from: '2026-09-06', to: null }, '2026-09-06')).toEqual({ from: '2026-09-06', to: '2026-09-06' });
+  });
+
+  test('시작일보다 앞을 누르면 새 시작일', () => {
+    expect(tapRange({ from: '2026-09-06', to: null }, '2026-09-01')).toEqual({ from: '2026-09-01', to: null });
+  });
+
+  test('기간이 다 정해진 뒤 누르면 새로 시작', () => {
+    expect(tapRange({ from: '2026-09-01', to: '2026-09-06' }, '2026-09-10')).toEqual({ from: '2026-09-10', to: null });
   });
 });
 
 describe('빈 피드 문구', () => {
-  test('날짜 필터가 있으면 탭과 상관없이 같은 문구에 버튼이 없다', () => {
+  test('기간 필터가 있으면 탭과 상관없이 같은 문구에 버튼이 없다', () => {
     expect(emptyCopy('CREW', true)).toEqual({
-      title: '그 날 이전 게시물이 없어요',
-      description: '다른 날짜를 고르거나 필터를 지워 보세요.',
+      title: '이 기간에 올라온 게시물이 없어요',
+      description: '다른 기간을 고르거나 필터를 지워 보세요.',
       write: false,
     });
     expect(emptyCopy('MINE', true).write).toBe(false);
