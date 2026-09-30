@@ -24,6 +24,10 @@ beforeEach(() => {
 });
 
 describe('기기 기록 읽기', () => {
+  test('이전 종료 형식은 대기 중인 종료 요청의 정확한 스냅샷을 복구한다', () => {
+    expect(parseStored(JSON.stringify({ ended: true, outbox: [{ kind: 'end', activityId: 'a1', body: snapshot }] }))?.ended).toEqual(snapshot);
+    expect(parseStored(JSON.stringify({ ended: true, outbox: [] }))?.ended).toBe(true);
+  });
   test('끝난 활동과 보내지 못한 큐를 그대로 되살린다', () => {
     const saved = { session: { activityId: 'a1' }, ended: snapshot, outbox: [{ kind: 'pause', activityId: 'a1' }] };
     expect(parseStored(JSON.stringify(saved))).toEqual(saved);

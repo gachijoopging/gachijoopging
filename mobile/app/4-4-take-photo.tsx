@@ -1,10 +1,10 @@
 import * as Crypto from 'expo-crypto';
-import * as ImagePicker from 'expo-image-picker';
+import { CameraView, Camera } from 'expo-camera';
 import * as Linking from 'expo-linking';
 import { useNetworkState } from 'expo-network';
 import { router, useFocusEffect, useLocalSearchParams, useNavigation } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
-import { Image, ScrollView, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { AppState, Image, ScrollView, View } from 'react-native';
 import {
   Banner,
   Button,
@@ -27,7 +27,8 @@ import { getStored } from '../src/activity/store';
 const api: ApiClient = createMockClient({ delayMs: 600 });
 
 type Perm = 'unknown' | 'granted' | 'denied' | 'blocked';
-type Shot = { uri: string; takenAt: string; mediaId: string };
+type Shot = { uri: string; takenAt: string; mediaId: string; location: { lat: number; lng: number } | null };
+const shots = new Map<string, Shot>();
 
 export default function TakePhotoScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -36,20 +37,36 @@ export default function TakePhotoScreen() {
   const network = useNetworkState();
   const offline = network.isConnected === false || network.isInternetReachable === false;
   const [perm, setPerm] = useState<Perm>('unknown');
-  const [shot, setShot] = useState<Shot | null>(null);
+  const [shot, setShot] = useState<Shot | null>(() => shots.get(id) ?? null);
   const [shooting, setShooting] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
+  const camera = useRef<CameraView>(null);
+  const leaving = useRef(false);
+  const [ready, setReady] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const [appActive, setAppActive] = useState(AppState.currentState === 'active');
+  useEffect(() => {
+    const listener = AppState.addEventListener('change', (state) => setAppActive(state === 'active'));
+    return () => listener.remove();
+  }, []);
+  useFocusEffect(useCallback(() => {
+    setFocused(true);
+    return () => { setFocused(false); setReady(false); };
+  }, []));
   const [rejected, setRejected] = useState(false);
   const [snackbar, setSnackbar] = useState<{ text: string; retry?: boolean } | null>(null);
+  useEffect(() => {
+    if (shot) shots.set(id, shot);
+    else shots.delete(id);
+  }, [id, shot]);
 
   const readPerm = useCallback(async (ask: boolean) => {
-    const p = ask ? await ImagePicker.requestCameraPermissionsAsync() : await ImagePicker.getCameraPermissionsAsync();
+    const p = ask ? await Camera.requestCameraPermissionsAsync() : await Camera.getCameraPermissionsAsync();
     setPerm(p.granted ? 'granted' : p.canAskAgain ? (ask ? 'denied' : 'unknown') : 'blocked');
     return p;
   }, []);
 
-  // 처음이면 바로 묻는다. 설정에서 돌아오면 다시 확인한다
   useFocusEffect(
     useCallback(() => {
       void (async () => {
@@ -59,10 +76,10 @@ export default function TakePhotoScreen() {
     }, [readPerm]),
   );
 
-  // 올리는 동안은 나가지 못한다. 미리보기에서 뒤로는 1단계로 돌아간다
   useEffect(
     () =>
       navigation.addListener('beforeRemove', (e) => {
+        if (leaving.current) return;
         if (uploading) return e.preventDefault();
         if (shot) {
           e.preventDefault();
@@ -77,9 +94,11 @@ export default function TakePhotoScreen() {
     if (shooting) return;
     setShooting(true);
     try {
-      const res = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.8, exif: false });
-      if (!res.canceled && res.assets[0]) {
-        setShot({ uri: res.assets[0].uri, takenAt: new Date().toISOString(), mediaId: Crypto.randomUUID() });
+      const here = getStored().session?.here;
+      const takenAt = new Date().toISOString();
+      const res = await camera.current?.takePictureAsync({ quality: 0.8, exif: false });
+      if (res) {
+        setShot({ uri: res.uri, takenAt, mediaId: Crypto.randomUUID(), location: here ? { lat: here.latitude, lng: here.longitude } : null });
         setRejected(false);
       }
     } catch {
@@ -93,18 +112,20 @@ export default function TakePhotoScreen() {
     if (!shot || uploading) return;
     setUploading(true);
     setProgress(0);
-    const here = getStored().session?.here;
     try {
       // ponytail: 목은 진행률이 없다. 실 업로드는 보낸 바이트 비율로 바꾼다
       setProgress(0.4);
-      const res = await api.mutate('POST /media', {
-        mediaId: shot.mediaId,
-        file: shot.uri,
-        purpose: 'ACTIVITY',
-        activityId: id,
-        takenAt: shot.takenAt,
-        ...(here ? { lat: here.latitude, lng: here.longitude } : {}),
-      });
+      const body = new FormData();
+      body.append('mediaId', shot.mediaId);
+      body.append('file', { uri: shot.uri, name: 'pickup.jpg', type: 'image/jpeg' } as unknown as Blob);
+      body.append('purpose', 'ACTIVITY');
+      body.append('activityId', id);
+      body.append('takenAt', shot.takenAt);
+      if (shot.location) {
+        body.append('lat', String(shot.location.lat));
+        body.append('lng', String(shot.location.lng));
+      }
+      const res = await api.mutate('POST /media', body);
       setProgress(1);
       setUploading(false);
       router.push({ pathname: '/4-5-ai-classification-review', params: { id, media: JSON.stringify(res.data), localUri: shot.uri } });
@@ -116,14 +137,18 @@ export default function TakePhotoScreen() {
         setRejected(true);
         setSnackbar({ text: '이 사진은 올릴 수 없어요. 다시 찍어 주세요.' });
       } else if (code === 'NOT_FOUND') {
-        router.back();
+        leaving.current = true;
+        router.dismissTo({ pathname: '/4-3-activity-in-progress', params: { id, flash: '이 활동을 찾지 못했어요' } });
       } else {
         setSnackbar({ text: '사진을 올리지 못했어요', retry: true });
       }
     }
   };
 
-  const quickPickup = () => router.dismissTo({ pathname: '/4-3-activity-in-progress', params: { id, quick: '1' } });
+  const quickPickup = () => {
+    leaving.current = true;
+    router.dismissTo({ pathname: '/4-3-activity-in-progress', params: { id, quick: '1' } });
+  };
 
   const frameInside =
     perm === 'denied' || perm === 'blocked' ? (
@@ -152,6 +177,7 @@ export default function TakePhotoScreen() {
       </View>
     ) : (
       <View style={{ flex: 1, backgroundColor: colors.camera.scrim, alignItems: 'center', justifyContent: 'center' }} accessibilityLabel="카메라 미리보기">
+        {perm === 'granted' && focused && appActive ? <CameraView ref={camera} facing="back" onCameraReady={() => setReady(true)} style={{ position: 'absolute', top: 0, bottom: 0, left: 0, right: 0 }} /> : null}
         <Corners color={colors.lime} />
         <Txt variant="body" bold tone="onPhoto" style={{ textAlign: 'center', paddingHorizontal: space.xl }}>
           쓰레기를 화면 중앙에 놓아 주세요
@@ -204,12 +230,12 @@ export default function TakePhotoScreen() {
               <Button label="다시 찍기" variant="translucent" size="lg" fullWidth disabled={uploading} onPress={() => { setShot(null); setRejected(false); }} />
             </View>
             <View style={{ flex: 1 }}>
-              <Button label="사용" size="lg" fullWidth loading={uploading} disabled={uploading || rejected} onPress={upload} />
+              <Button label="사용" size="lg" fullWidth loading={uploading} disabled={uploading || rejected || offline} onPress={upload} />
             </View>
           </View>
         ) : (
           <View style={{ alignItems: 'center' }}>
-            <CaptureButton disabled={perm !== 'granted' || shooting} onPress={shoot} />
+            <CaptureButton disabled={perm !== 'granted' || !ready || shooting || offline} onPress={shoot} />
           </View>
         )}
       </ScrollView>
