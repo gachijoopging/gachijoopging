@@ -35,7 +35,11 @@ export type VoidMutationKey =
   | 'PUT /crew/leader'
   | 'DELETE /crew/members/{userId}'
   | 'PATCH /notices/{noticeId}'
-  | 'PUT /crew/chat/read';
+  | 'PUT /crew/chat/read'
+  | 'POST /activities/{id}/pause'
+  | 'POST /activities/{id}/resume'
+  | 'POST /activities/{id}/live'
+  | 'DELETE /activities/{id}/items/{itemId}';
 export type MutationKey = MockKey | VoidMutationKey;
 
 export type ApiClient = {

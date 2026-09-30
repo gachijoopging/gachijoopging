@@ -29,10 +29,19 @@
       [
         "expo-font",
         {
-          "fonts": ["../design-system/assets/fonts"]
+          "fonts": [
+            "../design-system/assets/fonts"
+          ]
         }
       ],
       "expo-notifications",
+      [
+        "expo-location",
+        {
+          "isAndroidForegroundServiceEnabled": true,
+          "isAndroidBackgroundLocationEnabled": false
+        }
+      ],
       "expo-dev-client",
       "@react-native-vector-icons/material-design-icons",
       [

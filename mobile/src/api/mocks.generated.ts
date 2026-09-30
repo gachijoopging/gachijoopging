@@ -681,6 +681,47 @@ export const MOCKS = {
       "byCategory": {}
     }
   },
+  "POST /activities/{id}/end": {
+    "data": {
+      "id": "2b7e4c1a-9f3d-4e8b-a6c2-5d1f0e9b8a73",
+      "status": "ENDED",
+      "startedAt": "2026-09-29T09:00:00+09:00",
+      "endedAt": "2026-09-29T09:42:10+09:00",
+      "durationSec": 2530,
+      "pausedSec": 0,
+      "paused": false,
+      "pausedAt": null,
+      "distanceM": 2100,
+      "steps": null,
+      "locationShared": true,
+      "itemCount": 17,
+      "byCategory": {
+        "CIGARETTE": 9,
+        "PLASTIC": 5,
+        "CAN": 3
+      }
+    }
+  },
+  "POST /activities/{id}/items": {
+    "data": {
+      "itemCount": 3,
+      "byCategory": {
+        "CIGARETTE": 3
+      },
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000001",
+          "photoId": null,
+          "category": "CIGARETTE",
+          "quantity": 3,
+          "source": "MANUAL",
+          "aiConfidence": null,
+          "unclassified": false,
+          "bbox": null
+        }
+      ]
+    }
+  },
   "POST /auth/google": {
     "data": {
       "accessToken": "eyJhbGciOiJIUzI1NiJ9.mock…",
