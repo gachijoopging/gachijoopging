@@ -31,6 +31,7 @@ import { KakaoMapView } from '../modules/kakao-map';
 import { createMockClient, type ApiClient } from '../src/api/client';
 import type { MOCKS } from '../src/api/mocks.generated';
 import { enqueue } from '../src/activity/outbox';
+import { QuickPickupSheet } from '../src/activity/QuickPickupSheet';
 import {
   bannerFor,
   displayDistance,
@@ -67,7 +68,7 @@ const BANNER_TEXT: Record<Exclude<BannerKind, 'locationOff'>, { text: string; to
 
 export default function ActivityInProgressScreen() {
   useKeepAwake();
-  const { id, flash, startedAt, shared } = useLocalSearchParams<{ id: string; flash?: string; startedAt?: string; shared?: string }>();
+  const { id, flash, startedAt, shared, quick } = useLocalSearchParams<{ id: string; flash?: string; startedAt?: string; shared?: string; quick?: string }>();
   const { colors, shadows } = useTheme();
   const insets = useSafeAreaInsets();
   const appKey: string = Constants.expoConfig?.extra?.kakaoNativeAppKey ?? '';
@@ -89,12 +90,15 @@ export default function ActivityInProgressScreen() {
   const [confirmEnd, setConfirmEnd] = useState(false);
   const [ending, setEnding] = useState(false);
   const [endFailed, setEndFailed] = useState(false);
+  const [quickOpen, setQuickOpen] = useState(false);
   const [snackbar, setSnackbar] = useFlash();
   const bubbleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // 4-4 가 오프라인이라 빠른 줍기로 보냈다
   useEffect(() => {
     if (flash) setSnackbar(flash);
-  }, [flash, setSnackbar]);
+    if (quick) setQuickOpen(true);
+  }, [flash, quick, setSnackbar]);
 
   // 계정을 열고, 기기에 이 활동이 없으면 시작 시트가 넘긴 값이나 서버의 진행 중 활동으로 만든다
   useEffect(() => {
@@ -120,7 +124,7 @@ export default function ActivityInProgressScreen() {
               .then(({ data }) => (data?.id === id ? { ...newSession(data, userId, t), distanceM: data.distanceM } : null))
               .catch(() => null);
         if (cancelled || !fresh) return;
-        updateStored((st) => ({ ...st, session: fresh, ended: false }));
+        updateStored((st) => ({ ...st, session: fresh, ended: null }));
       }
       setSession(getStored().session);
       await startTracking();
@@ -223,7 +227,11 @@ export default function ActivityInProgressScreen() {
     setEndFailed(false);
     try {
       updateStored((st) =>
-        st.session ? { ...st, ended: true, outbox: enqueue(st.outbox, { kind: 'end', activityId: st.session.activityId, body: endBody(st.session, Date.now()) }) } : st,
+        {
+          if (!st.session) return st;
+          const body = endBody(st.session, Date.now());
+          return { ...st, ended: body, outbox: enqueue(st.outbox, { kind: 'end', activityId: st.session.activityId, body }) };
+        },
       );
     } catch {
       // 디스크에 못 남기면 추적을 끄지 않는다 — 여기서 넘어가면 기록을 잃는다
@@ -338,7 +346,8 @@ export default function ActivityInProgressScreen() {
               tone="surface"
               icon="delete-outline"
               label={`줍기 ${session?.itemCount ?? 0}개`}
-              accessibilityLabel={`줍기 ${session?.itemCount ?? 0}개`}
+              accessibilityLabel={`줍기 ${session?.itemCount ?? 0}개, 빠른 줍기 열기`}
+              onPress={() => setQuickOpen(true)}
             />
             {!follow && here ? (
               <RoundButton
@@ -392,6 +401,8 @@ export default function ActivityInProgressScreen() {
           <Button label="종료하기" variant="danger" size="md" loading={ending} disabled={ending} onPress={end} />
         </View>
       </Dialog>
+
+      <QuickPickupSheet visible={quickOpen} onClose={() => setQuickOpen(false)} session={session} />
 
       <Snackbar visible={snackbar != null} message={snackbar ?? ''} onDismiss={() => setSnackbar(null)} />
     </Screen>

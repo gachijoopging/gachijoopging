@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
-import { space } from '../../tokens/spacing.ts';
+import { space, size } from '../../tokens/spacing.ts';
 import { Field } from './Input.tsx';
 import { IconButton } from './IconButton.tsx';
 import { clampStepperValue, parseStepperInput } from './NumberStepper.ts';
@@ -13,6 +13,8 @@ export type NumberStepperProps = {
   onChange: (value: number) => void;
   onValidityChange?: (valid: boolean) => void;
   disabled?: boolean;
+  /** 바로 위에 같은 이름이 이미 보일 때. 스크린리더에는 그대로 읽힌다 */
+  hideLabel?: boolean;
 };
 
 /**
@@ -21,6 +23,9 @@ export type NumberStepperProps = {
  * 범위 밖이거나 정수가 아닌 입력은 값으로 올리지 않고 `Field` 오류로 남겨,
  * 부모는 `onValidityChange` 로 제출을 막습니다.
  */
+/** 입력칸 안에 −/+ 둘과 세 자리 숫자가 함께 들어가는 최소 폭 */
+const NARROW_WIDTH = size.minTouch * 3 + space.xs + space.lg * 2;
+
 export function NumberStepper({
   label,
   value,
@@ -29,7 +34,10 @@ export function NumberStepper({
   onChange,
   onValidityChange,
   disabled,
+  hideLabel,
 }: NumberStepperProps) {
+  // 2열 카드처럼 좁으면 −/+ 를 입력칸 안에 두면 숫자 자리가 사라진다. 글자·터치 영역을 줄이지 않고 다음 줄로 내린다
+  const [narrow, setNarrow] = useState(false);
   const [input, setInput] = useState(String(value));
   const [error, setError] = useState<string>();
   const currentValue = useRef(value);
@@ -76,30 +84,36 @@ export function NumberStepper({
     onPress: () => { if (!repeated.current) changeBy(amount); },
   });
 
+  const buttons = (
+    <View style={{ flexDirection: 'row', gap: space.xs }}>
+      <IconButton icon="minus" label={`${label} 줄이기`} disabled={decrementDisabled} tone="surface" {...buttonProps(-1)} />
+      <IconButton icon="plus" label={`${label} 늘리기`} disabled={incrementDisabled} tone="surface" {...buttonProps(1)} />
+    </View>
+  );
+
   return (
-    <Field
-      label={label}
-      value={input}
-      editable={!disabled}
-      keyboardType="number-pad"
-      error={error}
-      accessibilityLiveRegion="polite"
-      onChangeText={(text) => {
-        setInput(text);
-        const next = parseStepperInput(text, min, max);
-        if (next === undefined) {
-          setError(`${max === undefined ? `${min} 이상` : `${min}~${max}`}의 정수를 입력해 주세요.`);
-          onValidityChange?.(false);
-        } else {
-          commit(next);
-        }
-      }}
-      endAdornment={(
-        <View style={{ flexDirection: 'row', gap: space.xs }}>
-          <IconButton icon="minus" label={`${label} 줄이기`} disabled={decrementDisabled} tone="surface" {...buttonProps(-1)} />
-          <IconButton icon="plus" label={`${label} 늘리기`} disabled={incrementDisabled} tone="surface" {...buttonProps(1)} />
-        </View>
-      )}
-    />
+    <View onLayout={(e) => setNarrow(e.nativeEvent.layout.width < NARROW_WIDTH)} style={{ gap: space.xs }}>
+      <Field
+        label={hideLabel ? undefined : label}
+        accessibilityLabel={label}
+        value={input}
+        editable={!disabled}
+        keyboardType="number-pad"
+        error={error}
+        accessibilityLiveRegion="polite"
+        onChangeText={(text) => {
+          setInput(text);
+          const next = parseStepperInput(text, min, max);
+          if (next === undefined) {
+            setError(`${max === undefined ? `${min} 이상` : `${min}~${max}`}의 정수를 입력해 주세요.`);
+            onValidityChange?.(false);
+          } else {
+            commit(next);
+          }
+        }}
+        endAdornment={narrow ? undefined : buttons}
+      />
+      {narrow ? buttons : null}
+    </View>
   );
 }

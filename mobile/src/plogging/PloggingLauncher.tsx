@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { View } from 'react-native';
 import { File, Paths } from 'expo-file-system';
+import { useNetworkState } from 'expo-network';
 import { Snackbar, size, space } from 'design-system/src';
 import { createMockClient, type ApiClient } from '../api/client';
 import { useLocationGate } from '../auth/useLocationGate';
@@ -36,6 +37,13 @@ const resume = (id: string, params: { flash?: string; startedAt?: string; shared
 
 /** 시작 시트는 어느 탭 위에서든 뜨므로 탭 레이아웃이 한 벌만 가진다. */
 export function PloggingLauncher({ children }: { children: ReactNode }) {
+  const network = useNetworkState();
+  useEffect(() => {
+    if (network.isConnected && network.isInternetReachable !== false) {
+      loadLastAccount();
+      void syncOutbox();
+    }
+  }, [network.isConnected, network.isInternetReachable]);
   const [open, setOpen] = useState(false);
   const [noCrew, setNoCrew] = useState(false);
   const [syncing, setSyncing] = useState(false);
@@ -52,6 +60,8 @@ export function PloggingLauncher({ children }: { children: ReactNode }) {
       .get('GET /users/me')
       .then((me) => {
         loadAccount(me.data.id);
+        // 지난 실행에서 못 보낸 줍기·종료가 있으면 앱을 켤 때 이어서 보낸다
+        void syncOutbox();
         setShareDefault(me.data.settings.shareLocationDefault);
       })
       .catch(() => {});
@@ -62,7 +72,7 @@ export function PloggingLauncher({ children }: { children: ReactNode }) {
     const entry = ploggingEntry({
       onboarded: true,
       current: null,
-      local: session ? { activityId: session.activityId, ended, unsynced: outbox.length > 0 } : null,
+      local: session ? { activityId: session.activityId, ended: !!ended, unsynced: outbox.length > 0 } : null,
     });
     if (entry.kind === 'resume') return resume(entry.id);
     if (entry.kind === 'syncing') {
@@ -80,7 +90,7 @@ export function PloggingLauncher({ children }: { children: ReactNode }) {
       // 조회에 실패하면 없는 것으로 보고 시트를 연다. 실제로 진행 중이면 시작 요청이 409 로 그 활동을 찾아 준다
       const current = await api.get('GET /activities/current').then((r) => r.data).catch(() => null);
       const { session, ended, outbox } = getStored();
-      const local = session ? { activityId: session.activityId, ended, unsynced: outbox.length > 0 } : null;
+      const local = session ? { activityId: session.activityId, ended: !!ended, unsynced: outbox.length > 0 } : null;
       const entry = ploggingEntry({ onboarded: onboardedFlag.exists, current, local });
       if (entry.kind === 'resume') resume(entry.id);
       else if (entry.kind === 'syncing') {

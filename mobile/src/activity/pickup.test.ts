@@ -6,6 +6,7 @@ import {
   itemsFromCounts,
   parseQuantity,
   summaryMeta,
+  summaryDuration,
   totalOf,
   undoPickup,
 } from './pickup';
@@ -91,5 +92,14 @@ describe('종료 요약', () => {
       { category: 'PAPER', count: 2 },
       { category: 'VINYL', count: 2 },
     ]);
+  });
+});
+
+describe('요약 활동 시간', () => {
+  test('60초 미만은 "1분 미만", 그 위는 분·시간', () => {
+    expect(summaryDuration(0)).toBe('1분 미만');
+    expect(summaryDuration(59)).toBe('1분 미만');
+    expect(summaryDuration(2520)).toBe('42분');
+    expect(summaryDuration(4320)).toBe('1시간 12분');
   });
 });

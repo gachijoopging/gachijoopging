@@ -1,3 +1,4 @@
+import { formatElapsed } from '../format';
 import { CATEGORY_LABEL, type Category } from '../category';
 import type { ItemInput } from './outbox';
 
@@ -87,4 +88,8 @@ export function byCategoryChips(byCategory: Counts): { category: Category; count
   return ORDER.filter((c) => (byCategory[c] ?? 0) > 0)
     .map((category) => ({ category, count: byCategory[category] ?? 0 }))
     .sort((a, b) => b.count - a.count || ORDER.indexOf(a.category) - ORDER.indexOf(b.category));
+}
+
+export function summaryDuration(sec: number): string {
+  return sec < 60 ? '1분 미만' : formatElapsed(sec);
 }
