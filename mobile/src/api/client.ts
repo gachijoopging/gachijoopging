@@ -75,7 +75,7 @@ function isMockKey(key: MutationKey): key is MockKey {
   return key in MOCKS;
 }
 
-/** 실 API 가 붙기 전까지 화면이 쓰는 구현. 숫자는 docs/openapi.yaml 의 example 그대로다. */
+/** 실 API 가 붙기 전까지 화면이 쓰는 구현. */
 export function createMockClient({ delayMs = 0, failing = [], activityTotals }: MockOptions = {}): ApiClient {
   return {
     async get(key) {
@@ -88,7 +88,10 @@ export function createMockClient({ delayMs = 0, failing = [], activityTotals }: 
       if (failing.includes(key)) throw new ApiError('MOCK_FAILURE');
       if (key === 'POST /activities/{id}/end') {
         const request = body as EndBody & { id: string };
-        return { data: { ...MOCKS['POST /activities/{id}/end'].data, ...request, ...(activityTotals?.() ?? {}) } } as never;
+        const totals = activityTotals?.();
+        return { data: { ...MOCKS['POST /activities/{id}/end'].data, ...request,
+          ...(totals ? { itemCount: totals.itemCount, byCategory: totals.byCategory } : {}),
+        } } as never;
       }
       // 204 전용 경로는 example 이 없다 — 성공은 그냥 값 없이 끝난다.
       return (isMockKey(key) ? MOCKS[key] : undefined) as never;

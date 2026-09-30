@@ -3,8 +3,9 @@ import { MOCKS } from './mocks.generated';
 
 describe('목 클라이언트', () => {
   test('재실행 뒤 종료 목도 기기에 남은 전체 합계를 사용한다', async () => {
-    const api = createMockClient({ activityTotals: () => ({ itemCount: 2, byCategory: { CAN: 2 } }) });
-    const body = { id: 'a1', endedAt: '2026-09-30T00:01:00Z', durationSec: 60, pausedSec: 0, distanceM: 10, steps: null, route: [] };
+    const session = { itemCount: 2, byCategory: { CAN: 2 }, distanceM: 100, pausedSec: 0 };
+    const api = createMockClient({ activityTotals: () => session });
+    const body = { id: 'a1', endedAt: '2026-09-30T00:01:00Z', durationSec: 60, pausedSec: 20, distanceM: 10, steps: null, route: [] };
     const response = await api.mutate('POST /activities/{id}/end', body);
     expect(response.data).toEqual(expect.objectContaining({ ...body, itemCount: 2, byCategory: { CAN: 2 } }));
   });
