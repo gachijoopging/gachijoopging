@@ -45,7 +45,7 @@ import {
   type BannerKind,
   type Session,
 } from '../src/activity/session';
-import { getStored, loadAccount, subscribe, updateStored } from '../src/activity/store';
+import { getStored, loadAccount, loadLastAccount, subscribe, updateStored } from '../src/activity/store';
 import { startTracking, stopTracking, syncOutbox, tick } from '../src/activity/tracking';
 import { formatClock, formatDistance } from '../src/format';
 import { crewMarkers } from '../src/live/live';
@@ -100,10 +100,12 @@ export default function ActivityInProgressScreen() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
+      const local = loadLastAccount();
       const me = await api.get('GET /users/me').catch(() => null);
-      if (cancelled || !me) return;
-      setMyId(me.data.id);
-      const stored = loadAccount(me.data.id);
+      const userId = me?.data.id ?? local?.session?.userId;
+      if (cancelled || !userId) return;
+      setMyId(userId);
+      const stored = loadAccount(userId);
       if (stored.session?.activityId === id && stored.ended) {
         // 종료 대기 중인 활동을 진행 중으로 다시 열지 않는다
         router.replace({ pathname: '/4-7-activity-summary', params: { id } });
@@ -112,10 +114,10 @@ export default function ActivityInProgressScreen() {
       if (stored.session?.activityId !== id) {
         const t = Date.now();
         const fresh = startedAt
-          ? newSession({ id, startedAt, pausedSec: 0, paused: false, pausedAt: null, itemCount: 0, locationShared: shared === 'true' }, me.data.id, t)
+          ? newSession({ id, startedAt, pausedSec: 0, paused: false, pausedAt: null, itemCount: 0, locationShared: shared === 'true' }, userId, t)
           : await api
               .get('GET /activities/current')
-              .then(({ data }) => (data?.id === id ? { ...newSession(data, me.data.id, t), distanceM: data.distanceM } : null))
+              .then(({ data }) => (data?.id === id ? { ...newSession(data, userId, t), distanceM: data.distanceM } : null))
               .catch(() => null);
         if (cancelled || !fresh) return;
         updateStored((st) => ({ ...st, session: fresh, ended: false }));
@@ -158,6 +160,11 @@ export default function ActivityInProgressScreen() {
         Location.hasServicesEnabledAsync().catch(() => true),
       ]);
       const off = !perm?.granted || !services;
+      if (off) {
+        updateStored((st) => st.session?.here
+          ? { ...st, session: { ...restartLine(st.session, Date.now()), here: null } }
+          : st);
+      }
       setLocationOff((was) => {
         if (was && !off) {
           updateStored((st) => (st.session ? { ...st, session: restartLine(st.session, Date.now()) } : st));
