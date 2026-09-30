@@ -1,80 +1,91 @@
-import type { ApiClient } from '../api/client';
-import { enqueue, type Op } from './outbox';
-import { getStored, loadAccount, updateStored } from './store';
-import { syncOutbox } from './tracking';
+const snapshot = { endedAt: '2026-09-30T00:01:00Z', durationSec: 60, pausedSec: 0, distanceM: 10, steps: null, route: [] };
+import { createMockClient, type ApiClient } from '../api/client';
+import type { Op } from './outbox';
+import { newSession } from './session';
+import { startTracking, syncOutbox, tick } from './tracking';
 
-jest.mock('expo-file-system', () => {
-  const disk = new Map<string, string>();
-  class File {
-    private key: string;
-    constructor(_dir: unknown, name: string) {
-      this.key = name;
-    }
-    get exists() {
-      return disk.has(this.key);
-    }
-    textSync() {
-      return disk.get(this.key) ?? '';
-    }
-    write(text: string) {
-      disk.set(this.key, text);
-    }
-    delete() {
-      disk.delete(this.key);
-    }
-    create() {
-      disk.set(this.key, '');
-    }
-  }
-  return { File, Paths: { document: '' } };
+let mockStored: ReturnType<typeof import('./store')['getStored']>;
+const mockMutate = jest.mocked(createMockClient().mutate);
+const mockPermission = jest.fn().mockResolvedValue({ granted: true });
+const mockEnabled = jest.fn().mockResolvedValue(true);
+const mockStart = jest.fn().mockResolvedValue(undefined);
+jest.mock('../api/client', () => {
+  const client = { mutate: jest.fn().mockResolvedValue({}) };
+  return { createMockClient: () => client };
 });
-let mockOnline = true;
-jest.mock('expo-network', () => ({ getNetworkStateAsync: async () => ({ isConnected: mockOnline, isInternetReachable: mockOnline }) }));
-jest.mock('expo-location', () => ({}));
-jest.mock('expo-task-manager', () => ({ defineTask: () => {} }));
-jest.mock('../../modules/tracking-notification', () => ({ updateTrackingNotification: () => false }));
+jest.mock('expo-location', () => ({
+  Accuracy: { BestForNavigation: 6 },
+  hasStartedLocationUpdatesAsync: jest.fn().mockResolvedValue(true),
+  startLocationUpdatesAsync: (...args: unknown[]) => mockStart(...args),
+  getForegroundPermissionsAsync: (...args: unknown[]) => mockPermission(...args),
+  hasServicesEnabledAsync: (...args: unknown[]) => mockEnabled(...args),
+}));
+const mockNetwork = jest.fn().mockResolvedValue({ isConnected: true, isInternetReachable: true });
+jest.mock('expo-network', () => ({ getNetworkStateAsync: () => mockNetwork() }));
+jest.mock('expo-task-manager', () => ({ defineTask: jest.fn() }));
+jest.mock('../../modules/tracking-notification', () => ({ updateTrackingNotification: jest.fn() }));
+jest.mock('./store', () => ({
+  getStored: () => mockStored,
+  updateStored: (fn: (st: typeof mockStored) => typeof mockStored) => { mockStored = fn(mockStored); },
+}));
 
-const pause: Op = { kind: 'pause', activityId: 'a1' };
-const resume: Op = { kind: 'resume', activityId: 'a1' };
+beforeEach(() => {
+  mockStored = { session: null, ended: null, outbox: [] };
+  mockMutate.mockClear();
+  mockPermission.mockResolvedValue({ granted: true });
+  mockEnabled.mockResolvedValue(true);
+  mockStart.mockClear();
+  mockNetwork.mockResolvedValue({ isConnected: true, isInternetReachable: true });
+});
 
-function client(onSend: (key: string) => void | Promise<void>): ApiClient {
-  return { get: async () => ({}) as never, mutate: async (key: string) => { await onSend(key); } } as ApiClient;
-}
+test('작업이 등록되어 있어도 재실행에서 포그라운드 서비스를 다시 시작한다', async () => {
+  mockStored.session = newSession({ id: 'a1', startedAt: '2026-09-30T00:00:00Z', pausedSec: 0, paused: false, pausedAt: null, itemCount: 0, locationShared: false }, 'u1', 0);
+  expect(await startTracking()).toBe(true);
+  expect(mockStart).toHaveBeenCalledWith('gachi-activity-tracking', expect.objectContaining({ foregroundService: expect.any(Object) }));
+  mockStored.ended = snapshot;
+  expect(await startTracking()).toBe(false);
+  expect(mockStart).toHaveBeenCalledTimes(1);
+});
 
-describe('큐 보내기', () => {
-  beforeEach(() => {
-    mockOnline = true;
-    loadAccount(`u${Math.random()}`);
-  });
+test('빈 큐를 동기화해도 다음 동기화를 막지 않는다', async () => {
+  await syncOutbox();
+  mockStored.outbox = [{ kind: 'pause', activityId: 'a1' }];
+  await syncOutbox();
+  expect(mockMutate).toHaveBeenCalledTimes(1);
+  expect(mockStored.outbox).toEqual([]);
+});
 
-  test('연결이 없으면 보내 보지도 않고 false — 시간 초과를 기다리지 않는다', async () => {
-    mockOnline = false;
-    updateStored((st) => ({ ...st, outbox: enqueue(st.outbox, pause) }));
-    const send = jest.fn();
-    expect(await syncOutbox(client(send))).toBe(false);
-    expect(send).not.toHaveBeenCalled();
-    expect(getStored().outbox).toEqual([pause]);
-  });
+test('다음 요청 실패 전에 성공한 요청을 디스크 상태에서 제거한다', async () => {
+  const first: Op = { kind: 'pause', activityId: 'a1' };
+  const second: Op = { kind: 'resume', activityId: 'a1' };
+  mockStored.outbox = [first, second];
+  const mutate = jest.fn()
+    .mockImplementationOnce(async () => {})
+    .mockImplementationOnce(async () => {
+      expect(mockStored.outbox).toEqual([second]);
+      throw new Error('offline');
+    });
+  await syncOutbox({ mutate } as unknown as ApiClient);
+  expect(mockStored.outbox).toEqual([second]);
+});
 
-  test('보내는 도중에 쌓인 것도 이어서 보낸다', async () => {
-    updateStored((st) => ({ ...st, outbox: enqueue(st.outbox, pause) }));
-    const sent: string[] = [];
-    const ok = await syncOutbox(
-      client((key) => {
-        sent.push(key);
-        // 첫 요청이 나가는 사이에 사용자가 하나 더 담았다
-        if (sent.length === 1) updateStored((st) => ({ ...st, outbox: enqueue(st.outbox, resume) }));
-      }),
-    );
-    expect(sent).toEqual(['POST /activities/{id}/pause', 'POST /activities/{id}/resume']);
-    expect(ok).toBe(true);
-    expect(getStored().outbox).toEqual([]);
-  });
+test('전송 중 추가한 종료 요청도 진행 중인 동기화가 순서대로 보낸다', async () => {
+  const first: Op = { kind: 'pause', activityId: 'a1' };
+  const second: Op = { kind: 'resume', activityId: 'a1' };
+  mockStored.outbox = [first];
+  const mutate = jest.fn().mockImplementationOnce(async () => {
+    mockStored.outbox = [...mockStored.outbox, second];
+  }).mockResolvedValue({});
+  await syncOutbox({ mutate } as unknown as ApiClient);
+  expect(mutate.mock.calls.map(([path]) => path)).toEqual(['POST /activities/{id}/pause', 'POST /activities/{id}/resume']);
+  expect(mockStored.outbox).toEqual([]);
+});
 
-  test('실패하면 false 이고 큐를 남긴다', async () => {
-    updateStored((st) => ({ ...st, outbox: enqueue(st.outbox, pause) }));
-    const ok = await syncOutbox(client(() => Promise.reject(new Error('offline'))));
-    expect(ok).toBe(false);
-    expect(getStored().outbox).toEqual([pause]);
-  });
+test.each(['permission', 'services'])('위치 %s가 꺼지면 마지막 좌표를 보내지 않는다', async (off) => {
+  const session = newSession({ id: 'a1', startedAt: '2026-09-30T00:00:00Z', pausedSec: 0, paused: false, pausedAt: null, itemCount: 0, locationShared: true }, 'u1', 0);
+  mockStored.session = { ...session, here: { latitude: 37, longitude: 127, accuracy: 5 } };
+  if (off === 'permission') mockPermission.mockResolvedValue({ granted: false });
+  else mockEnabled.mockResolvedValue(false);
+  await tick(off === 'permission' ? 10_000 : 20_000);
+  expect(mockMutate).toHaveBeenCalledWith('POST /activities/{id}/live', expect.objectContaining({ location: null }));
 });
