@@ -23,7 +23,11 @@ class TrackingNotificationModule : Module() {
       val active = manager.activeNotifications.firstOrNull {
         it.notification.channelId?.endsWith(":$taskName") == true
       } ?: return@Function false
-      val open = Intent(Intent.ACTION_VIEW, Uri.parse(url)).setPackage(context.packageName)
+      // 실행 중인 MainActivity 를 다시 띄우지 않고 그 태스크로 돌아가게 한다. 플래그 없이 보내면 새 인스턴스가
+      // 겹쳐 올라와 dev client 에서는 react context 중복 생성으로 죽고, 링크도 전달되지 않는다
+      val open = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+        .setPackage(context.packageName)
+        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP)
       val builder = Notification.Builder.recoverBuilder(context, active.notification)
         .setContentTitle(title)
         .setContentText(body)

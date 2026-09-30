@@ -6,7 +6,7 @@ import * as Location from 'expo-location';
 import { useNetworkState } from 'expo-network';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { AppState, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   Appear,
@@ -193,6 +193,15 @@ export default function ActivityInProgressScreen() {
         .catch(() => {});
     }, []),
   );
+
+  // 앱이 앞에 올 때마다 추적을 다시 요청한다. 포그라운드 서비스는 앱이 앞에 있을 때만 시작되므로,
+  // 뒤에서 들어와 첫 시작을 놓쳤거나 시스템이 서비스를 내린 뒤에도 여기서 되살아난다
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') void startTracking();
+    });
+    return () => sub.remove();
+  }, []);
 
   useEffect(() => () => {
     if (bubbleTimer.current) clearTimeout(bubbleTimer.current);

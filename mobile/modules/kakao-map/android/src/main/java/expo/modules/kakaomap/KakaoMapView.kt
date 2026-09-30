@@ -39,6 +39,9 @@ class KakaoMapView(context: Context, appContext: AppContext) : ExpoView(context,
   private val onMarkerPress by EventDispatcher()
   private val onUserGesture by EventDispatcher()
 
+  // react-native-screens 는 다른 화면이 위에 오면 이 화면의 fragment 를 떼므로 지도가 창에서 빠진다.
+  // SDK 는 그때 finishManually 가 아니면 엔진을 스스로 끝내 버려 돌아와도 검게 남는다.
+  // 끝내기는 unmount 때 우리가 하고, 창에서 빠지고 붙을 때는 렌더 스레드만 멈췄다 잇는다
   private val mapView = MapView(context).also { addView(it) }
   private var map: KakaoMap? = null
   private var started = false
@@ -56,8 +59,6 @@ class KakaoMapView(context: Context, appContext: AppContext) : ExpoView(context,
   /** id 로 추가·이동·제거를 가른다. 소켓 갱신마다 전부 다시 그리지 않기 위해서다 */
   private val labels = mutableMapOf<String, Pair<Marker, Label>>()
 
-  /** 키가 와야 SDK 를 초기화할 수 있고, 초기화 전에는 지도를 띄울 수 없다. */
-  // 창에서 빠지면 렌더 스레드를 멈추고, 다시 붙으면 잇는다. 안 하면 배경에서 GL 을 돌리고 복귀 때 검게 남는다
   override fun onAttachedToWindow() {
     super.onAttachedToWindow()
     if (map != null) mapView.resume()
@@ -68,6 +69,9 @@ class KakaoMapView(context: Context, appContext: AppContext) : ExpoView(context,
     super.onDetachedFromWindow()
   }
 
+  fun destroy() = mapView.finish()
+
+  /** 키가 와야 SDK 를 초기화할 수 있고, 초기화 전에는 지도를 띄울 수 없다. */
   fun setAppKey(appKey: String) {
     if (started || appKey.isBlank()) return
     started = true
@@ -126,6 +130,8 @@ class KakaoMapView(context: Context, appContext: AppContext) : ExpoView(context,
         }
       },
     )
+    // start() 가 내부 SurfaceView 를 만든 뒤라야 먹는다. 그 전에 부르면 조용히 무시된다
+    mapView.setFinishManually(true)
   }
 
   private fun moveCamera(target: LatLng) {

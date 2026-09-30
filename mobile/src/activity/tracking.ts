@@ -45,7 +45,8 @@ export async function startTracking(): Promise<boolean> {
   const { session } = getStored();
   if (!session) return false;
   try {
-    if (await Location.hasStartedLocationUpdatesAsync(TRACKING_TASK)) return true;
+    // 이미 등록돼 있어도 다시 요청한다. 첫 등록이 앱이 앞에 오기 전에 되면 위치 task 만 남고
+    // 포그라운드 서비스(알림·화면 꺼짐 추적)는 빠진다. 재등록은 그 서비스를 다시 올린다
     const { title, body } = trackingNotice(session, Date.now());
     await Location.startLocationUpdatesAsync(TRACKING_TASK, {
       accuracy: Location.Accuracy.BestForNavigation,
@@ -54,7 +55,9 @@ export async function startTracking(): Promise<boolean> {
       foregroundService: { notificationTitle: title, notificationBody: body, killServiceOnDestroy: false },
     });
     return true;
-  } catch {
+  } catch (e) {
+    // 왜 못 켰는지 삼키지 않는다 — 권한·포그라운드 규칙 위반은 여기서만 드러난다
+    console.warn('[tracking] start failed', e instanceof Error ? e.message : String(e));
     return false;
   }
 }
