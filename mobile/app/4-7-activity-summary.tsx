@@ -25,8 +25,9 @@ import { createMockClient, type ApiClient } from '../src/api/client';
 import { CATEGORY_ICON, CATEGORY_LABEL } from '../src/category';
 import { formatDistance } from '../src/format';
 import { byCategoryChips, summaryDuration, summaryMeta } from '../src/activity/pickup';
-import { getStored, subscribe, updateStored, type Stored } from '../src/activity/store';
-import { syncOutbox } from '../src/activity/tracking';
+import { getStored, loadLastAccount, subscribe, updateStored, type Stored } from '../src/activity/store';
+import { applyEndedActivity, syncOutbox } from '../src/activity/tracking';
+import { ShareCard, useShareImage } from '../src/activity/ShareCard';
 
 const api: ApiClient = createMockClient({ delayMs: 300 });
 const MAP_HEIGHT = 248;
@@ -40,7 +41,7 @@ export default function ActivitySummaryScreen() {
   const appKey: string = Constants.expoConfig?.extra?.kakaoNativeAppKey ?? '';
   const network = useNetworkState();
   const offline = network.isConnected === false || network.isInternetReachable === false;
-  const [stored, setStored] = useState<Stored>(getStored);
+  const [stored, setStored] = useState<Stored>(() => loadLastAccount() ?? getStored());
   const [failed, setFailed] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [includeRoute, setIncludeRoute] = useState(false);
@@ -48,11 +49,18 @@ export default function ActivitySummaryScreen() {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [snackbar, setSnackbar] = useState<string | null>(null);
+  const [sharing, setSharing] = useState(false);
+  const share = useShareImage();
 
   useEffect(() => subscribe(setStored), []);
+  useEffect(() => {
+    if (stored.ended === true && stored.session?.activityId === id) {
+      void api.get('GET /activities/{id}', { id }).then(({ data }) => applyEndedActivity(id, data)).catch(() => setSnackbar('기록을 불러오지 못했어요. 연결 후 다시 열어 주세요.'));
+    }
+  }, [id, stored.ended, stored.session?.activityId]);
 
   const session = stored.session?.activityId === id ? stored.session : null;
-  const snapshot = session ? stored.ended : null;
+  const snapshot = session && typeof stored.ended === 'object' ? stored.ended : null;
   // 종료 요청이 큐에서 빠졌으면 서버가 받았다
   const pending = stored.outbox.some((op) => op.kind === 'end' && op.activityId === id);
   const phase: Phase = !pending ? 'saved' : offline ? 'offline' : failed && !syncing ? 'error' : 'saving';
@@ -111,6 +119,18 @@ export default function ActivitySummaryScreen() {
   const meta = summaryMeta({ startedAt: session.startedAt, endedAt: snapshot.endedAt, pausedSec: snapshot.pausedSec, steps: snapshot.steps });
   const distance = formatDistance(snapshot.distanceM);
   const duration = summaryDuration(snapshot.durationSec);
+  const openShare = async () => {
+    if (sharing) return;
+    setSharing(true);
+    try {
+      const imageUri = await share.capture();
+      router.push({ pathname: '/5-6-create-post', params: { imageUri } });
+    } catch {
+      setSnackbar('공유 이미지를 만들지 못했어요. 다시 시도해 주세요.');
+    } finally {
+      setSharing(false);
+    }
+  };
 
   const title = { saving: '기록을 저장하고 있어요…', saved: '기록을 저장했어요. 피드에 공유할까요?', offline: '기록을 기기에 저장했어요', error: '기록을 저장하지 못했어요' }[phase];
 
@@ -202,8 +222,9 @@ export default function ActivitySummaryScreen() {
                   accessibilityHint={phase === 'saved' ? undefined : '기록 저장이 끝나면 쓸 수 있어요'}
                   size="md"
                   fullWidth
-                  disabled={phase !== 'saved'}
-                  onPress={() => router.push({ pathname: '/5-6-create-post', params: { activityId: id, includeRoute: String(includeRoute) } })}
+                  loading={sharing}
+                  disabled={phase !== 'saved' || sharing}
+                  onPress={openShare}
                 />
               )}
             </View>
@@ -214,6 +235,8 @@ export default function ActivitySummaryScreen() {
           ) : null}
         </Card>
       </ScrollView>
+
+      <ShareCard cardRef={share.ref} includeRoute={includeRoute} data={{ ...snapshot, startedAt: session.startedAt, itemCount: session.itemCount, segments: session.segments }} />
 
       <Dialog visible={confirmDelete} onClose={() => !deleting && setConfirmDelete(false)} title="이 기록을 지울까요?">
         <Txt variant="body">지운 기록은 되돌릴 수 없어요. 크루 합산에서도 빠져요.</Txt>

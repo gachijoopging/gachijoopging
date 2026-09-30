@@ -72,14 +72,13 @@ export default function AiClassificationReviewScreen() {
   const save = () => {
     if (total === 0 || anyInvalid) return;
     setSaveFailed(false);
-    // 기기 저장은 동기라 "저장 중" 을 그릴 틈이 없다. 곧바로 4-3 으로 돌아간다
     try {
       // 같은 작업을 다시 시도하면 같은 id 를 쓴다 — 서버가 중복을 흡수한다
       const items = itemsFromCounts(counts, groups, () => '').map((it) => ({
         ...it,
         id: (ids.current[it.category] ??= Crypto.randomUUID()),
       }));
-      recordPickup(items, media.photoId);
+      recordPickup(items, media.photoId, id);
       const summary = items.map((it) => `${CATEGORY_LABEL[it.category]} ${it.quantity}`).join(' · ');
       backToActivity(`${summary} 담았어요 · 기기에 저장됨`);
     } catch {
@@ -93,7 +92,6 @@ export default function AiClassificationReviewScreen() {
       <ScrollView contentContainerStyle={{ gap: space.md, paddingBottom: space.xl }} keyboardShouldPersistTaps="handled">
         <Card padded={false} style={{ overflow: 'hidden' }}>
           <Image
-            // 방금 찍은 사진은 기기에 있다 — 서버 사본을 기다리지 않는다
             source={{ uri: localUri ?? media.url }}
             style={{ width: '100%', aspectRatio: 1, maxHeight: PHOTO_MAX_HEIGHT, backgroundColor: colors.neutral }}
             resizeMode="cover"

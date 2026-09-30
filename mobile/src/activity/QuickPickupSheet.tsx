@@ -13,7 +13,7 @@ export function QuickPickupSheet({ visible, onClose, session }: { visible: boole
   const [invalid, setInvalid] = useState<Partial<Record<Category, boolean>>>({});
   const [last, setLast] = useState<LastPickup | null>(null);
   const [failed, setFailed] = useState<{ category: Category; quantity: number } | null>(null);
-  // 큐만 바뀌어도(보내기 끝남) "동기화 대기 → 저장됨" 을 다시 그린다
+  const [undoFailed, setUndoFailed] = useState(false);
   useSyncExternalStore(subscribe, getStored);
 
   const add = (category: Category, quantity: number) => {
@@ -30,8 +30,9 @@ export function QuickPickupSheet({ visible, onClose, session }: { visible: boole
     try {
       undoPickup(last);
       setLast(null);
+      setUndoFailed(false);
     } catch {
-      setFailed(null);
+      setUndoFailed(true);
     }
   };
 
@@ -77,6 +78,7 @@ export function QuickPickupSheet({ visible, onClose, session }: { visible: boole
       </View>
 
       <View style={{ marginTop: space.md, gap: space.sm }}>
+        {undoFailed ? <Banner tone="danger" action={{ label: '다시 시도', onPress: undo }}>되돌리기를 저장하지 못했어요</Banner> : null}
         {failed ? (
           <Banner tone="danger" action={{ label: '다시 시도', onPress: () => add(failed.category, failed.quantity) }}>
             저장하지 못했어요

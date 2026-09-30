@@ -1,6 +1,7 @@
 import { MOCKS, type MockKey } from './mocks.generated';
 import type { MembershipStatus } from '../auth/destination';
 import type { JoinRequestStatus } from '../auth/pending-request';
+import type { EndBody } from '../activity/outbox';
 
 type MeData = (typeof MOCKS)['GET /users/me']['data'];
 type JoinRequestData = (typeof MOCKS)['GET /crews/join-requests/mine']['data'];
@@ -40,11 +41,11 @@ export type VoidMutationKey =
   | 'DELETE /posts/{postId}/like'
   | 'DELETE /posts/{postId}'
   | 'DELETE /comments/{commentId}'
-  | 'DELETE /activities/{id}'
-  | 'DELETE /activities/{id}/items/{itemId}'
   | 'POST /activities/{id}/pause'
   | 'POST /activities/{id}/resume'
-  | 'POST /activities/{id}/live';
+  | 'POST /activities/{id}/live'
+  | 'DELETE /activities/{id}/items/{itemId}'
+  | 'DELETE /activities/{id}';
 export type MutationKey = MockKey | VoidMutationKey;
 
 export type ApiClient = {
@@ -67,6 +68,7 @@ export class ApiError extends Error {
 export type MockOptions = {
   /** 응답 지연. 화면의 로딩 상태를 눈으로 보려면 올린다 */
   delayMs?: number;
+  activityTotals?: () => { itemCount: number; byCategory: Record<string, number> } | null;
   /** 이 키들은 항상 실패한다. 오류·재시도 UI 를 목으로 확인하는 수단 */
   failing?: readonly MutationKey[];
 };
@@ -77,17 +79,24 @@ function isMockKey(key: MutationKey): key is MockKey {
   return key in MOCKS;
 }
 
-/** 실 API 가 붙기 전까지 화면이 쓰는 구현. 숫자는 docs/openapi.yaml 의 example 그대로다. */
-export function createMockClient({ delayMs = 0, failing = [] }: MockOptions = {}): ApiClient {
+/** 실 API 가 붙기 전까지 화면이 쓰는 구현. */
+export function createMockClient({ delayMs = 0, failing = [], activityTotals }: MockOptions = {}): ApiClient {
   return {
     async get(key) {
       if (delayMs > 0) await wait(delayMs);
       if (failing.includes(key)) throw new ApiError('MOCK_FAILURE');
       return MOCKS[key] as ApiResponse<typeof key>;
     },
-    async mutate(key) {
+    async mutate(key, body) {
       if (delayMs > 0) await wait(delayMs);
       if (failing.includes(key)) throw new ApiError('MOCK_FAILURE');
+      if (key === 'POST /activities/{id}/end') {
+        const request = body as EndBody & { id: string };
+        const totals = activityTotals?.();
+        return { data: { ...MOCKS['POST /activities/{id}/end'].data, ...request,
+          ...(totals ? { itemCount: totals.itemCount, byCategory: totals.byCategory } : {}),
+        } } as never;
+      }
       // 204 전용 경로는 example 이 없다 — 성공은 그냥 값 없이 끝난다.
       return (isMockKey(key) ? MOCKS[key] : undefined) as never;
     },
