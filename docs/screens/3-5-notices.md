@@ -28,7 +28,7 @@
 |---|---|---|---|---|
 | ① | 뒤로 버튼 | "뒤로" | `AppHeader` | 3-1 |
 | ① | 헤더 제목 | "공지" | `AppHeader` | — |
-| ① | 작성 버튼 | 크루장만 "작성" | `Button` primary sm + `Icon`(plus) | 3-12 |
+| ① | 공지 쓰기 버튼 | 크루장만 "공지 쓰기" | `Button` primary sm + `Icon`(plus) | 3-12 |
 | ③ | 최신 공지 행 | 최신 작성 공지를 뜻하는 읽기 전용 `pinned` true인 `title`·`preview`·`commentCount`·`createdAt` (`GET /crew/notices`) | `Card` + `Icon`(pin) + `Txt` + `Badge` | 3-6 |
 | ④ | 일반 공지 행 | `pinned` false인 `title`·`preview`·`commentCount`·`createdAt` (`GET /crew/notices`). ③④ 모두 `preview` 는 2줄 끝 말줄임 | `ListRow` + `Txt` + `Icon`(comment-outline) | 3-6 |
 | ③·④ | 댓글 수 | "댓글 `commentCount`개" | `Txt` micro | 3-6 |

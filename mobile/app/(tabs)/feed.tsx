@@ -205,7 +205,7 @@ export default function FeedScreen() {
             </View>
           ) : null}
         </View>
-        <Button label="글쓰기" icon="plus" size="sm" accessibilityLabel="글쓰기" onPress={write} />
+        <Button label="게시물 쓰기" icon="plus" size="sm" accessibilityLabel="게시물 쓰기" onPress={write} />
       </View>
 
       <View style={{ gap: space.sm, paddingVertical: space.sm }}>
@@ -248,7 +248,7 @@ export default function FeedScreen() {
               icon="sprout-outline"
               title={empty.title}
               description={empty.description}
-              actionLabel={empty.write ? '글쓰기' : undefined}
+              actionLabel={empty.write ? '게시물 쓰기' : undefined}
               onAction={empty.write ? write : undefined}
             />
           }

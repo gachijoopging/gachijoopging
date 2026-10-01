@@ -221,7 +221,7 @@ export default function ManageCrewMembersScreen() {
         title={confirmTitle}
         actions={
           <>
-            <Button label="취소" variant="ghost" size="md" onPress={() => setConfirm(null)} />
+            <Button label="그대로 두기" variant="ghost" size="md" onPress={() => setConfirm(null)} />
             <Button
               label={confirm?.action === 'delegate' ? '위임' : '추방'}
               variant={confirm?.action === 'delegate' ? 'soft' : 'danger'}

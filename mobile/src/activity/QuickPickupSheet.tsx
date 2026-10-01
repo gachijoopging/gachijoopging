@@ -48,7 +48,7 @@ export function QuickPickupSheet({ visible, onClose, session }: { visible: boole
   return (
     <BottomSheet visible={visible} onClose={onClose} title={`이번 활동 줍기 ${total}개`}>
       <Txt variant="caption" tone="muted">
-        {total === 0 ? '아직 주운 게 없어요. 하나 담기 또는 수량을 입력하세요' : '하나 담기 또는 수량을 입력하세요'}
+        {total === 0 ? '아직 주운 게 없어요. 하나 담기를 누르거나 수량을 입력해 주세요' : '하나 담기를 누르거나 수량을 입력해 주세요'}
       </Txt>
 
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.sm }}>

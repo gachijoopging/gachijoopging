@@ -213,11 +213,11 @@ export default function ReportScreen() {
         <Button label="돌아가기" variant="ghost" onPress={back} fullWidth />
       ) : (
         <Button
-          label="신고 제출"
+          label="신고 보내기"
           fullWidth
           loading={sending}
           disabled={!submittable || sending}
-          accessibilityLabel={sending ? '신고 접수 중' : '신고 제출'}
+          accessibilityLabel={sending ? '신고 보내는 중' : '신고 보내기'}
           onPress={submit}
         />
       )}

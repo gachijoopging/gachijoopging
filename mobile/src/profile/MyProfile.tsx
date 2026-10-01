@@ -222,7 +222,7 @@ export function MyProfile({ recordsOnly = false }: { recordsOnly?: boolean }) {
       <BottomSheet visible={menuFor != null} onClose={() => setMenuFor(null)} title="활동 기록">
         <ListRow
           icon="delete-outline"
-          title="기록 삭제"
+          title="삭제하기"
           tone="danger"
           chevron={false}
           onPress={() => {
@@ -238,8 +238,8 @@ export function MyProfile({ recordsOnly = false }: { recordsOnly?: boolean }) {
         title="활동 기록을 삭제할까요?"
         actions={
           <>
-            <Button label="취소" variant="ghost" size="md" disabled={busy} onPress={() => setDeleting(null)} />
-            <Button label="기록 삭제" variant="danger" size="md" loading={busy} onPress={deleteRecord} />
+            <Button label="기록 남기기" variant="ghost" size="md" disabled={busy} onPress={() => setDeleting(null)} />
+            <Button label="삭제" variant="danger" size="md" loading={busy} onPress={deleteRecord} />
           </>
         }
       >

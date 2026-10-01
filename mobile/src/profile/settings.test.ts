@@ -106,3 +106,18 @@ test('크루가 없거나 승인 대기여도 설정에 머물러 계정 행만 
   expect(mockForget).toHaveBeenCalled();
   expect(mockDismiss).toHaveBeenCalledWith('/start');
 });
+
+test('동기화가 남아 막혔을 때 줍깅 탭으로 바로 갈 수 있다', async () => {
+  const { router } = require('expo-router');
+  mockStored = { session: null, ended: null, outbox: [{ kind: 'end', activityId: 'a1' }] };
+  await mount();
+  await act(async () => row('로그아웃').props.onPress());
+  const dialog = tree.root.findAll((n: any) => n.type === 'Dialog' && n.props.visible)[0];
+  expect(dialog.props.title).toBe('먼저 활동 종료와 동기화를 완료해 주세요');
+  expect(button('확인')).toBeUndefined();
+  await act(async () => button('줍깅 탭으로 이동')!.props.onPress());
+  // 이미 있는 탭으로 돌아간다. 탭을 하나 더 쌓으면 줍깅에서 뒤로가 설정으로 돌아온다
+  expect(mockDismiss).toHaveBeenCalledWith('/(tabs)/plogging');
+  expect(router.replace).not.toHaveBeenCalled();
+  expect(button('닫기')).toBeDefined();
+});

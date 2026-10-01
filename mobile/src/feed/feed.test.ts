@@ -112,10 +112,10 @@ describe('빈 피드 문구', () => {
   });
 
   test('전체 탭과 내 게시물 탭은 문구가 다르고 글쓰기 버튼이 있다', () => {
-    expect(emptyCopy('CREW', false)).toEqual({ title: '아직 크루 소식이 없어요', description: '첫 게시물을 남겨 보세요.', write: true });
+    expect(emptyCopy('CREW', false)).toEqual({ title: '아직 크루 게시물이 없어요', description: '첫 게시물을 남겨 보세요.', write: true });
     expect(emptyCopy('MINE', false)).toEqual({
-      title: '아직 올린 글이 없어요',
-      description: '나만 보기로 올린 글도 여기에 모여요.',
+      title: '아직 올린 게시물이 없어요',
+      description: '나만 보기로 올린 게시물도 여기에 모여요.',
       write: true,
     });
   });

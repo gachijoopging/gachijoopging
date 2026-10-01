@@ -61,8 +61,8 @@ export type FeedScope = 'CREW' | 'MINE';
 export function emptyCopy(scope: FeedScope, filtered: boolean): { title: string; description: string; write: boolean } {
   if (filtered) return { title: '이 기간에 올라온 게시물이 없어요', description: '다른 기간을 고르거나 필터를 지워 보세요.', write: false };
   return scope === 'CREW'
-    ? { title: '아직 크루 소식이 없어요', description: '첫 게시물을 남겨 보세요.', write: true }
-    : { title: '아직 올린 글이 없어요', description: '나만 보기로 올린 글도 여기에 모여요.', write: true };
+    ? { title: '아직 크루 게시물이 없어요', description: '첫 게시물을 남겨 보세요.', write: true }
+    : { title: '아직 올린 게시물이 없어요', description: '나만 보기로 올린 게시물도 여기에 모여요.', write: true };
 }
 
 export function photoLabel(index: number, total: number): string {

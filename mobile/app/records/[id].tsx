@@ -250,7 +250,7 @@ export default function ActivityDetailScreen() {
 
       <BottomSheet visible={menuOpen} onClose={() => setMenuOpen(false)} title="활동 기록 관리">
         <Button
-          label="삭제"
+          label="삭제하기"
           variant="danger"
           fullWidth
           onPress={() => {
@@ -266,7 +266,7 @@ export default function ActivityDetailScreen() {
         title="활동 기록을 삭제할까요?"
         actions={
           <>
-            <Button label="취소" variant="ghost" size="md" disabled={deleting} onPress={() => setConfirmDelete(false)} />
+            <Button label="기록 남기기" variant="ghost" size="md" disabled={deleting} onPress={() => setConfirmDelete(false)} />
             <Button label="삭제" variant="danger" size="md" loading={deleting} disabled={deleting} onPress={deleteActivity} />
           </>
         }
@@ -454,11 +454,13 @@ function ItemsSheet({
         title="이 항목을 삭제할까요?"
         actions={
           <>
-            <Button label="취소" variant="ghost" size="md" disabled={busy} onPress={() => setRemoveTarget(null)} />
+            <Button label="항목 남기기" variant="ghost" size="md" disabled={busy} onPress={() => setRemoveTarget(null)} />
             <Button label="삭제" variant="danger" size="md" loading={busy} disabled={busy || offline} onPress={() => removeTarget && remove(removeTarget)} />
           </>
         }
-      />
+      >
+        <Txt variant="body">이 활동의 줍기 개수에서 빠져요.</Txt>
+      </Dialog>
     </BottomSheet>
   );
 }

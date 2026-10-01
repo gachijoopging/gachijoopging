@@ -147,7 +147,7 @@ export default function EnterInviteCodeScreen() {
 
       {banner ? <Banner tone="danger">{banner}</Banner> : null}
       <Button
-        label={isPreview ? '가입 신청' : '크루 확인'}
+        label={isPreview ? '가입 신청하기' : '크루 찾기'}
         variant="primary"
         size="lg"
         fullWidth

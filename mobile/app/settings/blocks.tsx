@@ -196,7 +196,7 @@ export default function ManageBlocksScreen() {
                   onPress={u.withdrawn ? undefined : () => router.push({ pathname: '/users/[id]', params: { id: u.id } })}
                 />
               </View>
-              <Button label="해제" variant="ghost" size="sm" accessibilityLabel={`해제, ${u.nickname}님 차단 해제`} onPress={() => unblock(u)} />
+              <Button label="차단 해제" variant="ghost" size="sm" accessibilityLabel={`차단 해제, ${u.nickname}님`} onPress={() => unblock(u)} />
             </View>
           )}
           ListFooterComponent={

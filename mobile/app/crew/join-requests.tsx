@@ -187,7 +187,7 @@ export default function ManageJoinRequestsScreen() {
         title={confirmTitle}
         actions={
           <>
-            <Button label="취소" variant="ghost" size="md" onPress={() => setConfirm(null)} />
+            <Button label="그대로 두기" variant="ghost" size="md" onPress={() => setConfirm(null)} />
             <Button
               label={confirm?.decision === 'APPROVE' ? '승인' : '거절'}
               variant={confirm?.decision === 'APPROVE' ? 'primary' : 'danger'}

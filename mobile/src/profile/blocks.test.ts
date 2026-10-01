@@ -53,7 +53,7 @@ test('unblocking every loaded row leaves an accessible next-page button', async 
   mockGet.mockResolvedValueOnce({ data: { items: [users[0]], total: 2, nextCursor: 'next' } }).mockResolvedValueOnce({ data: { items: [users[1]], total: 1, nextCursor: null } });
   mockMutate.mockResolvedValue({});
   await act(async () => { tree = create(React.createElement(Blocks)); });
-  await act(async () => { await tree.root.findAllByType('Button' as never).find((node) => node.props.label === '해제')!.props.onPress(); });
+  await act(async () => { await tree.root.findAllByType('Button' as never).find((node) => node.props.label === '차단 해제')!.props.onPress(); });
   expect(names()).toEqual([]);
   await act(async () => { await tree.root.findAllByType('Button' as never).find((node) => node.props.label === '더 불러오기')!.props.onPress(); });
   expect(names()).toEqual(['b']);
