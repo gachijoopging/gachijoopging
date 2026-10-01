@@ -1,6 +1,6 @@
 import * as Crypto from 'expo-crypto';
 import { router, useLocalSearchParams, useNavigation } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Image, View } from 'react-native';
 import {
   AppHeader,
@@ -9,6 +9,8 @@ import {
   Button,
   Card,
   Field,
+  ErrorState,
+  Loading,
   Screen,
   SelectRow,
   Txt,
@@ -16,7 +18,7 @@ import {
   size,
   space,
 } from 'design-system/src';
-import { createMockClient, type ApiClient } from '../src/api/client';
+import { ApiError, createMockClient, type ApiClient } from '../src/api/client';
 import { usePreventBack } from '../src/auth/usePreventBack';
 import {
   MEMO_MAX,
@@ -28,6 +30,7 @@ import {
   reportDraftFor,
   reportRequestId,
   submitOutcome,
+  validReportTarget,
   type ReportReason,
 } from '../src/report/report';
 
@@ -45,26 +48,54 @@ type Params = {
 
 export default function ReportScreen() {
   const { targetType, targetId, nickname, photoUrl, text, thumbUrl } = useLocalSearchParams<Params>();
-  const [reason, setReason] = useState<ReportReason | null>(() => reportDraftFor(targetType, targetId).reason);
-  const [memo, setMemo] = useState(() => reportDraftFor(targetType, targetId).memo);
+  const [reason, setReason] = useState<ReportReason | null>(null);
+  const [memo, setMemo] = useState('');
+  const [accountId, setAccountId] = useState<string | null>(null);
+  const [denied, setDenied] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [sending, setSending] = useState(false);
   const [banner, setBanner] = useState<{ message: string; duplicate: boolean } | null>(null);
   const navigation = useNavigation();
+  const busy = useRef(false);
+  const validTarget = validReportTarget(targetType, targetId);
   usePreventBack(sending);
 
+  useEffect(() => navigation.addListener('beforeRemove', (event) => {
+    if (busy.current) event.preventDefault();
+  }), [navigation]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setAccountId(null);
+    setDenied(false);
+    setLoadFailed(false);
+    if (!validTarget) return;
+    api.get('GET /users/me').then(({ data }) => {
+      if (cancelled) return;
+      if (data.membership.status !== 'MEMBER' || data.membership.crew?.isLeader) { setDenied(true); return; }
+      const draft = reportDraftFor(data.id, targetType, targetId);
+      setReason(draft.reason);
+      setMemo(draft.memo);
+      setAccountId(data.id);
+    }).catch(() => { if (!cancelled) setLoadFailed(true); });
+    return () => { cancelled = true; };
+  }, [targetType, targetId, validTarget]);
+
   const edit = (next: { reason: ReportReason | null; memo: string }) => {
+    if (!accountId || busy.current || denied || !validTarget) return;
     setReason(next.reason);
     setMemo(next.memo);
-    editReportDraft(targetType, targetId, next);
+    editReportDraft(accountId, targetType, targetId, next);
   };
 
   const submit = async () => {
-    if (sending || !canSubmitReport(reason, memo)) return;
+    if (busy.current || !accountId || denied || !validTarget || !canSubmitReport(reason, memo)) return;
+    busy.current = true;
     setSending(true);
     setBanner(null);
     let error: unknown = null;
     try {
-      const id = reportRequestId(targetType, targetId, Crypto.randomUUID);
+      const id = reportRequestId(accountId, targetType, targetId, Crypto.randomUUID);
       await api.mutate('POST /reports', {
         id,
         targetType,
@@ -75,9 +106,15 @@ export default function ReportScreen() {
     } catch (e) {
       error = e;
     }
+    busy.current = false;
+    if (error instanceof ApiError && (error.code === 'FORBIDDEN' || error.code === 'NO_CREW')) {
+      setSending(false);
+      setDenied(true);
+      return;
+    }
     const outcome = submitOutcome(error);
     if (outcome.kind === 'done') {
-      clearReportDraft(targetType, targetId);
+      clearReportDraft(accountId, targetType, targetId);
       return backWithFlash(outcome.message);
     }
     setSending(false);
@@ -85,7 +122,6 @@ export default function ReportScreen() {
   };
 
   const back = () => (router.canGoBack() ? router.back() : router.replace('/(tabs)'));
-  // 이 화면은 사라지므로 접수 안내는 진입한 화면이 flash 로 받아 띄운다
   const backWithFlash = (flash: string) => {
     const { routes, index } = navigation.getState() ?? { routes: [], index: 0 };
     const prev = routes[index - 1];
@@ -95,6 +131,9 @@ export default function ReportScreen() {
   const counter = memoCounter(memo);
   const quote = targetType !== 'USER' && !(targetType === 'POST' && thumbUrl) && text ? `"${text}"` : null;
   const submittable = canSubmitReport(reason, memo);
+
+  if (!validTarget || denied) return <Screen><AppHeader title="신고하기" onBack={back} /><ErrorState title={denied ? '크루원만 신고할 수 있어요.' : '신고 대상을 확인할 수 없어요.'} actionLabel="돌아가기" onRetry={back} /></Screen>;
+  if (!accountId) return <Screen><AppHeader title="신고하기" onBack={back} />{loadFailed ? <ErrorState title="신고 권한을 확인하지 못했어요." actionLabel="돌아가기" onRetry={back} /> : <Loading label="신고 권한을 확인하는 중" />}</Screen>;
 
   return (
     <Screen scroll>

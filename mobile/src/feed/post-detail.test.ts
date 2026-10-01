@@ -116,3 +116,24 @@ test('피드 탭은 모듈이 새로 로드돼도 기기 값으로 복원한다'
   await mount(true);
   expect(rendered.root.findByType('Tabs').props.value).toBe('MINE');
 });
+
+test('게시물 신고에 작성자와 본문 미리보기를 전달한다', async () => {
+  account = 'u2';
+  await mount();
+  const { act } = require('react-test-renderer');
+  const { router } = require('expo-router');
+  await act(async () => rendered.root.findAllByType('Button').find((button: any) => button.props.label === '신고').props.onPress());
+  expect(router.push).toHaveBeenCalledWith(expect.objectContaining({ params: expect.objectContaining({ targetType: 'POST', targetId: 'p1', nickname: '나', text: '게시물' }) }));
+});
+
+test('댓글 신고에 선택한 댓글의 미리보기를 전달한다', async () => {
+  account = 'u2';
+  const comment = { id: 'c1', author: post.author, text: '신고할 댓글', createdAt: post.createdAt };
+  mockGet.mockImplementation((key: string) => Promise.resolve({ data: key === 'GET /users/me' ? { id: account, membership: { status: 'MEMBER', crew: { isLeader: false } } } : { ...post, comments: [comment] } }));
+  await mount();
+  const { act } = require('react-test-renderer');
+  const { router } = require('expo-router');
+  await act(async () => rendered.root.findAllByType('Pressable').find((node: any) => node.props.onLongPress).props.onLongPress());
+  await act(async () => rendered.root.findAllByType('Button').filter((button: any) => button.props.label === '신고').at(-1).props.onPress());
+  expect(router.push).toHaveBeenCalledWith(expect.objectContaining({ params: expect.objectContaining({ targetType: 'COMMENT', targetId: 'c1', nickname: '나', text: '신고할 댓글' }) }));
+});

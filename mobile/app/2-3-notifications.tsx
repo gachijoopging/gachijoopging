@@ -1,6 +1,6 @@
 import * as Notifications from 'expo-notifications';
 import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Linking, RefreshControl, View } from 'react-native';
 import {
   AppHeader,
@@ -58,13 +58,16 @@ export default function NotificationsScreen() {
   const [markingAll, setMarkingAll] = useState(false);
   const [notifyOff, setNotifyOff] = useState(false);
   const [snackbar, setSnackbar] = useState<string | null>(null);
+  const request = useRef(0);
 
   const load = useCallback(async (mode: 'first' | 'pull') => {
+    const generation = ++request.current;
     if (mode === 'pull') setRefreshing(true);
     const [list, count] = await Promise.allSettled([
       api.get('GET /notifications'),
       api.get('GET /notifications/unread-count'),
     ]);
+    if (generation !== request.current) return;
     setRefreshing(false);
     if (list.status === 'rejected') {
       setFailed(true);
@@ -78,15 +81,15 @@ export default function NotificationsScreen() {
   }, []);
 
   useEffect(() => {
-    void load('first');
     api.get('GET /users/me').then((res) => setMembership(res.data.membership.status)).catch(() => {});
   }, [load]);
 
   // 설정에서 권한을 켜고 돌아오면 배너를 걷는다
   useFocusEffect(
     useCallback(() => {
+      void load('first');
       Notifications.getPermissionsAsync().then((p) => setNotifyOff(!p.granted)).catch(() => {});
-    }, []),
+    }, [load]),
   );
 
   const open = (item: Item) => {

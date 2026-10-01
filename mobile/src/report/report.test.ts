@@ -8,6 +8,7 @@ import {
   reportActions,
   reportDraftFor,
   reportRequestId,
+  validReportTarget,
   resolveOutcome,
   submitOutcome,
   targetLabel,
@@ -68,36 +69,53 @@ describe('신고 제출 결과', () => {
 });
 
 describe('신고 초안', () => {
-  afterEach(() => clearReportDraft('POST', 'p1'));
+  afterEach(() => clearReportDraft('u1', 'POST', 'p1'));
 
   test('같은 대상으로 돌아오면 사유·메모가 남아 있다', () => {
-    editReportDraft('POST', 'p1', { reason: 'OTHER', memo: '광고' });
-    expect(reportDraftFor('POST', 'p1')).toMatchObject({ reason: 'OTHER', memo: '광고' });
-    expect(reportDraftFor('COMMENT', 'p1')).toMatchObject({ reason: null, memo: '' });
+    editReportDraft('u1', 'POST', 'p1', { reason: 'OTHER', memo: '광고' });
+    expect(reportDraftFor('u1', 'POST', 'p1')).toMatchObject({ reason: 'OTHER', memo: '광고' });
+    expect(reportDraftFor('u1', 'COMMENT', 'p1')).toMatchObject({ reason: null, memo: '' });
+  });
+
+  test('다른 계정은 앞 계정의 사유·메모·신고 id를 공유하지 않는다', () => {
+    editReportDraft('u1', 'POST', 'p1', { reason: 'OTHER', memo: '비공개 신고 메모' });
+    expect(reportRequestId('u1', 'POST', 'p1', () => 'u1-request')).toBe('u1-request');
+    expect(reportDraftFor('u2', 'POST', 'p1')).toEqual({ reason: null, memo: '', requestId: null });
+    expect(reportRequestId('u2', 'POST', 'p1', () => 'u2-request')).toBe('u2-request');
+    clearReportDraft('u2', 'POST', 'p1');
   });
 
   test('같은 입력의 재시도는 같은 요청 id 를 쓴다', () => {
     let n = 0;
     const make = () => `id${++n}`;
-    editReportDraft('POST', 'p1', { reason: 'SPAM', memo: '' });
-    expect(reportRequestId('POST', 'p1', make)).toBe('id1');
-    expect(reportRequestId('POST', 'p1', make)).toBe('id1');
+    editReportDraft('u1', 'POST', 'p1', { reason: 'SPAM', memo: '' });
+    expect(reportRequestId('u1', 'POST', 'p1', make)).toBe('id1');
+    expect(reportRequestId('u1', 'POST', 'p1', make)).toBe('id1');
   });
 
   test('입력이 바뀌면 새 요청 id 를 쓴다', () => {
     let n = 0;
     const make = () => `id${++n}`;
-    editReportDraft('POST', 'p1', { reason: 'SPAM', memo: '' });
-    reportRequestId('POST', 'p1', make);
-    editReportDraft('POST', 'p1', { reason: 'HATE', memo: '' });
-    expect(reportRequestId('POST', 'p1', make)).toBe('id2');
+    editReportDraft('u1', 'POST', 'p1', { reason: 'SPAM', memo: '' });
+    reportRequestId('u1', 'POST', 'p1', make);
+    editReportDraft('u1', 'POST', 'p1', { reason: 'HATE', memo: '' });
+    expect(reportRequestId('u1', 'POST', 'p1', make)).toBe('id2');
   });
 
   test('성공하면 초안을 지운다', () => {
-    editReportDraft('POST', 'p1', { reason: 'SPAM', memo: '' });
-    clearReportDraft('POST', 'p1');
-    expect(reportDraftFor('POST', 'p1')).toMatchObject({ reason: null, memo: '' });
+    editReportDraft('u1', 'POST', 'p1', { reason: 'SPAM', memo: '' });
+    clearReportDraft('u1', 'POST', 'p1');
+    expect(reportDraftFor('u1', 'POST', 'p1')).toMatchObject({ reason: null, memo: '' });
   });
+});
+
+test('신고 경계에서는 알려진 대상 유형과 비어 있지 않은 id만 허용한다', () => {
+  expect(validReportTarget('POST', 'p1')).toBe(true);
+  expect(validReportTarget('USER', 'u1')).toBe(true);
+  expect(validReportTarget('UNKNOWN', 'p1')).toBe(false);
+  expect(validReportTarget('POST', undefined)).toBe(false);
+  expect(validReportTarget('POST', '  ')).toBe(false);
+  expect(validReportTarget(['POST'], 'p1')).toBe(false);
 });
 
 describe('신고 처리 (6-2)', () => {
