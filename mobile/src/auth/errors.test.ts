@@ -71,6 +71,10 @@ describe('mapCrewCreateError', () => {
     });
   });
 
+  test('CREW_NAME_TAKEN 은 이름 필드 아래 중복 안내로', () => {
+    expect(mapCrewCreateError(new ApiError('CREW_NAME_TAKEN'))).toEqual({ field: '이미 사용 중인 크루 이름이에요.' });
+  });
+
   test('VALIDATION 은 이름 필드 오류로', () => {
     expect(mapCrewCreateError(new ApiError('VALIDATION'))).toEqual({
       field: '크루 이름을 다시 확인해 주세요.',

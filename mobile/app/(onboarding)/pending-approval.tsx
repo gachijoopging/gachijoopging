@@ -3,7 +3,7 @@ import { useCallback, useRef, useState } from 'react';
 import { AppState, BackHandler, RefreshControl, View } from 'react-native';
 import { router, useFocusEffect, useNavigation } from 'expo-router';
 import { addNotificationReceivedListener, addNotificationResponseReceivedListener } from 'expo-notifications';
-import { AppHeader, Banner, Button, Card, Dialog, EmptyState, ErrorState, Icon, Loading, Screen, Txt } from 'design-system/src';
+import { AppHeader, Banner, Button, Card, Dialog, EmptyState, ErrorState, Icon, IconButton, Loading, Screen, Txt } from 'design-system/src';
 import { onboardingApi as api } from '../../src/api/onboarding';
 import { resolvePendingRequest, type JoinRequestStatus, type MembershipStatus, type PendingRequestState } from '../../src/auth/pending-request';
 import { finishOnboarding, type OnboardingNavigation } from '../../src/auth/navigation';
@@ -108,7 +108,7 @@ export default function PendingApprovalScreen() {
 
   return (
     <Screen scroll refreshControl={<RefreshControl refreshing={refreshing} onRefresh={reload} />}>
-      <AppHeader title="가입 신청" onBack={() => BackHandler.exitApp()} backDisabled={refreshing || cancelling} />
+      <AppHeader title="가입 신청" action={<IconButton icon="cog-outline" label="설정" onPress={() => router.push('/settings')} />} />
       <View style={{ alignItems: 'center' }}>
         <Icon name="timer-sand" />
         <Txt variant="title" bold>크루장 승인을 기다리고 있어요</Txt>

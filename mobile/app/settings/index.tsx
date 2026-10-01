@@ -31,6 +31,8 @@ import { currentAccount, forgetAccount, rememberAccount } from '../../src/auth/a
 
 type Me = {
   hasPassword: boolean;
+  /** 크루 소속이 아니면(가입 전·승인 대기) 크루 관련 행을 숨기고 계정 행만 보인다 */
+  member: boolean;
   crewName: string | null;
   isLeader: boolean;
   shareLocationDefault: boolean;
@@ -96,9 +98,9 @@ export default function SettingsScreen() {
       const { data } = await api.get('GET /users/me');
       rememberAccount(data);
       loadAccount(data.id);
-      if (data.membership.status !== 'MEMBER') return router.replace(data.membership.status === 'PENDING' ? '/(onboarding)/pending-approval' : '/(onboarding)/crew-choice');
       setMe({
         hasPassword: data.hasPassword,
+        member: data.membership.status === 'MEMBER',
         crewName: data.membership.crew?.name ?? null,
         isLeader: !!data.membership.crew?.isLeader,
         shareLocationDefault: data.settings.shareLocationDefault,
@@ -204,6 +206,7 @@ export default function SettingsScreen() {
           {failed || offline ? <Banner tone="warn">인터넷 연결을 확인해 주세요.</Banner> : null}
           <Card padded={false}>
             <ListRow title="프로필 수정" subtitle="닉네임과 사진을 바꿔요." onPress={() => router.push('/settings/profile')} />
+            {me.member ? <>
             <ToggleRow
               title="위치 공유 기본값"
               subtitle="활동을 시작할 때 미리 선택돼요."
@@ -218,18 +221,21 @@ export default function SettingsScreen() {
               disabled={pendingSettings.has('notifyActivityStart')}
               onToggle={() => toggle('notifyActivityStart')}
             />
+            </> : null}
             <ListRow title="차단 관리" divider={false} onPress={() => router.push('/settings/blocks')} />
           </Card>
 
           <Card padded={false}>
-            <ListRow
-              title="크루 나가기"
-              tone="danger"
-              subtitle={me.crewName ? `${me.crewName}에서 나가요.` : undefined}
-              accessibilityLabel={me.crewName ? `크루 나가기, ${me.crewName}에서 나가기` : '크루 나가기'}
-              disabled={busy}
-              onPress={() => ask('leave')}
-            />
+            {me.member ? (
+              <ListRow
+                title="크루 나가기"
+                tone="danger"
+                subtitle={me.crewName ? `${me.crewName}에서 나가요.` : undefined}
+                accessibilityLabel={me.crewName ? `크루 나가기, ${me.crewName}에서 나가기` : '크루 나가기'}
+                disabled={busy}
+                onPress={() => ask('leave')}
+              />
+            ) : null}
             {me.hasPassword ? (
               <ListRow title="비밀번호 재설정" subtitle="재설정 메일을 보낼 수 있어요." onPress={() => router.push('/reset-password')} />
             ) : null}

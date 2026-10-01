@@ -5,7 +5,6 @@ import { File, Paths } from 'expo-file-system';
 import { useNetworkState } from 'expo-network';
 import { Snackbar, size, space } from 'design-system/src';
 import { createMockClient, type ApiClient } from '../api/client';
-import { useLocationGate } from '../auth/useLocationGate';
 import { getStored, loadLastAccount, openAccount } from '../activity/store';
 import { syncOutbox } from '../activity/tracking';
 import { ploggingEntry } from './entry';
@@ -52,7 +51,6 @@ export function PloggingLauncher({ children }: { children: ReactNode }) {
   const busy = useRef(false);
   // 시트는 별도 창이라 내려가는 중에 다음 화면을 띄우면 그 위에 겹친다. 다 내려간 뒤에 넘어간다
   const afterClose = useRef<(() => void) | null>(null);
-  const requireLocation = useLocationGate();
 
   useEffect(() => {
     const me = api.get('GET /users/me');
@@ -81,8 +79,8 @@ export function PloggingLauncher({ children }: { children: ReactNode }) {
       void syncOutbox();
       return;
     }
-    requireLocation(() => setOpen(true));
-  }, [requireLocation]);
+    setOpen(true);
+  }, []);
 
   const enter = useCallback(async () => {
     if (busy.current) return;
@@ -141,7 +139,6 @@ export function PloggingLauncher({ children }: { children: ReactNode }) {
           afterClose.current = null;
           next?.();
         }}
-        onLocationRevoked={() => closeThen(start)}
         onDone={onDone}
       />
       {/* 하단 내비 위에 띄운다 */}

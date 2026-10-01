@@ -5,9 +5,7 @@ import { ThemeProvider } from 'design-system/src';
 export default function RootLayout() {
   return (
     <ThemeProvider>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="location-permission" options={{ presentation: 'modal' }} />
-      </Stack>
+      <Stack screenOptions={{ headerShown: false }} />
     </ThemeProvider>
   );
 }
