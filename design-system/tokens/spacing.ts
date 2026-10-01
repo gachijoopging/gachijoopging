@@ -91,7 +91,21 @@ export const size = {
   cornerGuideStroke: 3,
   /** 공유 이미지 경로 선 굵기 */
   routeStroke: 4,
+  /** 워드마크 폭. 홈 머리·로그인·시작 화면 순. 높이는 원본 비율(301/840)로 정한다 */
+  wordmarkSm: 110,
+  wordmarkMd: 190,
+  wordmarkLg: 270,
+  /** 시작 화면 워드마크 뒤 번짐 */
+  wordmarkGlow: 220,
+  /** 피드 카드 사진 높이 */
+  feedPhoto: 190,
+  /** 홈 최근 7일 막대 그래프 높이와 막대 폭 */
+  sparkline: 32,
+  sparklineBar: 6,
 } as const;
+
+/** 워드마크 원본 비율(세로/가로) */
+export const WORDMARK_RATIO = 301 / 840;
 
 /**
  * 하단 내비 활성 알약의 인셋. 원본 `bg_nav_item_selected` 에서 가져왔습니다.

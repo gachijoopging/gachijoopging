@@ -40,3 +40,12 @@ export function projectedDistance(velocity: number, decelerationRate = 0.998): n
 export function rubberband(overshoot: number, dimension: number, constant = 0.55): number {
   return (overshoot * dimension * constant) / (dimension + constant * Math.abs(overshoot));
 }
+
+/** 탭과 끌기를 가르는 문턱(px). 제목을 누를 때 손가락이 조금 떨려도 시트가 따라 흔들리지 않는다 */
+export const DRAG_SLOP = 10;
+
+/** 문턱 안의 움직임은 버리고, 넘으면 넘은 만큼만 따라간다. 문턱을 넘는 순간 튀지 않게 한다 */
+export function dragAfterSlop(dy: number, slop = DRAG_SLOP): number {
+  if (Math.abs(dy) <= slop) return 0;
+  return dy - Math.sign(dy) * slop;
+}

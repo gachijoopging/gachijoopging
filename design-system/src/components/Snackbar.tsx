@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Pressable, View, AccessibilityInfo } from 'react-native';
 import { radius } from '../../tokens/radius.ts';
 import { space, screen, size as sizes } from '../../tokens/spacing.ts';
@@ -37,11 +37,17 @@ export function Snackbar({
   const shown = useRef(message);
   if (visible) shown.current = message;
 
+  // 액션을 누르고 있는 동안은 사라지지 않는다. 손을 떼면 시간을 처음부터 다시 잰다
+  const [held, setHeld] = useState(false);
+  // 누른 채 사라지면 손 뗌이 오지 않을 수 있다. 다음 문구가 영영 남지 않게 숨을 때 푼다
   useEffect(() => {
-    if (!visible || !onDismiss) return;
+    if (!visible) setHeld(false);
+  }, [visible]);
+  useEffect(() => {
+    if (!visible || !onDismiss || held) return;
     const t = setTimeout(onDismiss, duration);
     return () => clearTimeout(t);
-  }, [visible, duration, onDismiss]);
+  }, [visible, duration, onDismiss, held]);
 
   useEffect(() => {
     if (visible) AccessibilityInfo.announceForAccessibility(message);
@@ -79,6 +85,8 @@ export function Snackbar({
           <Pressable
             accessibilityRole="button"
             onPress={onAction}
+            onPressIn={() => setHeld(true)}
+            onPressOut={() => setHeld(false)}
             disabled={!visible}
             hitSlop={12}
             android_ripple={ripple}

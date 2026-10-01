@@ -1,6 +1,6 @@
 import type { Ref } from 'react';
 import { Text as RNText, type TextProps, type TextStyle } from 'react-native';
-import { fontSize, lineHeight, fontFamily } from '../../tokens/typography.ts';
+import { fontSize, lineHeight, fontFamily, tracking } from '../../tokens/typography.ts';
 import { useTheme } from '../theme.tsx';
 
 export type TextVariant = keyof typeof fontSize;
@@ -78,6 +78,7 @@ export function Txt({
   const base: TextStyle = {
     fontSize: fontSize[variant],
     lineHeight: lineHeight[variant],
+    letterSpacing: tracking[variant],
     fontFamily: fontFamily[resolved],
     color: toneColor[tone],
     // 바뀌는 숫자가 자릿수마다 폭이 달라 좌우로 흔들리지 않게 고정폭 숫자를 쓴다
