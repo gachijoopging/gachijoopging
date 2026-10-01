@@ -7,7 +7,6 @@ import {
   parseQuantity,
   summaryMeta,
   summaryMetaSpoken,
-  summaryDuration,
   totalOf,
   undoPickup,
 } from './pickup';
@@ -96,14 +95,6 @@ describe('종료 요약', () => {
   });
 });
 
-describe('요약 활동 시간', () => {
-  test('60초 미만은 "1분 미만", 그 위는 분·시간', () => {
-    expect(summaryDuration(0)).toBe('1분 미만');
-    expect(summaryDuration(59)).toBe('1분 미만');
-    expect(summaryDuration(2520)).toBe('42분');
-    expect(summaryDuration(4320)).toBe('1시간 12분');
-  });
-});
 
 describe('요약 메타 읽기', () => {
   test('기호 없이 문장으로 — "9월 7일 월요일 9시 2분부터 9시 48분까지, 일시정지 4분, 4,100걸음"', () => {

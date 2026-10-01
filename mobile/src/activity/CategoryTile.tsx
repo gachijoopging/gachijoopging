@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
-import { View } from 'react-native';
-import { Icon, Tile, Txt, borderWidth, size, space, useTheme } from 'design-system/src';
+import { Pressable, View } from 'react-native';
+import { Icon, Tile, Txt, borderWidth, pressedOpacity, size, space, useRipple, useTheme } from 'design-system/src';
 import { CATEGORY_ICON, CATEGORY_LABEL, type Category } from '../category';
 
 /**
@@ -12,6 +12,7 @@ export function CategoryTile({
   aside,
   selected = false,
   headerLabel,
+  press,
   children,
 }: {
   category: Category;
@@ -20,9 +21,21 @@ export function CategoryTile({
   selected?: boolean;
   /** 머리 줄을 한 문장으로 읽힐 때 ("플라스틱, 2개, 확인 필요") */
   headerLabel: string;
-  children: ReactNode;
+  /** 4-6 은 머리 줄을 누르면 하나 담고, 길게 누르면 수량을 입력한다 */
+  press?: { onPress: () => void; onLongPress: () => void; longPressLabel: string };
+  children?: ReactNode;
 }) {
   const { colors } = useTheme();
+  const ripple = useRipple();
+  const header = (
+    <>
+      <Icon name={CATEGORY_ICON[category]} size={size.iconCard} />
+      <Txt variant="label" style={{ flexShrink: 1 }}>{CATEGORY_LABEL[category]}</Txt>
+      <View style={{ flex: 1 }} />
+      {aside}
+    </>
+  );
+  const row = { flexDirection: 'row', alignItems: 'center', gap: space.xs, flexWrap: 'wrap' } as const;
   return (
     <Tile
       tone="surface"
@@ -34,12 +47,25 @@ export function CategoryTile({
         borderColor: selected ? colors.deep : colors.border,
       }}
     >
-      <View accessible accessibilityLabel={headerLabel} style={{ flexDirection: 'row', alignItems: 'center', gap: space.xs, flexWrap: 'wrap' }}>
-        <Icon name={CATEGORY_ICON[category]} size={size.iconCard} />
-        <Txt variant="label" style={{ flexShrink: 1 }}>{CATEGORY_LABEL[category]}</Txt>
-        <View style={{ flex: 1 }} />
-        {aside}
-      </View>
+      {press ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={headerLabel}
+          accessibilityActions={[{ name: 'activate' }, { name: 'longpress', label: press.longPressLabel }]}
+          onAccessibilityAction={(e) => (e.nativeEvent.actionName === 'longpress' ? press.onLongPress() : press.onPress())}
+          onPress={press.onPress}
+          onLongPress={press.onLongPress}
+          android_ripple={ripple}
+          // 카드 어디를 눌러도 담기게 남는 높이를 머리 줄이 채운다
+          style={({ pressed }) => ({ ...row, alignItems: 'flex-start', flexGrow: 1, minHeight: size.minTouch, opacity: pressedOpacity(pressed) })}
+        >
+          {header}
+        </Pressable>
+      ) : (
+        <View accessible accessibilityLabel={headerLabel} style={row}>
+          {header}
+        </View>
+      )}
       {children}
     </Tile>
   );

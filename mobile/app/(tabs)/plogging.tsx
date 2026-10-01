@@ -12,7 +12,7 @@ const api: ApiClient = createMockClient({ delayMs: 300 });
 // ponytail: 대기 그림이 정해지기 전까지 홈과 같은 새싹 한 장
 const sprout = require('../../../design-system/assets/character/sprout.png');
 
-/** 4-1. 줍깅 버튼을 처음 누른 사람에게만 보이는 온보딩이다. 그 뒤로 줍깅 버튼은 이 화면을 거치지 않는다. */
+/** 4-1. 줍깅 버튼은 이 화면을 거치지 않고 시트를 띄운다. 설정·빈 기록의 "줍깅 시작" 링크가 닿는 자리다 */
 export default function PloggingScreen() {
   const [last, setLast] = useState<Activity | null | undefined>(undefined);
   const [failed, setFailed] = useState(false);
@@ -32,10 +32,7 @@ export default function PloggingScreen() {
     }
   }, []);
 
-  useFocusEffect(useCallback(() => {
-    plogging.markOnboarded();
-    void load();
-  }, [load, plogging]));
+  useFocusEffect(useCallback(() => void load(), [load]));
 
   const view = readyView({ last, failed });
   const now = Date.now();

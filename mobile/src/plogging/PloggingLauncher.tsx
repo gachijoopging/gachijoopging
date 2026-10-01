@@ -2,7 +2,6 @@ import { router } from 'expo-router';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { File, Paths } from 'expo-file-system';
 import { useNetworkState } from 'expo-network';
 import { Snackbar, size, space } from 'design-system/src';
 import { createMockClient, type ApiClient } from '../api/client';
@@ -13,15 +12,12 @@ import { StartSheet } from './StartSheet';
 import type { StartResult } from './start';
 
 const api: ApiClient = createMockClient({ delayMs: 300 });
-const onboardedFlag = new File(Paths.document, 'plogging-onboarded');
 
 type Launcher = {
-  /** 하단 가운데 줍깅 버튼. 처음이면 4-1, 진행 중이면 4-3, 그 밖에는 지금 탭 위에 시작 시트 */
+  /** 하단 가운데 줍깅 버튼. 진행 중이면 4-3, 그 밖에는 지금 탭 위에 시작 시트 */
   enter: () => void;
   /** 위치 권한을 확인하고 시작 시트를 연다 */
   start: () => void;
-  /** 4-1 온보딩을 봤다. 다음부터 줍깅 버튼은 4-1 을 거치지 않는다 */
-  markOnboarded: () => void;
 };
 
 const LauncherContext = createContext<Launcher | null>(null);
@@ -64,7 +60,7 @@ export function PloggingLauncher({ children }: { children: ReactNode }) {
       void syncOutbox();
       const { session, ended, outbox } = getStored();
       const local = session ? { activityId: session.activityId, ended: !!ended, unsynced: outbox.length > 0 } : null;
-      const entry = ploggingEntry({ onboarded: onboardedFlag.exists, current: null, local });
+      const entry = ploggingEntry({ current: null, local });
       if (entry.kind === 'resume') resume(entry.id);
     });
   }, []);
@@ -72,7 +68,6 @@ export function PloggingLauncher({ children }: { children: ReactNode }) {
   const start = useCallback(() => {
     const { session, ended, outbox } = loadLastAccount() ?? getStored();
     const entry = ploggingEntry({
-      onboarded: true,
       current: null,
       local: session ? { activityId: session.activityId, ended: !!ended, unsynced: outbox.length > 0 } : null,
     });
@@ -93,22 +88,17 @@ export function PloggingLauncher({ children }: { children: ReactNode }) {
       const current = await api.get('GET /activities/current').then((r) => r.data).catch(() => null);
       const { session, ended, outbox } = getStored();
       const local = session ? { activityId: session.activityId, ended: !!ended, unsynced: outbox.length > 0 } : null;
-      const entry = ploggingEntry({ onboarded: onboardedFlag.exists, current, local });
+      const entry = ploggingEntry({ current, local });
       if (entry.kind === 'resume') resume(entry.id);
       else if (entry.kind === 'syncing') {
         setSyncing(true);
         void syncOutbox();
       }
-      else if (entry.kind === 'onboarding') router.navigate('/(tabs)/plogging');
       else start();
     } finally {
       busy.current = false;
     }
   }, [start]);
-
-  const markOnboarded = useCallback(() => {
-    if (!onboardedFlag.exists) onboardedFlag.create();
-  }, []);
 
   function closeThen(next: () => void) {
     afterClose.current = next;
@@ -127,7 +117,7 @@ export function PloggingLauncher({ children }: { children: ReactNode }) {
     );
   }
 
-  const value = useMemo(() => ({ enter: () => void enter(), start, markOnboarded }), [enter, start, markOnboarded]);
+  const value = useMemo(() => ({ enter: () => void enter(), start }), [enter, start]);
 
   return (
     <LauncherContext.Provider value={value}>

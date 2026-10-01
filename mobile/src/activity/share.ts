@@ -1,6 +1,6 @@
 import type { LatLng } from '../../modules/kakao-map';
 import { formatDistance } from '../format';
-import { summaryDuration } from './pickup';
+import { formatDuration } from '../feed/activity-detail';
 
 export type Stroke = { x: number; y: number; length: number; angle: number };
 
@@ -34,7 +34,7 @@ export function routeStrokes(segments: readonly LatLng[][], width: number, heigh
 
 export function shareLines(a: { durationSec: number; distanceM: number; steps: number | null; itemCount: number }) {
   return [
-    { label: '활동 시간', value: summaryDuration(a.durationSec) },
+    { label: '활동 시간', value: formatDuration(a.durationSec) },
     { label: '이동 거리', value: formatDistance(a.distanceM) },
     ...(a.steps == null ? [] : [{ label: '걸음', value: a.steps.toLocaleString('en-US') }]),
     { label: '줍기', value: `${a.itemCount}개` },
