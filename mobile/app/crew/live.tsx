@@ -118,7 +118,11 @@ export default function ActiveCrewMembersScreen() {
                 style={{ flex: 1 }}
               />
             ) : (
-              <Banner tone="warn">카카오 네이티브 앱 키가 없다. mobile/.env 의 KAKAO_NATIVE_APP_KEY 를 채운다</Banner>
+              // 키 누락은 빌드 설정 문제라 사용자에게는 원인 대신 결과만 알린다
+              <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: space.xs }}>
+                <Txt variant="caption" tone="muted">지도를 쓸 수 없어요</Txt>
+                {__DEV__ ? <Txt variant="caption" tone="hint">mobile/.env 의 KAKAO_NATIVE_APP_KEY 가 비어 있어요</Txt> : null}
+              </View>
             )}
           </View>
 

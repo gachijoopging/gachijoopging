@@ -70,6 +70,7 @@ export default function CrewScreen() {
   return (
     <Screen
       scroll
+      edges={['top', 'left', 'right']}
       refreshControl={
         <RefreshControl
           refreshing={refreshing}

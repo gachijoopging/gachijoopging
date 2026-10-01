@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { File, Paths } from 'expo-file-system';
 import { useNetworkState } from 'expo-network';
 import { Snackbar, size, space } from 'design-system/src';
@@ -36,6 +37,8 @@ const resume = (id: string, params: { flash?: string; startedAt?: string; shared
 
 /** 시작 시트는 어느 탭 위에서든 뜨므로 탭 레이아웃이 한 벌만 가진다. */
 export function PloggingLauncher({ children }: { children: ReactNode }) {
+  // 탭 바가 하단 안전 영역만큼 높아진다. 스낵바는 그 위에 놓는다
+  const insets = useSafeAreaInsets();
   const network = useNetworkState();
   useEffect(() => {
     if (network.isConnected && network.isInternetReachable !== false) {
@@ -142,7 +145,7 @@ export function PloggingLauncher({ children }: { children: ReactNode }) {
         onDone={onDone}
       />
       {/* 하단 내비 위에 띄운다 */}
-      <View pointerEvents="box-none" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: size.bottomNavHeight + space.md * 2 }}>
+      <View pointerEvents="box-none" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: size.bottomNavHeight + Math.max(space.md, insets.bottom + space.sm) + space.md }}>
         <Snackbar
           visible={noCrew}
           message="크루에 소속돼야 활동을 시작할 수 있어요"
