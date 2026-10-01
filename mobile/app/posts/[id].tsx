@@ -380,11 +380,11 @@ export default function PostDetailScreen() {
                 editable={!!draftKey && !pending}
               />
               <Button
-                label="등록"
+                label="남기기"
                 size="sm"
                 loading={!!pending}
                 disabled={!draftKey || !!pending || !canSendComment(text)}
-                accessibilityLabel={pending ? '등록 중' : '등록'}
+                accessibilityLabel={pending ? '남기는 중' : '댓글 남기기'}
                 onPress={send}
               />
             </View>
@@ -403,7 +403,7 @@ export default function PostDetailScreen() {
           </Txt>
           {postAction === 'delete' ? (
             <Button
-              label="삭제"
+              label="삭제하기"
               variant="danger"
               fullWidth
               onPress={() => {
@@ -413,7 +413,7 @@ export default function PostDetailScreen() {
             />
           ) : (
             <Button
-              label="신고"
+              label="신고하기"
               variant="ghost"
               fullWidth
               onPress={() => {
@@ -427,10 +427,10 @@ export default function PostDetailScreen() {
 
       <BottomSheet visible={!!commentTarget && confirm !== 'comment'} onClose={() => setCommentTarget(null)}>
         {commentAction === 'delete' ? (
-          <Button label="댓글 삭제" variant="danger" fullWidth onPress={() => setConfirm('comment')} />
+          <Button label="삭제하기" variant="danger" fullWidth onPress={() => setConfirm('comment')} />
         ) : (
           <Button
-            label="신고"
+            label="신고하기"
             variant="ghost"
             fullWidth
             onPress={() => {
@@ -453,7 +453,7 @@ export default function PostDetailScreen() {
         actions={
           <>
             <Button
-              label="취소"
+              label="남겨 두기"
               variant="ghost"
               size="md"
               disabled={deleting}

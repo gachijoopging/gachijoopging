@@ -123,20 +123,29 @@ export default function PendingApprovalScreen() {
             <Txt variant="caption" tone="muted">가입 신청을 보냈어요</Txt>
           </Card>
           <Button label="신청 취소" variant="ghost" size="lg" fullWidth loading={cancelling} disabled={refreshing || cancelling} onPress={() => setCancelDialog(true)} />
-          <Button label="승인 상태 확인" variant="soft" size="lg" fullWidth loading={refreshing} disabled={cancelling} onPress={reload} />
+          <Button label="다시 확인하기" variant="soft" size="lg" fullWidth loading={refreshing} disabled={cancelling} onPress={reload} />
         </>
       ) : null}
       {state === 'confirming' ? <>
         <Banner tone="info">가입 승인을 확인하고 있어요. 소속 확인이 끝나면 홈으로 이동해요.</Banner>
-        <Button label="승인 상태 확인" loading={refreshing} onPress={reload} />
+        <Button label="다시 확인하기" loading={refreshing} onPress={reload} />
       </> : null}
       {banner ? <Banner tone="danger">{banner}</Banner> : null}
       {state === 'rejected' ? <EmptyState icon="close-circle-outline" title="가입 신청이 승인되지 않았어요." actionLabel="크루 선택하기" onAction={() => router.replace('/crew-choice')} /> : null}
       {state === 'empty' ? <EmptyState title="가입 신청이 없어요." actionLabel="크루 선택하기" onAction={() => router.replace('/crew-choice')} /> : null}
 
-      <Dialog visible={cancelDialog} onClose={() => { if (!cancelling) setCancelDialog(false); }} title="가입 신청을 취소할까요?">
-        <Button label="계속 기다리기" variant="ghost" disabled={cancelling} onPress={() => setCancelDialog(false)} />
-        <Button label="신청 취소" variant="primary" loading={cancelling} disabled={cancelling} onPress={handleCancel} />
+      <Dialog
+        visible={cancelDialog}
+        onClose={() => { if (!cancelling) setCancelDialog(false); }}
+        title="가입 신청을 취소할까요?"
+        actions={
+          <>
+            <Button label="계속 기다리기" variant="ghost" size="md" disabled={cancelling} onPress={() => setCancelDialog(false)} />
+            <Button label="신청 취소" variant="danger" size="md" loading={cancelling} disabled={cancelling} onPress={handleCancel} />
+          </>
+        }
+      >
+        <Txt variant="body">다시 가입하려면 초대 코드를 처음부터 입력해야 해요.</Txt>
       </Dialog>
     </Screen>
   );

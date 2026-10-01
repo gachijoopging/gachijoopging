@@ -74,7 +74,7 @@ const CONFIRM: Record<Confirm, { title: (n: string) => string; body: string; act
   },
   delegate: {
     title: (n) => `${n}님에게 크루장을 넘길까요?`,
-    body: '위임하면 회원님은 크루장 권한을 잃고 일반 크루원이 돼요.',
+    body: '위임하면 나는 크루장 권한을 잃고 일반 크루원이 돼요. 크루장만 할 수 있는 일은 새 크루장이 맡아요.',
     action: '위임',
     done: () => '크루장을 위임했어요',
     fail: '위임에 실패했어요',
@@ -349,7 +349,7 @@ export default function UserProfileScreen() {
         title={confirm ? CONFIRM[confirm].title(name) : ''}
         actions={
           <>
-            <Button label="취소" variant="ghost" size="md" disabled={busy} onPress={() => setConfirm(null)} />
+            <Button label="그대로 두기" variant="ghost" size="md" disabled={busy} onPress={() => setConfirm(null)} />
             {confirm ? <Button label={CONFIRM[confirm].action} variant="danger" size="md" loading={busy} onPress={() => run(confirm)} /> : null}
           </>
         }

@@ -96,10 +96,10 @@ export default function AiClassificationReviewScreen() {
             resizeMode="cover"
             accessible
             accessibilityRole="image"
-            accessibilityLabel="방금 촬영한 수거물"
+            accessibilityLabel="방금 찍은 쓰레기"
           />
           <View style={{ position: 'absolute', left: space.md, bottom: space.md }} importantForAccessibility="no-hide-descendants">
-            <Chip tone="overlay" label="방금 촬영한 수거물" />
+            <Chip tone="overlay" label="방금 찍은 쓰레기" />
           </View>
         </Card>
 

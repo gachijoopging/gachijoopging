@@ -49,7 +49,7 @@ beforeEach(() => {
 afterEach(async () => { if (rendered) await act(async () => rendered.unmount()); });
 const mount = async () => { await act(async () => { rendered = create(React.createElement(ReportScreen)); }); };
 const chooseSpam = async () => { await act(async () => rendered.root.findAllByType('SelectRow').find((row: any) => row.props.title === '스팸·도배').props.onPress()); };
-const submitButton = () => rendered.root.findAllByType('Button').find((button: any) => button.props.label === '신고 제출');
+const submitButton = () => rendered.root.findAllByType('Button').find((button: any) => button.props.label === '신고 보내기');
 
 test('같은 프레임의 중복 제출은 한 번만 보내며 대기 중 이탈을 막고 성공 복귀를 허용한다', async () => {
   await mount();

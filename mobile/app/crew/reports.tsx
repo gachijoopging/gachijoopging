@@ -221,7 +221,7 @@ export default function ReviewReportScreen() {
       <Dialog visible={confirm != null} onClose={() => setConfirm(null)} title={confirm ? CONFIRM[confirm.action].title(confirm.report) : ''}
         actions={
           <>
-            <Button label="취소" variant="ghost" size="md" onPress={() => setConfirm(null)} />
+            <Button label="그대로 두기" variant="ghost" size="md" onPress={() => setConfirm(null)} />
             <Button
               label={confirm ? CONFIRM[confirm.action].label : ''}
               variant={confirm?.action === 'DISMISS' ? 'primary' : 'danger'}

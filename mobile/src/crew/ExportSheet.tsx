@@ -35,7 +35,7 @@ export function ExportSheet({ visible, onClose, onFailed }: { visible: boolean; 
         <Field label="시작일" placeholder="2026-09-01" value={from} onChangeText={(v) => setFrom(formatDateInput(v))} keyboardType="number-pad" maxLength={10} editable={!busy} />
         <Field label="종료일" placeholder="2026-09-30" value={to} onChangeText={(v) => setTo(formatDateInput(v))} keyboardType="number-pad" maxLength={10} editable={!busy} error={error ?? undefined} />
         <View style={{ flexDirection: 'row', gap: space.sm, justifyContent: 'flex-end' }}>
-          <Button label="취소" variant="ghost" size="md" disabled={busy} onPress={onClose} />
+          <Button label="닫기" variant="ghost" size="md" disabled={busy} onPress={onClose} />
           <Button label="CSV 내보내기" size="md" loading={busy} disabled={busy} onPress={submit} />
         </View>
       </View>

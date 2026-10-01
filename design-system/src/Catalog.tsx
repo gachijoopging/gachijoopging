@@ -218,7 +218,7 @@ export function Catalog({ scheme, onScheme }: { scheme: Scheme; onScheme: (s: Sc
             <Button label="줍깅 시작" onPress={noop} />
             <Button label="모임 만들기" variant="soft" onPress={noop} />
             <Button label="카카오로 로그인" variant="kakao" onPress={noop} />
-            <Button label="취소" variant="ghost" onPress={noop} />
+            <Button label="닫기" variant="ghost" onPress={noop} />
             <Button label="선택" variant="deep" onPress={noop} />
             <Button label="삭제" variant="danger" onPress={noop} />
             <Button label="삭제 취소" variant="ghostDanger" onPress={noop} />
@@ -260,7 +260,7 @@ export function Catalog({ scheme, onScheme }: { scheme: Scheme; onScheme: (s: Sc
             resizeMode="cover"
             style={{ height: 140, justifyContent: 'flex-end', padding: space.md, borderRadius: radius.tile, overflow: 'hidden' }}
           >
-            <Chip label="방금 촬영한 수거물" tone="overlay" />
+            <Chip label="방금 찍은 쓰레기" tone="overlay" />
           </ImageBackground>
         </Section>
 
@@ -451,7 +451,7 @@ export function Catalog({ scheme, onScheme }: { scheme: Scheme; onScheme: (s: Sc
         title="모임을 나갈까요?"
         actions={
           <>
-            <Button label="취소" variant="ghost" size="md" onPress={() => setDialog(false)} />
+            <Button label="그대로 두기" variant="ghost" size="md" onPress={() => setDialog(false)} />
             <Button label="나가기" variant="danger" size="md" onPress={() => setDialog(false)} />
           </>
         }

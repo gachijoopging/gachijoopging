@@ -140,11 +140,13 @@ export default function InviteCodeScreen() {
         title="새 초대 코드를 만들까요?"
         actions={
           <>
-            <Button label="취소" variant="ghost" size="md" onPress={() => setConfirming(false)} />
+            <Button label="기존 코드 유지" variant="ghost" size="md" onPress={() => setConfirming(false)} />
             <Button label="새 코드 만들기" size="md" onPress={reissue} />
           </>
         }
-      />
+      >
+        <Txt variant="body">지금 코드는 더 이상 쓸 수 없어요. 이미 받은 가입 신청은 그대로 남아요.</Txt>
+      </Dialog>
 
       <Snackbar visible={snackbar != null} message={snackbar ?? ''} onDismiss={() => setSnackbar(null)} />
     </Screen>

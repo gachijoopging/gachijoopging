@@ -250,7 +250,7 @@ export default function TakePhotoScreen() {
               <Button label="다시 찍기" variant="translucent" size="lg" fullWidth disabled={uploading} onPress={() => { setShot(null); setRejected(false); }} />
             </View>
             <View style={{ flex: 1 }}>
-              <Button label="사용" size="lg" fullWidth loading={uploading} disabled={uploading || rejected || offline} onPress={upload} />
+              <Button label="이 사진으로 분류" size="lg" fullWidth loading={uploading} disabled={uploading || rejected || offline} onPress={upload} />
             </View>
           </View>
         ) : (

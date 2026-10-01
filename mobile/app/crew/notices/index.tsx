@@ -63,7 +63,7 @@ export default function NoticesScreen() {
         action={
           isLeader ? (
             <Button
-              label="작성"
+              label="공지 쓰기"
               icon="plus"
               size="sm"
               accessibilityLabel="공지 작성, 크루장만 가능"

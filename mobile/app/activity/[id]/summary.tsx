@@ -283,7 +283,7 @@ export default function ActivitySummaryScreen() {
         title="이 기록을 지울까요?"
         actions={
           <>
-            <Button label="취소" variant="ghost" size="md" disabled={deleting} onPress={() => setConfirmDelete(false)} />
+            <Button label="기록 남기기" variant="ghost" size="md" disabled={deleting} onPress={() => setConfirmDelete(false)} />
             <Button label="지우기" variant="danger" size="md" loading={deleting} disabled={deleting} onPress={remove} />
           </>
         }

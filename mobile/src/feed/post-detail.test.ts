@@ -88,7 +88,7 @@ test('계정을 확인하지 못하면 댓글 입력과 전송을 막는다', as
   mockGet.mockImplementation((key: string) => key === 'GET /users/me' ? Promise.reject(new Error('offline')) : Promise.resolve({ data: post }));
   await mount();
   expect(rendered.root.findByType('Field').props.editable).toBe(false);
-  expect(rendered.root.findAllByType('Button').find((button: any) => button.props.label === '등록').props.disabled).toBe(true);
+  expect(rendered.root.findAllByType('Button').find((button: any) => button.props.label === '남기기').props.disabled).toBe(true);
 });
 
 test('댓글 응답 전에는 뒤로 이동을 막고 완료 후 해제한다', async () => {
@@ -97,7 +97,7 @@ test('댓글 응답 전에는 뒤로 이동을 막고 완료 후 해제한다', 
   await mount();
   const { act } = require('react-test-renderer');
   await act(async () => rendered.root.findByType('Field').props.onChangeText('댓글'));
-  await act(async () => { void rendered.root.findAllByType('Button').find((button: any) => button.props.label === '등록').props.onPress(); });
+  await act(async () => { void rendered.root.findAllByType('Button').find((button: any) => button.props.label === '남기기').props.onPress(); });
   const preventDefault = jest.fn();
   mockBeforeRemove!({ preventDefault });
   expect(preventDefault).toHaveBeenCalledTimes(1);
@@ -122,7 +122,7 @@ test('게시물 신고에 작성자와 본문 미리보기를 전달한다', asy
   await mount();
   const { act } = require('react-test-renderer');
   const { router } = require('expo-router');
-  await act(async () => rendered.root.findAllByType('Button').find((button: any) => button.props.label === '신고').props.onPress());
+  await act(async () => rendered.root.findAllByType('Button').find((button: any) => button.props.label === '신고하기').props.onPress());
   expect(router.push).toHaveBeenCalledWith(expect.objectContaining({ params: expect.objectContaining({ targetType: 'POST', targetId: 'p1', nickname: '나', text: '게시물' }) }));
 });
 
@@ -135,7 +135,7 @@ test('스크린리더 사용자도 댓글 관리 동작으로 메뉴를 연다',
   const row = rendered.root.findAllByType('Pressable').find((node: any) => node.props.onLongPress);
   expect(row.props.accessibilityActions).toEqual([{ name: 'longpress', label: '댓글 관리' }]);
   await act(async () => row.props.onAccessibilityAction({ nativeEvent: { actionName: 'longpress' } }));
-  expect(rendered.root.findAllByType('Button').filter((button: any) => button.props.label === '신고').length).toBeGreaterThan(0);
+  expect(rendered.root.findAllByType('Button').filter((button: any) => button.props.label === '신고하기').length).toBeGreaterThan(0);
 });
 
 test('댓글 신고에 선택한 댓글의 미리보기를 전달한다', async () => {
@@ -146,7 +146,7 @@ test('댓글 신고에 선택한 댓글의 미리보기를 전달한다', async 
   const { act } = require('react-test-renderer');
   const { router } = require('expo-router');
   await act(async () => rendered.root.findAllByType('Pressable').find((node: any) => node.props.onLongPress).props.onLongPress());
-  await act(async () => rendered.root.findAllByType('Button').filter((button: any) => button.props.label === '신고').at(-1).props.onPress());
+  await act(async () => rendered.root.findAllByType('Button').filter((button: any) => button.props.label === '신고하기').at(-1).props.onPress());
   expect(router.push).toHaveBeenCalledWith(expect.objectContaining({ params: expect.objectContaining({ targetType: 'COMMENT', targetId: 'c1', nickname: '나', text: '신고할 댓글' }) }));
 });
 

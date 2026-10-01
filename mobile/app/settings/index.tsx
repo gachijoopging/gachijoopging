@@ -64,7 +64,7 @@ const CONFIRM: Record<Kind, { title: string; body: (crew: string) => string; can
   logout: {
     title: '로그아웃할까요?',
     body: () => '이 기기에서 로그아웃돼요. 기록·크루·게시물은 그대로라 다시 로그인하면 이어서 볼 수 있어요.',
-    cancel: '취소',
+    cancel: '로그인 유지',
     ok: '로그아웃',
   },
 };
@@ -251,7 +251,19 @@ export default function SettingsScreen() {
         visible={modal?.kind === 'blocked'}
         onClose={() => setModal(null)}
         title="먼저 활동 종료와 동기화를 완료해 주세요"
-        actions={<Button label="확인" size="md" onPress={() => setModal(null)} />}
+        actions={
+          <>
+            <Button label="닫기" variant="ghost" size="md" onPress={() => setModal(null)} />
+            <Button
+              label="줍깅 탭으로 이동"
+              size="md"
+              onPress={() => {
+                setModal(null);
+                router.dismissTo('/(tabs)/plogging');
+              }}
+            />
+          </>
+        }
       >
         {modal?.kind === 'blocked' ? <Txt variant="body">{BLOCKED[modal.action]}</Txt> : null}
       </Dialog>

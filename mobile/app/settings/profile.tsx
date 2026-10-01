@@ -251,7 +251,7 @@ export default function EditProfileScreen() {
       <Dialog visible={pendingLeave != null} onClose={() => setPendingLeave(null)} title="나갈까요?"
         actions={
           <>
-            <Button label="취소" variant="ghost" size="md" onPress={() => setPendingLeave(null)} />
+            <Button label="계속 수정" variant="ghost" size="md" onPress={() => setPendingLeave(null)} />
             <Button
               label="나가기"
               variant="danger"

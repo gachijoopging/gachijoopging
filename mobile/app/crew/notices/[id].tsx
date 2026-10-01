@@ -231,7 +231,7 @@ export default function NoticeDetailScreen() {
               onSubmitEditing={send}
             />
             <Button
-              label="전송"
+              label="남기기"
               size="sm"
               loading={sending}
               disabled={sending || !canSendComment(text)}
@@ -244,7 +244,7 @@ export default function NoticeDetailScreen() {
       <BottomSheet visible={menuOpen} onClose={() => setMenuOpen(false)} title="공지 관리">
         <ListRow
           icon="pencil-outline"
-          title="수정"
+          title="수정하기"
           onPress={() => {
             setMenuOpen(false);
             router.push({ pathname: '/crew/notices/edit', params: { id } });
@@ -252,7 +252,7 @@ export default function NoticeDetailScreen() {
         />
         <ListRow
           icon="delete-outline"
-          title="삭제"
+          title="삭제하기"
           tone="danger"
           chevron={false}
           onPress={() => {
@@ -264,11 +264,11 @@ export default function NoticeDetailScreen() {
 
       <BottomSheet visible={commentMenuOpen} onClose={() => setCommentMenuOpen(false)} title="댓글">
         {targetAction === 'delete' ? (
-          <ListRow icon="delete-outline" title="삭제" tone="danger" chevron={false} onPress={() => commentTarget && deleteComment(commentTarget)} />
+          <ListRow icon="delete-outline" title="삭제하기" tone="danger" chevron={false} onPress={() => commentTarget && deleteComment(commentTarget)} />
         ) : (
           <ListRow
             icon="flag-outline"
-            title="신고"
+            title="신고하기"
             onPress={() => {
               const target = commentTarget;
               setCommentMenuOpen(false);
@@ -284,11 +284,13 @@ export default function NoticeDetailScreen() {
         title="이 공지를 삭제할까요?"
         actions={
           <>
-            <Button label="취소" variant="ghost" size="md" onPress={() => setConfirmDelete(false)} />
+            <Button label="남겨 두기" variant="ghost" size="md" onPress={() => setConfirmDelete(false)} />
             <Button label="삭제" variant="danger" size="md" onPress={deleteNotice} />
           </>
         }
-      />
+      >
+        <Txt variant="body">댓글도 함께 삭제되고 되돌릴 수 없어요.</Txt>
+      </Dialog>
 
       <Snackbar visible={snackbar != null} message={snackbar ?? ''} onDismiss={() => setSnackbar(null)} />
     </Screen>
