@@ -2,7 +2,7 @@ import * as Location from 'expo-location';
 import * as Network from 'expo-network';
 import * as TaskManager from 'expo-task-manager';
 import { updateTrackingNotification } from '../../modules/tracking-notification';
-import { createMockClient, type ApiClient } from '../api/client';
+import { ApiError, createMockClient, type ApiClient } from '../api/client';
 import { flush, type Op } from './outbox';
 import { applyFix, livePayload, trackingNotice } from './session';
 import { getStored, loadLastAccount, updateStored } from './store';
@@ -11,7 +11,7 @@ export const TRACKING_TASK = 'gachi-activity-tracking';
 const LIVE_EVERY_MS = 5_000;
 
 // ponytail: 실 API·소켓(/app/crew/live)은 W3. 그 전까지 배경 보고 경로만 목으로 부른다
-const api: ApiClient = createMockClient();
+const api: ApiClient = createMockClient({ activityTotals: () => getStored().session });
 
 let lastLiveAt = 0;
 
@@ -26,26 +26,31 @@ TaskManager.defineTask<{ locations: Location.LocationObject[] }>(TRACKING_TASK, 
     );
     return { ...st, session };
   });
-  tick(Date.now());
+  await tick(Date.now());
 });
 
 /** 5초마다 배경 알림 문구와 실시간 위치를 맞춘다. 화면의 1초 타이머와 위치 task 가 함께 부른다 */
-export function tick(now: number) {
+export async function tick(now: number) {
   const { session, ended } = getStored();
   if (!session || ended || now - lastLiveAt < LIVE_EVERY_MS) return;
   lastLiveAt = now;
   const { title, body } = trackingNotice(session, now);
   updateTrackingNotification(TRACKING_TASK, title, body, `gachijoopging://4-3-activity-in-progress?id=${session.activityId}`);
+  const [permission, enabled] = await Promise.all([
+    Location.getForegroundPermissionsAsync().catch(() => null),
+    Location.hasServicesEnabledAsync().catch(() => false),
+  ]);
+  if (getStored().ended || getStored().session?.activityId !== session.activityId) return;
   const { activityId, ...live } = livePayload(session, now);
+  if (!permission?.granted || !enabled) live.location = null;
   // 위치 전송은 쌓아 두지 않는다 — 마지막 값만 의미가 있다
-  api.mutate('POST /activities/{id}/live', { id: activityId, ...live }).catch(() => {});
+  await api.mutate('POST /activities/{id}/live', { id: activityId, ...live }).catch(() => {});
 }
 
 export async function startTracking(): Promise<boolean> {
-  const { session } = getStored();
-  if (!session) return false;
+  const { session, ended } = getStored();
+  if (!session || ended) return false;
   try {
-    if (await Location.hasStartedLocationUpdatesAsync(TRACKING_TASK)) return true;
     const { title, body } = trackingNotice(session, Date.now());
     await Location.startLocationUpdatesAsync(TRACKING_TASK, {
       accuracy: Location.Accuracy.BestForNavigation,
@@ -67,7 +72,7 @@ export async function stopTracking(): Promise<void> {
   }
 }
 
-function send(client: ApiClient, op: Op): Promise<unknown> {
+async function send(client: ApiClient, op: Op): Promise<unknown> {
   switch (op.kind) {
     case 'items':
       return client.mutate('POST /activities/{id}/items', { id: op.activityId, photoId: op.photoId, items: op.items });
@@ -78,37 +83,55 @@ function send(client: ApiClient, op: Op): Promise<unknown> {
     case 'resume':
       return client.mutate('POST /activities/{id}/resume', { id: op.activityId });
     case 'end':
-      return client.mutate('POST /activities/{id}/end', { id: op.activityId, ...op.body });
+      try {
+        const response = await client.mutate('POST /activities/{id}/end', { id: op.activityId, ...op.body });
+        applyEndedActivity(op.activityId, response.data);
+      } catch (error) {
+        if (!(error instanceof ApiError) || error.code !== 'CONFLICT') throw error;
+        const response = await client.get('GET /activities/{id}', { id: op.activityId });
+        if (response.data.status !== 'ENDED' || response.data.id !== op.activityId || response.data.itemCount !== getStored().session?.itemCount) throw error;
+        applyEndedActivity(op.activityId, response.data);
+      }
+      return;
   }
 }
 
-let syncing: Promise<boolean> | null = null;
+export function applyEndedActivity(id: string, data: { id: string; status: string; endedAt: string; durationSec: number; pausedSec: number; distanceM: number; steps: number | null; route?: readonly (readonly number[])[]; itemCount: number; byCategory: Record<string, number> }) {
+  if (data.id !== id || data.status !== 'ENDED') throw new Error('종료 응답이 활동과 일치하지 않아요');
+  updateStored((st) => st.session?.activityId === id ? {
+    ...st,
+    ended: { endedAt: data.endedAt, durationSec: data.durationSec, pausedSec: data.pausedSec, distanceM: data.distanceM, steps: data.steps, route: data.route?.map((p) => [...p]) ?? (typeof st.ended === 'object' ? st.ended?.route : null) ?? [] },
+    session: { ...st.session, itemCount: data.itemCount, byCategory: data.byCategory, distanceM: data.distanceM, steps: data.steps },
+  } : st);
+}
 
-/**
- * 큐를 순서대로 비운다. 동시에 두 번 돌지 않는다 — 같은 줍기를 두 번 보내지 않게.
- * 도는 동안 새로 쌓인 것도 이어서 보낸다. 다 보냈으면 true, 중간에 막히면 false
- */
+let syncing: Promise<boolean> | null = null;
+let sending: Op | null = null;
+
+export const isSendingItem = (id: string) => sending?.kind === 'items' && sending.items.some((item) => item.id === id);
+
+/** 큐를 순서대로 비운다. 동시에 두 번 돌지 않는다 — 같은 줍기를 두 번 보내지 않게 */
 export function syncOutbox(client: ApiClient = api): Promise<boolean> {
-  syncing ??= (async () => {
+  syncing ??= Promise.resolve().then(async () => {
     try {
       const net = await Network.getNetworkStateAsync().catch(() => null);
-      // 연결이 없으면 요청마다 시간 초과를 기다리지 않고 바로 대기로 둔다
       if (net && (net.isConnected === false || net.isInternetReachable === false)) return false;
-      for (;;) {
-        const q = getStored().outbox;
-        if (q.length === 0) return true;
-        const sent = new Set<Op>();
-        await flush(q, async (op) => {
-          await send(client, op);
-          sent.add(op);
+      while (getStored().outbox.length) {
+        const remaining = await flush([getStored().outbox[0]], async (op) => {
+          sending = op;
+          try {
+            await send(client, op);
+          } finally {
+            sending = null;
+          }
+          updateStored((st) => ({ ...st, outbox: st.outbox.filter((queued) => queued !== op) }));
         });
-        // 보내는 동안 되돌려 바뀐 것은 남긴다 — 실제로 보낸 것만 뺀다
-        if (sent.size) updateStored((st) => ({ ...st, outbox: st.outbox.filter((op) => !sent.has(op)) }));
-        if (sent.size < q.length) return false;
+        if (remaining.length) return false;
       }
+      return true;
     } finally {
       syncing = null;
     }
-  })();
+  });
   return syncing;
 }

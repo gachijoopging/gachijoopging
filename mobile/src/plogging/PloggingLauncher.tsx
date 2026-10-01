@@ -2,10 +2,11 @@ import { router } from 'expo-router';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { View } from 'react-native';
 import { File, Paths } from 'expo-file-system';
+import { useNetworkState } from 'expo-network';
 import { Snackbar, size, space } from 'design-system/src';
 import { createMockClient, type ApiClient } from '../api/client';
 import { useLocationGate } from '../auth/useLocationGate';
-import { getStored, loadAccount } from '../activity/store';
+import { getStored, loadAccount, loadLastAccount } from '../activity/store';
 import { syncOutbox } from '../activity/tracking';
 import { ploggingEntry } from './entry';
 import { StartSheet } from './StartSheet';
@@ -36,6 +37,13 @@ const resume = (id: string, params: { flash?: string; startedAt?: string; shared
 
 /** 시작 시트는 어느 탭 위에서든 뜨므로 탭 레이아웃이 한 벌만 가진다. */
 export function PloggingLauncher({ children }: { children: ReactNode }) {
+  const network = useNetworkState();
+  useEffect(() => {
+    if (network.isConnected && network.isInternetReachable !== false) {
+      loadLastAccount();
+      void syncOutbox();
+    }
+  }, [network.isConnected, network.isInternetReachable]);
   const [open, setOpen] = useState(false);
   const [noCrew, setNoCrew] = useState(false);
   const [syncing, setSyncing] = useState(false);
@@ -47,6 +55,7 @@ export function PloggingLauncher({ children }: { children: ReactNode }) {
   const requireLocation = useLocationGate();
 
   useEffect(() => {
+    loadLastAccount();
     api
       .get('GET /users/me')
       .then((me) => {
@@ -58,7 +67,21 @@ export function PloggingLauncher({ children }: { children: ReactNode }) {
       .catch(() => {});
   }, []);
 
-  const start = useCallback(() => requireLocation(() => setOpen(true)), [requireLocation]);
+  const start = useCallback(() => {
+    const { session, ended, outbox } = loadLastAccount() ?? getStored();
+    const entry = ploggingEntry({
+      onboarded: true,
+      current: null,
+      local: session ? { activityId: session.activityId, ended: !!ended, unsynced: outbox.length > 0 } : null,
+    });
+    if (entry.kind === 'resume') return resume(entry.id);
+    if (entry.kind === 'syncing') {
+      setSyncing(true);
+      void syncOutbox();
+      return;
+    }
+    requireLocation(() => setOpen(true));
+  }, [requireLocation]);
 
   const enter = useCallback(async () => {
     if (busy.current) return;
