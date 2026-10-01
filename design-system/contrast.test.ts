@@ -158,6 +158,9 @@ for (const [name, p] of themes) {
     // Button
     atLeast(p.ink, p.softChip, 4.5, `${name} Button soft`);
     atLeast(p.kakaoInk, p.kakao, 4.5, `${name} Button kakao`);
+    // Button translucent · 시작 화면 사진 위. 어두운 스크림 아래 검은 사진이 최악, 흰 사진도 함께 본다
+    atLeast(p.ink, over(p.surface85, over(p.inkShadow, '#000000')), 4.5, `${name} Button translucent 어두운 사진`);
+    atLeast(p.ink, over(p.surface85, p.white), 4.5, `${name} Button translucent 밝은 사진`);
     atLeast(p.inkMuted, p.track, 4.5, `${name} Button primary 비활성`);
 
     // Switch 꺼짐 · 손잡이 위치가 상태를 말하므로 손잡이가 트랙·바탕 위에서 보여야 합니다(1.4.11)

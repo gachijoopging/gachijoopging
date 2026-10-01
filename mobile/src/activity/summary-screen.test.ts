@@ -15,8 +15,9 @@ jest.mock('react-native', () => ({
 }));
 jest.mock('../../modules/kakao-map', () => ({ KakaoMapView: 'KakaoMapView' }));
 jest.mock('../api/client', () => ({ createMockClient: () => ({ get: jest.fn() }) }));
+let mockStored: unknown = { session: null, ended: null, outbox: [] };
 jest.mock('./store', () => ({
-  getStored: () => ({ session: null, ended: null, outbox: [] }),
+  getStored: () => mockStored,
   loadLastAccount: () => null,
   subscribe: () => () => {},
   updateStored: jest.fn(),
@@ -24,7 +25,7 @@ jest.mock('./store', () => ({
 jest.mock('./tracking', () => ({ applyEndedActivity: jest.fn(), syncOutbox: jest.fn() }));
 jest.mock('./ShareCard', () => ({ ShareCard: 'ShareCard', useShareImage: () => ({ capture: jest.fn() }) }));
 jest.mock('design-system/src', () => new Proxy(
-  { space: {}, size: {}, radius: {}, useTheme: () => ({ colors: {} }) },
+  { space: {}, size: {}, radius: {}, useTheme: () => ({ colors: {} }), useReduceMotion: () => true },
   { get: (target, key) => (key in target ? target[key as keyof typeof target] : String(key)) },
 ));
 
@@ -36,4 +37,21 @@ test('기기에서 기록을 찾지 못해도 제목은 스크린리더가 제�
   const title = tree.root.findAll((n: any) => n.type === 'Txt' && n.props.variant === 'title')[0];
   expect(title.props.accessibilityRole).toBe('header');
   act(() => tree.unmount());
+});
+
+test('저장이 끝난 기록의 지우기 버튼은 공유 카드 밖에 둔다', async () => {
+  mockStored = {
+    session: { activityId: 'a1', userId: 'u1', startedAt: '2026-09-30T00:00:00Z', pausedSec: 0, paused: false, pausedAt: null, locationShared: false, itemCount: 2, byCategory: {}, segments: [], distanceM: 120, steps: null },
+    ended: { endedAt: '2026-09-30T00:30:00Z', durationSec: 1800, pausedSec: 0, distanceM: 120, steps: null, route: [] },
+    outbox: [],
+  };
+  let tree!: ReturnType<typeof create>;
+  await act(async () => { tree = create(React.createElement(Summary)); });
+  const remove = tree.root.findAll((n: any) => n.type === 'Button' && n.props.label === '이 기록 지우기')[0];
+  expect(remove).toBeDefined();
+  let parent = remove.parent;
+  while (parent && parent.type !== 'Card') parent = parent.parent;
+  expect(parent).toBeNull();
+  act(() => tree.unmount());
+  mockStored = { session: null, ended: null, outbox: [] };
 });

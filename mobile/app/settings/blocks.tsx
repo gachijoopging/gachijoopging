@@ -27,7 +27,7 @@ import { currentAccount } from '../../src/auth/account';
 type Blocked = (typeof MOCKS)['GET /users/me/blocked']['data']['items'][number];
 
 const api: ApiClient = createMockClient({ delayMs: 300 });
-const ROW_DESC = '차단됨 · 게시물·댓글·채팅·위치에서 숨김';
+const ROW_DESC = '차단됨, 게시물, 댓글, 채팅, 위치에서 숨김';
 
 export default function ManageBlocksScreen() {
   const { colors } = useTheme();
@@ -165,7 +165,7 @@ export default function ManageBlocksScreen() {
           onEndReachedThreshold={0.5}
           refreshControl={<RefreshControl refreshing={refreshing} enabled={pending.current.size === 0} onRefresh={() => load('pull')} />}
           ListHeaderComponent={failed ? <View style={{ paddingBottom: space.md }}><Banner tone="warn">인터넷 연결을 확인해 주세요.</Banner></View> : null}
-          empty={<EmptyState icon="account-cancel-outline" title="차단한 크루원이 없어요" description="차단하면 내 게시물·댓글·채팅·위치 화면에서 그 사람이 숨겨져요." />}
+          empty={<EmptyState icon="account-cancel-outline" title="차단한 크루원이 없어요" description="차단하면 내 게시물, 댓글, 채팅, 위치 화면에서 그 사람이 숨겨져요." />}
           renderItem={({ item: u, index: i }) => (
             // 한 장의 카드처럼 보이도록 첫 행과 끝 행만 둥글린다
             <View
@@ -192,7 +192,7 @@ export default function ManageBlocksScreen() {
                   left={<Avatar name={u.nickname} uri={u.photoUrl ?? undefined} size="sm" withdrawn={u.withdrawn} decorative />}
                   divider={i < list.length - 1}
                   chevron={false}
-                  accessibilityLabel={u.withdrawn ? `${u.nickname}, 차단됨` : `${u.nickname}, 차단됨, 게시물·댓글·채팅·위치에서 숨김, 프로필 보기`}
+                  accessibilityLabel={u.withdrawn ? `${u.nickname}, 차단됨` : `${u.nickname}, 차단됨, 게시물, 댓글, 채팅, 위치에서 숨김, 프로필 보기`}
                   onPress={u.withdrawn ? undefined : () => router.push({ pathname: '/users/[id]', params: { id: u.id } })}
                 />
               </View>

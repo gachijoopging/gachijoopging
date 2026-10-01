@@ -137,7 +137,7 @@ export default function SignUpScreen() {
 
       <View style={{ alignItems: 'center' }}>
         <Button
-          label="이미 계정이 있어요 · 로그인"
+          label="이미 계정이 있어요? 로그인"
           variant="ghost"
           disabled={loading}
           onPress={() => router.replace('/login')}

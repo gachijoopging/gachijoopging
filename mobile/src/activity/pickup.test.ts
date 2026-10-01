@@ -82,8 +82,8 @@ describe('기기 합계와 되돌리기', () => {
 describe('종료 요약', () => {
   test('메타 줄 — 일시정지 60초 이상, 걸음은 측정됐을 때만', () => {
     const meta = summaryMeta({ startedAt: '2026-09-07T00:02:00Z', endedAt: '2026-09-07T00:48:00Z', pausedSec: 240, steps: 4100 });
-    expect(meta).toBe('9월 7일 (월) 09:02 – 09:48 · 일시정지 4분 · 4,100걸음');
-    expect(summaryMeta({ startedAt: '2026-09-07T00:02:00Z', endedAt: '2026-09-07T00:48:00Z', pausedSec: 59, steps: null })).toBe('9월 7일 (월) 09:02 – 09:48');
+    expect(meta).toBe('9월 7일 (월) 09:02~09:48 · 일시정지 4분 · 4,100걸음');
+    expect(summaryMeta({ startedAt: '2026-09-07T00:02:00Z', endedAt: '2026-09-07T00:48:00Z', pausedSec: 59, steps: null })).toBe('9월 7일 (월) 09:02~09:48');
   });
 
   test('카테고리 칩은 수량 내림차순, 같으면 카테고리 순서', () => {

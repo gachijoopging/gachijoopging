@@ -64,11 +64,12 @@ const api: ApiClient = createMockClient({ delayMs: 300 });
 const BUBBLE_MS = 3_000;
 const LOCATION_CHECK_MS = 5_000;
 
-const BANNER_TEXT: Record<Exclude<BannerKind, 'locationOff'>, { text: string; tone: 'info' | 'warn' | 'surface'; icon?: 'wifi-off' | 'crosshairs-gps' | 'signal-off' | 'pause' }> = {
-  offline: { text: '오프라인 · 기록은 계속돼요. 연결되면 보내요', tone: 'warn', icon: 'wifi-off' },
+// 칩은 상태 한 마디만 보인다. 무엇이 이어지는지는 스크린리더 이름(detail)으로 들려준다
+const BANNER_TEXT: Record<Exclude<BannerKind, 'locationOff'>, { text: string; detail?: string; tone: 'info' | 'warn' | 'surface'; icon?: 'wifi-off' | 'crosshairs-gps' | 'signal-off' | 'pause' }> = {
+  offline: { text: '오프라인', detail: '기록은 계속돼요. 연결되면 보내요', tone: 'warn', icon: 'wifi-off' },
   connecting: { text: '연결 중…', tone: 'info' },
   searching: { text: '위치를 찾고 있어요', tone: 'info', icon: 'crosshairs-gps' },
-  unstable: { text: 'GPS 불안정 · 경로 정확도가 낮을 수 있어요', tone: 'warn', icon: 'signal-off' },
+  unstable: { text: 'GPS 불안정', detail: '경로 정확도가 낮을 수 있어요', tone: 'warn', icon: 'signal-off' },
   paused: { text: '일시정지 중', tone: 'surface', icon: 'pause' },
 };
 
@@ -274,13 +275,13 @@ export default function ActivityInProgressScreen() {
         { value: String(session.itemCount), label: '줍기 개수' },
         { value: formatClock(elapsedSec(session, now)), label: '활동 시간', muted: paused },
         { value: formatDistance(displayDistance(session)), label: '이동 거리', muted: paused },
-        { value: session.steps == null ? '—' : session.steps.toLocaleString('ko-KR'), label: '걸음', muted: paused },
+        { value: session.steps == null ? '측정 안 됨' : session.steps.toLocaleString('ko-KR'), label: '걸음', muted: paused },
       ]
     : [
         { value: '0', label: '줍기 개수' },
         { value: '00:00', label: '활동 시간' },
         { value: '0m', label: '이동 거리' },
-        { value: '—', label: '걸음' },
+        { value: '측정 안 됨', label: '걸음' },
       ];
 
   // 지도는 상태바 밑까지 채우고, 위에 뜨는 것만 안전 영역을 지킨다
@@ -330,7 +331,7 @@ export default function ActivityInProgressScreen() {
             <Chip
               tone="surface"
               icon="account-group"
-              label={`크루원 ${others ? others.length : '–'}`}
+              label={others ? `크루원 ${others.length}` : '크루원'}
               accessibilityLabel={others ? `활동 중인 크루원 ${others.length}명, 목록 보기` : '활동 중인 크루원 목록 보기'}
               onPress={() => router.push('/crew/live')}
             />
@@ -352,7 +353,12 @@ export default function ActivityInProgressScreen() {
               </Banner>
             ) : banner ? (
               <View accessibilityLiveRegion="polite" style={{ alignSelf: 'flex-start' }}>
-                <Chip tone={BANNER_TEXT[banner].tone} icon={BANNER_TEXT[banner].icon} label={BANNER_TEXT[banner].text} />
+                <Chip
+                  tone={BANNER_TEXT[banner].tone}
+                  icon={BANNER_TEXT[banner].icon}
+                  label={BANNER_TEXT[banner].text}
+                  accessibilityLabel={[BANNER_TEXT[banner].text, BANNER_TEXT[banner].detail].filter(Boolean).join(', ')}
+                />
               </View>
             ) : null}
           </Appear>

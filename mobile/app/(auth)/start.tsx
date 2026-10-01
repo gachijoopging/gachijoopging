@@ -90,7 +90,8 @@ export default function StartScreen() {
             />
             <Button
               label="구글로 시작하기"
-              variant="ghost"
+              // 사진 위라 테두리만 있는 버튼은 글자가 묻힌다. 이메일 버튼과 같은 반투명 바탕을 쓴다
+              variant="translucent"
               size="lg"
               icon="google"
               fullWidth
