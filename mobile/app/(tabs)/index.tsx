@@ -76,7 +76,7 @@ export default function HomeScreen() {
           iconEnd
           accessibilityLabel={home ? `${home.crew.name}, 크루 정보 보기` : undefined}
           disabled={!home}
-          onPress={() => router.push('/crew/info')}
+          onPress={() => router.push('/crew/members')}
         />
         <View>
           <IconButton

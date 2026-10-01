@@ -14,6 +14,7 @@ import {
   ListRow,
   Loading,
   Screen,
+  Snackbar,
   Tabs,
   Txt,
   borderWidth,
@@ -23,7 +24,9 @@ import {
 import { createMockClient, type ApiClient } from '../../src/api/client';
 import type { MOCKS } from '../../src/api/mocks.generated';
 import { CalendarPanel } from '../../src/crew/CalendarPanel';
+import { NoticesPanel } from '../../src/crew/NoticesPanel';
 import { RecordsPanel } from '../../src/crew/RecordsPanel';
+import { useFlash } from '../../src/ui/useFlash';
 import { monthDay } from '../../src/crew/crew';
 
 type CrewData = (typeof MOCKS)['GET /crew']['data'];
@@ -31,10 +34,11 @@ export type Crew = Omit<CrewData, 'pinnedNotice'> & { pinnedNotice: CrewData['pi
 
 const api: ApiClient = createMockClient({ delayMs: 300 });
 
-type Panel = 'calendar' | 'records';
+type Panel = 'calendar' | 'records' | 'notices';
 const PANELS: ReadonlyArray<{ value: Panel; label: string }> = [
   { value: 'calendar', label: '달력' },
   { value: 'records', label: '기록' },
+  { value: 'notices', label: '공지' },
 ];
 
 export default function CrewScreen() {
@@ -46,11 +50,12 @@ export default function CrewScreen() {
   const { tab } = useLocalSearchParams<{ tab?: string }>();
   const [panel, setPanel] = useState<Panel>('calendar');
   const [refreshKey, setRefreshKey] = useState(0);
+  const [snackbar, setSnackbar] = useFlash();
 
-  // 홈의 "크루 기록 보기" 는 기록 탭으로 들어온다. 한 번 반영하면 지워 다음 진입은 달력부터다
+  // 홈의 "크루 기록 보기" 는 기록 탭으로, 공지를 쓰거나 지우고 돌아오면 공지 탭으로 들어온다. 한 번 반영하면 지워 다음 진입은 달력부터다
   useEffect(() => {
-    if (tab !== 'records') return;
-    setPanel('records');
+    if (tab !== 'records' && tab !== 'notices') return;
+    setPanel(tab);
     router.setParams({ tab: undefined });
   }, [tab]);
 
@@ -100,7 +105,7 @@ export default function CrewScreen() {
       {crew ? (
         <>
           <Card
-            onPress={() => router.push('/crew/info')}
+            onPress={() => router.push('/crew/members')}
             accessibilityLabel={`${crew.name}, 크루원 ${crew.memberCount}명, 14일 목표 ${crew.goalCount}개, 크루 정보 보기`}
           >
             {/* 누르는 Card 는 style 을 바깥 틀에만 주므로 배치는 안쪽 View 에서 한다 */}
@@ -136,10 +141,10 @@ export default function CrewScreen() {
                   onPress={() => router.push({ pathname: '/crew/notices/[id]', params: { id: crew.pinnedNotice!.id } })}
                 />
               </View>
-              <LinkText label="전체 ›" tone="muted" accessibilityLabel="공지 전체 보기" onPress={() => router.push('/crew/notices')} />
+              <LinkText label="전체 ›" tone="muted" accessibilityLabel="공지 전체 보기" onPress={() => setPanel('notices')} />
             </View>
           ) : (
-            <ListRow icon="bullhorn-outline" title="공지" divider={false} chevron onPress={() => router.push('/crew/notices')} />
+            <ListRow icon="bullhorn-outline" title="공지" divider={false} chevron onPress={() => setPanel('notices')} />
           )}
           <View style={{ height: borderWidth.hairline, backgroundColor: colors.border }} />
           <ListRow
@@ -154,13 +159,20 @@ export default function CrewScreen() {
           </Card>
 
           <Tabs items={PANELS} value={panel} onChange={setPanel} fullWidth />
-          {panel === 'calendar' ? <CalendarPanel refreshKey={refreshKey} /> : <RecordsPanel refreshKey={refreshKey} />}
+          {panel === 'calendar' ? (
+            <CalendarPanel refreshKey={refreshKey} />
+          ) : panel === 'records' ? (
+            <RecordsPanel refreshKey={refreshKey} />
+          ) : (
+            <NoticesPanel isLeader={crew.isLeader} refreshKey={refreshKey} />
+          )}
         </>
       ) : failed ? (
         <ErrorState title="크루를 불러오지 못했어요" onRetry={() => load('quiet')} />
       ) : (
         <Loading label="크루를 불러오고 있어요" />
       )}
+      <Snackbar visible={snackbar != null} message={snackbar ?? ''} onDismiss={() => setSnackbar(null)} />
     </Screen>
   );
 }

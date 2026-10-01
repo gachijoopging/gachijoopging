@@ -194,7 +194,7 @@ export function MyProfile({ recordsOnly = false }: { recordsOnly?: boolean }) {
                       icon="chevron-right"
                       iconEnd
                       accessibilityLabel={`${me.crew.name}, 크루 정보 보기`}
-                      onPress={() => router.push('/crew/info')}
+                      onPress={() => router.push('/crew/members')}
                     />
                   ) : <View />}
                   <Button label="프로필 수정" size="sm" onPress={() => router.push('/settings/profile')} />

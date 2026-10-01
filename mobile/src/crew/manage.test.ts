@@ -44,9 +44,9 @@ describe('가입 신청 처리 결과', () => {
 });
 
 describe('위임·추방 결과', () => {
-  test('위임에 성공하면 크루 정보로 돌아간다', () => {
+  test('위임에 성공하면 그 자리에서 목록과 내 역할을 다시 받는다', () => {
     expect(memberActionOutcome('delegate', '상혁', null)).toEqual({
-      next: 'leave',
+      next: 'reload',
       message: '상혁 님에게 크루장을 위임했어요.',
     });
   });

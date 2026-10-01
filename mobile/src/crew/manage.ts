@@ -32,15 +32,15 @@ export function joinDecisionOutcome(
 }
 
 export type MemberActionOutcome = {
-  /** leave: 내 역할이 바뀌어 3-2 로 돌아간다 · removeRow · reload: 목록과 역할을 다시 받는다 · stay */
-  next: 'leave' | 'removeRow' | 'reload' | 'stay';
+  /** removeRow · reload: 목록과 역할을 다시 받는다(위임하면 내 역할이 바뀐다) · stay */
+  next: 'removeRow' | 'reload' | 'stay';
   message: string | null;
 };
 
 export function memberActionOutcome(action: MemberAction, nickname: string, error: unknown): MemberActionOutcome {
   if (error == null) {
     return action === 'delegate'
-      ? { next: 'leave', message: `${nickname} 님에게 크루장을 위임했어요.` }
+      ? { next: 'reload', message: `${nickname} 님에게 크루장을 위임했어요.` }
       : { next: 'removeRow', message: `${nickname} 님을 추방했어요.` };
   }
   if (alreadyChanged(error)) return { next: 'reload', message: '크루원 정보가 바뀌었어요.' };
