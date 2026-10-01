@@ -24,6 +24,7 @@ function ListRowBase({
   divider = true,
   chevron = !right,
   tone,
+  emphasized,
   accessibilityLabel,
   accessibilityActions,
   onAccessibilityAction,
@@ -43,6 +44,8 @@ function ListRowBase({
    * 시트·카드(surface) 위에서만 쓴다 — 화면 배경(bg) 위 error 는 3.76:1 로 본문 하한에 못 미친다
    */
   tone?: 'danger';
+  /** 안 읽음처럼 색 점만으로는 구분되지 않는 상태. 제목을 굵게 한다 */
+  emphasized?: boolean;
   /** 점·배지처럼 글자가 없는 상태를 읽어 줘야 할 때 (예: "…, 안 읽음") */
   accessibilityLabel?: string;
   /**
@@ -68,7 +71,7 @@ function ListRowBase({
       {left ?? (icon ? <Icon name={icon} size={22} color={tone === 'danger' ? colors.error : colors.inkMuted} /> : null)}
       {/* 제목과 부제를 한 줄 묶음으로 읽히게 하는 광학 간격. xs(4)면 두 항목으로 갈라져 보입니다. */}
       <View style={{ flex: 1, gap: 1 }}>
-        <Txt variant="bodyLg" tone={tone === 'danger' ? 'error' : 'ink'}>{title}</Txt>
+        <Txt variant="bodyLg" bold={emphasized} tone={tone === 'danger' ? 'error' : 'ink'}>{title}</Txt>
         {subtitle ? (
           <Txt variant="caption" tone="hint">
             {subtitle}

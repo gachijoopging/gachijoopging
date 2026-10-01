@@ -126,6 +126,18 @@ test('게시물 신고에 작성자와 본문 미리보기를 전달한다', asy
   expect(router.push).toHaveBeenCalledWith(expect.objectContaining({ params: expect.objectContaining({ targetType: 'POST', targetId: 'p1', nickname: '나', text: '게시물' }) }));
 });
 
+test('스크린리더 사용자도 댓글 관리 동작으로 메뉴를 연다', async () => {
+  account = 'u2';
+  const comment = { id: 'c1', author: post.author, text: '신고할 댓글', createdAt: post.createdAt };
+  mockGet.mockImplementation((key: string) => Promise.resolve({ data: key === 'GET /users/me' ? { id: account, membership: { status: 'MEMBER', crew: { isLeader: false } } } : { ...post, comments: [comment] } }));
+  await mount();
+  const { act } = require('react-test-renderer');
+  const row = rendered.root.findAllByType('Pressable').find((node: any) => node.props.onLongPress);
+  expect(row.props.accessibilityActions).toEqual([{ name: 'longpress', label: '댓글 관리' }]);
+  await act(async () => row.props.onAccessibilityAction({ nativeEvent: { actionName: 'longpress' } }));
+  expect(rendered.root.findAllByType('Button').filter((button: any) => button.props.label === '신고').length).toBeGreaterThan(0);
+});
+
 test('댓글 신고에 선택한 댓글의 미리보기를 전달한다', async () => {
   account = 'u2';
   const comment = { id: 'c1', author: post.author, text: '신고할 댓글', createdAt: post.createdAt };

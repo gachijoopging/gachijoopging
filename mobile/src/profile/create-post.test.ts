@@ -141,14 +141,17 @@ test('이미 10장인 초안은 요약 이미지 진입 때문에 마지막 사�
   expect(saved.photos.slice(1).map((photo) => photo.key)).toEqual(photos.slice(0, 9).map((photo) => photo.key));
 });
 
-test('사진을 길게 누른 뒤 옆으로 끌면 파일과 업로드 id를 유지한 채 순서를 바꾼다', async () => {
+test('사진을 골라 뒤로 옮기면 파일과 업로드 id를 유지한 채 순서를 바꾼다', async () => {
   mockFiles.set('picker.jpg', 'photo');
   const photos = ['a', 'b'].map((key) => keepPhoto({ uri: 'picker.jpg', name: 'photo.jpg', type: 'image/jpeg' }, key));
   saveDraft(scope, { ...emptyDraft(), photos, requestId: 'old-post-id' });
   await mount();
   const first = rendered.root.findAllByType('Pressable').find((button: any) => button.props.accessibilityLabel === '대표 사진, 1번째');
-  await act(async () => first.props.onLongPress({ nativeEvent: { pageX: 0 } }));
-  await act(async () => first.props.onTouchMove({ nativeEvent: { pageX: 80 } }));
+  // 가로 스크롤 안의 길게 눌러 끌기는 스크롤과 다퉈 자주 놓친다. 순서는 골라서 옮기기 하나로만 바꾼다
+  expect(first.props.onLongPress).toBeUndefined();
+  expect(first.props.onTouchMove).toBeUndefined();
+  await act(async () => first.props.onPress());
+  await act(async () => rendered.root.findAllByType('Button').find((button: any) => button.props.label === '뒤로 옮기기').props.onPress());
   expect(loadDraft(scope).photos.map((photo) => photo.key)).toEqual(['b', 'a']);
   expect(loadDraft(scope).requestId).toBeNull();
   expect(mockFiles.has(photos[0].uri)).toBe(true);

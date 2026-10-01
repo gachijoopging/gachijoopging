@@ -1,7 +1,7 @@
 // 화면 3-8 · docs/screens/3-8-manage-join-requests.md
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
+import { Pressable, RefreshControl, View } from 'react-native';
 import {
   AppHeader,
   Avatar,
@@ -11,6 +11,7 @@ import {
   Dialog,
   EmptyState,
   ErrorState,
+  List,
   Loading,
   Screen,
   Snackbar,
@@ -21,7 +22,6 @@ import {
 } from 'design-system/src';
 import { ApiError, createMockClient, type ApiClient } from '../../src/api/client';
 import type { MOCKS } from '../../src/api/mocks.generated';
-import { nearBottom } from '../../src/profile/ProfileParts';
 import { monthDay } from '../../src/crew/crew';
 import { joinDecisionOutcome, type JoinDecision } from '../../src/crew/manage';
 
@@ -136,9 +136,6 @@ export default function ManageJoinRequestsScreen() {
     <Screen>
       <AppHeader title="가입 신청 관리" onBack={back} />
 
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ gap: space.md }}
-        onScroll={({ nativeEvent }) => { if (nearBottom(nativeEvent)) void loadMore(); }} scrollEventThrottle={200}
-        refreshControl={<RefreshControl refreshing={refreshing} enabled={!busyId} onRefresh={() => load('pull')} />}>
       {isLeader === false ? (
         <ErrorState
           title="크루장만 가입 신청을 관리할 수 있어요."
@@ -153,29 +150,37 @@ export default function ManageJoinRequestsScreen() {
         ) : (
           <Loading label="가입 신청을 불러오고 있어요" />
         )
-      ) : requests.length === 0 ? (
-        <EmptyState
-          icon="account-clock-outline"
-          title="대기 중인 가입 신청이 없어요"
-        />
       ) : (
-        <>
-          <Txt variant="section" accessibilityRole="header">{`대기 중인 가입 신청 ${pending}건`}</Txt>
-          {failed ? <Banner tone="warn">인터넷 연결을 확인해 주세요.</Banner> : null}
-          {requests.map((r) => (
+        <List
+          data={requests}
+          keyExtractor={(r) => r.id}
+          gap={space.md}
+          // 실패한 다음 장은 끝에 닿을 때마다 다시 부르지 않는다. 다시 시도 버튼으로만 부른다
+          onEndReached={() => { if (moreState !== 'failed') void loadMore(); }}
+          onEndReachedThreshold={0.5}
+          refreshControl={<RefreshControl refreshing={refreshing} enabled={!busyId} onRefresh={() => load('pull')} />}
+          ListHeaderComponent={
+            requests.length > 0 ? (
+              <View style={{ gap: space.md, paddingBottom: space.md }}>
+                <Txt variant="section" accessibilityRole="header">{`대기 중인 가입 신청 ${pending}건`}</Txt>
+                {failed ? <Banner tone="warn">인터넷 연결을 확인해 주세요.</Banner> : null}
+              </View>
+            ) : null
+          }
+          empty={<EmptyState icon="account-clock-outline" title="대기 중인 가입 신청이 없어요" />}
+          renderItem={({ item: r }) => (
             <RequestRow
-              key={r.id}
               request={r}
               busy={busyId === r.id}
               locked={busyId != null}
               onDecide={(decision) => setConfirm({ request: r, decision })}
             />
-          ))}
-        </>
+          )}
+          ListFooterComponent={
+            moreState === 'loading' ? <Loading label="가입 신청을 더 불러오고 있어요" /> : moreState === 'failed' ? <Button label="다시 시도" variant="ghost" onPress={loadMore} /> : cursor.current ? <Button label="더 불러오기" variant="ghost" disabled={busyId != null} onPress={loadMore} /> : null
+          }
+        />
       )}
-
-      {moreState === 'loading' ? <Loading label="가입 신청을 더 불러오고 있어요" /> : moreState === 'failed' ? <Button label="다시 시도" variant="ghost" onPress={loadMore} /> : cursor.current ? <Button label="더 불러오기" variant="ghost" disabled={busyId != null} onPress={loadMore} /> : null}
-      </ScrollView>
       <Dialog
         visible={confirm != null}
         onClose={() => setConfirm(null)}

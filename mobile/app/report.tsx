@@ -50,6 +50,7 @@ export default function ReportScreen() {
   const { targetType, targetId, nickname, photoUrl, text, thumbUrl } = useLocalSearchParams<Params>();
   const [reason, setReason] = useState<ReportReason | null>(null);
   const [memo, setMemo] = useState('');
+  const [memoLeft, setMemoLeft] = useState(false);
   const [accountId, setAccountId] = useState<string | null>(null);
   const [denied, setDenied] = useState(false);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -83,6 +84,7 @@ export default function ReportScreen() {
 
   const edit = (next: { reason: ReportReason | null; memo: string }) => {
     if (!accountId || busy.current || denied || !validTarget) return;
+    if (next.reason !== reason) setMemoLeft(false);
     setReason(next.reason);
     setMemo(next.memo);
     editReportDraft(accountId, targetType, targetId, next);
@@ -189,6 +191,8 @@ export default function ReportScreen() {
             accessibilityLabel="상세 메모, 기타 사유일 때 필수"
             value={memo}
             onChangeText={(v) => edit({ reason, memo: v })}
+            onBlur={() => setMemoLeft(true)}
+            error={memoLeft && !memo.trim() ? '기타 사유는 메모가 필요해요.' : undefined}
           />
           {counter ? (
             <Txt
