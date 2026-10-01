@@ -43,6 +43,7 @@
         }
       ],
       "expo-dev-client",
+      ["expo-camera", {"recordAudioAndroid": false}],
       "@react-native-vector-icons/material-design-icons",
       [
         "expo-splash-screen",

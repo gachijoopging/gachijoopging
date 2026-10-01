@@ -1,12 +1,9 @@
 import { File, Paths } from 'expo-file-system';
-import { restore, type EndBody, type Op } from './outbox';
+import { pendingEnd, restore, type EndBody, type Op } from './outbox';
 import type { Session } from './session';
 
-/**
- * 계정 하나의 기기 기록. ended 는 종료 스냅샷 — 종료 요청이 큐에서 먼저 빠져도
- * 4-7 은 이 값으로 그리고, 재시도 때 새로 계산하지 않는다.
- */
-export type Stored = { session: Session | null; ended: EndBody | null; outbox: Op[] };
+/** 계정 하나의 기기 기록. 끝난 활동도 큐가 비기 전까지는 session 이 남아 4-7 이 읽는다 */
+export type Stored = { session: Session | null; ended: EndBody | true | null; outbox: Op[] };
 
 const EMPTY: Stored = { session: null, ended: null, outbox: [] };
 // 배경 task 는 화면 없이 깨어나므로 어느 계정의 파일을 열지 이 파일로 안다
@@ -23,7 +20,8 @@ export function parseStored(text: string | null): Stored | null {
   try {
     const raw = JSON.parse(text);
     if (typeof raw !== 'object' || raw == null) return null;
-    return { session: raw.session ?? null, ended: raw.ended || null, outbox: restore(JSON.stringify(raw.outbox ?? [])) };
+    const outbox = restore(JSON.stringify(raw.outbox ?? []));
+    return { session: raw.session ?? null, ended: raw.ended === true ? pendingEnd(outbox)?.body ?? true : raw.ended || null, outbox };
   } catch {
     return null;
   }
@@ -33,10 +31,10 @@ const read = (f: File) => (f.exists ? f.textSync() : null);
 
 export function loadAccount(userId: string): Stored {
   if (account === userId) return state;
-  account = userId;
   owner.write(userId);
   // 본 파일을 쓰다 죽었으면 임시 파일이 온전한 마지막 판이다
-  state = parseStored(read(fileOf(userId))) ?? parseStored(read(fileOf(userId, '.tmp'))) ?? EMPTY;
+  state = parseStored(read(fileOf(userId, '.tmp'))) ?? parseStored(read(fileOf(userId))) ?? EMPTY;
+  account = userId;
   return state;
 }
 
@@ -53,12 +51,16 @@ export function updateStored(fn: (s: Stored) => Stored): Stored {
   if (!account) return state;
   const next = fn(state);
   if (next === state) return state;
-  state = next;
   const text = JSON.stringify(next);
   const tmp = fileOf(account, '.tmp');
+  if (tmp.exists) fileOf(account).write(JSON.stringify(state));
   tmp.write(text);
-  fileOf(account).write(text);
-  tmp.delete();
+  // 임시 파일이 최신 기록이다. 본 파일 갱신 실패에도 재실행에서 복구한다.
+  try {
+    fileOf(account).write(text);
+    tmp.delete();
+  } catch {}
+  state = next;
   listeners.forEach((l) => l(next));
   return next;
 }

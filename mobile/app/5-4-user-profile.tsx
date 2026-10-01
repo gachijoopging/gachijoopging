@@ -26,6 +26,7 @@ import type { MOCKS } from '../src/api/mocks.generated';
 import { RecordsList } from '../src/profile/MyProfile';
 import { ActivityCalendar, PostGrid, StatsTile, nearBottom, usePaged, type ActivityCard, type Post } from '../src/profile/ProfileParts';
 import { safetyRows, type SafetyRow } from '../src/profile/profile';
+import { setUserBlocked } from '../src/profile/blocked-users';
 
 type Profile = Omit<(typeof MOCKS)['GET /crew/members/{userId}']['data'], 'isLeader' | 'following' | 'blocked' | 'activeDays'> & {
   isLeader: boolean;
@@ -86,6 +87,7 @@ export default function UserProfileScreen() {
   const [failed, setFailed] = useState(false);
   const [gone, setGone] = useState(false);
   const [viewerIsLeader, setViewerIsLeader] = useState(false);
+  const [viewerId, setViewerId] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>('records');
   const [refreshing, setRefreshing] = useState(false);
   const [introOpen, setIntroOpen] = useState(false);
@@ -94,19 +96,33 @@ export default function UserProfileScreen() {
   const [busy, setBusy] = useState(false);
   const [following, setFollowing] = useState(false);
   const [snackbar, setSnackbar] = useState<string | null>(null);
+  const memberId = useRef(id);
+  memberId.current = id;
+  const profileRequest = useRef(0);
+  useEffect(() => {
+    setProfile(null);
+    setGone(false);
+    setFailed(false);
+    setSheet(false);
+    setConfirm(null);
+  }, [id]);
 
-  const records = usePaged<ActivityCard>(async (cursor) => (await api.get('GET /crew/members/{userId}/activities', { userId: id, cursor })).data);
-  const posts = usePaged<Post>(async (cursor) => (await api.get('GET /crew/members/{userId}/posts', { userId: id, cursor })).data);
+  const records = usePaged<ActivityCard>(async (cursor) => (await api.get('GET /crew/members/{userId}/activities', { userId: id, cursor })).data, id);
+  const posts = usePaged<Post>(async (cursor) => (await api.get('GET /crew/members/{userId}/posts', { userId: id, cursor })).data, id);
   const tabList = tab === 'records' ? records : posts;
 
   const loadProfile = useCallback(async () => {
+    const request = ++profileRequest.current;
     try {
       const { data } = await api.get('GET /crew/members/{userId}', { userId: id });
+      if (memberId.current !== id || request !== profileRequest.current) return true;
       setProfile(data);
+      setGone(false);
       setFollowing(data.following);
       setFailed(false);
       return true;
     } catch (e) {
+      if (memberId.current !== id || request !== profileRequest.current) return true;
       if (e instanceof ApiError && e.code === 'NOT_FOUND') setGone(true);
       else setFailed(true);
       return false;
@@ -114,14 +130,18 @@ export default function UserProfileScreen() {
   }, [id]);
 
   useEffect(() => {
+    let ignore = false;
     api
       .get('GET /users/me')
       .then(({ data }) => {
+        if (ignore) return;
+        setViewerId(data.id);
         // 자기 자신이면 5-4 를 스택에 남기지 않고 내 정보로 바꾼다
         if (data.id === id) return router.replace('/(tabs)/profile');
         setViewerIsLeader(!!data.membership.crew?.isLeader);
       })
       .catch(() => {});
+    return () => { ignore = true; };
   }, [id]);
 
   const tabRef = useRef(tab);
@@ -134,13 +154,13 @@ export default function UserProfileScreen() {
   );
   useFocusEffect(useCallback(() => void reloadAll(), [reloadAll]));
 
-  const postsAsked = useRef(false);
+  const postsAsked = useRef<string | null>(null);
   useEffect(() => {
-    if (tab === 'posts' && !postsAsked.current) {
-      postsAsked.current = true;
+    if (tab === 'posts' && postsAsked.current !== id) {
+      postsAsked.current = id;
       void reloadPosts();
     }
-  }, [tab, reloadPosts]);
+  }, [tab, id, reloadPosts]);
 
   const pull = async () => {
     setRefreshing(true);
@@ -164,11 +184,12 @@ export default function UserProfileScreen() {
   };
 
   const unblock = async () => {
-    if (busy || !profile) return;
+    if (busy || !profile || !viewerId) return;
     setSheet(false);
     setBusy(true);
     try {
       await api.mutate('DELETE /users/{userId}/block', { userId: id });
+      setUserBlocked(viewerId, id, false);
       setProfile({ ...profile, blocked: false });
       setSnackbar('차단을 해제했어요');
     } catch {
@@ -179,7 +200,7 @@ export default function UserProfileScreen() {
   };
 
   const run = async (action: Confirm) => {
-    if (busy || !profile) return;
+    if (busy || !profile || !viewerId) return;
     setBusy(true);
     try {
       if (action === 'block') await api.mutate('PUT /users/{userId}/block', { userId: id });
@@ -189,7 +210,10 @@ export default function UserProfileScreen() {
       setSheet(false);
       const message = CONFIRM[action].done(profile.nickname);
       if (action === 'kick') return router.back();
-      if (action === 'block') setProfile({ ...profile, blocked: true });
+      if (action === 'block') {
+        setUserBlocked(viewerId, id, true);
+        setProfile({ ...profile, blocked: true });
+      }
       if (action === 'delegate') {
         setProfile({ ...profile, isLeader: true });
         setViewerIsLeader(false);
@@ -206,7 +230,7 @@ export default function UserProfileScreen() {
   const pick = (row: SafetyRow) => {
     if (row === 'report') {
       setSheet(false);
-      return router.push({ pathname: '/6-1-report', params: { targetType: 'USER', targetId: id, nickname: profile?.nickname ?? '', photoUrl: profile?.photoUrl ?? '' } });
+      return router.push({ pathname: '/6-1-report', params: { targetType: 'USER', targetId: id } });
     }
     if (row === 'unblock') return void unblock();
     setSheet(false);

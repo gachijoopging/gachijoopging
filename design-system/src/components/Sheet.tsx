@@ -198,7 +198,6 @@ export function BottomSheet({
             />
             {shown.current.title ? <Txt ref={titleRef} variant="title" accessibilityRole="header">{shown.current.title}</Txt> : null}
           </View>
-          {/* 내용이 화면보다 길어도 시트가 화면 위로 넘치지 않게 본문만 스크롤한다. 손잡이·제목은 끌기 자리라 고정 */}
           <ScrollView style={{ flexShrink: 1 }} contentContainerStyle={{ gap: space.lg }} keyboardShouldPersistTaps="handled" bounces={false}>
             {shown.current.children}
           </ScrollView>
