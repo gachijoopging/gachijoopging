@@ -30,7 +30,7 @@ export function ExportSheet({ visible, onClose, onFailed }: { visible: boolean; 
   };
 
   return (
-    <BottomSheet visible={visible} onClose={busy ? () => {} : onClose} title="기록 내보내기">
+    <BottomSheet visible={visible} onClose={onClose} dismissible={!busy} title="기록 내보내기">
       <View style={{ gap: space.md }}>
         <Field label="시작일" placeholder="2026-09-01" value={from} onChangeText={(v) => setFrom(formatDateInput(v))} keyboardType="number-pad" maxLength={10} editable={!busy} />
         <Field label="종료일" placeholder="2026-09-30" value={to} onChangeText={(v) => setTo(formatDateInput(v))} keyboardType="number-pad" maxLength={10} editable={!busy} error={error ?? undefined} />

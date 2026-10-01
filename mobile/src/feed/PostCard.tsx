@@ -4,12 +4,12 @@ import { Avatar, Card, Chip, Icon, Tile, Txt, pressedOpacity, radius, size, spac
 import { relativeTime } from '../notifications/notifications';
 import { authorLink, displayName, type Post } from './feed';
 
-const PHOTO_HEIGHT = 190;
+const PHOTO_HEIGHT = size.feedPhoto;
 
 type Props = {
   post: Post;
   meId: string | undefined;
-  /** 내 게시물 탭은 전부 내 글이라 "내 글" 표시를 그리지 않는다 */
+  /** 내 게시물 탭은 전부 내 것이라 "내 게시물" 표시를 그리지 않는다 */
   mineTab: boolean;
   onOpen: (focusComment?: boolean) => void;
   onAuthor: () => void;
@@ -39,7 +39,8 @@ export function PostCard({ post, meId, mineTab, onOpen, onAuthor, onLike }: Prop
 
   return (
     <Card style={{ gap: space.md }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
+      {/* 큰 글자에서는 표시가 이름을 덮지 않고 다음 줄로 내려간다 */}
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: space.sm }}>
         {link ? (
           <Pressable
             accessibilityRole="button"
@@ -58,7 +59,7 @@ export function PostCard({ post, meId, mineTab, onOpen, onAuthor, onLike }: Prop
         {/* Chip 은 스스로 flex-start 로 붙어 줄 가운데에서 뜬다. 감싸서 줄 정렬을 따르게 한다 */}
         {!mineTab && post.author.id === meId ? (
           <View>
-            <Chip label="내 글" tone="neutral" />
+            <Chip label="내 게시물" tone="neutral" />
           </View>
         ) : null}
         {post.visibility === 'PRIVATE' ? (
