@@ -31,6 +31,7 @@ import { clearDraft, draftFor, editDraft, requestIdFor } from '../src/crew/comme
 import { COMMENT_MAX, canSendComment } from '../src/crew/notice';
 import { PhotoPager } from '../src/feed/PhotoPager';
 import { authorLink, manageAction, photoLabel, toggleLike, type Comment, type Post, type UserBrief } from '../src/feed/feed';
+import { useBlockedUsers } from '../src/profile/blocked-users';
 import { leaveForMembership } from '../src/feed/leave';
 import { relativeTime } from '../src/notifications/notifications';
 import { useFlash } from '../src/ui/useFlash';
@@ -46,6 +47,7 @@ export default function PostDetailScreen() {
   const { id, focus } = useLocalSearchParams<{ id: string; focus?: string }>();
   const [post, setPost] = useState<Detail | null>(null);
   const [me, setMe] = useState<{ id: string; isLeader: boolean } | null>(null);
+  const blocked = useBlockedUsers(me?.id);
   const draftKey = me ? `post:${me.id}:${id}` : null;
   const [failed, setFailed] = useState(false);
   const [gone, setGone] = useState(false);
@@ -200,7 +202,7 @@ export default function PostDetailScreen() {
     <Screen>
       <AppHeader title="게시물" onBack={() => router.back()} />
 
-      {gone ? (
+      {gone || (post && blocked.has(post.author.id)) ? (
         <EmptyState
           icon="sprout-outline"
           title="삭제된 게시물이에요"
@@ -272,7 +274,7 @@ export default function PostDetailScreen() {
               {post.comments.length === 0 && !pending ? (
                 <Txt variant="caption" tone="muted" style={{ textAlign: 'center' }}>아직 댓글이 없어요. 첫 댓글을 남겨 보세요.</Txt>
               ) : null}
-              {post.comments.map((c) => {
+              {post.comments.filter((c) => !blocked.has(c.author.id)).map((c) => {
                 const action = me ? manageAction({ author: c.author, meId: me.id, isLeader: me.isLeader }) : null;
                 return (
                   <CommentRow

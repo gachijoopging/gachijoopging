@@ -25,6 +25,7 @@ import { createMockClient, type ApiClient } from '../src/api/client';
 import { MOCKS } from '../src/api/mocks.generated';
 import { formatDistance, formatElapsed } from '../src/format';
 import { crewMarkers, locationShareLabel } from '../src/live/live';
+import { useBlockedUsers } from '../src/profile/blocked-users';
 
 type Member = (typeof MOCKS)['GET /crew/live']['data'][number];
 
@@ -34,7 +35,10 @@ const progress = (m: Member) => `${formatDistance(m.distanceM)} · ${formatElaps
 
 export default function ActiveCrewMembersScreen() {
   const appKey = Constants.expoConfig?.extra?.kakaoNativeAppKey ?? '';
-  const [members, setMembers] = useState<readonly Member[] | null>(null);
+  const [allMembers, setMembers] = useState<readonly Member[] | null>(null);
+  const [meId, setMeId] = useState<string | null>(null);
+  const blocked = useBlockedUsers(meId);
+  const members = allMembers?.filter((member) => !blocked.has(member.user.id)) ?? null;
   const [failed, setFailed] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -53,6 +57,7 @@ export default function ActiveCrewMembersScreen() {
   }, []);
 
   useEffect(() => void load(), [load]);
+  useEffect(() => { void api.get('GET /users/me').then(({ data }) => setMeId(data.id)).catch(() => {}); }, []);
 
   const markers = members ? crewMarkers([...members]) : [];
   const selected = members?.find((m) => m.user.id === selectedId) ?? null;
