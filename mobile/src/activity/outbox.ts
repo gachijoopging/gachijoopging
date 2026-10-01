@@ -40,9 +40,9 @@ export function pendingEnd(q: readonly Op[]): Extract<Op, { kind: 'end' }> | nul
   return (q.find((op) => op.kind === 'end') as Extract<Op, { kind: 'end' }> | undefined) ?? null;
 }
 
-export function undoItem(q: readonly Op[], activityId: string, itemId: string): Op[] {
+export function undoItem(q: readonly Op[], activityId: string, itemId: string, sending = false): Op[] {
   const unsent = q.some((op) => op.kind === 'items' && op.items.some((it) => it.id === itemId));
-  if (unsent) {
+  if (unsent && !sending) {
     return q.flatMap<Op>((op) => {
       if (op.kind !== 'items') return [op];
       const rest = op.items.filter((it) => it.id !== itemId);

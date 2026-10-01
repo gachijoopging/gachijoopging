@@ -77,6 +77,30 @@ export const MOCKS = {
   "GET /activities/current": {
     "data": null
   },
+  "GET /agreements": {
+    "data": {
+      "items": [
+        {
+          "type": "TERMS",
+          "version": "2026-09",
+          "required": true,
+          "url": "https://www.gachi-joopging.site/terms"
+        },
+        {
+          "type": "PRIVACY",
+          "version": "2026-09",
+          "required": true,
+          "url": "https://www.gachi-joopging.site/privacy"
+        },
+        {
+          "type": "MARKETING",
+          "version": "2026-09",
+          "required": false,
+          "url": "https://www.gachi-joopging.site/marketing"
+        }
+      ]
+    }
+  },
   "GET /crew": {
     "data": {
       "id": "c001",
@@ -1197,6 +1221,37 @@ export const MOCKS = {
       },
       "text": "저도 다음엔 갈게요",
       "createdAt": "2026-09-06T14:00:00Z"
+    }
+  },
+  "PUT /users/me/agreements": {
+    "data": {
+      "complete": true,
+      "items": [
+        {
+          "type": "TERMS",
+          "version": "2026-09",
+          "required": true,
+          "url": "https://www.gachi-joopging.site/terms",
+          "agreed": true,
+          "agreedAt": "2026-09-01T00:00:00Z"
+        },
+        {
+          "type": "PRIVACY",
+          "version": "2026-09",
+          "required": true,
+          "url": "https://www.gachi-joopging.site/privacy",
+          "agreed": true,
+          "agreedAt": "2026-09-01T00:00:00Z"
+        },
+        {
+          "type": "MARKETING",
+          "version": "2026-09",
+          "required": false,
+          "url": "https://www.gachi-joopging.site/marketing",
+          "agreed": false,
+          "agreedAt": null
+        }
+      ]
     }
   },
 } as const;

@@ -38,7 +38,7 @@ export function ShareCard({ cardRef, data, includeRoute }: { cardRef: React.RefO
       <View
         ref={cardRef}
         collapsable={false}
-        style={{ width: SIDE, height: SIDE, padding: space.xl, gap: space.md, backgroundColor: colors.bg, borderRadius: radius.card, justifyContent: 'space-between' }}
+        style={{ width: SIDE, minHeight: SIDE, padding: space.xl, gap: space.md, backgroundColor: colors.bg, borderRadius: radius.card, justifyContent: 'space-between' }}
       >
         <View style={{ gap: space.xs }}>
           <Txt variant="label" bold>가치줍깅</Txt>

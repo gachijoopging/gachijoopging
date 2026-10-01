@@ -1,83 +1,24 @@
+import * as Linking from 'expo-linking';
 import { useState } from 'react';
 import { View } from 'react-native';
-import { BottomSheet, Button, Checkbox, Txt, space } from 'design-system/src';
-
-type AgreementFieldsProps = {
-  termsChecked: boolean;
-  onTermsChange: (checked: boolean) => void;
-  privacyChecked: boolean;
-  onPrivacyChange: (checked: boolean) => void;
-  optionalChecked: boolean;
-  onOptionalChange: (checked: boolean) => void;
-  disabled?: boolean;
-};
-
-type SheetTarget = { title: string } | null;
-
-/**
- * 1-3·1-4 가 공유하는 필수/선택 동의 목록. 실제 약관·개인정보 전문·버전·저장 계약은
- * 미결(screens/1-3-sign-up.md·1-4-nickname.md)이라 "내용 보기" 는 준비 중 안내만 보여 준다.
- */
-export function AgreementFields({
-  termsChecked,
-  onTermsChange,
-  privacyChecked,
-  onPrivacyChange,
-  optionalChecked,
-  onOptionalChange,
-  disabled,
-}: AgreementFieldsProps) {
-  const [sheet, setSheet] = useState<SheetTarget>(null);
-
+import { Banner, Button, Checkbox, Loading, Txt, space } from 'design-system/src';
+import type { AgreementItem, AgreementType } from './agreements';
+const labels: Record<AgreementType, string> = { TERMS: '이용약관 동의', PRIVACY: '개인정보 동의', MARKETING: '마케팅 정보 수신 동의' };
+export function AgreementFields({ items, onChange, failed, onRetry, disabled }: {
+  items: readonly AgreementItem[] | null; onChange: (type: AgreementType, agreed: boolean) => void; failed: boolean; onRetry: () => void; disabled?: boolean;
+}) {
+  const [linkFailed, setLinkFailed] = useState(false);
   return (
     <View style={{ gap: space.sm }}>
-      <AgreementRow
-        label="필수 약관 동의"
-        checked={termsChecked}
-        onChange={onTermsChange}
-        onViewDetail={() => setSheet({ title: '이용약관' })}
-        disabled={disabled}
-      />
-      <AgreementRow
-        label="필수 개인정보 동의"
-        checked={privacyChecked}
-        onChange={onPrivacyChange}
-        onViewDetail={() => setSheet({ title: '개인정보 처리방침' })}
-        disabled={disabled}
-      />
-      <AgreementRow
-        label="선택 동의 항목"
-        checked={optionalChecked}
-        onChange={onOptionalChange}
-        onViewDetail={() => setSheet({ title: '선택 동의 항목' })}
-        disabled={disabled}
-      />
-      <BottomSheet visible={sheet !== null} onClose={() => setSheet(null)} title={sheet?.title}>
-        <Txt variant="body" tone="muted">
-          전문은 아직 준비 중이에요. 최종본이 확정되면 이 화면에서 확인할 수 있어요.
-        </Txt>
-      </BottomSheet>
-    </View>
-  );
-}
-
-function AgreementRow({
-  label,
-  checked,
-  onChange,
-  onViewDetail,
-  disabled,
-}: {
-  label: string;
-  checked: boolean;
-  onChange: (checked: boolean) => void;
-  onViewDetail: () => void;
-  disabled?: boolean;
-}) {
-  return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-      <Checkbox label={label} checked={checked} onChange={onChange} disabled={disabled} />
-      <Button label="내용 보기" variant="ghost" size="sm" onPress={onViewDetail} disabled={disabled} />
+      {failed ? <Banner tone="warn" action={{ label: '다시 시도', onPress: onRetry }}>동의 항목을 불러오지 못했어요. 다시 시도해 주세요.</Banner> : null}
+      {!items && !failed ? <Loading label="동의 항목을 불러오고 있어요" /> : null}
+      {items?.map((item) => (
+        <View key={item.type} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <View style={{ flex: 1 }}><Checkbox label={`${item.required ? '필수' : '선택'} ${labels[item.type]}`} checked={item.agreed} onChange={(agreed) => onChange(item.type, agreed)} disabled={disabled || failed} /></View>
+          <Button label="내용 보기" variant="ghost" size="sm" disabled={disabled} onPress={() => { setLinkFailed(false); void Linking.openURL(item.url).catch(() => setLinkFailed(true)); }} />
+        </View>
+      ))}
+      {linkFailed ? <Txt variant="caption" tone="error">전문을 열지 못했어요. 다시 시도해 주세요.</Txt> : null}
     </View>
   );
 }

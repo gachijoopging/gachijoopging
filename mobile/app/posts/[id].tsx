@@ -29,11 +29,12 @@ import { clearDraft, draftFor, editDraft, requestIdFor } from '../../src/crew/co
 import { COMMENT_MAX, canSendComment } from '../../src/crew/notice';
 import { PhotoPager } from '../../src/feed/PhotoPager';
 import { authorLink, displayName, manageAction, photoLabel, syncLike, toggleLike, type Comment, type LikeSync, type Post, type UserBrief } from '../../src/feed/feed';
+import { useBlockedUsers } from '../../src/profile/blocked-users';
 import { leaveForMembership } from '../../src/feed/leave';
 import { relativeTime } from '../../src/notifications/notifications';
 import { useFlash } from '../../src/ui/useFlash';
 
-type Detail = Post & { comments: Comment[] };
+type Detail = Post & { comments: Comment[]; commentsNextCursor?: string | null };
 type Pending = { id: string; text: string };
 
 const api: ApiClient = createMockClient({ delayMs: 300 });
@@ -42,14 +43,15 @@ const COUNT_FROM = 400;
 
 export default function PostDetailScreen() {
   const { id, focus } = useLocalSearchParams<{ id: string; focus?: string }>();
-  const draftKey = `post:${id}`;
   const [post, setPost] = useState<Detail | null>(null);
   const [me, setMe] = useState<{ id: string; isLeader: boolean } | null>(null);
+  const blocked = useBlockedUsers(me?.id);
+  const draftKey = me ? `post:${me.id}:${id}` : null;
   const [failed, setFailed] = useState(false);
   const [gone, setGone] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const liking = useRef<LikeSync | null>(null);
-  const [text, setText] = useState(() => draftFor(draftKey).text);
+  const [text, setText] = useState('');
   const [pending, setPending] = useState<Pending | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [commentTarget, setCommentTarget] = useState<Comment | null>(null);
@@ -59,15 +61,39 @@ export default function PostDetailScreen() {
   const navigation = useNavigation();
   const input = useRef<TextInput>(null);
   const scroll = useRef<ScrollView>(null);
+  const sending = useRef(false);
+  const request = useRef(0);
+  const olderPending = useRef(false);
+  const olderCursor = useRef<string | null>(null);
+  const [olderState, setOlderState] = useState<'idle' | 'loading' | 'failed'>('idle');
+  const [hasOlder, setHasOlder] = useState(false);
+
+  useEffect(() => {
+    setText(draftKey ? draftFor(draftKey).text : '');
+  }, [draftKey]);
+
+  useEffect(() => navigation.addListener('beforeRemove', (event) => {
+    if (sending.current) event.preventDefault();
+  }), [navigation]);
 
   const load = useCallback(
     async (mode: 'first' | 'pull') => {
+      const generation = ++request.current;
+      olderPending.current = false;
+      olderCursor.current = null;
+      setOlderState('idle');
+      setHasOlder(false);
       if (mode === 'pull') setRefreshing(true);
       try {
         const { data } = await api.get('GET /posts/{postId}', { postId: id });
+        if (generation !== request.current) return;
         setPost({ ...(data as unknown as Detail), comments: [...(data.comments as readonly Comment[])] });
+        olderCursor.current = data.commentsNextCursor ?? null;
+        setHasOlder(olderCursor.current != null);
+        setGone(false);
         setFailed(false);
       } catch (e) {
+        if (generation !== request.current) return;
         const code = e instanceof ApiError ? e.code : null;
         // 차단·나만 보기 글은 차단 여부를 알리지 않으려고 삭제와 같은 화면으로 보인다
         if (code === 'NOT_FOUND' || code === 'FORBIDDEN') setGone(true);
@@ -77,19 +103,49 @@ export default function PostDetailScreen() {
           if (mode === 'pull') setSnackbar('새로고침에 실패했어요');
         }
       } finally {
-        setRefreshing(false);
+        if (generation === request.current) setRefreshing(false);
       }
     },
     [id, setSnackbar],
   );
 
   useEffect(() => {
+    let ignore = false;
     void load('first');
     api
       .get('GET /users/me')
-      .then(({ data }) => setMe({ id: data.id, isLeader: !!data.membership.crew?.isLeader }))
+      .then(({ data }) => { if (!ignore) setMe({ id: data.id, isLeader: !!data.membership.crew?.isLeader }); })
       .catch(() => {});
+    return () => { ignore = true; request.current += 1; };
   }, [load]);
+
+  const loadOlder = async () => {
+    const cursor = olderCursor.current;
+    if (!cursor || olderPending.current) return;
+    const generation = request.current;
+    olderPending.current = true;
+    setOlderState('loading');
+    try {
+      const { data } = await api.get('GET /posts/{postId}/comments', { postId: id, cursor });
+      if (generation !== request.current || cursor !== olderCursor.current) return;
+      setPost((previous) => {
+        if (!previous) return previous;
+        const ids = new Set(previous.comments.map((comment) => comment.id));
+        const added = (data.items as readonly Comment[]).filter((comment) => !ids.has(comment.id));
+        return { ...previous, comments: [...added, ...previous.comments] };
+      });
+      olderCursor.current = data.nextCursor;
+      setHasOlder(data.nextCursor != null);
+      setOlderState('idle');
+    } catch (error) {
+      if (generation !== request.current) return;
+      if (error instanceof ApiError && (error.code === 'NOT_FOUND' || error.code === 'FORBIDDEN')) setGone(true);
+      else if (error instanceof ApiError && error.code === 'NO_CREW') void leaveForMembership();
+      else setOlderState('failed');
+    } finally {
+      if (generation === request.current) olderPending.current = false;
+    }
+  };
 
   useEffect(() => {
     if (focus === 'comment' && post) input.current?.focus();
@@ -124,14 +180,16 @@ export default function PostDetailScreen() {
 
 
   const changeText = (value: string) => {
+    if (!draftKey) return;
     setText(value);
     editDraft(draftKey, value);
   };
 
   const send = async () => {
-    if (pending || !canSendComment(text)) return;
+    if (!draftKey || sending.current || !canSendComment(text)) return;
     const requestId = requestIdFor(draftKey, Crypto.randomUUID);
     const body = text.trim();
+    sending.current = true;
     setPending({ id: requestId, text: body });
     setTimeout(() => scroll.current?.scrollToEnd({ animated: true }), 0);
     try {
@@ -145,6 +203,7 @@ export default function PostDetailScreen() {
       // 같은 id 로 다시 보내면 서버가 중복을 흡수한다 — 초안의 id 는 그대로 둔다
       else setSnackbar('댓글을 남기지 못했어요. 다시 시도해 주세요.');
     } finally {
+      sending.current = false;
       setPending(null);
     }
   };
@@ -192,7 +251,7 @@ export default function PostDetailScreen() {
     <Screen>
       <AppHeader title="게시물" onBack={() => router.back()} />
 
-      {gone ? (
+      {gone || (post && blocked.has(post.author.id)) ? (
         <EmptyState
           icon="sprout-outline"
           title="삭제된 게시물이에요"
@@ -214,6 +273,7 @@ export default function PostDetailScreen() {
             contentContainerStyle={{ gap: space.md, paddingBottom: space.md }}
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode="on-drag"
+            maintainVisibleContentPosition={{ minIndexForVisible: 2 }}
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load('pull')} />}
           >
             {failed ? <Banner tone="warn">인터넷 연결을 확인해 주세요.</Banner> : null}
@@ -260,10 +320,13 @@ export default function PostDetailScreen() {
               <Txt variant="section" bold accessibilityRole="header">
                 {post.commentCount > 0 ? `댓글 ${post.commentCount}` : '댓글'}
               </Txt>
+              {hasOlder ? <Button label={olderState === 'failed' ? '이전 댓글 다시 시도' : '이전 댓글 더 보기'} variant="ghost" loading={olderState === 'loading'} disabled={olderState === 'loading'} onPress={loadOlder} /> : null}
+              {olderState === 'failed' ? <Banner tone="warn">이전 댓글을 불러오지 못했어요. 다시 시도해 주세요.</Banner> : null}
               {post.comments.length === 0 && !pending ? (
                 <Txt variant="caption" tone="muted" style={{ textAlign: 'center' }}>아직 댓글이 없어요. 첫 댓글을 남겨 보세요.</Txt>
               ) : null}
-              {post.comments.map((c) => {
+            </View>
+              {post.comments.filter((c) => !blocked.has(c.author.id)).map((c) => {
                 const action = me ? manageAction({ author: c.author, meId: me.id, isLeader: me.isLeader }) : null;
                 return (
                   <CommentRow
@@ -289,7 +352,6 @@ export default function PostDetailScreen() {
                   onAuthor={() => {}}
                 />
               ) : null}
-            </View>
           </ScrollView>
 
           <View style={{ gap: space.xs, paddingBottom: space.md }}>
@@ -315,13 +377,13 @@ export default function PostDetailScreen() {
                 maxLength={COMMENT_MAX}
                 multiline
                 maxLines={4}
-                editable={!pending}
+                editable={!!draftKey && !pending}
               />
               <Button
                 label="등록"
                 size="sm"
                 loading={!!pending}
-                disabled={!!pending || !canSendComment(text)}
+                disabled={!draftKey || !!pending || !canSendComment(text)}
                 accessibilityLabel={pending ? '등록 중' : '등록'}
                 onPress={send}
               />

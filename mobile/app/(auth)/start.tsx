@@ -6,7 +6,8 @@ import { router } from 'expo-router';
 import { Banner, Button, LinkText, Screen, Snackbar, Txt, radius, space, useTheme } from 'design-system/src';
 import { useFlash } from '../../src/ui/useFlash';
 import { onboardingApi as api } from '../../src/api/onboarding';
-import { resolveDestination } from '../../src/auth/destination';
+import { authenticatedDestination } from '../../src/auth/destination';
+import { forgetAccount, rememberAccount } from '../../src/auth/account';
 
 const bg = require('../../../design-system/assets/legacy/start-bg.png');
 const wordmark = require('../../../design-system/assets/logo-wordmark.png');
@@ -31,8 +32,10 @@ export default function StartScreen() {
       await api.mutate(provider === 'kakao' ? 'POST /auth/kakao' : 'POST /auth/google', {
         token: 'mock-provider-token',
       });
+      forgetAccount();
       const me = await api.get('GET /users/me');
-      router.replace(resolveDestination(me.data));
+      rememberAccount(me.data);
+      router.replace(await authenticatedDestination(api, me.data));
     } catch {
       setSocialError(true);
     } finally {

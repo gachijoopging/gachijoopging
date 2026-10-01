@@ -1,4 +1,5 @@
-import { resolveDestination, type Me } from './destination';
+import { authenticatedDestination, resolveDestination, type Me } from './destination';
+import type { ApiClient } from '../api/client';
 import { existsSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 
@@ -10,6 +11,16 @@ function routeFileExists(route: string): boolean {
 }
 
 describe('resolveDestination', () => {
+  test('현재 버전 필수 동의가 없으면 크루 소속보다 재동의를 먼저 한다', async () => {
+    const get = jest.fn().mockResolvedValue({ data: { complete: false } });
+    const api = { get } as unknown as ApiClient;
+    expect(await authenticatedDestination(api, { profileComplete: true, membership: { status: 'MEMBER' } })).toBe('/nickname');
+    expect(get).toHaveBeenCalledWith('GET /users/me/agreements');
+  });
+  test('동의 조회 실패를 완료로 간주하지 않는다', async () => {
+    const api = { get: jest.fn().mockRejectedValue(new Error('offline')) } as unknown as ApiClient;
+    await expect(authenticatedDestination(api, { profileComplete: true, membership: { status: 'MEMBER' } })).rejects.toThrow('offline');
+  });
   test('온보딩 분기가 가리키는 화면 파일이 존재한다', () => {
     for (const status of ['NONE', 'PENDING'] as const) {
       const route = resolveDestination({ profileComplete: true, membership: { status } });

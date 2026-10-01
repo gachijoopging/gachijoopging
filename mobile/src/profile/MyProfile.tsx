@@ -58,7 +58,7 @@ export function MyProfile({ recordsOnly = false }: { recordsOnly?: boolean }) {
   const ripple = useRipple();
 
   const records = usePaged<ActivityCard>(async (cursor) => (await api.get('GET /users/me/activities', { cursor })).data);
-  const posts = usePaged<Post>(async (cursor) => (await api.get('GET /crew/members/{userId}/posts', { userId: me?.id, cursor })).data);
+  const posts = usePaged<Post>(async (cursor) => (await api.get('GET /crew/members/{userId}/posts', { userId: me?.id, cursor })).data, me?.id);
 
   const loadMe = useCallback(async () => {
     try {
@@ -102,11 +102,11 @@ export function MyProfile({ recordsOnly = false }: { recordsOnly?: boolean }) {
   // 프로필을 고치거나 기록을 지우고 돌아오는 길이라 돌아올 때마다 조용히 다시 받는다
   useFocusEffect(useCallback(() => void reloadAll(), [reloadAll]));
 
-  const postsAsked = useRef(false);
+  const postsAsked = useRef<string | null>(null);
   const meId = me?.id;
   useEffect(() => {
-    if (tab === 'posts' && meId && !postsAsked.current) {
-      postsAsked.current = true;
+    if (tab === 'posts' && meId && postsAsked.current !== meId) {
+      postsAsked.current = meId;
       void reloadPosts();
     }
   }, [tab, meId, reloadPosts]);

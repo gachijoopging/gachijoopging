@@ -1,5 +1,5 @@
 // 화면 1-4 · docs/screens/1-4-nickname.md
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 import { router } from 'expo-router';
 import { AppHeader, Banner, Button, Field, Screen, Txt, space } from 'design-system/src';
@@ -7,33 +7,63 @@ import { onboardingApi as api } from '../../src/api/onboarding';
 import { AgreementFields } from '../../src/auth/AgreementFields';
 import { resolveDestination } from '../../src/auth/destination';
 import { mapNicknameError } from '../../src/auth/errors';
-import { validateNickname } from '../../src/auth/validators';
+import { normalizeNickname, validateNickname } from '../../src/auth/validators';
+import { clearAgreementChoices, requiredAgreementsAccepted, useAgreementForm } from '../../src/auth/agreements';
+import { ApiError, type ApiResponse } from '../../src/api/client';
+import { rememberAccount } from '../../src/auth/account';
 
 export default function NicknameScreen() {
   const [nickname, setNickname] = useState('');
   const [nicknameError, setNicknameError] = useState<string>();
-  const [terms, setTerms] = useState(false);
-  const [privacy, setPrivacy] = useState(false);
-  const [optional, setOptional] = useState(false);
+  const [me, setMe] = useState<ApiResponse<'GET /users/me'>['data'] | null>(null);
+  const agreements = useAgreementForm(api, me?.id ?? null);
+  const originalNickname = useRef('');
+  const busy = useRef(false);
+  const loadRequest = useRef(0);
   const [banner, setBanner] = useState<string>();
   const [loading, setLoading] = useState(false);
 
-  const canSubmit = !validateNickname(nickname) && terms && privacy;
+  const load = async () => {
+    const request = ++loadRequest.current;
+    try {
+      const { data } = await api.get('GET /users/me');
+      if (request !== loadRequest.current) return;
+      setMe(data);
+      originalNickname.current = data.nickname;
+      setNickname(data.nickname);
+      rememberAccount(data);
+      setBanner(undefined);
+    } catch { if (request === loadRequest.current) setBanner('내 정보를 불러오지 못했어요. 다시 시도해 주세요.'); }
+  };
+  useEffect(() => { void load(); return () => { loadRequest.current += 1; }; }, []);
+  const canSubmit = !validateNickname(nickname) && me != null && agreements.items != null && !agreements.failed && requiredAgreementsAccepted(agreements.items);
 
   async function handleSubmit() {
-    if (loading || !canSubmit) return;
+    if (busy.current || !canSubmit || !me || !agreements.items) return;
+    busy.current = true;
     setBanner(undefined);
     setLoading(true);
     try {
-      await api.mutate('PATCH /users/me', { nickname: nickname.trim() });
-      const me = await api.get('GET /users/me');
-      router.replace(resolveDestination(me.data));
+      const nextNickname = normalizeNickname(nickname);
+      if (nextNickname !== originalNickname.current) {
+        await api.mutate('PATCH /users/me', { nickname: nextNickname });
+        originalNickname.current = nextNickname;
+      }
+      const { data } = await api.mutate('PUT /users/me/agreements', { items: agreements.items.map(({ type, version, agreed }) => ({ type, version, agreed })) });
+      if (!data.complete) throw new Error('필수 동의가 완료되지 않았어요');
+      clearAgreementChoices(me.id);
+      router.replace(resolveDestination({ ...me, profileComplete: true }));
     } catch (error) {
       const mapped = mapNicknameError(error);
       setNicknameError(mapped.field);
       setBanner(mapped.banner);
+      if (error instanceof ApiError && error.fields?.some((field) => field.field === 'items' && field.code === 'FORMAT')) {
+        await agreements.reload();
+        setBanner('약관이 변경됐어요. 새 항목을 확인해 주세요.');
+      }
     } finally {
       setLoading(false);
+      busy.current = false;
     }
   }
 
@@ -57,22 +87,21 @@ export default function NicknameScreen() {
         }}
         onBlur={() => setNicknameError(validateNickname(nickname))}
         error={nicknameError}
-        editable={!loading}
+        editable={!loading && !!me}
         returnKeyType="done"
         onSubmitEditing={handleSubmit}
       />
 
       <AgreementFields
-        termsChecked={terms}
-        onTermsChange={setTerms}
-        privacyChecked={privacy}
-        onPrivacyChange={setPrivacy}
-        optionalChecked={optional}
-        onOptionalChange={setOptional}
+        items={agreements.items}
+        onChange={agreements.change}
+        failed={agreements.failed}
+        onRetry={agreements.reload}
         disabled={loading}
       />
 
       {banner ? <Banner tone="danger">{banner}</Banner> : null}
+      {!me && banner ? <Button label="다시 시도" variant="ghost" onPress={load} /> : null}
 
       <Button label="다음" variant="primary" size="lg" fullWidth loading={loading} disabled={!canSubmit} onPress={handleSubmit} />
     </Screen>

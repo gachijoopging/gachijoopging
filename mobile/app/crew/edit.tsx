@@ -1,4 +1,5 @@
 // 화면 3-10 · docs/screens/3-10-edit-crew.md
+import { mediaFile } from '../../src/api/media';
 import * as Crypto from 'expo-crypto';
 import * as ImagePicker from 'expo-image-picker';
 import { router, useNavigation } from 'expo-router';
@@ -114,7 +115,7 @@ export default function EditCrewScreen() {
       const body = new FormData();
       body.append('mediaId', Crypto.randomUUID());
       body.append('purpose', 'CREW');
-      body.append('file', { uri: asset.uri, name: asset.fileName ?? 'crew.jpg', type: asset.mimeType ?? 'image/jpeg' } as unknown as Blob);
+      body.append('file', await mediaFile(asset.uri) as unknown as Blob);
       const { data } = await api.mutate('POST /media', body);
       setPhoto({ uri: asset.uri, mediaId: data.mediaId });
       update({ photoMediaId: data.mediaId });

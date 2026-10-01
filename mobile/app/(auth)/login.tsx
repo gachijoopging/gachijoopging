@@ -4,9 +4,10 @@ import { Image, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { AppHeader, Banner, Button, Chip, Field, LinkText, Screen, Snackbar, Txt, space } from 'design-system/src';
 import { onboardingApi as api } from '../../src/api/onboarding';
-import { resolveDestination } from '../../src/auth/destination';
+import { authenticatedDestination } from '../../src/auth/destination';
 import { loginErrorMessage } from '../../src/auth/errors';
-import { validateEmail, validatePassword } from '../../src/auth/validators';
+import { validateEmail } from '../../src/auth/validators';
+import { forgetAccount, rememberAccount } from '../../src/auth/account';
 
 const wordmark = require('../../../design-system/assets/logo-wordmark.png');
 
@@ -24,7 +25,7 @@ export default function LoginScreen() {
   async function handleSubmit() {
     if (loading) return;
     const emailErr = validateEmail(email);
-    const passwordErr = validatePassword(password);
+    const passwordErr = password.length === 0 ? '비밀번호를 입력해 주세요.' : undefined;
     setEmailError(emailErr);
     setPasswordError(passwordErr);
     if (emailErr || passwordErr) return;
@@ -33,9 +34,11 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       await api.mutate('POST /auth/login', { email: email.trim(), password });
+      forgetAccount();
       try {
         const me = await api.get('GET /users/me');
-        router.replace(resolveDestination(me.data));
+        rememberAccount(me.data);
+        router.replace(await authenticatedDestination(api, me.data));
       } catch {
         setBanner('내 정보를 불러오지 못했어요. 다시 시도해 주세요.');
       }

@@ -18,8 +18,10 @@ import {
   NOTICE_BODY_MAX,
   NOTICE_TITLE_MAX,
   clearNoticeDraft,
+  clearNoticeRequest,
   noticeDraft,
   noticeFormErrors,
+  noticeRequestId,
   noticeSubmit,
   saveNoticeDraft,
   type NoticeDraftKey,
@@ -92,7 +94,9 @@ export default function EditNoticeScreen() {
         clearNoticeDraft(key);
         router.dismissTo({ pathname: '/crew/notices/[id]', params: { id, flash: '공지 변경사항을 저장했어요.' } });
       } else {
-        const { data } = await api.mutate('POST /crew/notices', submit);
+        const requestId = noticeRequestId(key, submit);
+        const { data } = await api.mutate('POST /crew/notices', { id: requestId, ...submit });
+        clearNoticeRequest(key);
         clearNoticeDraft(key);
         router.replace({ pathname: '/crew/notices/[id]', params: { id: data.id, flash: '공지를 올렸어요.' } });
       }

@@ -20,7 +20,7 @@ export default function ResetPasswordConfirmScreen() {
   const [secure, setSecure] = useState(true);
   const [loading, setLoading] = useState(false);
 
-  const canSubmit = code.trim().length > 0 && !validatePassword(password) && confirm === password;
+  const canSubmit = /^\d{6}$/.test(code.trim()) && !validatePassword(password) && confirm === password;
 
   async function handleSubmit() {
     if (loading || !canSubmit) return;
@@ -54,6 +54,7 @@ export default function ResetPasswordConfirmScreen() {
 
       <Field
         label="인증 코드"
+        maxLength={6}
         placeholder="메일로 받은 코드"
         value={code}
         onChangeText={(v) => {

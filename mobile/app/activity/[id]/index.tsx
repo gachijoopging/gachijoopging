@@ -50,10 +50,11 @@ import {
   type BannerKind,
   type Session,
 } from '../../../src/activity/session';
-import { getStored, openAccount, subscribe, updateStored } from '../../../src/activity/store';
+import { getStored, loadAccount, loadLastAccount, subscribe, updateStored } from '../../../src/activity/store';
 import { startTracking, stopTracking, syncOutbox, tick } from '../../../src/activity/tracking';
 import { formatClock, formatDistance } from '../../../src/format';
 import { crewMarkers } from '../../../src/live/live';
+import { useBlockedUsers } from '../../../src/profile/blocked-users';
 import { useFlash } from '../../../src/ui/useFlash';
 
 type Member = (typeof MOCKS)['GET /crew/live']['data'][number];
@@ -72,7 +73,7 @@ const BANNER_TEXT: Record<Exclude<BannerKind, 'locationOff'>, { text: string; to
 
 export default function ActivityInProgressScreen() {
   useKeepAwake();
-  const { id, startedAt, shared, quick } = useLocalSearchParams<{ id: string; startedAt?: string; shared?: string; quick?: string }>();
+  const { id, flash, startedAt, shared, quick } = useLocalSearchParams<{ id: string; flash?: string; startedAt?: string; shared?: string; quick?: string }>();
   const { colors, shadows } = useTheme();
   const insets = useSafeAreaInsets();
 
@@ -86,6 +87,7 @@ export default function ActivityInProgressScreen() {
     return st.session?.activityId === id && !st.ended ? st.session : null;
   });
   const [myId, setMyId] = useState<string | null>(null);
+  const blocked = useBlockedUsers(myId);
   const [now, setNow] = useState(Date.now());
   const [members, setMembers] = useState<readonly Member[] | null>(null);
   const [unreadChat, setUnreadChat] = useState(false);
@@ -102,17 +104,20 @@ export default function ActivityInProgressScreen() {
 
   // 4-4 가 오프라인이라 빠른 줍기로 보냈다
   useEffect(() => {
+    if (flash) setSnackbar(flash);
     if (quick) setQuickOpen(true);
-  }, [quick]);
+  }, [flash, quick, setSnackbar]);
 
   // 계정을 열고, 기기에 이 활동이 없으면 시작 시트가 넘긴 값이나 서버의 진행 중 활동으로 만든다
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const userId = await openAccount(() => api.get('GET /users/me').then((r) => r.data.id));
+      const local = loadLastAccount();
+      const me = await api.get('GET /users/me').catch(() => null);
+      const userId = me?.data.id ?? local?.session?.userId;
       if (cancelled || !userId) return;
       setMyId(userId);
-      const stored = getStored();
+      const stored = loadAccount(userId);
       if (stored.session?.activityId === id && stored.ended) {
         // 종료 대기 중인 활동을 진행 중으로 다시 열지 않는다
         router.replace({ pathname: '/activity/[id]/summary', params: { id } });
@@ -167,6 +172,11 @@ export default function ActivityInProgressScreen() {
         Location.hasServicesEnabledAsync().catch(() => true),
       ]);
       const off = !perm?.granted || !services;
+      if (off) {
+        updateStored((st) => st.session?.here
+          ? { ...st, session: { ...restartLine(st.session, Date.now()), here: null } }
+          : st);
+      }
       setLocationOff((was) => {
         if (was && !off) {
           updateStored((st) => (st.session ? { ...st, session: restartLine(st.session, Date.now()) } : st));
@@ -207,7 +217,7 @@ export default function ActivityInProgressScreen() {
     if (bubbleTimer.current) clearTimeout(bubbleTimer.current);
   }, []);
 
-  const others = members?.filter((m) => m.user.id !== myId) ?? null;
+  const others = members?.filter((m) => m.user.id !== myId && !blocked.has(m.user.id)) ?? null;
   const markers = others ? crewMarkers([...others]) : [];
   const bubble = others?.find((m) => m.user.id === bubbleId) ?? null;
 

@@ -77,7 +77,6 @@ export function NumberStepper({
   const changeBy = (amount: number) => {
     const before = currentValue.current;
     commit(clampStepperValue(currentValue.current, amount, min, max));
-    // 누를 때마다 값이 바뀌었다는 것을 살짝 커졌다 돌아오는 것으로 알린다
     if (currentValue.current !== before && !reduce) {
       bump.setValue(1.04);
       Animated.spring(bump, { toValue: 1, ...motion.settle, useNativeDriver: true }).start();

@@ -1,4 +1,15 @@
-import { clearNoticeDraft, noticeDraft, noticeFormErrors, noticeSubmit, saveNoticeDraft } from './notice-edit';
+import { clearNoticeDraft, clearNoticeRequest, noticeDraft, noticeFormErrors, noticeRequestId, noticeSubmit, saveNoticeDraft } from './notice-edit';
+
+const mockFiles = new Map<string, string>();
+jest.mock('expo-crypto', () => { let n = 0; return { randomUUID: () => `uuid-${++n}` }; });
+jest.mock('expo-file-system', () => ({ Paths: { document: 'documents' }, File: class {
+  name: string;
+  constructor(_dir: string, name: string) { this.name = name; }
+  get exists() { return mockFiles.has(this.name); }
+  textSync() { return mockFiles.get(this.name); }
+  write(value: string) { mockFiles.set(this.name, value); }
+  delete() { mockFiles.delete(this.name); }
+} }));
 
 describe('공지 입력 검증', () => {
   test('빈 제목·본문은 각 입력 아래에 안내한다', () => {
@@ -60,5 +71,17 @@ describe('공지 초안', () => {
     saveNoticeDraft(key, { title: '10월 활동', body: '첫째 주' });
     clearNoticeDraft(key);
     expect(noticeDraft(key)).toBeNull();
+  });
+});
+
+describe('noticeRequestId', () => {
+  const key = { meId: 'me', crewId: 'c1', noticeId: null };
+  it('같은 제목·내용으로 다시 올리면 같은 id 를, 내용이 바뀌거나 지우면 새 id 를 준다', () => {
+    const first = noticeRequestId(key, { title: '공지', body: '내용' });
+    expect(noticeRequestId(key, { title: '공지', body: '내용' })).toBe(first);
+    const edited = noticeRequestId(key, { title: '공지', body: '바뀐 내용' });
+    expect(edited).not.toBe(first);
+    clearNoticeRequest(key);
+    expect(noticeRequestId(key, { title: '공지', body: '바뀐 내용' })).not.toBe(edited);
   });
 });

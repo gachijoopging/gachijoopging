@@ -1,4 +1,5 @@
 import { router, useFocusEffect } from 'expo-router';
+import { File, Paths } from 'expo-file-system';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { FlatList, Pressable, RefreshControl, View } from 'react-native';
 import {
@@ -29,6 +30,7 @@ import { PostCard } from '../../src/feed/PostCard';
 import { emptyCopy, rangeLabel, syncLike, tapRange, toggleLike, type DateRange, type FeedScope, type LikeSync, type Post, type RangeDraft } from '../../src/feed/feed';
 import { leaveForMembership } from '../../src/feed/leave';
 import { useFlash } from '../../src/ui/useFlash';
+import { useBlockedUsers } from '../../src/profile/blocked-users';
 
 const api: ApiClient = createMockClient({ delayMs: 300 });
 const SCOPES: { value: FeedScope; label: string }[] = [
@@ -37,8 +39,11 @@ const SCOPES: { value: FeedScope; label: string }[] = [
 ];
 const WEEK = ['일', '월', '화', '수', '목', '금', '토'];
 
-// ponytail: 마지막 탭을 메모리에만 둔다. 앱을 다시 켜면 전체로 돌아간다 — 재실행 뒤에도 필요하면 AsyncStorage 로 옮긴다
+const scopeFile = new File(Paths.document, 'feed-scope');
 let lastScope: FeedScope = 'CREW';
+try {
+  if (scopeFile.exists && scopeFile.textSync() === 'MINE') lastScope = 'MINE';
+} catch {}
 
 type Page = { items: Post[]; nextCursor: string | null };
 
@@ -48,6 +53,7 @@ export default function FeedScreen() {
   const [range, setRange] = useState<DateRange | null>(null);
   const [page, setPage] = useState<Page | null>(null);
   const [meId, setMeId] = useState<string>();
+  const blocked = useBlockedUsers(meId);
   const [failed, setFailed] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [moreState, setMoreState] = useState<'idle' | 'loading' | 'failed'>('idle');
@@ -56,16 +62,29 @@ export default function FeedScreen() {
   const [snackbar, setSnackbar] = useFlash();
   const listRef = useRef<FlatList<Post>>(null);
   const request = useRef(0);
+  const firstPageSize = useRef(0);
 
   const load = useCallback(
     async (mode: 'first' | 'pull' | 'quiet') => {
       const id = ++request.current;
-      if (mode === 'first') setPage(null);
+      setMoreState('idle');
+      if (mode === 'first') {
+        setPage(null);
+        firstPageSize.current = 0;
+      }
       if (mode === 'pull') setRefreshing(true);
       try {
         const { data } = await api.get('GET /crew/posts', { scope, ...range, limit: 20 });
         if (id !== request.current) return;
-        setPage({ items: [...data.items] as Post[], nextCursor: data.nextCursor });
+        const first = [...data.items] as Post[];
+        const previousFirstSize = firstPageSize.current;
+        firstPageSize.current = first.length;
+        setPage((previous) => {
+          if (mode !== 'quiet' || !previous) return { items: first, nextCursor: data.nextCursor };
+          const ids = new Set(first.map((post) => post.id));
+          const tail = previous.items.slice(previousFirstSize).filter((post) => !ids.has(post.id));
+          return { items: [...first, ...tail], nextCursor: tail.length ? previous.nextCursor : data.nextCursor };
+        });
         setFailed(false);
         setMoreState('idle');
       } catch (e) {
@@ -104,17 +123,30 @@ export default function FeedScreen() {
 
   const setScope = (s: FeedScope) => {
     lastScope = s;
+    try {
+      scopeFile.write(s);
+    } catch {
+      setSnackbar('선택한 탭을 저장하지 못했어요');
+    }
     setScopeState(s);
   };
 
   const loadMore = async () => {
     if (!page?.nextCursor || moreState === 'loading') return;
+    const generation = request.current;
+    const cursor = page.nextCursor;
     setMoreState('loading');
     try {
-      const { data } = await api.get('GET /crew/posts', { scope, ...range, cursor: page.nextCursor, limit: 20 });
-      setPage((p) => p && { items: [...p.items, ...(data.items as readonly Post[])], nextCursor: data.nextCursor });
+      const { data } = await api.get('GET /crew/posts', { scope, ...range, cursor, limit: 20 });
+      if (generation !== request.current) return;
+      setPage((p) => {
+        if (!p || p.nextCursor !== cursor) return p;
+        const ids = new Set(p.items.map((post) => post.id));
+        return { items: [...p.items, ...(data.items as readonly Post[]).filter((post) => !ids.has(post.id))], nextCursor: data.nextCursor };
+      });
       setMoreState('idle');
     } catch {
+      if (generation !== request.current) return;
       setMoreState('failed');
     }
   };
@@ -195,7 +227,7 @@ export default function FeedScreen() {
       ) : (
         <FlatList
           ref={listRef}
-          data={page.items}
+          data={page.items.filter((post) => !blocked.has(post.author.id))}
           keyExtractor={(p) => p.id}
           contentContainerStyle={{ gap: space.md, paddingBottom: space['3xl'], flexGrow: 1 }}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load('pull')} />}
