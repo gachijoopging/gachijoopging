@@ -1,7 +1,7 @@
 // 화면 5-4 · docs/screens/5-4-user-profile.md
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { RefreshControl, ScrollView, View } from 'react-native';
+import { RefreshControl, View } from 'react-native';
 import {
   AppHeader,
   Avatar,
@@ -24,8 +24,8 @@ import {
 } from 'design-system/src';
 import { ApiError, createMockClient, type ApiClient } from '../../src/api/client';
 import type { MOCKS } from '../../src/api/mocks.generated';
-import { RecordsList } from '../../src/profile/MyProfile';
-import { ActivityCalendar, PostGrid, StatsTile, nearBottom, usePaged, type ActivityCard, type Post } from '../../src/profile/ProfileParts';
+import { ActivityCalendar, StatsTile, usePaged, type ActivityCard, type Post } from '../../src/profile/ProfileParts';
+import { ProfileTabList } from '../../src/profile/ProfileTabList';
 import { INTRO_FOLD, safetyRows, type SafetyRow } from '../../src/profile/profile';
 import { setUserBlocked } from '../../src/profile/blocked-users';
 
@@ -109,7 +109,6 @@ export default function UserProfileScreen() {
 
   const records = usePaged<ActivityCard>(async (cursor) => (await api.get('GET /crew/members/{userId}/activities', { userId: id, cursor })).data, id);
   const posts = usePaged<Post>(async (cursor) => (await api.get('GET /crew/members/{userId}/posts', { userId: id, cursor })).data, id);
-  const tabList = tab === 'records' ? records : posts;
 
   const loadProfile = useCallback(async () => {
     const request = ++profileRequest.current;
@@ -262,85 +261,69 @@ export default function UserProfileScreen() {
       ) : !profile ? (
         failed ? <ErrorState title="프로필을 불러오지 못했어요" onRetry={loadProfile} /> : <Loading label="프로필을 불러오고 있어요" />
       ) : (
-        <ScrollView
-          style={{ flex: 1 }}
-          contentContainerStyle={{ gap: space.md, paddingBottom: space['3xl'] }}
+        <ProfileTabList
+          tab={tab}
+          header={
+            <>
+                {failed ? <Banner tone="warn">인터넷 연결을 확인해 주세요.</Banner> : null}
+
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.md }}>
+                  <Avatar name={profile.nickname} uri={profile.photoUrl ?? undefined} size="lg" decorative />
+                  <View style={{ flex: 1, gap: space.xs }}>
+                    <View
+                      accessible
+                      accessibilityLabel={profile.isLeader ? `${profile.nickname}, 크루장` : profile.nickname}
+                      style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}
+                    >
+                      <Txt variant="title" bold numberOfLines={1} style={{ flexShrink: 1 }}>{profile.nickname}</Txt>
+                      {profile.isLeader ? <Badge label="크루장" tone="deep" /> : null}
+                    </View>
+                    {profile.intro ? (
+                      <>
+                        <Txt variant="caption" numberOfLines={introOpen ? undefined : 2}>{profile.intro}</Txt>
+                        {profile.intro.length > INTRO_FOLD ? (
+                          <LinkText label={introOpen ? '접기' : '더 보기'} tone="muted" onPress={() => setIntroOpen((o) => !o)} style={{ alignSelf: 'flex-start' }} />
+                        ) : null}
+                      </>
+                    ) : null}
+                    <Txt variant="micro" tone="muted">{joinedLabel(profile.joinedAt)}</Txt>
+                  </View>
+                </View>
+
+                {!profile.blocked && !profile.withdrawn ? (
+                  <View style={{ gap: space.xs, alignItems: 'flex-start' }}>
+                    <Button
+                      label={following ? '팔로우 중' : '팔로우'}
+                      variant={following ? 'soft' : 'primary'}
+                      size="sm"
+                      loading={busy}
+                      accessibilityLabel={following ? '팔로우 중, 해제하려면 두 번 탭' : '팔로우'}
+                      onPress={toggleFollow}
+                    />
+                    <Txt variant="micro" tone="muted">활동을 시작하면 알려 드려요</Txt>
+                  </View>
+                ) : null}
+
+                {profile.blocked ? (
+                  <Banner tone="danger" action={{ label: '차단 해제', onPress: unblock }}>
+                    차단한 크루원이에요. 내 게시물·댓글·채팅·위치 화면에서 보이지 않아요.
+                  </Banner>
+                ) : null}
+
+                <StatsTile stats={profile} />
+                <Tabs items={TABS} value={tab} onChange={setTab} fullWidth />
+              {tab === 'records' && !profile.blocked ? <ActivityCalendar activeDays={profile.activeDays} /> : null}
+            </>
+          }
+          records={records}
+          posts={posts}
+          onOpenRecord={(activityId) => router.push({ pathname: '/records/[id]', params: { id: activityId } })}
+          onOpenPost={(postId) => router.push({ pathname: '/posts/[id]', params: { id: postId } })}
+          recordsEmpty={{ description: `${name}님이 첫 활동을 시작하면 여기 쌓여요.` }}
+          postsEmptyDescription={`${name}님이 크루에 올린 게시물이 여기 모여요.`}
+          hidden={profile.blocked ? <EmptyState icon="eye-off-outline" title="차단한 크루원의 개인 콘텐츠는 숨겨져요" /> : undefined}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={pull} />}
-          scrollEventThrottle={200}
-          onScroll={({ nativeEvent }) => {
-            if (nearBottom(nativeEvent) && !tabList.failed) void tabList.loadMore();
-          }}
-        >
-          {failed ? <Banner tone="warn">인터넷 연결을 확인해 주세요.</Banner> : null}
-
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.md }}>
-            <Avatar name={profile.nickname} uri={profile.photoUrl ?? undefined} size="lg" decorative />
-            <View style={{ flex: 1, gap: space.xs }}>
-              <View
-                accessible
-                accessibilityLabel={profile.isLeader ? `${profile.nickname}, 크루장` : profile.nickname}
-                style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}
-              >
-                <Txt variant="title" bold numberOfLines={1} style={{ flexShrink: 1 }}>{profile.nickname}</Txt>
-                {profile.isLeader ? <Badge label="크루장" tone="deep" /> : null}
-              </View>
-              {profile.intro ? (
-                <>
-                  <Txt variant="caption" numberOfLines={introOpen ? undefined : 2}>{profile.intro}</Txt>
-                  {profile.intro.length > INTRO_FOLD ? (
-                    <LinkText label={introOpen ? '접기' : '더 보기'} tone="muted" onPress={() => setIntroOpen((o) => !o)} style={{ alignSelf: 'flex-start' }} />
-                  ) : null}
-                </>
-              ) : null}
-              <Txt variant="micro" tone="muted">{joinedLabel(profile.joinedAt)}</Txt>
-            </View>
-          </View>
-
-          {!profile.blocked && !profile.withdrawn ? (
-            <View style={{ gap: space.xs, alignItems: 'flex-start' }}>
-              <Button
-                label={following ? '팔로우 중' : '팔로우'}
-                variant={following ? 'soft' : 'primary'}
-                size="sm"
-                loading={busy}
-                accessibilityLabel={following ? '팔로우 중, 해제하려면 두 번 탭' : '팔로우'}
-                onPress={toggleFollow}
-              />
-              <Txt variant="micro" tone="muted">활동을 시작하면 알려 드려요</Txt>
-            </View>
-          ) : null}
-
-          {profile.blocked ? (
-            <Banner tone="danger" action={{ label: '차단 해제', onPress: unblock }}>
-              차단한 크루원이에요. 내 게시물·댓글·채팅·위치 화면에서 보이지 않아요.
-            </Banner>
-          ) : null}
-
-          <StatsTile stats={profile} />
-          <Tabs items={TABS} value={tab} onChange={setTab} fullWidth />
-
-          {profile.blocked ? (
-            <EmptyState icon="eye-off-outline" title="차단한 크루원의 개인 콘텐츠는 숨겨져요" />
-          ) : tab === 'records' ? (
-            <>
-              <ActivityCalendar activeDays={profile.activeDays} />
-              <RecordsList
-                list={records}
-                onOpen={(activityId) => router.push({ pathname: '/records/[id]', params: { id: activityId } })}
-                emptyDescription={`${name}님이 첫 활동을 시작하면 여기 쌓여요.`}
-              />
-            </>
-          ) : !posts.items ? (
-            posts.failed ? <ErrorState title="게시물을 불러오지 못했어요" onRetry={posts.reload} /> : <Loading label="게시물을 불러오고 있어요" />
-          ) : posts.items.length === 0 ? (
-            <EmptyState icon="image-multiple-outline" title="아직 올린 게시물이 없어요" description={`${name}님이 크루에 올린 게시물이 여기 모여요.`} />
-          ) : (
-            <>
-              <PostGrid posts={posts.items} onOpen={(postId) => router.push({ pathname: '/posts/[id]', params: { id: postId } })} />
-              {posts.loadingMore ? <Loading label="게시물을 불러오고 있어요" /> : null}
-            </>
-          )}
-        </ScrollView>
+        />
       )}
 
       <BottomSheet visible={sheet} onClose={() => setSheet(false)} title={`${name}님`}>

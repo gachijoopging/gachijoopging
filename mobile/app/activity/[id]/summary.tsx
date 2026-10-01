@@ -118,7 +118,7 @@ export default function ActivitySummaryScreen() {
   if (!session || !snapshot) {
     return (
       <Screen>
-        <Txt variant="title">오늘의 줍깅 정리 🌱</Txt>
+        <Txt variant="title" accessibilityRole="header" accessibilityLabel="오늘의 줍깅 정리">오늘의 줍깅 정리 🌱</Txt>
         <Banner tone="warn" action={{ label: '닫기', onPress: leave }}>이 활동의 기록을 기기에서 찾지 못했어요.</Banner>
       </Screen>
     );

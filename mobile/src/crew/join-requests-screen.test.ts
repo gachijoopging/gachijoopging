@@ -6,7 +6,7 @@ jest.mock('../api/client', () => ({ ApiError: class extends Error { code: string
 jest.mock('expo/src/winter/fetch', () => ({ fetch: jest.fn() }));
 jest.mock('expo-router', () => ({ router: { canGoBack: () => true, back: jest.fn(), replace: jest.fn() }, useLocalSearchParams: () => ({}), useFocusEffect: (fn: () => void) => require('react').useEffect(fn, [fn]) }));
 jest.mock('react-native', () => ({ View: 'View', Pressable: 'Pressable', ScrollView: 'ScrollView', RefreshControl: 'RefreshControl', Image: 'Image', Platform: { OS: 'android', select: (options: Record<string, unknown>) => options.android ?? options.default } }));
-jest.mock('design-system/src', () => new Proxy({ space: { md: 16, sm: 8, xs: 4 }, size: { minTouch: 48 }, useRipple: () => undefined }, { get: (target, key) => key === 'Dialog' ? (props: any) => require('react').createElement('Dialog', props, props.children, props.actions) : key in target ? target[key as keyof typeof target] : String(key) }));
+jest.mock('design-system/src', () => new Proxy({ space: { md: 16, sm: 8, xs: 4 }, size: { minTouch: 48 }, useRipple: () => undefined }, { get: (target, key) => key === 'List' ? require('../test/mock-list').MockList : key === 'Dialog' ? (props: any) => require('react').createElement('Dialog', props, props.children, props.actions) : key in target ? target[key as keyof typeof target] : String(key) }));
 import Review from '../../app/crew/join-requests';
 const MockApiError = require('../api/client').ApiError;
 const me = { data: { isLeader: true, pendingJoinRequests: 2 } };
@@ -14,8 +14,7 @@ const report = (id: string) => ({ id, user: { id, nickname: id, photoUrl: null }
 const deferred = () => { let resolve!: (value: unknown) => void; let reject!: (error: Error) => void; const promise = new Promise((yes, no) => { resolve = yes; reject = no; }); return { promise, resolve, reject }; };
 let tree: ReactTestRenderer;
 const rowIds = () => tree.root.findAll((node) => !!node.props.request && node.props.request.id).map((node) => node.props.request.id);
-const scroll = () => tree.root.findByType('ScrollView' as never);
-const bottom = { nativeEvent: { layoutMeasurement: { height: 600 }, contentOffset: { y: 600 }, contentSize: { height: 900 } } };
+const list = () => tree.root.findByType('List' as never);
 async function mount() { await act(async () => { tree = create(React.createElement(Review)); }); }
 async function approve() {
   act(() => tree.root.findAllByType('Button' as never).find((node) => node.props.accessibilityLabel === 'first 님 가입 승인')!.props.onPress());
@@ -41,7 +40,7 @@ test('bottom scroll locks same-frame pagination and deduplicates overlapping pag
   const tail = deferred();
   mockGet.mockImplementation((key: string, query?: { cursor?: string }) => key === 'GET /crew' ? Promise.resolve(me) : query?.cursor ? tail.promise : Promise.resolve({ data: { items: [report('first')], nextCursor: 'next', total: 2 } }));
   await mount();
-  act(() => { scroll().props.onScroll(bottom); scroll().props.onScroll(bottom); });
+  act(() => { list().props.onEndReached(); list().props.onEndReached(); });
   expect(mockGet.mock.calls.filter(([key, query]) => key === 'GET /crew/join-requests' && query?.cursor)).toHaveLength(1);
   await act(async () => { tail.resolve({ data: { items: [report('first'), report('second')], nextCursor: null, total: 2 } }); });
   expect(rowIds()).toEqual(['first', 'second']);
@@ -53,7 +52,7 @@ test('refresh response cannot restore a request approved during the fetch', asyn
   const old = deferred();
   mockGet.mockImplementation((key: string) => key === 'GET /crew' ? Promise.resolve(me) : old.promise);
   let refresh!: Promise<void>;
-  act(() => { refresh = scroll().props.refreshControl.props.onRefresh(); });
+  act(() => { refresh = list().props.refreshControl.props.onRefresh(); });
   await approve();
   expect(mockMutate).toHaveBeenCalledWith('POST /crew/join-requests/{requestId}', { requestId: 'first', decision: 'APPROVE' });
   expect(rowIds()).toEqual([]);

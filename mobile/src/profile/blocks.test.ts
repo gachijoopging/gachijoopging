@@ -6,7 +6,7 @@ jest.mock('../api/client', () => ({ createMockClient: () => ({ get: (...args: un
 jest.mock('expo/src/winter/fetch', () => ({ fetch: jest.fn() }));
 jest.mock('expo-router', () => ({ router: { back: jest.fn(), push: jest.fn() }, useFocusEffect: (fn: () => void) => require('react').useEffect(fn, [fn]) }));
 jest.mock('react-native', () => ({ View: 'View', ScrollView: 'ScrollView', RefreshControl: 'RefreshControl', Platform: { OS: 'android', select: (options: Record<string, unknown>) => options.android ?? options.default } }));
-jest.mock('design-system/src', () => new Proxy({ space: { md: 16 } }, { get: (target, key) => key in target ? target[key as keyof typeof target] : String(key) }));
+jest.mock('design-system/src', () => new Proxy({ space: { md: 16 }, radius: {}, useTheme: () => ({ colors: {} }) }, { get: (target, key) => key === 'List' ? require('../test/mock-list').MockList : key in target ? target[key as keyof typeof target] : String(key) }));
 jest.mock('../auth/account', () => ({ currentAccount: () => ({ id: 'viewer', hasCrew: true }) }));
 import Blocks from '../../app/settings/blocks';
 const users = ['a', 'b', 'c'].map((id) => ({ id, nickname: id, photoUrl: null, withdrawn: false }));
@@ -30,7 +30,7 @@ test('refresh does not restore a pending removal or duplicate its failed rollbac
   const pending = deferred(); mockMutate.mockReturnValue(pending.promise);
   await act(async () => { tree = create(React.createElement(Blocks)); });
   act(() => { void tree.root.findAllByType('Button' as never)[0].props.onPress(); });
-  await act(async () => { await tree.root.findByType('ScrollView' as never).props.refreshControl.props.onRefresh(); });
+  await act(async () => { await tree.root.findByType('List' as never).props.refreshControl.props.onRefresh(); });
   expect(names()).toEqual(['b', 'c']);
   await act(async () => { pending.reject(new Error('fail')); });
   expect(names()).toEqual(['a', 'b', 'c']);
@@ -40,8 +40,7 @@ test('pagination locks duplicate scrolls and keeps existing rows on failed tail 
   const page = deferred();
   mockGet.mockResolvedValueOnce({ data: { items: [users[0]], total: 3, nextCursor: 'next' } }).mockReturnValueOnce(page.promise);
   await act(async () => { tree = create(React.createElement(Blocks)); });
-  const bottom = { nativeEvent: { layoutMeasurement: { height: 600 }, contentOffset: { y: 600 }, contentSize: { height: 900 } } };
-  act(() => { tree.root.findByType('ScrollView' as never).props.onScroll(bottom); tree.root.findByType('ScrollView' as never).props.onScroll(bottom); });
+  act(() => { tree.root.findByType('List' as never).props.onEndReached(); tree.root.findByType('List' as never).props.onEndReached(); });
   expect(mockGet).toHaveBeenCalledTimes(2);
   await act(async () => { page.reject(new Error('offline')); });
   expect(names()).toEqual(['a']);

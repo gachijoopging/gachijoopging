@@ -5,7 +5,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useNetworkState } from 'expo-network';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { LayoutAnimation, Pressable, ScrollView, View, type GestureResponderEvent } from 'react-native';
+import { LayoutAnimation, Pressable, ScrollView, View } from 'react-native';
 import {
   AppHeader,
   Banner,
@@ -56,13 +56,11 @@ export default function CreatePostScreen() {
   const [loadFailed, setLoadFailed] = useState(false);
   const imageAdded = useRef(false);
   const [selected, setSelected] = useState<number | null>(null);
-  const [dragKey, setDragKey] = useState<string | null>(null);
   const [posting, setPosting] = useState(false);
   const [done, setDone] = useState(0);
   const [postFailed, setPostFailed] = useState(false);
   const busy = useRef(false);
   const initialization = useRef(0);
-  const dragging = useRef<{ key: string; x: number } | null>(null);
   usePreventBack(posting);
 
   const initialize = async () => {
@@ -216,19 +214,6 @@ export default function CreatePostScreen() {
     finally { busy.current = false; setPosting(false); }
   };
 
-  const dragPhoto = (event: GestureResponderEvent) => {
-    const drag = dragging.current;
-    if (!drag || busy.current) return;
-    const delta = event.nativeEvent.pageX - drag.x;
-    if (Math.abs(delta) < THUMB + space.sm) return;
-    const index = draftRef.current.photos.findIndex((photo) => photo.key === drag.key);
-    if (index < 0) return;
-    const direction = delta > 0 ? 1 : -1;
-    setPhotos((previous) => [...movePhoto(previous, index, direction)]);
-    setSelected(Math.max(0, Math.min(photos.length - 1, index + direction)));
-    drag.x = event.nativeEvent.pageX;
-  };
-
   const allowed = !!scope && !offline && canPost({ text, photoCount: photos.length });
   const atMax = text.length >= POST_TEXT_MAX;
 
@@ -258,7 +243,7 @@ export default function CreatePostScreen() {
 
         <View style={{ gap: space.sm }}>
           <Txt variant="label">사진 (최대 {POST_PHOTO_MAX}장)</Txt>
-          <ScrollView horizontal scrollEnabled={dragKey == null} contentContainerStyle={{ gap: space.sm }} showsHorizontalScrollIndicator={false}>
+          <ScrollView horizontal contentContainerStyle={{ gap: space.sm }} showsHorizontalScrollIndicator={false}>
             {photos.length < POST_PHOTO_MAX ? (
               <Pressable
                 accessibilityRole="button"
@@ -291,10 +276,6 @@ export default function CreatePostScreen() {
                   disabled={posting}
                   android_ripple={ripple}
                   onPress={() => setSelected(selected === i ? null : i)}
-                  onLongPress={(event) => { dragging.current = { key: p.key, x: event.nativeEvent.pageX }; setSelected(i); setDragKey(p.key); }}
-                  onTouchMove={dragPhoto}
-                  onTouchEnd={() => { dragging.current = null; setDragKey(null); }}
-                  onTouchCancel={() => { dragging.current = null; setDragKey(null); }}
                   style={{
                     flex: 1,
                     borderRadius: radius.tile,

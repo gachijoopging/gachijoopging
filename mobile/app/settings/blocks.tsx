@@ -1,26 +1,28 @@
 // 화면 5-9 · docs/screens/5-9-manage-blocks.md
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { RefreshControl, ScrollView, View } from 'react-native';
+import { RefreshControl, View } from 'react-native';
 import {
   AppHeader,
   Avatar,
   Banner,
   Button,
-  Card,
   EmptyState,
   ErrorState,
+  List,
   ListRow,
   Loading,
   Screen,
   Snackbar,
+  borderWidth,
+  radius,
   space,
+  useTheme,
 } from 'design-system/src';
 import { createMockClient, type ApiClient } from '../../src/api/client';
 import type { MOCKS } from '../../src/api/mocks.generated';
 import { blockedUsers, reconcileBlockedUsers, setUserBlocked } from '../../src/profile/blocked-users';
 import { currentAccount } from '../../src/auth/account';
-import { nearBottom } from '../../src/profile/ProfileParts';
 
 type Blocked = (typeof MOCKS)['GET /users/me/blocked']['data']['items'][number];
 
@@ -28,6 +30,7 @@ const api: ApiClient = createMockClient({ delayMs: 300 });
 const ROW_DESC = '차단됨 · 게시물·댓글·채팅·위치에서 숨김';
 
 export default function ManageBlocksScreen() {
+  const { colors } = useTheme();
   const [list, setList] = useState<readonly Blocked[] | null>(null);
   const [total, setTotal] = useState(0);
   const [failed, setFailed] = useState(false);
@@ -151,39 +154,58 @@ export default function ManageBlocksScreen() {
     <Screen>
       <AppHeader title="차단 관리" subtitle={list ? `차단 ${total}명` : undefined} onBack={() => router.back()} />
 
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ gap: space.md }} onScroll={({ nativeEvent }) => { if (nearBottom(nativeEvent)) void loadMore(); }} scrollEventThrottle={200} refreshControl={<RefreshControl refreshing={refreshing} enabled={pending.current.size === 0} onRefresh={() => load('pull')} />}>
       {!list ? (
         failed ? <ErrorState title="차단 목록을 불러오지 못했어요" onRetry={() => load('quiet')} /> : <Loading label="차단 목록을 불러오고 있어요" />
       ) : (
-        <>
-          {failed ? <Banner tone="warn">인터넷 연결을 확인해 주세요.</Banner> : null}
-          {list.length === 0 ? (
-            <EmptyState icon="account-cancel-outline" title="차단한 크루원이 없어요" description="차단하면 내 게시물·댓글·채팅·위치 화면에서 그 사람이 숨겨져요." />
-          ) : (
-            <Card padded={false}>
-              {list.map((u, i) => (
-                <View key={u.id} style={{ flexDirection: 'row', alignItems: 'center', paddingRight: space.md }}>
-                  <View style={{ flex: 1 }}>
-                    <ListRow
-                      title={u.nickname}
-                      subtitle={ROW_DESC}
-                      left={<Avatar name={u.nickname} uri={u.photoUrl ?? undefined} size="sm" withdrawn={u.withdrawn} decorative />}
-                      divider={i < list.length - 1}
-                      chevron={false}
-                      accessibilityLabel={u.withdrawn ? `${u.nickname}, 차단됨` : `${u.nickname}, 차단됨, 게시물·댓글·채팅·위치에서 숨김, 프로필 보기`}
-                      onPress={u.withdrawn ? undefined : () => router.push({ pathname: '/users/[id]', params: { id: u.id } })}
-                    />
-                  </View>
-                  <Button label="해제" variant="ghost" size="sm" accessibilityLabel={`해제, ${u.nickname}님 차단 해제`} onPress={() => unblock(u)} />
-                </View>
-              ))}
-            </Card>
+        <List
+          data={list}
+          keyExtractor={(u) => u.id}
+          // 실패한 다음 장은 끝에 닿을 때마다 다시 부르지 않는다. 다시 시도 버튼으로만 부른다
+          onEndReached={() => { if (moreState !== 'failed') void loadMore(); }}
+          onEndReachedThreshold={0.5}
+          refreshControl={<RefreshControl refreshing={refreshing} enabled={pending.current.size === 0} onRefresh={() => load('pull')} />}
+          ListHeaderComponent={failed ? <View style={{ paddingBottom: space.md }}><Banner tone="warn">인터넷 연결을 확인해 주세요.</Banner></View> : null}
+          empty={<EmptyState icon="account-cancel-outline" title="차단한 크루원이 없어요" description="차단하면 내 게시물·댓글·채팅·위치 화면에서 그 사람이 숨겨져요." />}
+          renderItem={({ item: u, index: i }) => (
+            // 한 장의 카드처럼 보이도록 첫 행과 끝 행만 둥글린다
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                paddingHorizontal: space.md,
+                backgroundColor: colors.surface,
+                // 다른 카드 목록과 같은 가장자리. 행 사이 선은 ListRow 가 긋는다
+                borderWidth: borderWidth.hairline,
+                borderTopWidth: i === 0 ? borderWidth.hairline : 0,
+                borderBottomWidth: i === list.length - 1 ? borderWidth.hairline : 0,
+                borderColor: colors.border,
+                borderTopLeftRadius: i === 0 ? radius.card : 0,
+                borderTopRightRadius: i === 0 ? radius.card : 0,
+                borderBottomLeftRadius: i === list.length - 1 ? radius.card : 0,
+                borderBottomRightRadius: i === list.length - 1 ? radius.card : 0,
+              }}
+            >
+              <View style={{ flex: 1 }}>
+                <ListRow
+                  title={u.nickname}
+                  subtitle={ROW_DESC}
+                  left={<Avatar name={u.nickname} uri={u.photoUrl ?? undefined} size="sm" withdrawn={u.withdrawn} decorative />}
+                  divider={i < list.length - 1}
+                  chevron={false}
+                  accessibilityLabel={u.withdrawn ? `${u.nickname}, 차단됨` : `${u.nickname}, 차단됨, 게시물·댓글·채팅·위치에서 숨김, 프로필 보기`}
+                  onPress={u.withdrawn ? undefined : () => router.push({ pathname: '/users/[id]', params: { id: u.id } })}
+                />
+              </View>
+              <Button label="해제" variant="ghost" size="sm" accessibilityLabel={`해제, ${u.nickname}님 차단 해제`} onPress={() => unblock(u)} />
+            </View>
           )}
-        </>
+          ListFooterComponent={
+            <View style={{ paddingTop: space.md }}>
+              {moreState === 'loading' ? <Loading label="차단 목록을 더 불러오고 있어요" /> : moreState === 'failed' ? <Button label="다시 시도" variant="ghost" onPress={loadMore} /> : cursor.current ? <Button label="더 불러오기" variant="ghost" disabled={pending.current.size > 0} onPress={loadMore} /> : null}
+            </View>
+          }
+        />
       )}
-
-      {moreState === 'loading' ? <Loading label="차단 목록을 더 불러오고 있어요" /> : moreState === 'failed' ? <Button label="다시 시도" variant="ghost" onPress={loadMore} /> : cursor.current ? <Button label="더 불러오기" variant="ghost" disabled={pending.current.size > 0} onPress={loadMore} /> : null}
-      </ScrollView>
       <Snackbar visible={snackbar != null} message={snackbar ?? ''} onDismiss={() => setSnackbar(null)} />
     </Screen>
   );

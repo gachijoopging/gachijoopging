@@ -108,3 +108,25 @@ test('잘못된 링크의 대상 유형 또는 누락 id는 조회·제출 전�
   expect(mockGet).not.toHaveBeenCalled();
   expect(mockMutate).not.toHaveBeenCalled();
 });
+
+test('기타 사유의 메모를 비운 채 칸을 떠나면 칸 아래에 필수라고 알린다', async () => {
+  await mount();
+  await act(async () => rendered.root.findAllByType('SelectRow').find((row: any) => row.props.title === '기타').props.onPress());
+  const memo = () => rendered.root.findAllByType('Field').find((f: any) => f.props.accessibilityLabel?.startsWith('상세 메모'));
+  expect(memo().props.error).toBeUndefined();
+  await act(async () => memo().props.onBlur());
+  expect(memo().props.error).toBe('기타 사유는 메모가 필요해요.');
+  await act(async () => memo().props.onChangeText('광고 링크를 반복해서 올려요'));
+  expect(memo().props.error).toBeUndefined();
+});
+
+test('다른 사유를 골랐다가 기타로 돌아오면 칸을 다시 떠나기 전까지 필수 오류를 보이지 않는다', async () => {
+  await mount();
+  const pick = (title: string) => act(async () => rendered.root.findAllByType('SelectRow').find((row: any) => row.props.title === title).props.onPress());
+  const memo = () => rendered.root.findAllByType('Field').find((f: any) => f.props.accessibilityLabel?.startsWith('상세 메모'));
+  await pick('기타');
+  await act(async () => memo().props.onBlur());
+  await pick('스팸·도배');
+  await pick('기타');
+  expect(memo().props.error).toBeUndefined();
+});

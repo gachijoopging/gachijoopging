@@ -193,6 +193,7 @@ export default function NotificationsScreen() {
                     subtitle={[item.detail, relativeTime(item.createdAt)].filter(Boolean).join(' · ')}
                     left={<IconCircle icon={ICON[item.type] ?? 'bell-outline'} tone="tint" size="sm" />}
                     right={item.unread ? <Dot tone="deep" size={7} /> : undefined}
+                    emphasized={item.unread}
                     chevron
                     accessibilityLabel={[item.title, item.detail, relativeTime(item.createdAt), item.unread ? '안 읽음' : '']
                       .filter(Boolean)

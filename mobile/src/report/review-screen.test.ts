@@ -6,7 +6,7 @@ jest.mock('../api/client', () => ({ ApiError: class extends Error { code: string
 jest.mock('expo/src/winter/fetch', () => ({ fetch: jest.fn() }));
 jest.mock('expo-router', () => ({ router: { canGoBack: () => true, back: jest.fn(), replace: jest.fn() }, useLocalSearchParams: () => ({}), useFocusEffect: (fn: () => void) => require('react').useEffect(fn, [fn]) }));
 jest.mock('react-native', () => ({ View: 'View', Pressable: 'Pressable', ScrollView: 'ScrollView', RefreshControl: 'RefreshControl', Image: 'Image', Platform: { OS: 'android', select: (options: Record<string, unknown>) => options.android ?? options.default } }));
-jest.mock('design-system/src', () => new Proxy({ space: { md: 16, sm: 8, xs: 4 }, size: { minTouch: 48 }, useRipple: () => undefined }, { get: (target, key) => key === 'Dialog' ? (props: any) => require('react').createElement('Dialog', props, props.children, props.actions) : key in target ? target[key as keyof typeof target] : String(key) }));
+jest.mock('design-system/src', () => new Proxy({ space: { md: 16, sm: 8, xs: 4 }, size: { minTouch: 48 }, useRipple: () => undefined }, { get: (target, key) => key === 'List' ? require('../test/mock-list').MockList : key === 'Dialog' ? (props: any) => require('react').createElement('Dialog', props, props.children, props.actions) : key in target ? target[key as keyof typeof target] : String(key) }));
 import Review from '../../app/crew/reports';
 const MockApiError = require('../api/client').ApiError;
 const me = { data: { id: 'leader', membership: { crew: { isLeader: true } } } };
@@ -14,8 +14,7 @@ const report = (id: string, targetType = 'POST', targetId = id) => ({ id, target
 const deferred = () => { let resolve!: (value: unknown) => void; let reject!: (error: Error) => void; const promise = new Promise((yes, no) => { resolve = yes; reject = no; }); return { promise, resolve, reject }; };
 let tree: ReactTestRenderer;
 const rowIds = () => tree.root.findAll((node) => !!node.props.report && node.props.report.id).map((node) => node.props.report.id);
-const scroll = () => tree.root.findByType('ScrollView' as never);
-const bottom = { nativeEvent: { layoutMeasurement: { height: 600 }, contentOffset: { y: 600 }, contentSize: { height: 900 } } };
+const list = () => tree.root.findByType('List' as never);
 async function mount() { await act(async () => { tree = create(React.createElement(Review)); }); }
 async function confirmAction(label: string) {
   act(() => tree.root.findAllByType('Pressable' as never)[0].props.onPress());
@@ -42,7 +41,7 @@ test('bottom scroll locks same-frame pagination and deduplicates overlapping pag
   const tail = deferred();
   mockGet.mockImplementation((key: string, query?: { cursor?: string }) => key === 'GET /users/me' ? Promise.resolve(me) : query?.cursor ? tail.promise : Promise.resolve({ data: { items: [report('first')], nextCursor: 'next' } }));
   await mount();
-  act(() => { scroll().props.onScroll(bottom); scroll().props.onScroll(bottom); });
+  act(() => { list().props.onEndReached(); list().props.onEndReached(); });
   expect(mockGet.mock.calls.filter(([key, query]) => key === 'GET /crew/reports' && query?.cursor)).toHaveLength(1);
   await act(async () => { tail.resolve({ data: { items: [report('first'), report('second')], nextCursor: null } }); });
   expect(rowIds()).toEqual(['first', 'second']);
@@ -53,7 +52,7 @@ test('refresh begun before mutation cannot reinsert the resolved report', async 
   const old = deferred();
   mockGet.mockImplementation((key: string) => key === 'GET /users/me' ? Promise.resolve(me) : old.promise);
   let refresh!: Promise<void>;
-  act(() => { refresh = scroll().props.refreshControl.props.onRefresh(); });
+  act(() => { refresh = list().props.refreshControl.props.onRefresh(); });
   await confirmAction('대상 삭제');
   expect(mockMutate).toHaveBeenCalledWith('POST /crew/reports/{reportId}', { reportId: 'first', result: 'DELETE' });
   expect(rowIds()).toEqual([]);
@@ -79,4 +78,14 @@ test('user resolution calls the kick endpoint and re-fetches remaining reports',
   await confirmAction('크루원 추방');
   expect(mockMutate).toHaveBeenCalledWith('DELETE /crew/members/{userId}', { userId: 'member' });
   expect(rowIds()).toEqual([]);
+});
+
+test('다음 장을 못 받은 뒤에는 끝에 닿아도 다시 부르지 않고 다시 시도 버튼으로만 부른다', async () => {
+  mockGet.mockImplementation((key: string, query?: { cursor?: string }) => key === 'GET /users/me' ? Promise.resolve(me) : query?.cursor ? Promise.reject(new Error('offline')) : Promise.resolve({ data: { items: [report('first')], nextCursor: 'next' } }));
+  await mount();
+  await act(async () => { list().props.onEndReached(); });
+  const tailCalls = () => mockGet.mock.calls.filter(([key, query]) => key === 'GET /crew/reports' && query?.cursor).length;
+  expect(tailCalls()).toBe(1);
+  await act(async () => { list().props.onEndReached(); });
+  expect(tailCalls()).toBe(1);
 });

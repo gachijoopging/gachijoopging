@@ -1,6 +1,6 @@
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
+import { Pressable, RefreshControl, View } from 'react-native';
 import {
   AppHeader,
   Avatar,
@@ -10,7 +10,6 @@ import {
   Button,
   Chip,
   Dialog,
-  EmptyState,
   ErrorState,
   IconButton,
   LinkText,
@@ -28,7 +27,8 @@ import {
 import { createMockClient, type ApiClient } from '../api/client';
 import { useFlash } from '../ui/useFlash';
 import { INTRO_FOLD } from './profile';
-import { ActivityCardView, PostGrid, StatsTile, nearBottom, usePaged, type ActivityCard, type Post, type Stats } from './ProfileParts';
+import { StatsTile, usePaged, type ActivityCard, type Post, type Stats } from './ProfileParts';
+import { ProfileTabList } from './ProfileTabList';
 
 type Me = { id: string; nickname: string; intro: string; photoUrl: string | null; crew: { name: string; isLeader: boolean } | null };
 type Tab = 'records' | 'posts';
@@ -84,7 +84,6 @@ export function MyProfile({ recordsOnly = false }: { recordsOnly?: boolean }) {
     }
   }, []);
 
-  const tabList = tab === 'records' ? records : posts;
   const tabRef = useRef(tab);
   tabRef.current = tab;
   const reloadRecords = records.reload;
@@ -149,94 +148,76 @@ export function MyProfile({ recordsOnly = false }: { recordsOnly?: boolean }) {
       )}
       {offline ? <Banner tone="warn">인터넷 연결을 확인해 주세요.</Banner> : null}
 
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={{ gap: space.md, paddingBottom: space['3xl'] }}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={pull} />}
-        scrollEventThrottle={200}
-        onScroll={({ nativeEvent }) => {
-          if (nearBottom(nativeEvent) && !tabList.failed) void tabList.loadMore();
-        }}
-      >
-        {recordsOnly ? null : !me ? (
-          meFailed ? (
-            <ErrorState title="프로필을 불러오지 못했어요" onRetry={loadMe} />
-          ) : (
-            <Loading label="프로필을 불러오고 있어요" />
-          )
-        ) : (
-          <View style={{ gap: space.sm }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.md }}>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="프로필 사진, 프로필 수정으로 이동"
-                android_ripple={ripple}
-                onPress={() => router.push('/settings/profile')}
-                style={({ pressed }) => ({ borderRadius: radius.pill, overflow: 'hidden', opacity: pressedOpacity(pressed) })}
-              >
-                <Avatar name={me.nickname} uri={me.photoUrl ?? undefined} size="lg" decorative />
-              </Pressable>
-              <View style={{ flex: 1, gap: space.xs }}>
-                <View
-                  accessible
-                  accessibilityLabel={me.crew?.isLeader ? `${me.nickname}, 크루장` : me.nickname}
-                  style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}
-                >
-                  <Txt variant="title" bold numberOfLines={1} style={{ flexShrink: 1 }}>{me.nickname}</Txt>
-                  {me.crew?.isLeader ? <Badge label="크루장" tone="deep" /> : null}
-                </View>
-                <Txt variant="caption" tone={me.intro ? 'ink' : 'hint'} numberOfLines={introOpen ? undefined : 2}>
-                  {me.intro || '소개를 적어 보세요'}
-                </Txt>
-                {me.intro.length > INTRO_FOLD ? (
-                  <LinkText label={introOpen ? '접기' : '더 보기'} tone="muted" onPress={() => setIntroOpen((o) => !o)} style={{ alignSelf: 'flex-start' }} />
-                ) : null}
-              </View>
-            </View>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space.sm }}>
-              {me.crew ? (
-                <Chip
-                  label={me.crew.name}
-                  icon="chevron-right"
-                  iconEnd
-                  accessibilityLabel={`${me.crew.name}, 크루 정보 보기`}
-                  onPress={() => router.push('/crew/info')}
-                />
-              ) : <View />}
-              <Button label="프로필 수정" size="sm" onPress={() => router.push('/settings/profile')} />
-            </View>
-          </View>
-        )}
-
-        <StatsTile stats={stats} />
-        {statsFailed && !stats ? (
-          <LinkText label="누적 수치를 불러오지 못했어요 다시 시도" tone="muted" onPress={loadStats} />
-        ) : null}
-
-        {recordsOnly ? null : <Tabs items={TABS} value={tab} onChange={setTab} fullWidth />}
-
-        {tab === 'records' ? (
-          <RecordsList
-            list={records}
-            onOpen={(id) => router.push({ pathname: '/records/[id]', params: { id } })}
-            onMenu={setMenuFor}
-            onStart={recordsOnly ? undefined : () => router.push('/(tabs)/plogging')}
-          />
-        ) : !posts.items ? (
-          posts.failed ? <ErrorState title="게시물을 불러오지 못했어요" onRetry={posts.reload} /> : <Loading label="게시물을 불러오고 있어요" />
-        ) : posts.items.length === 0 ? (
-          <EmptyState
-            icon="image-multiple-outline"
-            title="아직 올린 게시물이 없어요"
-            description="올린 게시물이 여기에 모여요. 나만 보기로 올린 것도 나에게는 보여요."
-          />
-        ) : (
+      <ProfileTabList
+        tab={tab}
+        header={
           <>
-            <PostGrid posts={posts.items} onOpen={(id) => router.push({ pathname: '/posts/[id]', params: { id } })} />
-            {posts.loadingMore ? <Loading label="게시물을 불러오고 있어요" /> : null}
+            {recordsOnly ? null : !me ? (
+              meFailed ? (
+                <ErrorState title="프로필을 불러오지 못했어요" onRetry={loadMe} />
+              ) : (
+                <Loading label="프로필을 불러오고 있어요" />
+              )
+            ) : (
+              <View style={{ gap: space.sm }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.md }}>
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel="프로필 사진, 프로필 수정으로 이동"
+                    android_ripple={ripple}
+                    onPress={() => router.push('/settings/profile')}
+                    style={({ pressed }) => ({ borderRadius: radius.pill, overflow: 'hidden', opacity: pressedOpacity(pressed) })}
+                  >
+                    <Avatar name={me.nickname} uri={me.photoUrl ?? undefined} size="lg" decorative />
+                  </Pressable>
+                  <View style={{ flex: 1, gap: space.xs }}>
+                    <View
+                      accessible
+                      accessibilityLabel={me.crew?.isLeader ? `${me.nickname}, 크루장` : me.nickname}
+                      style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}
+                    >
+                      <Txt variant="title" bold numberOfLines={1} style={{ flexShrink: 1 }}>{me.nickname}</Txt>
+                      {me.crew?.isLeader ? <Badge label="크루장" tone="deep" /> : null}
+                    </View>
+                    <Txt variant="caption" tone={me.intro ? 'ink' : 'hint'} numberOfLines={introOpen ? undefined : 2}>
+                      {me.intro || '소개를 적어 보세요'}
+                    </Txt>
+                    {me.intro.length > INTRO_FOLD ? (
+                      <LinkText label={introOpen ? '접기' : '더 보기'} tone="muted" onPress={() => setIntroOpen((o) => !o)} style={{ alignSelf: 'flex-start' }} />
+                    ) : null}
+                  </View>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space.sm }}>
+                  {me.crew ? (
+                    <Chip
+                      label={me.crew.name}
+                      icon="chevron-right"
+                      iconEnd
+                      accessibilityLabel={`${me.crew.name}, 크루 정보 보기`}
+                      onPress={() => router.push('/crew/info')}
+                    />
+                  ) : <View />}
+                  <Button label="프로필 수정" size="sm" onPress={() => router.push('/settings/profile')} />
+                </View>
+              </View>
+            )}
+
+            <StatsTile stats={stats} />
+            {statsFailed && !stats ? (
+              <LinkText label="누적 수치를 불러오지 못했어요 다시 시도" tone="muted" onPress={loadStats} />
+            ) : null}
+
+            {recordsOnly ? null : <Tabs items={TABS} value={tab} onChange={setTab} fullWidth />}
           </>
-        )}
-      </ScrollView>
+        }
+        records={records}
+        posts={posts}
+        onOpenRecord={(id) => router.push({ pathname: '/records/[id]', params: { id } })}
+        onMenu={setMenuFor}
+        onOpenPost={(id) => router.push({ pathname: '/posts/[id]', params: { id } })}
+        recordsEmpty={{ description: '첫 줍깅을 시작하면 줍기, 시간, 거리가 여기에 쌓여요.', onStart: recordsOnly ? undefined : () => router.push('/(tabs)/plogging') }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={pull} />}
+      />
 
       <BottomSheet visible={menuFor != null} onClose={() => setMenuFor(null)} title="활동 기록">
         <ListRow
@@ -267,43 +248,5 @@ export function MyProfile({ recordsOnly = false }: { recordsOnly?: boolean }) {
 
       <Snackbar visible={snackbar != null} message={snackbar ?? ''} onDismiss={() => setSnackbar(null)} />
     </Screen>
-  );
-}
-
-type Paged<T> = ReturnType<typeof usePaged<T & { id: string }>>;
-
-export function RecordsList({
-  list,
-  onOpen,
-  onMenu,
-  onStart,
-  emptyDescription = '첫 줍깅을 시작하면 줍기, 시간, 거리가 여기에 쌓여요.',
-}: {
-  list: Paged<ActivityCard>;
-  onOpen: (id: string) => void;
-  onMenu?: (card: ActivityCard) => void;
-  onStart?: () => void;
-  emptyDescription?: string;
-}) {
-  if (!list.items) return list.failed ? <ErrorState title="활동 기록을 불러오지 못했어요" onRetry={list.reload} /> : <Loading label="활동 기록을 불러오고 있어요" />;
-  if (list.items.length === 0) {
-    return (
-      <EmptyState
-        icon="sprout"
-        title="아직 활동 기록이 없어요"
-        description={emptyDescription}
-        actionLabel={onStart ? '줍깅 시작하러 가기' : undefined}
-        onAction={onStart}
-      />
-    );
-  }
-  return (
-    <View style={{ gap: space.md }}>
-      {list.items.map((card) => (
-        <ActivityCardView key={card.id} card={card} onPress={() => onOpen(card.id)} onMenu={onMenu ? () => onMenu(card) : undefined} />
-      ))}
-      {list.loadingMore ? <Loading label="활동 기록을 불러오고 있어요" /> : null}
-      {list.moreFailed ? <LinkText label="다시 시도" tone="muted" onPress={list.loadMore} /> : null}
-    </View>
   );
 }

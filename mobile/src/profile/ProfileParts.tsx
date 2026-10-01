@@ -82,51 +82,45 @@ export function ActivityCardView({ card, onPress, onMenu }: { card: ActivityCard
   );
 }
 
-export function PostGrid({ posts, onOpen }: { posts: readonly Post[]; onOpen: (id: string) => void }) {
+/** 프로필 게시물 격자의 한 칸. 세 칸 격자를 이루도록 폭의 1/3 을 차지한다 */
+export function PostTile({ post: p, onOpen }: { post: Post; onOpen: (id: string) => void }) {
   const { colors } = useTheme();
   const ripple = useRipple();
+  const thumb = p.media[0]?.thumbUrl;
+  const isPrivate = (p.visibility as string) === 'PRIVATE';
+  const label = ['게시물', thumb ? '사진' : p.text.slice(0, 40), isPrivate ? '나만 보기' : ''].filter(Boolean).join(', ');
   return (
-    <View style={{ flexDirection: 'row', flexWrap: 'wrap', margin: -space.xs / 2 }}>
-      {posts.map((p) => {
-        const thumb = p.media[0]?.thumbUrl;
-        const isPrivate = (p.visibility as string) === 'PRIVATE';
-        const label = ['게시물', thumb ? '사진' : p.text.slice(0, 40), isPrivate ? '나만 보기' : ''].filter(Boolean).join(', ');
-        return (
-          <View key={p.id} style={{ width: '33.333%', aspectRatio: 1, padding: space.xs / 2 }}>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={label}
-              android_ripple={ripple}
-              onPress={() => onOpen(p.id)}
-              style={({ pressed }) => ({
-                flex: 1,
-                borderRadius: radius.tile,
-                overflow: 'hidden',
-                backgroundColor: colors.tint,
-                justifyContent: 'center',
-                padding: thumb ? 0 : space.sm,
-                opacity: pressedOpacity(pressed),
-              })}
-            >
-              {thumb ? (
-                <Image source={{ uri: thumb }} accessible={false} style={{ width: '100%', height: '100%' }} />
-              ) : (
-                <Txt variant="micro" tone="muted" numberOfLines={5} style={{ textAlign: 'center' }}>{p.text}</Txt>
-              )}
-              {isPrivate ? (
-                <View style={{ position: 'absolute', left: space.xs, bottom: space.xs }}>
-                  <Chip label="나만 보기" icon="lock-outline" tone="overlay" />
-                </View>
-              ) : null}
-            </Pressable>
+    <View style={{ width: '33.333%', aspectRatio: 1, padding: space.xs / 2 }}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={label}
+        android_ripple={ripple}
+        onPress={() => onOpen(p.id)}
+        style={({ pressed }) => ({
+          flex: 1,
+          borderRadius: radius.tile,
+          overflow: 'hidden',
+          backgroundColor: colors.tint,
+          justifyContent: 'center',
+          padding: thumb ? 0 : space.sm,
+          opacity: pressedOpacity(pressed),
+        })}
+      >
+        {thumb ? (
+          <Image source={{ uri: thumb }} accessible={false} style={{ width: '100%', height: '100%' }} />
+        ) : (
+          <Txt variant="micro" tone="muted" numberOfLines={5} style={{ textAlign: 'center' }}>{p.text}</Txt>
+        )}
+        {isPrivate ? (
+          <View style={{ position: 'absolute', left: space.xs, bottom: space.xs }}>
+            <Chip label="나만 보기" icon="lock-outline" tone="overlay" />
           </View>
-        );
-      })}
+        ) : null}
+      </Pressable>
     </View>
   );
 }
 
-/** 26주×7일 활동 달력. 칸 하나하나는 읽지 않고 요약 한 줄로 읽힌다 */
 export function ActivityCalendar({ activeDays }: { activeDays: readonly string[] }) {
   const { colors } = useTheme();
   const grid = activeDaysGrid(activeDays, kstToday());
@@ -223,13 +217,4 @@ export function usePaged<T extends { id: string }>(fetchPage: (cursor: string | 
   const remove = useCallback((id: string) => setItems((prev) => prev?.filter((i) => i.id !== id) ?? prev), []);
 
   return { items, failed, moreFailed, loadingMore, hasMore: () => cursor.current != null, reload, loadMore, remove };
-}
-
-/** ScrollView onScroll 에서 바닥 근처인지 */
-export function nearBottom({ layoutMeasurement, contentOffset, contentSize }: {
-  layoutMeasurement: { height: number };
-  contentOffset: { y: number };
-  contentSize: { height: number };
-}): boolean {
-  return layoutMeasurement.height + contentOffset.y >= contentSize.height - 200;
 }

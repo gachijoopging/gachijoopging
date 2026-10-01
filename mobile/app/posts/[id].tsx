@@ -532,10 +532,13 @@ function CommentRow({
     <Pressable
       accessibilityLabel={`${displayName(comment.author)}, ${when}, ${comment.text}`}
       accessibilityHint={onLongPress ? '관리하려면 길게 누르기' : undefined}
+      // 길게 누르기는 스크린리더로 찾기 어렵다. 같은 메뉴를 동작으로도 연다
+      accessibilityActions={onLongPress ? [{ name: 'longpress', label: '댓글 관리' }] : undefined}
+      onAccessibilityAction={onLongPress ? () => onLongPress() : undefined}
       onLongPress={onLongPress}
       disabled={sending || !onLongPress}
       android_ripple={onLongPress ? ripple : undefined}
-      style={{ flexDirection: 'row', gap: space.sm, paddingVertical: space.sm }}
+      style={{ flexDirection: 'row', gap: space.sm, paddingVertical: space.sm, minHeight: size.minTouch }}
     >
       <AuthorButton author={comment.author} mine={mine} onPress={onAuthor}>
         <AuthorFace author={comment.author} size="sm" />

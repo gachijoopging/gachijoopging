@@ -1,7 +1,7 @@
 // 화면 6-2 · docs/screens/6-2-review-report.md
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
+import { Pressable, RefreshControl, View } from 'react-native';
 import {
   AppHeader,
   Avatar,
@@ -12,6 +12,7 @@ import {
   Dialog,
   EmptyState,
   ErrorState,
+  List,
   Loading,
   Screen,
   Snackbar,
@@ -25,7 +26,6 @@ import type { MOCKS } from '../../src/api/mocks.generated';
 import { monthDay } from '../../src/crew/crew';
 import { memberActionOutcome } from '../../src/crew/manage';
 import { reasonLabel, reportActions, resolveOutcome, targetLabel, withoutKickedUser, type ReportAction } from '../../src/report/report';
-import { nearBottom } from '../../src/profile/ProfileParts';
 
 type Report = (typeof MOCKS)['GET /crew/reports']['data']['items'][number];
 
@@ -164,8 +164,6 @@ export default function ReviewReportScreen() {
   return (
     <Screen>
       <AppHeader title="신고 처리" onBack={back} />
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ gap: space.md }} onScroll={({ nativeEvent }) => { if (nearBottom(nativeEvent)) void loadMore(); }} scrollEventThrottle={200} refreshControl={<RefreshControl refreshing={refreshing} enabled={busyId == null} onRefresh={() => load('pull')} />}>
-
       {isLeader === false ? (
         <ErrorState
           title="크루장만 신고를 처리할 수 있어요."
@@ -180,19 +178,32 @@ export default function ReviewReportScreen() {
         ) : (
           <Loading label="신고를 불러오고 있어요" />
         )
-      ) : reports.length === 0 ? (
-        <EmptyState
-          icon="flag-outline"
-          title="대기 중인 신고가 없어요"
-          description="새 신고가 들어오면 여기에서 처리할 수 있어요."
-        />
       ) : (
-        <>
-          <Txt variant="section" bold accessibilityRole="header">{`처리할 신고 ${reports.length}건`}</Txt>
-          {failed ? <Banner tone="warn">인터넷 연결을 확인해 주세요.</Banner> : null}
-          {reports.map((r) => (
+        <List
+          data={reports}
+          keyExtractor={(r) => r.id}
+          gap={space.md}
+          // 실패한 다음 장은 끝에 닿을 때마다 다시 부르지 않는다. 다시 시도 버튼으로만 부른다
+          onEndReached={() => { if (moreState !== 'failed') void loadMore(); }}
+          onEndReachedThreshold={0.5}
+          refreshControl={<RefreshControl refreshing={refreshing} enabled={busyId == null} onRefresh={() => load('pull')} />}
+          ListHeaderComponent={
+            reports.length > 0 ? (
+              <View style={{ gap: space.md, paddingBottom: space.md }}>
+                <Txt variant="section" bold accessibilityRole="header">{`처리할 신고 ${reports.length}건`}</Txt>
+                {failed ? <Banner tone="warn">인터넷 연결을 확인해 주세요.</Banner> : null}
+              </View>
+            ) : null
+          }
+          empty={
+            <EmptyState
+              icon="flag-outline"
+              title="대기 중인 신고가 없어요"
+              description="새 신고가 들어오면 여기에서 처리할 수 있어요."
+            />
+          }
+          renderItem={({ item: r }) => (
             <ReportRow
-              key={r.id}
               report={r}
               open={openId === r.id}
               busy={busyId === r.id}
@@ -200,11 +211,12 @@ export default function ReviewReportScreen() {
               onToggle={() => setOpenId((cur) => (cur === r.id ? null : r.id))}
               onAct={(action) => setConfirm({ report: r, action })}
             />
-          ))}
-          {moreState === 'loading' ? <Loading label="신고를 더 불러오고 있어요" /> : moreState === 'failed' ? <Button label="다시 시도" variant="ghost" onPress={loadMore} /> : null}
-        </>
+          )}
+          ListFooterComponent={
+            moreState === 'loading' ? <Loading label="신고를 더 불러오고 있어요" /> : moreState === 'failed' ? <Button label="다시 시도" variant="ghost" onPress={loadMore} /> : null
+          }
+        />
       )}
-      </ScrollView>
 
       <Dialog visible={confirm != null} onClose={() => setConfirm(null)} title={confirm ? CONFIRM[confirm.action].title(confirm.report) : ''}
         actions={
