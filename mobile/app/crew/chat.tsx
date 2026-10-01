@@ -2,12 +2,11 @@
 import * as Crypto from 'expo-crypto';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useBlockedUsers } from '../../src/profile/blocked-users';
 import {
   AccessibilityInfo,
   ActivityIndicator,
-  Animated,
   FlatList,
   Pressable,
   View,
@@ -16,6 +15,7 @@ import {
 } from 'react-native';
 import {
   AppHeader,
+  Appear,
   Avatar,
   Banner,
   BottomSheet,
@@ -36,6 +36,7 @@ import {
   radius,
   size,
   space,
+  useRipple,
   useTheme,
 } from 'design-system/src';
 import { createMockClient, type ApiClient } from '../../src/api/client';
@@ -332,9 +333,10 @@ export default function CrewChatScreen() {
     <View style={{ alignItems: 'center', gap: space.sm, paddingVertical: space.sm }}>
       {olderState === 'loading' ? <ActivityIndicator color={colors.deep} /> : null}
       {olderState === 'failed' ? (
-        <Pressable accessibilityRole="button" onPress={() => void loadOlder()} style={{ minHeight: size.minTouch, justifyContent: 'center' }}>
-          <Txt variant="caption" tone="muted">이전 메시지를 불러오지 못했어요 · 다시 시도</Txt>
-        </Pressable>
+        <>
+          <Txt variant="caption" tone="muted">이전 메시지를 불러오지 못했어요</Txt>
+          <Button label="다시 시도" variant="ghost" size="sm" onPress={() => void loadOlder()} />
+        </>
       ) : null}
     </View>
   );
@@ -346,9 +348,9 @@ export default function CrewChatScreen() {
         subtitle={memberCount != null ? `크루원 ${memberCount}명` : ' '}
         onBack={() => router.back()}
       />
-      <Fade visible={!connected}>
+      <Appear visible={!connected} rise={0}>
         <Banner tone="warn">연결 중…</Banner>
-      </Fade>
+      </Appear>
 
       <View style={{ flex: 1 }}>
         {phase === 'loading' ? (
@@ -392,7 +394,7 @@ export default function CrewChatScreen() {
             }
           />
         )}
-        <Fade visible={pill} style={{ position: 'absolute', bottom: space.sm, alignSelf: 'center' }}>
+        <Appear visible={pill} rise={0} pointerEvents="box-none" style={{ position: 'absolute', bottom: space.sm, alignSelf: 'center' }}>
             <Button
               label="새 메시지"
               icon="arrow-down"
@@ -401,7 +403,7 @@ export default function CrewChatScreen() {
               accessibilityLabel="새 메시지, 맨 아래로 이동"
               onPress={scrollToBottom}
             />
-        </Fade>
+        </Appear>
       </View>
 
       <View style={{ gap: space.xs, paddingBottom: space.md }}>
@@ -461,6 +463,7 @@ function MessageRow({
   onReport?: (item: ChatItem) => void;
 }) {
   const { colors } = useTheme();
+  const ripple = useRipple();
   const { item, mine, showAuthor, showTime } = row;
   const deleted = item.status === 'sent' && item.deleted;
   const failed = item.status === 'failed';
@@ -498,6 +501,7 @@ function MessageRow({
           accessibilityLabel={withdrawn ? item.author.nickname : `${item.author.nickname}, 프로필 보기`}
           disabled={withdrawn}
           onPress={() => onOpenProfile(item.author)}
+          android_ripple={ripple}
           style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm, minHeight: size.minTouch, marginLeft: -AUTHOR_INDENT }}
         >
           <Avatar name={item.author.nickname} uri={item.author.photoUrl ?? undefined} size="sm" />
@@ -550,29 +554,6 @@ function MessageRow({
       ) : null}
     </View>
   );
-}
-
-/** 배너·알약이 나타나고 사라질 때 짧게 페이드한다. 움직임 줄이기를 켰으면 바로 바뀐다 */
-function Fade({ visible, style, children }: { visible: boolean; style?: object; children: ReactNode }) {
-  const opacity = useRef(new Animated.Value(visible ? 1 : 0)).current;
-  const [mounted, setMounted] = useState(visible);
-
-  useEffect(() => {
-    if (visible) setMounted(true);
-    let cancelled = false;
-    AccessibilityInfo.isReduceMotionEnabled().then((reduce) => {
-      if (cancelled) return;
-      Animated.timing(opacity, { toValue: visible ? 1 : 0, duration: reduce ? 0 : 150, useNativeDriver: true }).start(
-        ({ finished }) => finished && !visible && setMounted(false),
-      );
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [visible, opacity]);
-
-  if (!mounted) return null;
-  return <Animated.View style={[style, { opacity }]}>{children}</Animated.View>;
 }
 
 /** Chip 은 스스로 왼쪽에 붙는다(alignSelf). 감싼 쪽을 가운데로 둬야 가운데에 온다 */

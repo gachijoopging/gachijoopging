@@ -21,6 +21,7 @@ import {
   space,
   useRipple,
   useTheme,
+  WORDMARK_RATIO,
 } from 'design-system/src';
 import { createMockClient, type ApiClient } from '../../src/api/client';
 import { MOCKS } from '../../src/api/mocks.generated';
@@ -66,7 +67,7 @@ export default function HomeScreen() {
     <Screen scroll edges={['top', 'left', 'right']} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load('pull')} />}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
         <View style={{ flex: 1, gap: space.xs }}>
-          <Image source={scheme === 'dark' ? wordmarkDark : wordmark} accessible={false} resizeMode="contain" style={{ width: 110, height: (110 * 301) / 840 }} />
+          <Image source={scheme === 'dark' ? wordmarkDark : wordmark} accessible={false} resizeMode="contain" style={{ width: size.wordmarkSm, height: size.wordmarkSm * WORDMARK_RATIO }} />
           <Txt variant="caption" tone="muted">오늘도 가볍게 한 바퀴</Txt>
         </View>
         <Chip
@@ -179,12 +180,12 @@ function HomeCards({ home }: { home: Home }) {
 function Sparkline({ values }: { values: readonly number[] }) {
   const { colors } = useTheme();
   const max = Math.max(1, ...values);
-  const HEIGHT = 32;
+  const HEIGHT = size.sparkline;
   return (
     <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: space.xs, height: HEIGHT }} accessible={false}>
       {values.map((v, i) => (
         // 0 은 트랙 색 바닥으로 남긴다 — BarChart 와 같이 "쉰 날"로 읽혀야 데이터 막대와 헷갈리지 않는다
-        <View key={i} style={{ width: 6, height: v > 0 ? Math.max(2, (v / max) * HEIGHT) : 2, borderRadius: radius.pill, backgroundColor: v > 0 ? colors.deep : colors.track }} />
+        <View key={i} style={{ width: size.sparklineBar, height: v > 0 ? Math.max(2, (v / max) * HEIGHT) : 2, borderRadius: radius.pill, backgroundColor: v > 0 ? colors.deep : colors.track }} />
       ))}
     </View>
   );

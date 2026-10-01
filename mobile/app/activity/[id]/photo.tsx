@@ -1,6 +1,7 @@
 // 화면 4-4 · docs/screens/4-4-take-photo.md
 import { mediaFile } from '../../../src/api/media';
 import * as Crypto from 'expo-crypto';
+import { AndroidHaptics, performAndroidHapticsAsync } from 'expo-haptics';
 import { CameraView, Camera } from 'expo-camera';
 import * as Linking from 'expo-linking';
 import { useNetworkState } from 'expo-network';
@@ -25,6 +26,7 @@ import {
   radius,
   size,
   space,
+  useReduceMotion,
   useTheme,
 } from 'design-system/src';
 import { ApiError, createMockClient, type ApiClient } from '../../../src/api/client';
@@ -40,6 +42,7 @@ export default function TakePhotoScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const navigation = useNavigation();
   const { colors } = useTheme();
+  const reduceMotion = useReduceMotion();
   const network = useNetworkState();
   const offline = network.isConnected === false || network.isInternetReachable === false;
   const [perm, setPerm] = useState<Perm>('unknown');
@@ -99,6 +102,8 @@ export default function TakePhotoScreen() {
   const shoot = async () => {
     if (shooting || !camera.current) return;
     setShooting(true);
+    // 진동 끄기 설정을 따르는 시스템 햅틱이다. 지원하지 않는 기기에서는 조용히 넘어간다
+    performAndroidHapticsAsync(AndroidHaptics.Context_Click).catch(() => {});
     try {
       const here = getStored().session?.here;
       const takenAt = new Date().toISOString();
@@ -185,6 +190,10 @@ export default function TakePhotoScreen() {
       <View style={{ flex: 1 }} accessible accessibilityRole="image" accessibilityLabel="카메라 미리보기, 쓰레기를 화면 중앙에 놓아 주세요">
         {perm === 'granted' && focused && appActive ? (
           <CameraView ref={camera} facing="back" style={{ flex: 1 }} onCameraReady={() => setReady(true)} />
+        ) : null}
+        {/* 찍힌 순간을 눈으로도 알린다. 찍는 동안만 켜지므로 사진에는 들어가지 않는다 */}
+        {shooting && !reduceMotion ? (
+          <View testID="shutter-flash" pointerEvents="none" style={{ position: 'absolute', inset: 0, backgroundColor: colors.white }} />
         ) : null}
         {/* 프리뷰가 밝아도 안내가 읽히게 어두운 막을 얹는다. 사진에는 들어가지 않는다 */}
         <View

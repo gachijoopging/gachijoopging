@@ -15,6 +15,7 @@ import {
   Snackbar,
   Txt,
   space,
+  tracking,
 } from 'design-system/src';
 import { createMockClient, type ApiClient } from '../../src/api/client';
 import { spelledCode } from '../../src/crew/crew';
@@ -94,7 +95,7 @@ export default function InviteCodeScreen() {
               accessibilityLabel={`초대 코드 ${spelledCode(code)}`}
               accessibilityHint="길게 누르면 복사해요"
             >
-              <Txt variant="counter" style={{ letterSpacing: 6 }}>{code}</Txt>
+              <Txt variant="counter" style={{ letterSpacing: tracking.code }}>{code}</Txt>
             </Pressable>
             <View style={{ flexDirection: 'row', gap: space.sm, alignSelf: 'stretch' }}>
               <Button

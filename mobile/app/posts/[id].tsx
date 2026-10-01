@@ -61,6 +61,8 @@ export default function PostDetailScreen() {
   const navigation = useNavigation();
   const input = useRef<TextInput>(null);
   const scroll = useRef<ScrollView>(null);
+  // 내가 단 댓글이 그려진 뒤에 내려가야 맨 끝이 새 댓글이다
+  const toEnd = useRef(false);
   const sending = useRef(false);
   const request = useRef(0);
   const olderPending = useRef(false);
@@ -191,10 +193,12 @@ export default function PostDetailScreen() {
     const body = text.trim();
     sending.current = true;
     setPending({ id: requestId, text: body });
-    setTimeout(() => scroll.current?.scrollToEnd({ animated: true }), 0);
+    toEnd.current = true;
     try {
       const { data } = await api.mutate('POST /posts/{postId}/comments', { postId: id, id: requestId, text: body });
       const created = data as unknown as Comment;
+      // 서버가 돌려준 댓글이 임시 줄보다 길 수 있어 한 번 더 내려간다
+      toEnd.current = true;
       setPost((p) => p && { ...p, commentCount: p.commentCount + 1, comments: [...p.comments.filter((c) => c.id !== created.id), created] });
       clearDraft(draftKey);
       setText('');
@@ -274,6 +278,11 @@ export default function PostDetailScreen() {
             keyboardShouldPersistTaps="handled"
             keyboardDismissMode="on-drag"
             maintainVisibleContentPosition={{ minIndexForVisible: 2 }}
+            onContentSizeChange={() => {
+              if (!toEnd.current) return;
+              toEnd.current = false;
+              scroll.current?.scrollToEnd({ animated: true });
+            }}
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load('pull')} />}
           >
             {failed ? <Banner tone="warn">인터넷 연결을 확인해 주세요.</Banner> : null}

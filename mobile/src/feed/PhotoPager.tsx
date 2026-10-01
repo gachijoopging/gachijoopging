@@ -1,10 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
-import { FlatList, Image, View, useWindowDimensions, type NativeScrollEvent, type NativeSyntheticEvent } from 'react-native';
+import { FlatList, Image, View, useWindowDimensions, type ViewToken } from 'react-native';
 import { Chip, Icon, IconButton, radius, screen, size, space, useTheme } from 'design-system/src';
 
 /** 원본 비율을 지키되 너무 납작하거나 길어지지 않게 막는 범위 (5-2 배치) */
 const MIN_H = 220;
 const MAX_H = size.photoMaxHeight;
+// 반 넘게 보이는 사진이 지금 사진이다. 관성이 없는 넘김(스크린리더 스크롤)에서도 잡힌다
+// FlatList 는 이 값이 렌더마다 바뀌면 오류를 낸다
+const VIEWABILITY = { itemVisiblePercentThreshold: 50 };
 
 type Photo = { url: string; thumbUrl: string };
 
@@ -45,13 +48,14 @@ export function PhotoPager({
     onIndexChange?.(i);
   };
 
-  const onScrollEnd = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const i = Math.round(e.nativeEvent.contentOffset.x / width);
-    if (i !== index) {
-      setIndex(i);
-      onIndexChange?.(i);
-    }
-  };
+  const current = useRef({ index, onIndexChange });
+  current.current = { index, onIndexChange };
+  const onViewable = useRef(({ viewableItems }: { viewableItems: ViewToken<Photo>[] }) => {
+    const i = viewableItems[0]?.index;
+    if (i == null || i === current.current.index) return;
+    setIndex(i);
+    current.current.onIndexChange?.(i);
+  }).current;
 
   return (
     <View
@@ -65,7 +69,8 @@ export function PhotoPager({
         pagingEnabled
         showsHorizontalScrollIndicator={false}
         keyExtractor={(p, i) => `${i}-${p.url}`}
-        onMomentumScrollEnd={onScrollEnd}
+        viewabilityConfig={VIEWABILITY}
+        onViewableItemsChanged={onViewable}
         getItemLayout={(_, i) => ({ length: width, offset: width * i, index: i })}
         renderItem={({ item, index: i }) => (
           <View

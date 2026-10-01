@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Image, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { Banner, Button, LinkText, Screen, Snackbar, Txt, radius, space, useTheme } from 'design-system/src';
+import { Banner, Button, LinkText, Screen, Snackbar, Txt, radius, space, useTheme, size, WORDMARK_RATIO } from 'design-system/src';
 import { useFlash } from '../../src/ui/useFlash';
 import { onboardingApi as api } from '../../src/api/onboarding';
 import { authenticatedDestination } from '../../src/auth/destination';
@@ -13,7 +13,7 @@ const bg = require('../../../design-system/assets/legacy/start-bg.png');
 const wordmark = require('../../../design-system/assets/logo-wordmark.png');
 
 /** 워드마크 뒤 광원 지름. 워드마크(270)보다 넉넉히 커야 은은하게 번지는 것처럼 보인다 */
-const GLOW_SIZE = 220;
+const GLOW_SIZE = size.wordmarkGlow;
 
 type Provider = 'kakao' | 'google';
 
@@ -67,7 +67,7 @@ export default function StartScreen() {
                 source={wordmark}
                 accessibilityLabel="가치줍깅"
                 resizeMode="contain"
-                style={{ width: 270, height: (270 * 301) / 840 }}
+                style={{ width: size.wordmarkLg, height: size.wordmarkLg * WORDMARK_RATIO }}
               />
             </View>
             <Txt variant="bodyLg" bold tone="onPhoto" style={{ textAlign: 'center' }}>

@@ -7,20 +7,26 @@ const mockRequest = jest.fn();
 const mockBlurs: Array<() => void> = [];
 jest.mock('expo/src/winter/fetch', () => ({ fetch: jest.fn() }));
 jest.mock('expo-camera', () => ({ CameraView: 'CameraView', Camera: { getCameraPermissionsAsync: () => mockPermission(), requestCameraPermissionsAsync: () => mockRequest() } }));
+// 찍은 사진은 재시도를 위해 활동별로 화면 밖에 남는다. 테스트마다 다른 활동으로 연다
+let mockId = 'a0';
+let mockReduce = false;
+const mockHaptic = jest.fn(async (_type: string) => {});
+jest.mock('expo-haptics', () => ({ performAndroidHapticsAsync: (t: string) => mockHaptic(t), AndroidHaptics: { Context_Click: 'context-click' } }));
 jest.mock('expo-crypto', () => ({ randomUUID: () => 'photo-id' }));
 jest.mock('expo-linking', () => ({ openSettings: jest.fn() }));
 jest.mock('expo-status-bar', () => ({ StatusBar: 'StatusBar' }));
 jest.mock('expo-network', () => ({ useNetworkState: () => ({ isConnected: true }) }));
-jest.mock('expo-router', () => ({ router: {}, useLocalSearchParams: () => ({ id: 'a1' }), useNavigation: () => ({ addListener: () => () => {} }), useFocusEffect: (fn: () => (() => void) | void) => require('react').useEffect(() => { const blur = fn(); if (blur) mockBlurs.push(blur); return blur; }, [fn]) }));
+jest.mock('expo-router', () => ({ router: {}, useLocalSearchParams: () => ({ id: mockId }), useNavigation: () => ({ addListener: () => () => {} }), useFocusEffect: (fn: () => (() => void) | void) => require('react').useEffect(() => { const blur = fn(); if (blur) mockBlurs.push(blur); return blur; }, [fn]) }));
 jest.mock('../api/client', () => ({ ApiError: class extends Error {}, createMockClient: () => ({}) }));
 jest.mock('./store', () => ({ getStored: () => ({ session: null }) }));
 jest.mock('react-native', () => ({ View: 'View', Image: 'Image', ScrollView: 'ScrollView', AppState: { currentState: 'active', addEventListener: () => ({ remove() {} }) } }));
-jest.mock('design-system/src', () => new Proxy({ space: {}, radius: {}, size: {}, borderWidth: {}, useTheme: () => ({ colors: { camera: {} } }) }, { get: (target, key) => key in target ? target[key as keyof typeof target] : String(key) }));
+jest.mock('design-system/src', () => new Proxy({ space: {}, radius: {}, size: {}, borderWidth: {}, useTheme: () => ({ colors: { camera: {} } }), useReduceMotion: () => mockReduce }, { get: (target, key) => key in target ? target[key as keyof typeof target] : String(key) }));
 import Photo from '../../app/activity/[id]/photo';
 
 let tree: ReactTestRenderer;
 beforeAll(() => { (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true; });
 beforeEach(() => {
+  mockId = `a${Number(mockId.slice(1)) + 1}`;
   mockPermission.mockReset().mockResolvedValue({ granted: true, canAskAgain: true, status: 'granted' });
   mockRequest.mockReset().mockResolvedValue({ granted: false, canAskAgain: true, status: 'denied' });
 });
@@ -46,4 +52,28 @@ test('카메라 화면을 떠나 위에 다른 화면이 올라오면 밝은 상
   expect(tree.root.findAllByType('StatusBar' as never)).toHaveLength(1);
   await act(async () => mockBlurs.splice(0).forEach((blur) => blur()));
   expect(tree.root.findAllByType('StatusBar' as never)).toHaveLength(0);
+});
+
+test('셔터를 누르면 찍힌 순간을 손끝으로 알린다', async () => {
+  await act(async () => {
+    tree = create(React.createElement(Photo), { createNodeMock: () => ({ takePictureAsync: async () => ({ uri: 'file://shot.jpg' }) }) });
+  });
+  await act(async () => tree.root.findByType('CameraView' as never).props.onCameraReady());
+  await act(async () => tree.root.findByType('CaptureButton' as never).props.onPress());
+  expect(mockHaptic).toHaveBeenCalledWith('context-click');
+});
+
+test.each([[false, 1], [true, 0]])('셔터를 누른 순간 화면이 하얗게 번쩍인다. 동작 줄이기가 %s 면 번쩍임 %i 번', async (reduce, flashes) => {
+  mockReduce = reduce;
+  let finish: (v: { uri: string }) => void = () => {};
+  await act(async () => {
+    tree = create(React.createElement(Photo), { createNodeMock: () => ({ takePictureAsync: () => new Promise((r) => { finish = r; }) }) });
+  });
+  await act(async () => tree.root.findByType('CameraView' as never).props.onCameraReady());
+  await act(async () => { void tree.root.findByType('CaptureButton' as never).props.onPress(); });
+  const flash = () => tree.root.findAll((n) => n.props.testID === 'shutter-flash');
+  expect(flash()).toHaveLength(flashes);
+  await act(async () => finish({ uri: 'file://shot.jpg' }));
+  expect(flash()).toHaveLength(0);
+  mockReduce = false;
 });

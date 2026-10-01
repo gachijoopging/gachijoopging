@@ -1,5 +1,6 @@
 // 화면 4-3 · docs/screens/4-3-activity-in-progress.md
 import Constants from 'expo-constants';
+import { AndroidHaptics, performAndroidHapticsAsync } from 'expo-haptics';
 import { useKeepAwake } from 'expo-keep-awake';
 import * as Linking from 'expo-linking';
 import * as Location from 'expo-location';
@@ -259,6 +260,8 @@ export default function ActivityInProgressScreen() {
       setEndFailed(true);
       return;
     }
+    // 기록이 기기에 남은 뒤에만 알린다. API 30 미만은 Confirm 이 없어 조용히 넘어간다
+    performAndroidHapticsAsync(AndroidHaptics.Confirm).catch(() => {});
     setConfirmEnd(false);
     await stopTracking();
     router.replace({ pathname: '/activity/[id]/summary', params: { id } });
@@ -343,7 +346,7 @@ export default function ActivityInProgressScreen() {
             <MetricSplit items={metrics} divider="dashed" accessibilityLabel={session ? metricsLabel(session, now) : '기록을 불러오고 있어요'} />
           </Card>
 
-          <Appear visible={!!banner} rise={0} pointerEvents="box-none">
+          <Appear visible={!!banner} rise={0} pointerEvents="box-none" replayKey={banner ?? undefined}>
             {banner === 'locationOff' ? (
               <Banner
                 tone="danger"

@@ -54,6 +54,7 @@ const WEEK = ['일', '월', '화', '수', '목', '금', '토'];
 /** 3-1 모이깅의 달력 탭. refreshKey 가 바뀌면 보던 달을 다시 받는다(당겨서 새로고침) */
 export function CalendarPanel({ refreshKey }: { refreshKey: number }) {
   const today = kstToday();
+  const avatarRipple = useRipple(undefined, true);
   const [month, setMonth] = useState(today.slice(0, 7));
   const [calendar, setCalendar] = useState<Calendar | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
@@ -156,6 +157,8 @@ export function CalendarPanel({ refreshKey }: { refreshKey: number }) {
                         accessibilityLabel={`${a.user.nickname}, 프로필 보기`}
                         hitSlop={space.md}
                         onPress={() => openUser(a.user.id)}
+                        android_ripple={avatarRipple}
+                        style={({ pressed }) => ({ opacity: pressedOpacity(pressed) })}
                       >
                         <Avatar name={a.user.nickname} uri={a.user.photoUrl ?? undefined} size="sm" />
                       </Pressable>
