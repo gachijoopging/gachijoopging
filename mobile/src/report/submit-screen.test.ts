@@ -87,7 +87,7 @@ test('크루장 직접 진입과 권한 조회 실패는 신고 폼을 열지 �
   await act(async () => rendered.unmount());
   mockGet.mockRejectedValue(new Error('offline'));
   await mount();
-  expect(rendered.root.findByType('ErrorState').props.title).toBe('신고 권한을 확인하지 못했어요.');
+  expect(rendered.root.findByType('ErrorState').props.title).toBe('신고 권한을 확인하지 못했어요');
   expect(mockMutate).not.toHaveBeenCalled();
 });
 

@@ -36,9 +36,9 @@ export function StatsTile({ stats }: { stats: Stats | null }) {
     <Tile>
       <MetricSplit
         items={[
-          { value: stats ? String(stats.totalActivities) : '—', label: '활동' },
-          { value: stats ? formatDistance(stats.totalDistanceM) : '—', label: '거리' },
-          { value: stats ? withCommas(stats.totalItems) : '—', label: '개수' },
+          { value: stats ? String(stats.totalActivities) : '…', label: '활동' },
+          { value: stats ? formatDistance(stats.totalDistanceM) : '…', label: '거리' },
+          { value: stats ? withCommas(stats.totalItems) : '…', label: '개수' },
         ]}
         accessibilityLabel={stats ? statsLabel(stats) : '누적 수치를 불러오지 못했어요'}
       />

@@ -100,7 +100,7 @@ export function PostCard({ post, meId, mineTab, onOpen, onAuthor, onLike }: Prop
         ) : (
           <Tile style={{ gap: space.xs }}>
             <Txt variant="body" numberOfLines={3}>{post.text}</Txt>
-            <Txt variant="caption" tone="green" bold>전체 보기 →</Txt>
+            <Txt variant="caption" tone="green" bold>전체 보기 ›</Txt>
           </Tile>
         )}
       </Pressable>

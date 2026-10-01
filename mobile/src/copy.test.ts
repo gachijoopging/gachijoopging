@@ -17,7 +17,8 @@ const hits = (pattern: RegExp) =>
   files.flatMap(({ path, text }) =>
     text.split('\n').flatMap((line, i) => {
       // 주석은 문구가 아니다. 줄 머리 주석, JSX 주석, 줄 끝 주석을 뺀다
-      const code = line.replace(/\{\/\*.*?\*\/\}/g, '').replace(/\s\/\/ .*$/, '');
+      // 카탈로그의 note 는 개발자용 설명이라 화면 문구가 아니다
+      const code = line.replace(/\{\/\*.*?\*\/\}/g, '').replace(/\s\/\/ .*$/, '').replace(/note="[^"]*"/g, '');
       return pattern.test(code) && !/^\s*(\/\/|\*|\/\*)/.test(code) ? [`${path.split(/[\\/](mobile|design-system)[\\/]/).pop()}:${i + 1}`] : [];
     }),
   );
@@ -54,3 +55,37 @@ test('시트 메뉴의 동작은 동사형으로 부른다', () => {
 test('스크린리더 이름도 보이는 버튼 이름과 같은 동사를 쓴다', () => {
   expect(hits(/'등록 중'|'신고 제출'|'신고 접수 중'|: '등록'/)).toEqual([]);
 });
+
+test('값 자리에 대시를 쓰지 않는다. 미측정·로딩은 말로 쓴다', () => {
+  // 카탈로그의 note 는 개발자용 설명이라 화면 문구가 아니다
+  expect(hits(/['"`][^'"`]*[—–][^'"`]*['"`]/)).toEqual([]);
+});
+
+test('이모지를 아이콘 대신 쓰지 않는다', () => {
+  expect(hits(/🌱|🔒/)).toEqual([]);
+});
+
+test('여러 항목을 가운뎃점으로 잇지 않는다. 쉼표로 나열한다', () => {
+  expect(hits(/게시물·댓글·채팅·위치/)).toEqual([]);
+});
+
+test('버튼·칩 문구 안에 가운뎃점으로 문장을 붙이지 않는다', () => {
+  expect(hits(/label=\{?[`'"][^`'"]*\s·\s|text: '[^']*\s·\s[^']*'/)).toEqual([]);
+});
+
+test('단계 번호를 라벨로 보이지 않는다', () => {
+  expect(hits(/>단계 \{/)).toEqual([]);
+});
+
+test('제목·빈 상태 문구는 마침표로 끝내지 않는다', () => {
+  expect(hits(/<(ErrorState|EmptyState)[^>]*title="[^"]*\."/)).toEqual([]);
+});
+
+test('같은 이동은 같은 화살표로 표시한다', () => {
+  expect(hits(/보기 →/)).toEqual([]);
+});
+
+test('단위는 칩이 아니라 글자로 붙인다', () => {
+  expect(hits(/<Chip label="개" \/>/)).toEqual([]);
+});
+

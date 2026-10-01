@@ -51,7 +51,7 @@ function joinedLabel(iso: string): string {
 
 const ROW: Record<SafetyRow, { title: string; subtitle: string; icon: 'flag-outline' | 'block-helper' | 'account-remove-outline' | 'crown-outline' | 'account-check-outline' }> = {
   report: { title: '신고하기', subtitle: '부적절한 행동을 알려 주세요', icon: 'flag-outline' },
-  block: { title: '차단하기', subtitle: '내 게시물·댓글·채팅·위치 화면에서 바로 숨겨져요', icon: 'block-helper' },
+  block: { title: '차단하기', subtitle: '내 게시물, 댓글, 채팅, 위치 화면에서 바로 숨겨져요', icon: 'block-helper' },
   unblock: { title: '차단 해제', subtitle: '다시 내 화면에 보여요', icon: 'account-check-outline' },
   kick: { title: '크루원 추방', subtitle: '크루에서 내보내요. 활동 기록은 남아요', icon: 'account-remove-outline' },
   delegate: { title: '크루장 위임', subtitle: '이 크루원이 크루장이 되고, 나는 일반 크루원이 돼요', icon: 'crown-outline' },
@@ -60,7 +60,7 @@ const ROW: Record<SafetyRow, { title: string; subtitle: string; icon: 'flag-outl
 const CONFIRM: Record<Confirm, { title: (n: string) => string; body: string; action: string; done: (n: string) => string; fail: string }> = {
   block: {
     title: (n) => `${n}님을 차단할까요?`,
-    body: '차단하면 내 게시물·댓글·채팅·위치 화면에서 이 크루원이 보이지 않아요. 크루 소속은 그대로예요.',
+    body: '차단하면 내 게시물, 댓글, 채팅, 위치 화면에서 이 크루원이 보이지 않아요. 크루 소속은 그대로예요.',
     action: '차단',
     done: (n) => `${n}님을 차단했어요`,
     fail: '차단에 실패했어요',
@@ -306,7 +306,7 @@ export default function UserProfileScreen() {
 
                 {profile.blocked ? (
                   <Banner tone="danger" action={{ label: '차단 해제', onPress: unblock }}>
-                    차단한 크루원이에요. 내 게시물·댓글·채팅·위치 화면에서 보이지 않아요.
+                    차단한 크루원이에요. 내 게시물, 댓글, 채팅, 위치 화면에서 보이지 않아요.
                   </Banner>
                 ) : null}
 

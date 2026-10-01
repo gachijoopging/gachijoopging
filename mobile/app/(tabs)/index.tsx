@@ -126,7 +126,7 @@ function HomeCards({ home }: { home: Home }) {
           <View style={{ gap: space.xs }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
               <Txt variant="counter">{last7d.crewItems}</Txt>
-              <Chip label="개" />
+              <Txt variant="section" tone="muted">개</Txt>
             </View>
             <Txt variant="caption" tone="muted">크루 기록 보기 ›</Txt>
           </View>
@@ -209,12 +209,12 @@ function CrewCharacter({ character }: { character: Home['character'] }) {
       onPress={toggle}
       android_ripple={ripple}
       accessibilityRole="button"
-      accessibilityLabel={`크루 캐릭터, ${stageName}`}
+      accessibilityLabel={`크루 캐릭터, ${character.stage}단계 ${stageName}`}
       accessibilityHint="목표 진행을 들으려면 두 번 탭"
       style={({ pressed }) => ({ alignItems: 'center', gap: space.sm, paddingVertical: space.lg, borderRadius: radius.card, overflow: 'hidden', opacity: pressedOpacity(pressed) })}
     >
       <Image source={sprout} resizeMode="contain" style={{ width: size.character, height: size.character }} />
-      <Txt variant="caption" tone="muted">단계 {character.stage} · {stageName}</Txt>
+      <Txt variant="caption" tone="muted">{stageName}</Txt>
       {/* 말풍선이 뜨고 질 때 아래 카드가 밀리지 않도록 캐릭터 위에 띄운다. 캐릭터 쪽(아래)에서 솟아 같은 길로 들어간다 */}
       <Appear visible={bubble} style={{ position: 'absolute', top: space.sm }}>
         <View accessibilityLiveRegion="polite">

@@ -118,7 +118,7 @@ export default function ActivitySummaryScreen() {
   if (!session || !snapshot) {
     return (
       <Screen>
-        <Txt variant="title" accessibilityRole="header" accessibilityLabel="오늘의 줍깅 정리">오늘의 줍깅 정리 🌱</Txt>
+        <Txt variant="title" accessibilityRole="header" accessibilityLabel="오늘의 줍깅 정리">오늘의 줍깅 정리</Txt>
         <Banner tone="warn" action={{ label: '닫기', onPress: leave }}>이 활동의 기록을 기기에서 찾지 못했어요.</Banner>
       </Screen>
     );
@@ -146,7 +146,7 @@ export default function ActivitySummaryScreen() {
 
   return (
     <Screen>
-      <Txt ref={titleRef} variant="title" accessibilityRole="header" accessibilityLabel="오늘의 줍깅 정리">오늘의 줍깅 정리 🌱</Txt>
+      <Txt ref={titleRef} variant="title" accessibilityRole="header" accessibilityLabel="오늘의 줍깅 정리">오늘의 줍깅 정리</Txt>
       <ScrollView contentContainerStyle={{ gap: space.md, paddingBottom: space.xl }}>
         <Txt
           variant="caption"
@@ -210,8 +210,8 @@ export default function ActivitySummaryScreen() {
         )}
 
         <Appear visible={phase === 'offline'} rise={0}>
-          <View accessibilityLiveRegion="polite" style={{ alignSelf: 'flex-start' }}>
-            <Chip tone="warn" icon="wifi-off" label="동기화 대기 중 · 연결되면 자동 업로드돼요" />
+          <View accessibilityLiveRegion="polite">
+            <Banner tone="warn">동기화 대기 중이에요. 연결되면 자동으로 올라가요.</Banner>
           </View>
         </Appear>
 
@@ -256,10 +256,12 @@ export default function ActivitySummaryScreen() {
             </View>
           </View>
 
-          <Appear visible={phase === 'saved'} rise={0}>
-            <Button label="이 기록 지우기" variant="ghostDanger" size="md" fullWidth onPress={() => setConfirmDelete(true)} />
-          </Appear>
         </Card>
+
+        {/* 지우기는 저장·공유와 다른 일이라 카드 밖 맨 아래에 둔다 */}
+        <Appear visible={phase === 'saved'} rise={0}>
+          <Button label="이 기록 지우기" variant="ghostDanger" size="md" fullWidth onPress={() => setConfirmDelete(true)} />
+        </Appear>
       </ScrollView>
 
       <ShareCard

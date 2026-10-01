@@ -115,7 +115,7 @@ export default function PendingApprovalScreen() {
       </View>
 
       {isLoading ? <Loading label="신청을 확인하고 있어요" /> : null}
-      {error ? <ErrorState title="신청을 불러오지 못했어요." description="네트워크 상태를 확인하고 다시 시도해 주세요." onRetry={reload} /> : null}
+      {error ? <ErrorState title="신청을 불러오지 못했어요" description="네트워크 상태를 확인하고 다시 시도해 주세요." onRetry={reload} /> : null}
       {state === 'pending' && request ? (
         <>
           <Card accessible accessibilityLabel={`${request.crew.name}, 가입 신청을 보냈어요`}>
@@ -131,8 +131,8 @@ export default function PendingApprovalScreen() {
         <Button label="다시 확인하기" loading={refreshing} onPress={reload} />
       </> : null}
       {banner ? <Banner tone="danger">{banner}</Banner> : null}
-      {state === 'rejected' ? <EmptyState icon="close-circle-outline" title="가입 신청이 승인되지 않았어요." actionLabel="크루 선택하기" onAction={() => router.replace('/crew-choice')} /> : null}
-      {state === 'empty' ? <EmptyState title="가입 신청이 없어요." actionLabel="크루 선택하기" onAction={() => router.replace('/crew-choice')} /> : null}
+      {state === 'rejected' ? <EmptyState icon="close-circle-outline" title="가입 신청이 승인되지 않았어요" actionLabel="크루 선택하기" onAction={() => router.replace('/crew-choice')} /> : null}
+      {state === 'empty' ? <EmptyState title="가입 신청이 없어요" actionLabel="크루 선택하기" onAction={() => router.replace('/crew-choice')} /> : null}
 
       <Dialog
         visible={cancelDialog}
