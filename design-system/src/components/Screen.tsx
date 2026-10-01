@@ -10,8 +10,10 @@ import {
 } from 'react-native';
 import { SafeAreaView, type Edge } from 'react-native-safe-area-context';
 import { screen, space } from '../../tokens/spacing.ts';
+import { androidElevation } from '../../tokens/elevation.ts';
 import { useTheme } from '../theme.tsx';
 import { Snackbar } from './Snackbar.tsx';
+import { AppHeader } from './AppHeader.tsx';
 
 /**
  * 화면 바깥 껍데기. 플랫폼 계약이 전부 여기 모입니다.
@@ -69,7 +71,23 @@ export function Screen({
 
   const all = Children.toArray(children);
   const floating = scroll ? all.filter((child) => isValidElement(child) && child.type === Snackbar) : [];
-  const content = scroll ? all.filter((child) => !floating.includes(child)) : children;
+  const rest = scroll ? all.filter((child) => !floating.includes(child)) : [];
+  // 긴 화면에서도 뒤로 가기가 손에 닿게 머리는 위에 붙는다. 뒤로 지나가는 내용이 비치지 않게 바탕을 깐다
+  const sticky = scroll && isValidElement(rest[0]) && rest[0].type === AppHeader;
+  const content = sticky
+    ? [
+        <View
+          key="sticky-header"
+          // API 27 이하는 카드 그림자가 elevation 이라 머리 위로 올라온다. 머리를 그보다 위에 둔다
+          style={{ backgroundColor: colors.bg, marginHorizontal: bleed ? 0 : -gutter, paddingHorizontal: bleed ? 0 : gutter, marginTop: -screen.top, paddingTop: screen.top, zIndex: 1, ...(Platform.OS === 'android' && Number(Platform.Version) < 28 ? { elevation: androidElevation.floating } : null) }}
+        >
+          {rest[0]}
+        </View>,
+        ...rest.slice(1),
+      ]
+    : scroll
+      ? rest
+      : children;
 
   const body = scroll ? (
     <ScrollView
@@ -78,6 +96,7 @@ export function Screen({
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
       refreshControl={refreshControl}
+      stickyHeaderIndices={sticky ? [0] : undefined}
     >
       {content}
     </ScrollView>

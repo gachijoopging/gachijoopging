@@ -2,9 +2,10 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { AccessibilityInfo, Animated, Dimensions, KeyboardAvoidingView, Modal, PanResponder, Pressable, ScrollView, View, findNodeHandle, type Text } from 'react-native';
 import { radius } from '../../tokens/radius.ts';
 import { space, screen, size as sizes } from '../../tokens/spacing.ts';
-import { motion, projectedDistance, rubberband } from '../../tokens/motion.ts';
+import { dragAfterSlop, motion, projectedDistance, rubberband } from '../../tokens/motion.ts';
 import { useTheme, useReduceMotion, depth } from '../theme.tsx';
 import { Txt } from './Text.tsx';
+import { dialogFrame } from './dialog-motion.ts';
 
 /**
  * 바텀시트. 원본 `bg_sheet`(위 모서리만 30) + `bg_sheet_handle` + `bg_scrim`.
@@ -74,7 +75,7 @@ export function BottomSheet({
     Animated.spring(y, {
       toValue: to,
       velocity,
-      ...(velocity ? motion.fling : motion.sheet),
+      ...motion.sheet,
       useNativeDriver: true,
     }).start(({ finished }) => finished && !visible && finishClose());
   }, [visible, reduce, y]);
@@ -91,10 +92,12 @@ export function BottomSheet({
         y.setValue(0);
       },
       onPanResponderMove: (_, g) => {
-        const next = grabbedAt.current + g.dy;
+        // 제목을 누를 때 떨리는 손가락은 끌기가 아니다
+        const dy = dragAfterSlop(g.dy);
+        const next = grabbedAt.current + dy;
         // 위로는 더 열 곳이 없다. 닫을 수 없을 때는 아래로도 그렇다. 딱 멈추지 않고 저항만 커진다
         const resist = next < 0 || !live.current.dismissible;
-        y.setValue(resist ? rubberband(next, height.current) - grabbedAt.current : g.dy);
+        y.setValue(resist ? rubberband(next, height.current) - grabbedAt.current : dy);
       },
       onPanResponderRelease: (_, g) => settle(g.vy),
       onPanResponderTerminate: (_, g) => settle(g.vy),
@@ -117,7 +120,7 @@ export function BottomSheet({
       live.current.onClose();
       // 부르는 쪽이 다시 그리기 전에 되돌리면 위로 튀었다가 닫힌다. 먼저 내려 보내고,
       // 다 내려갔는데도 닫지 않기로 했으면(처리 중 등) 그때 제자리로 돌아온다
-      Animated.spring(y, { toValue: height.current, velocity: vy, ...motion.fling, useNativeDriver: true }).start(
+      Animated.spring(y, { toValue: height.current, velocity: vy, ...motion.sheet, useNativeDriver: true }).start(
         ({ finished }) => finished && live.current.visible && springBack(0),
       );
       return;
@@ -223,12 +226,45 @@ export function Dialog({
   actions?: ReactNode;
 }) {
   const { colors, shadows } = useTheme();
+  const reduce = useReduceMotion();
   const titleRef = useRef<Text>(null);
+  // 닫히는 움직임이 끝날 때까지 창을 붙든다. 진행도 하나(0 닫힘 → 1 열림)가 스크림과 카드를 함께 움직이고,
+  // 도중에 다시 열면 지금 값에서 이어 간다
+  const [mounted, setMounted] = useState(visible);
+  const progress = useRef(new Animated.Value(visible ? 1 : 0)).current;
+  const shown = useRef({ title, children, actions });
+  if (visible) shown.current = { title, children, actions };
+
+  const wasMounted = useRef(mounted);
+  wasMounted.current = mounted;
+  useEffect(() => {
+    if (visible) {
+      // 닫히는 도중에 다시 열면 창이 그대로라 onShow 가 다시 오지 않는다. 그때는 제목으로 초점을 직접 옮긴다
+      if (wasMounted.current) {
+        const node = findNodeHandle(titleRef.current);
+        if (node) AccessibilityInfo.setAccessibilityFocus(node);
+      }
+      setMounted(true);
+    }
+    const to = visible ? 1 : 0;
+    if (reduce) {
+      progress.setValue(to);
+      if (!visible) setMounted(false);
+      return;
+    }
+    Animated.spring(progress, { toValue: to, ...motion.settle, useNativeDriver: true }).start(
+      ({ finished }) => finished && !visible && setMounted(false),
+    );
+  }, [visible, reduce, progress]);
+
+  const scale = progress.interpolate({ inputRange: [0, 1], outputRange: [dialogFrame(0, reduce).scale, dialogFrame(1, reduce).scale] });
+  const { title: shownTitle, children: shownChildren, actions: shownActions } = shown.current;
+
   return (
     <Modal
-      visible={visible}
+      visible={mounted}
       transparent
-      animationType="fade"
+      animationType="none"
       statusBarTranslucent
       navigationBarTranslucent
       onRequestClose={onClose}
@@ -238,36 +274,41 @@ export function Dialog({
         if (node) AccessibilityInfo.setAccessibilityFocus(node);
       }}
     >
-      <Pressable
-        accessibilityLabel="닫기"
-        onPress={onClose}
-        style={{
-          flex: 1,
-          backgroundColor: colors.scrim,
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: screen.horizontal,
-        }}
-      >
+      {/* 사라지는 동안 다시 누르면 위험한 동작이 두 번 돈다. 닫히기 시작하면 누름을 받지 않는다 */}
+      <Animated.View pointerEvents={visible ? 'auto' : 'none'} style={{ flex: 1, opacity: progress }}>
         <Pressable
-          onPress={(e) => e.stopPropagation()}
+          accessibilityLabel="닫기"
+          onPress={onClose}
           style={{
-            backgroundColor: colors.surface,
-            borderRadius: radius.card,
-            padding: space.xl,
-            gap: space.md,
-            alignSelf: 'stretch',
-            maxWidth: 420,
-            ...depth('overlay', shadows.overlay),
+            flex: 1,
+            backgroundColor: colors.scrim,
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: screen.horizontal,
           }}
         >
-          <Txt ref={titleRef} variant="title" accessibilityRole="header">{title}</Txt>
-          {children}
-          {actions ? (
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-end', gap: space.sm }}>{actions}</View>
-          ) : null}
+          <Animated.View style={{ alignSelf: 'stretch', alignItems: 'center', transform: [{ scale }] }}>
+            <Pressable
+              onPress={(e) => e.stopPropagation()}
+              style={{
+                backgroundColor: colors.surface,
+                borderRadius: radius.card,
+                padding: space.xl,
+                gap: space.md,
+                alignSelf: 'stretch',
+                maxWidth: 420,
+                ...depth('overlay', shadows.overlay),
+              }}
+            >
+              <Txt ref={titleRef} variant="title" accessibilityRole="header">{shownTitle}</Txt>
+              {shownChildren}
+              {shownActions ? (
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-end', gap: space.sm }}>{shownActions}</View>
+              ) : null}
+            </Pressable>
+          </Animated.View>
         </Pressable>
-      </Pressable>
+      </Animated.View>
     </Modal>
   );
 }
