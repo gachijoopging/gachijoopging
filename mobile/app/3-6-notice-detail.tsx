@@ -271,7 +271,7 @@ export default function NoticeDetailScreen() {
             onPress={() => {
               const target = commentTarget;
               setCommentMenuOpen(false);
-              if (target) router.push({ pathname: '/6-1-report', params: { targetType: 'NOTICE_COMMENT', targetId: target.id } });
+              if (target) router.push({ pathname: '/6-1-report', params: { targetType: 'NOTICE_COMMENT', targetId: target.id, nickname: target.author.nickname, photoUrl: target.author.photoUrl ?? '', text: target.text } });
             }}
           />
         )}

@@ -37,6 +37,8 @@ export type VoidMutationKey =
   | 'DELETE /crew/members/{userId}'
   | 'PATCH /notices/{noticeId}'
   | 'PUT /crew/chat/read'
+  | 'POST /reports'
+  | 'POST /crew/reports/{reportId}'
   | 'PUT /users/{userId}/block'
   | 'DELETE /users/{userId}/block'
   | 'PUT /users/{userId}/follow'

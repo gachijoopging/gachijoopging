@@ -230,7 +230,7 @@ export default function UserProfileScreen() {
   const pick = (row: SafetyRow) => {
     if (row === 'report') {
       setSheet(false);
-      return router.push({ pathname: '/6-1-report', params: { targetType: 'USER', targetId: id } });
+      return router.push({ pathname: '/6-1-report', params: { targetType: 'USER', targetId: id, nickname: profile?.nickname ?? '', photoUrl: profile?.photoUrl ?? '' } });
     }
     if (row === 'unblock') return void unblock();
     setSheet(false);

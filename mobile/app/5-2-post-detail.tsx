@@ -367,7 +367,7 @@ export default function PostDetailScreen() {
               fullWidth
               onPress={() => {
                 setMenuOpen(false);
-                router.push({ pathname: '/6-1-report', params: { targetType: 'POST', targetId: id } });
+                router.push({ pathname: '/6-1-report', params: { targetType: 'POST', targetId: id, nickname: post?.author.nickname ?? '', photoUrl: post?.author.photoUrl ?? '', text: post?.text ?? '', thumbUrl: post?.media[0]?.thumbUrl ?? '' } });
               }}
             />
           )}
@@ -385,7 +385,7 @@ export default function PostDetailScreen() {
             onPress={() => {
               const target = commentTarget;
               setCommentTarget(null);
-              if (target) router.push({ pathname: '/6-1-report', params: { targetType: 'COMMENT', targetId: target.id } });
+              if (target) router.push({ pathname: '/6-1-report', params: { targetType: 'COMMENT', targetId: target.id, nickname: target.author.nickname, photoUrl: target.author.photoUrl ?? '', text: target.text } });
             }}
           />
         )}
