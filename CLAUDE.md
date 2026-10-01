@@ -13,7 +13,7 @@
 |---|---|
 | `/create-issue <작업 설명>` | Linear 일감을 만들 때. 중복 검사 후 폴더 오너에게 배정한다 |
 
-Linear 접근에는 각자의 `LINEAR_API_KEY` 가 필요하다. 발급과 설정은 `docs/conventions.md` §Linear 연결.
+Linear 접근은 각자 OAuth 로 붙인다. 연결 방법은 `docs/conventions.md` §Linear 연결.
 
 ## 이 저장소의 에이전트
 
