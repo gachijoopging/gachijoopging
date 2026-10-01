@@ -1,5 +1,6 @@
 // 화면 5-7 · docs/screens/5-7-settings.md
 import Constants from 'expo-constants';
+import { useNetworkState } from 'expo-network';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 import { Pressable, View } from 'react-native';
@@ -24,8 +25,9 @@ import {
   useTheme,
 } from 'design-system/src';
 import { ApiError, createMockClient, type ApiClient } from '../../src/api/client';
-import { accountGate, leaveConfirm, leaveFailure, lockSetting } from '../../src/profile/profile';
-import { getStored } from '../../src/activity/store';
+import { accountGate, leaveConfirm, leaveFailure } from '../../src/profile/profile';
+import { getStored, loadAccount, loadLastAccount } from '../../src/activity/store';
+import { currentAccount, forgetAccount, rememberAccount } from '../../src/auth/account';
 
 type Me = {
   hasPassword: boolean;
@@ -84,12 +86,17 @@ export default function SettingsScreen() {
   const [modal, setModal] = useState<Modal | null>(null);
   const [busy, setBusy] = useState(false);
   const [snackbar, setSnackbar] = useState<string | null>(null);
-  const sending = useRef<SettingKey[]>([]);
+  const toggling = useRef(new Set<SettingKey>());
+  const [pendingSettings, setPendingSettings] = useState<ReadonlySet<SettingKey>>(new Set());
+  const network = useNetworkState();
+  const offline = network.isConnected === false || network.isInternetReachable === false;
 
   const load = useCallback(async () => {
     try {
       const { data } = await api.get('GET /users/me');
-      if (data.membership.status !== 'MEMBER') return router.replace(data.membership.status === 'PENDING' ? '/pending-approval' : '/crew-choice');
+      rememberAccount(data);
+      loadAccount(data.id);
+      if (data.membership.status !== 'MEMBER') return router.replace(data.membership.status === 'PENDING' ? '/(onboarding)/pending-approval' : '/(onboarding)/crew-choice');
       setMe({
         hasPassword: data.hasPassword,
         crewName: data.membership.crew?.name ?? null,
@@ -107,19 +114,20 @@ export default function SettingsScreen() {
   useFocusEffect(useCallback(() => void load(), [load]));
 
   const toggle = async (key: SettingKey) => {
-    // 보내는 동안 다시 누르면 같은 값을 두 번 보낸다 — 응답이 올 때까지 그 키만 잠근다
-    const locked = lockSetting(sending.current, key);
-    if (!me || !locked) return;
-    sending.current = locked;
-    const next = !me[key];
-    setMe((m) => (m ? { ...m, [key]: next } : m));
+    if (!me || toggling.current.has(key)) return;
+    toggling.current.add(key);
+    setPendingSettings(new Set(toggling.current));
+    const before = me[key];
+    setMe((value) => value && { ...value, [key]: !before });
     try {
-      await api.mutate('PATCH /users/me', { [key]: next });
+      if (offline) throw new ApiError('OFFLINE');
+      await api.mutate('PATCH /users/me', { [key]: !before });
     } catch {
-      setMe((m) => (m ? { ...m, [key]: !next } : m));
+      setMe((m) => (m ? { ...m, [key]: before } : m));
       setSnackbar('설정을 저장하지 못했어요.');
     } finally {
-      sending.current = sending.current.filter((k) => k !== key);
+      toggling.current.delete(key);
+      setPendingSettings(new Set(toggling.current));
     }
   };
 
@@ -127,11 +135,12 @@ export default function SettingsScreen() {
     if (busy || !me) return;
     setBusy(true);
     try {
+      if (offline) throw new ApiError('OFFLINE');
       const [{ data: current }, crew] = await Promise.all([
         api.get('GET /activities/current'),
         action === 'logout' || !me.isLeader ? null : api.get('GET /crew'),
       ]);
-      const local = getStored();
+      const local = loadLastAccount() ?? getStored();
       const unsyncedCount = local.outbox.length;
       // 서버가 모르는 오프라인 진행 중 활동도 막는다 — 나가면 그 기록을 잃는다
       const hasCurrentActivity = current != null || (local.session != null && !local.ended);
@@ -153,17 +162,23 @@ export default function SettingsScreen() {
     setBusy(true);
     try {
       if (action === 'leave') {
+        if (offline) throw new ApiError('OFFLINE');
         await api.mutate('POST /crew/leave');
+        const account = currentAccount();
+        if (account) rememberAccount({ id: account.id, membership: { status: 'NONE' } });
         setModal(null);
         return router.dismissTo({ pathname: '/crew-choice', params: { flash: '크루를 나갔어요.' } });
       }
       if (action === 'withdraw') {
+        if (offline) throw new ApiError('OFFLINE');
         await api.mutate('DELETE /users/me');
+        forgetAccount();
         setModal(null);
         return router.dismissTo({ pathname: '/start', params: { flash: '탈퇴가 완료됐어요.' } });
       }
       // 세션 종료 요청이 실패해도 이 기기의 로그아웃은 끝낸다 — 활동·큐는 위에서 이미 비어 있음을 확인했다
       await api.mutate('POST /auth/logout').catch(() => {});
+      forgetAccount();
       setModal(null);
       return router.dismissTo('/start');
     } catch (e) {
@@ -186,19 +201,21 @@ export default function SettingsScreen() {
         failed ? <ErrorState title="내 정보를 불러오지 못했어요" onRetry={load} /> : <Loading label="내 정보를 불러오고 있어요" />
       ) : (
         <>
-          {failed ? <Banner tone="warn">인터넷 연결을 확인해 주세요.</Banner> : null}
+          {failed || offline ? <Banner tone="warn">인터넷 연결을 확인해 주세요.</Banner> : null}
           <Card padded={false}>
             <ListRow title="프로필 수정" subtitle="닉네임과 사진을 바꿔요." onPress={() => router.push('/settings/profile')} />
             <ToggleRow
               title="위치 공유 기본값"
               subtitle="활동을 시작할 때 미리 선택돼요."
               value={me.shareLocationDefault}
+              disabled={pendingSettings.has('shareLocationDefault')}
               onToggle={() => toggle('shareLocationDefault')}
             />
             <ToggleRow
               title="활동 시작 알림"
               subtitle="팔로우한 크루원이 활동을 시작하면 알려줘요."
               value={me.notifyActivityStart}
+              disabled={pendingSettings.has('notifyActivityStart')}
               onToggle={() => toggle('notifyActivityStart')}
             />
             <ListRow title="차단 관리" divider={false} onPress={() => router.push('/settings/blocks')} />
@@ -307,7 +324,7 @@ export default function SettingsScreen() {
  * 켜고 끄는 설정 한 줄. 행 전체가 스위치 하나로 읽히게 역할·상태를 행에 두고,
  * 안의 스위치는 보이기만 한다 — 두 곳에 초점이 가면 같은 설정을 두 번 듣는다
  */
-function ToggleRow({ title, subtitle, value, onToggle }: { title: string; subtitle: string; value: boolean; onToggle: () => void }) {
+function ToggleRow({ title, subtitle, value, onToggle, disabled }: { title: string; subtitle: string; value: boolean; onToggle: () => void; disabled: boolean }) {
   const { colors } = useTheme();
   const ripple = useRipple();
   return (
@@ -315,7 +332,8 @@ function ToggleRow({ title, subtitle, value, onToggle }: { title: string; subtit
       accessibilityRole="switch"
       accessibilityLabel={title}
       accessibilityHint={subtitle}
-      accessibilityState={{ checked: value }}
+      accessibilityState={{ checked: value, disabled }}
+      disabled={disabled}
       onPress={onToggle}
       android_ripple={ripple}
       style={({ pressed }) => ({
@@ -334,7 +352,7 @@ function ToggleRow({ title, subtitle, value, onToggle }: { title: string; subtit
         <Txt variant="caption" tone="hint">{subtitle}</Txt>
       </View>
       <View importantForAccessibility="no-hide-descendants">
-        <Switch label={title} hideLabel value={value} onValueChange={onToggle} />
+        <Switch label={title} hideLabel value={value} disabled={disabled} onValueChange={onToggle} />
       </View>
     </Pressable>
   );

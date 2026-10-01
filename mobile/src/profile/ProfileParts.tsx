@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Image, Pressable, View } from 'react-native';
 import {
   Card,
@@ -153,42 +153,72 @@ export function ActivityCalendar({ activeDays }: { activeDays: readonly string[]
 }
 
 /** 커서 목록. 끝에 닿으면 다음 장을 이어 받고, 새로고침은 첫 장부터 다시 받는다 */
-export function usePaged<T extends { id: string }>(fetchPage: (cursor: string | null) => Promise<Page<T>>) {
+export function usePaged<T extends { id: string }>(fetchPage: (cursor: string | null) => Promise<Page<T>>, key = '') {
   const [items, setItems] = useState<readonly T[] | null>(null);
   const [failed, setFailed] = useState(false);
   const [moreFailed, setMoreFailed] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const cursor = useRef<string | null>(null);
+  const generation = useRef(0);
+  const activeKey = useRef(key);
+  const morePending = useRef(false);
   const fetcher = useRef(fetchPage);
   fetcher.current = fetchPage;
+  if (activeKey.current !== key) {
+    activeKey.current = key;
+    generation.current += 1;
+    cursor.current = null;
+    morePending.current = false;
+  }
+  useEffect(() => {
+    setItems(null);
+    setFailed(false);
+    setMoreFailed(false);
+    setLoadingMore(false);
+  }, [key]);
+  useEffect(() => () => { generation.current += 1; }, []);
 
   const reload = useCallback(async () => {
+    const request = ++generation.current;
+    cursor.current = null;
+    morePending.current = false;
+    setLoadingMore(false);
+    setMoreFailed(false);
     try {
       const page = await fetcher.current(null);
+      if (request !== generation.current) return true;
       setItems(page.items);
       cursor.current = page.nextCursor;
       setFailed(false);
       return true;
     } catch {
+      if (request !== generation.current) return true;
       setFailed(true);
       return false;
     }
   }, []);
 
   const loadMore = useCallback(async () => {
-    if (!cursor.current || loadingMore) return;
+    const next = cursor.current;
+    if (!next || morePending.current) return;
+    const request = generation.current;
+    morePending.current = true;
     setLoadingMore(true);
     try {
-      const page = await fetcher.current(cursor.current);
+      const page = await fetcher.current(next);
+      if (request !== generation.current || next !== cursor.current) return;
       setItems((prev) => [...(prev ?? []), ...page.items.filter((i) => !prev?.some((p) => p.id === i.id))]);
       cursor.current = page.nextCursor;
       setMoreFailed(false);
     } catch {
-      setMoreFailed(true);
+      if (request === generation.current && next === cursor.current) setMoreFailed(true);
     } finally {
-      setLoadingMore(false);
+      if (request === generation.current) {
+        morePending.current = false;
+        setLoadingMore(false);
+      }
     }
-  }, [loadingMore]);
+  }, []);
 
   const remove = useCallback((id: string) => setItems((prev) => prev?.filter((i) => i.id !== id) ?? prev), []);
 

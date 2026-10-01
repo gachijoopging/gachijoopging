@@ -7,6 +7,7 @@ import { onboardingApi as api } from '../../src/api/onboarding';
 import { resolveDestination } from '../../src/auth/destination';
 import { loginErrorMessage } from '../../src/auth/errors';
 import { validateEmail, validatePassword } from '../../src/auth/validators';
+import { forgetAccount, rememberAccount } from '../../src/auth/account';
 
 const wordmark = require('../../../design-system/assets/logo-wordmark.png');
 
@@ -33,8 +34,10 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       await api.mutate('POST /auth/login', { email: email.trim(), password });
+      forgetAccount();
       try {
         const me = await api.get('GET /users/me');
+        rememberAccount(me.data);
         router.replace(resolveDestination(me.data));
       } catch {
         setBanner('내 정보를 불러오지 못했어요. 다시 시도해 주세요.');

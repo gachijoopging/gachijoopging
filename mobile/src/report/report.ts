@@ -1,6 +1,9 @@
 import { ApiError } from '../api/client';
 
 export type ReportTargetType = 'USER' | 'POST' | 'COMMENT' | 'NOTICE_COMMENT' | 'CHAT_MESSAGE';
+export function validReportTarget(type: unknown, id: unknown): type is ReportTargetType {
+  return typeof type === 'string' && ['USER', 'POST', 'COMMENT', 'NOTICE_COMMENT', 'CHAT_MESSAGE'].includes(type) && typeof id === 'string' && id.trim().length > 0;
+}
 export type ReportReason = 'SPAM' | 'HATE' | 'INAPPROPRIATE_PHOTO' | 'PRIVACY' | 'OTHER';
 
 export const REASONS: readonly { value: ReportReason; label: string }[] = [
@@ -38,28 +41,28 @@ type Draft = { reason: ReportReason | null; memo: string; requestId: string | nu
 
 // ponytail: 메모리에만 둔다. 앱을 다시 켜면 사라진다 — 재실행 뒤에도 필요하면 AsyncStorage 로 옮긴다
 const drafts = new Map<string, Draft>();
-const keyOf = (type: string, id: string) => `${type}:${id}`;
+const keyOf = (accountId: string, type: string, id: string) => JSON.stringify([accountId, type, id]);
 
-export function reportDraftFor(type: string, id: string): Draft {
-  return drafts.get(keyOf(type, id)) ?? { reason: null, memo: '', requestId: null };
+export function reportDraftFor(accountId: string, type: string, id: string): Draft {
+  return drafts.get(keyOf(accountId, type, id)) ?? { reason: null, memo: '', requestId: null };
 }
 
-export function editReportDraft(type: string, id: string, next: { reason: ReportReason | null; memo: string }): void {
-  const draft = reportDraftFor(type, id);
+export function editReportDraft(accountId: string, type: string, id: string, next: { reason: ReportReason | null; memo: string }): void {
+  const draft = reportDraftFor(accountId, type, id);
   // 입력이 바뀌면 다른 신고다. 옛 id 를 다시 쓰면 서버가 멱등 재전송으로 보고 새 사유를 버린다
   const same = draft.reason === next.reason && draft.memo === next.memo;
-  drafts.set(keyOf(type, id), { ...next, requestId: same ? draft.requestId : null });
+  drafts.set(keyOf(accountId, type, id), { ...next, requestId: same ? draft.requestId : null });
 }
 
-export function reportRequestId(type: string, id: string, makeId: () => string): string {
-  const draft = reportDraftFor(type, id);
+export function reportRequestId(accountId: string, type: string, id: string, makeId: () => string): string {
+  const draft = reportDraftFor(accountId, type, id);
   const requestId = draft.requestId ?? makeId();
-  drafts.set(keyOf(type, id), { ...draft, requestId });
+  drafts.set(keyOf(accountId, type, id), { ...draft, requestId });
   return requestId;
 }
 
-export function clearReportDraft(type: string, id: string): void {
-  drafts.delete(keyOf(type, id));
+export function clearReportDraft(accountId: string, type: string, id: string): void {
+  drafts.delete(keyOf(accountId, type, id));
 }
 
 const TARGET_LABEL: Record<ReportTargetType, string> = {

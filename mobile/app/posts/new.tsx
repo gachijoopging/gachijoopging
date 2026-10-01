@@ -1,10 +1,10 @@
 // 화면 5-6 · docs/screens/5-6-create-post.md
 import * as Crypto from 'expo-crypto';
-import { File, Paths } from 'expo-file-system';
 import * as ImagePicker from 'expo-image-picker';
+import { useNetworkState } from 'expo-network';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { LayoutAnimation, Pressable, ScrollView, View } from 'react-native';
+import { LayoutAnimation, Pressable, ScrollView, View, type GestureResponderEvent } from 'react-native';
 import {
   AppHeader,
   Banner,
@@ -16,6 +16,8 @@ import {
   Screen,
   SelectRow,
   Field,
+  ErrorState,
+  Loading,
   Spinner,
   Thumb,
   Txt,
@@ -30,65 +32,100 @@ import {
 } from 'design-system/src';
 import { ApiError, createMockClient, type ApiClient } from '../../src/api/client';
 import { usePreventBack } from '../../src/auth/usePreventBack';
-import { EMPTY_DRAFT, POST_PHOTO_MAX, POST_TEXT_MAX, canPost, movePhoto, parseDraft, photosToUpload, readyMediaIds, type DraftPhoto, type PostDraft } from '../../src/profile/profile';
-
-type Photo = DraftPhoto;
-type Visibility = PostDraft['visibility'];
+import { currentAccount, rememberAccount } from '../../src/auth/account';
+import { resolveDestination } from '../../src/auth/destination';
+import { POST_PHOTO_MAX, POST_TEXT_MAX, canPost, movePhoto, photosToUpload, readyMediaIds } from '../../src/profile/profile';
+import { changedDraft, discardPhotos, emptyDraft, keepPhoto, lastPostScope, loadDraft, rememberPostScope, saveDraft, type Draft, type Photo, type PostScope } from '../../src/profile/post-draft';
 
 const api: ApiClient = createMockClient({ delayMs: 300 });
 const THUMB = size.thumbMd;
-// 뒤로 가거나 앱을 다시 켜도 쓰던 글이 남게 기기에 둔다. 게시에 성공하면 지운다
-const draftFile = new File(Paths.document, 'post-draft.json');
-
-function readDraft(): PostDraft {
-  try {
-    return parseDraft(draftFile.exists ? draftFile.textSync() : null);
-  } catch {
-    return EMPTY_DRAFT;
-  }
-}
-
-function saveDraft(draft: PostDraft) {
-  try {
-    draftFile.write(JSON.stringify(draft));
-  } catch {
-    // 초안 저장 실패는 작성을 막지 않는다
-  }
-}
-
-function clearDraft() {
-  try {
-    if (draftFile.exists) draftFile.delete();
-  } catch {
-    // 남아도 다음 작성에서 덮어쓴다
-  }
-}
 
 export default function CreatePostScreen() {
   const { imageUri } = useLocalSearchParams<{ imageUri?: string }>();
   const { colors } = useTheme();
   const ripple = useRipple();
   const reduce = useReduceMotion();
-  const [draft] = useState(readDraft);
-  const [text, setText] = useState(draft.text);
-  const [photos, setPhotos] = useState<Photo[]>(() =>
-    imageUri && !draft.photos.some((p) => p.uri === imageUri)
-      ? [{ key: imageUri, uri: imageUri, name: 'summary.png', type: 'image/png', mediaId: null, failed: false }, ...draft.photos]
-      : draft.photos,
-  );
-  const [visibility, setVisibility] = useState<Visibility>(draft.visibility);
+  const network = useNetworkState();
+  const offline = network.isConnected === false || network.isInternetReachable === false;
+  const [scope, setScope] = useState<PostScope | null>(null);
+  const [draft, setDraft] = useState<Draft>(emptyDraft);
+  const draftRef = useRef(draft);
+  const { text, photos, visibility } = draft;
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const imageAdded = useRef(false);
   const [selected, setSelected] = useState<number | null>(null);
+  const [dragKey, setDragKey] = useState<string | null>(null);
   const [posting, setPosting] = useState(false);
   const [done, setDone] = useState(0);
   const [postFailed, setPostFailed] = useState(false);
-  const requestId = useRef(draft.requestId);
   const busy = useRef(false);
+  const initialization = useRef(0);
+  const dragging = useRef<{ key: string; x: number } | null>(null);
   usePreventBack(posting);
 
-  // 뒤로 가도 작성 중인 내용을 들고 있다가 다시 들어오면 되살린다
+  const initialize = async () => {
+    if (busy.current) return;
+    const generation = ++initialization.current;
+    const accountId = currentAccount()?.id;
+    setLoadFailed(false);
+    try {
+      let next: PostScope | null;
+      if (offline) {
+        const account = currentAccount();
+        next = account?.hasCrew ? lastPostScope(account.id) : null;
+      } else {
+        const { data } = await api.get('GET /users/me');
+        if (generation !== initialization.current || (accountId && currentAccount()?.id !== accountId)) return;
+        rememberAccount(data);
+        if (data.membership.status !== 'MEMBER' || !data.membership.crew) return router.replace(resolveDestination(data));
+        next = { userId: data.id, crewId: data.membership.crew.id };
+        rememberPostScope(next);
+      }
+      if (generation !== initialization.current) return;
+      if (!next) throw new Error('계정을 확인할 수 없어요');
+      const restored = loadDraft(next);
+      draftRef.current = restored;
+      setDraft(restored);
+      setScope(next);
+    } catch { if (generation === initialization.current) setLoadFailed(true); }
+  };
   useEffect(() => {
-    saveDraft({ text, photos, visibility, requestId: requestId.current });
-  }, [text, photos, visibility]);
+    void initialize();
+    return () => { initialization.current++; };
+  }, [offline]);
+
+  const commit = (next: Draft) => {
+    if (!scope) throw new Error('계정을 확인할 수 없어요');
+    saveDraft(scope, next);
+    draftRef.current = next;
+    setDraft(next);
+    setSaveError(null);
+  };
+  const edit = (change: Partial<Draft>) => {
+    if (busy.current) return;
+    try {
+      const previous = draftRef.current;
+      const next = changedDraft(previous, { ...previous, ...change });
+      commit(next);
+      discardPhotos(previous.photos.filter((photo) => !next.photos.some((saved) => saved.key === photo.key)));
+    }
+    catch { setSaveError('초안을 저장하지 못했어요. 다시 시도해 주세요.'); }
+  };
+  const setText = (value: string) => edit({ text: value });
+  const setVisibility = (value: Draft['visibility']) => edit({ visibility: value });
+  const setPhotos = (fn: (photos: Photo[]) => Photo[]) => edit({ photos: fn(draftRef.current.photos) });
+
+  useEffect(() => {
+    if (!scope || !imageUri || imageAdded.current) return;
+    if (photos.some((photo) => photo.sourceUri === imageUri)) { imageAdded.current = true; return; }
+    if (photos.length >= POST_PHOTO_MAX) { setSaveError('사진은 최대 10장이에요. 요약 이미지를 넣으려면 한 장을 삭제해 주세요.'); return; }
+    try {
+      const photo = keepPhoto({ uri: imageUri, name: 'summary.png', type: 'image/png' }, Crypto.randomUUID());
+      commit(changedDraft(draftRef.current, { ...draftRef.current, photos: [photo, ...photos] }));
+      imageAdded.current = true;
+    } catch { setSaveError('요약 이미지를 보존하지 못했어요. 다시 열어 주세요.'); }
+  }, [scope, imageUri, photos.length]);
 
   // 썸네일이 순간이동하지 않게 줄 재배치를 짧게 잇는다
   const animateRow = () => {
@@ -96,33 +133,32 @@ export default function CreatePostScreen() {
   };
 
   const updatePhoto = (key: string, patch: Partial<Photo>) =>
-    setPhotos((prev) => prev.map((p) => (p.key === key ? { ...p, ...patch } : p)));
+    commit({ ...draftRef.current, photos: draftRef.current.photos.map((p) => (p.key === key ? { ...p, ...patch } : p)) });
 
   const addPhotos = async () => {
     const remaining = POST_PHOTO_MAX - photos.length;
     if (remaining <= 0) return;
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsMultipleSelection: true,
-      selectionLimit: remaining,
-      quality: 0.8,
-    });
-    if (result.canceled) return;
-    const added = result.assets.slice(0, remaining).map((a) => ({
-      key: `${a.uri}#${Crypto.randomUUID()}`,
-      uri: a.uri,
-      name: a.fileName ?? 'photo.jpg',
-      type: a.mimeType ?? 'image/jpeg',
-      mediaId: null,
-      failed: false,
-    }));
-    setPhotos((prev) => [...prev, ...added].slice(0, POST_PHOTO_MAX));
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsMultipleSelection: true,
+        selectionLimit: remaining,
+        quality: 0.8,
+      });
+      if (result.canceled) return;
+      const added = result.assets.slice(0, remaining).map((a) => keepPhoto({
+        uri: a.uri,
+        name: a.fileName ?? 'photo.jpg',
+        type: a.mimeType ?? 'image/jpeg',
+      }, Crypto.randomUUID()));
+      setPhotos((prev) => [...prev, ...added].slice(0, POST_PHOTO_MAX));
+    } catch { setSaveError('사진을 보존하지 못했어요. 다시 선택해 주세요.'); }
   };
 
   const upload = async (photo: Photo): Promise<string | null> => {
     try {
       const body = new FormData();
-      body.append('mediaId', Crypto.randomUUID());
+      body.append('mediaId', photo.key);
       body.append('purpose', 'POST');
       body.append('file', { uri: photo.uri, name: photo.name, type: photo.type } as unknown as Blob);
       const { data } = await api.mutate('POST /media', body);
@@ -136,7 +172,7 @@ export default function CreatePostScreen() {
 
   const publish = async () => {
     // 같은 프레임의 연속 탭은 posting 상태가 반영되기 전이라 ref 로 막는다
-    if (busy.current || !canPost({ text, photoCount: photos.length })) return;
+    if (busy.current || offline || !scope || !canPost({ text, photoCount: photos.length })) return;
     busy.current = true;
     setPosting(true);
     setPostFailed(false);
@@ -151,14 +187,18 @@ export default function CreatePostScreen() {
       }
       const mediaIds = readyMediaIds(photos.map((p) => ({ mediaId: uploaded.get(p.key) ?? null })));
       if (!mediaIds) return;
-      // 응답이 유실돼 다시 눌러도 같은 id 라 서버가 중복 게시를 흡수한다
-      requestId.current ??= Crypto.randomUUID();
-      saveDraft({ text, photos, visibility, requestId: requestId.current });
-      await api.mutate('POST /crew/posts', { id: requestId.current, text: text.trim(), visibility, mediaIds });
-      clearDraft();
+      const requestId = draftRef.current.requestId ?? Crypto.randomUUID();
+      commit({ ...draftRef.current, requestId });
+      await api.mutate('POST /crew/posts', { id: requestId, text: text.trim(), visibility, mediaIds });
+      const publishedPhotos = draftRef.current.photos;
+      commit(emptyDraft());
+      discardPhotos(publishedPhotos);
       router.dismissTo({ pathname: '/(tabs)/feed', params: { flash: '게시물을 올렸어요' } });
     } catch (e) {
-      if (e instanceof ApiError && e.code === 'NO_CREW') return router.replace('/crew-choice');
+      if (e instanceof ApiError && e.code === 'NO_CREW') {
+        const response = await api.get('GET /users/me').catch(() => null);
+        if (response) return router.replace(resolveDestination(response.data));
+      }
       setPostFailed(true);
     } finally {
       busy.current = false;
@@ -166,12 +206,38 @@ export default function CreatePostScreen() {
     }
   };
 
-  const allowed = canPost({ text, photoCount: photos.length });
+  const retryPhoto = async (photo: Photo) => {
+    if (busy.current || offline) return;
+    busy.current = true;
+    setPosting(true);
+    try { await upload(photo); }
+    catch { setSaveError('사진 업로드 결과를 보존하지 못했어요. 다시 시도해 주세요.'); }
+    finally { busy.current = false; setPosting(false); }
+  };
+
+  const dragPhoto = (event: GestureResponderEvent) => {
+    const drag = dragging.current;
+    if (!drag || busy.current) return;
+    const delta = event.nativeEvent.pageX - drag.x;
+    if (Math.abs(delta) < THUMB + space.sm) return;
+    const index = draftRef.current.photos.findIndex((photo) => photo.key === drag.key);
+    if (index < 0) return;
+    const direction = delta > 0 ? 1 : -1;
+    setPhotos((previous) => [...movePhoto(previous, index, direction)]);
+    setSelected(Math.max(0, Math.min(photos.length - 1, index + direction)));
+    drag.x = event.nativeEvent.pageX;
+  };
+
+  const allowed = !!scope && !offline && canPost({ text, photoCount: photos.length });
   const atMax = text.length >= POST_TEXT_MAX;
+
+  if (!scope) return <Screen><AppHeader title="게시물 작성" onBack={() => router.back()} />{loadFailed ? <ErrorState onRetry={initialize} /> : <Loading label="초안을 불러오는 중" />}</Screen>;
 
   return (
     <Screen>
       <AppHeader title="게시물 작성" onBack={() => router.back()} backDisabled={posting} />
+      {offline ? <Banner tone="warn">인터넷 연결을 확인해 주세요.</Banner> : null}
+      {saveError ? <Banner tone="danger">{saveError}</Banner> : null}
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ gap: space.lg, paddingBottom: space['3xl'] }} keyboardShouldPersistTaps="handled">
         <View style={{ gap: space.xs }}>
           <Field
@@ -191,7 +257,7 @@ export default function CreatePostScreen() {
 
         <View style={{ gap: space.sm }}>
           <Txt variant="label">사진 (최대 {POST_PHOTO_MAX}장)</Txt>
-          <ScrollView horizontal contentContainerStyle={{ gap: space.sm }} showsHorizontalScrollIndicator={false}>
+          <ScrollView horizontal scrollEnabled={dragKey == null} contentContainerStyle={{ gap: space.sm }} showsHorizontalScrollIndicator={false}>
             {photos.length < POST_PHOTO_MAX ? (
               <Pressable
                 accessibilityRole="button"
@@ -224,6 +290,10 @@ export default function CreatePostScreen() {
                   disabled={posting}
                   android_ripple={ripple}
                   onPress={() => setSelected(selected === i ? null : i)}
+                  onLongPress={(event) => { dragging.current = { key: p.key, x: event.nativeEvent.pageX }; setSelected(i); setDragKey(p.key); }}
+                  onTouchMove={dragPhoto}
+                  onTouchEnd={() => { dragging.current = null; setDragKey(null); }}
+                  onTouchCancel={() => { dragging.current = null; setDragKey(null); }}
                   style={{
                     flex: 1,
                     borderRadius: radius.tile,
@@ -245,8 +315,8 @@ export default function CreatePostScreen() {
                   ) : null}
                 </Pressable>
                 {p.failed && !posting ? (
-                  <View style={{ position: 'absolute', top: space.md, left: 0, right: space.md, bottom: 0, alignItems: 'center', justifyContent: 'center' }}>
-                    <IconButton icon="alert-circle" label="업로드 실패, 다시 시도하려면 두 번 탭" tone="surface" onPress={publish} />
+                  <View style={{ position: 'absolute', inset: 0, alignItems: 'center', justifyContent: 'center' }}>
+                    <IconButton icon="alert-circle" label="업로드 실패, 다시 시도하려면 두 번 탭" tone="surface" disabled={offline} onPress={() => retryPhoto(p)} />
                   </View>
                 ) : null}
                 <View style={{ position: 'absolute', top: 0, right: 0 }}>

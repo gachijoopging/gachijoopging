@@ -42,7 +42,6 @@ android/        expo prebuild 산출물. 커밋하지 않고 직접 고치지도
 - 한 자원의 하위 화면은 그 폴더 안: `activity/[id]/{index,photo,review,summary}`
 - `typedRoutes` 가 켜져 있어 `router.push` 의 pathname·params 가 라우트 파일과 어긋나면 `tsc` 가 잡는다.
   라우트 타입은 Metro 가 `.expo/types/` 에 만들고, 커밋하지 않는다
-- 화면 구현 파일 머리에 어떤 화면 문서인지 한 줄 남긴다: `// 화면 4-3 · docs/screens/4-3-activity-in-progress.md`
 
 ## design-system 임포트
 

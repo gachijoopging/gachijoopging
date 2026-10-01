@@ -30,7 +30,7 @@ import { INTRO_MAX, NICKNAME_MAX, profileChanges, profilePatch } from '../../src
 
 type Original = { nickname: string; intro: string; photoUrl: string | null };
 /** 새로 고른 사진. mediaId 는 올린 뒤에만 생기고, 저장이 실패해도 들고 있다가 다시 올리지 않는다 */
-type Picked = { uri: string; name: string; type: string; mediaId: string | null };
+type Picked = { uri: string; name: string; type: string; uploadId: string; mediaId: string | null };
 
 const api: ApiClient = createMockClient({ delayMs: 300 });
 
@@ -100,7 +100,7 @@ export default function EditProfileScreen() {
       if (picked && !mediaId) {
         try {
           const body = new FormData();
-          body.append('mediaId', Crypto.randomUUID());
+          body.append('mediaId', picked.uploadId);
           body.append('purpose', 'PROFILE');
           body.append('file', { uri: picked.uri, name: picked.name, type: picked.type } as unknown as Blob);
           const { data } = await api.mutate('POST /media', body);
@@ -142,7 +142,7 @@ export default function EditProfileScreen() {
     const options: ImagePicker.ImagePickerOptions = { mediaTypes: ['images'], allowsEditing: true, aspect: [1, 1], quality: 0.8 };
     const result = source === 'camera' ? await ImagePicker.launchCameraAsync(options) : await ImagePicker.launchImageLibraryAsync(options);
     const asset = result.canceled ? null : result.assets[0];
-    if (asset) setPicked({ uri: asset.uri, name: asset.fileName ?? 'profile.jpg', type: asset.mimeType ?? 'image/jpeg', mediaId: null });
+    if (asset) setPicked({ uri: asset.uri, name: asset.fileName ?? 'profile.jpg', type: asset.mimeType ?? 'image/jpeg', uploadId: Crypto.randomUUID(), mediaId: null });
   };
 
   const photoUri = picked?.uri ?? (photoRemoved ? undefined : original?.photoUrl ?? undefined);

@@ -1,7 +1,7 @@
 // 화면 6-2 · docs/screens/6-2-review-report.md
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { useCallback, useRef, useState } from 'react';
-import { Pressable, RefreshControl, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Pressable, RefreshControl, ScrollView, View } from 'react-native';
 import {
   AppHeader,
   Avatar,
@@ -25,6 +25,7 @@ import type { MOCKS } from '../../src/api/mocks.generated';
 import { monthDay } from '../../src/crew/crew';
 import { memberActionOutcome } from '../../src/crew/manage';
 import { reasonLabel, reportActions, resolveOutcome, targetLabel, withoutKickedUser, type ReportAction } from '../../src/report/report';
+import { nearBottom } from '../../src/profile/ProfileParts';
 
 type Report = (typeof MOCKS)['GET /crew/reports']['data']['items'][number];
 
@@ -50,14 +51,47 @@ export default function ReviewReportScreen() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<{ report: Report; action: ReportAction } | null>(null);
   const [snackbar, setSnackbar] = useState<string | null>(null);
+  const [moreState, setMoreState] = useState<'idle' | 'loading' | 'failed'>('idle');
+  const generation = useRef(0);
+  const cursor = useRef<string | null>(null);
+  const morePending = useRef(false);
+  const acting = useRef(false);
+  const mounted = useRef(true);
+  const viewerId = useRef<string | null>(null);
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; generation.current += 1; };
+  }, []);
+  useEffect(() => { setOpenId(id ?? null); }, [id]);
 
   const load = useCallback(async (mode: 'quiet' | 'pull') => {
+    if (acting.current) return;
+    const request = ++generation.current;
+    cursor.current = null;
+    morePending.current = false;
+    setMoreState('idle');
     if (mode === 'pull') setRefreshing(true);
     const [meRes, listRes] = await Promise.allSettled([api.get('GET /users/me'), api.get('GET /crew/reports')]);
+    if (!mounted.current || request !== generation.current) return;
     setRefreshing(false);
-    if (meRes.status === 'fulfilled') setIsLeader(!!meRes.value.data.membership.crew?.isLeader);
+    if (listRes.status === 'rejected' && listRes.reason instanceof ApiError && listRes.reason.code === 'FORBIDDEN') {
+      setIsLeader(false);
+      return;
+    }
+    if (meRes.status === 'rejected') {
+      setIsLeader(null);
+      setFailed(true);
+      return;
+    }
+    if (viewerId.current !== meRes.value.data.id) {
+      viewerId.current = meRes.value.data.id;
+      setReports(null);
+      setConfirm(null);
+    }
+    setIsLeader(!!meRes.value.data.membership.crew?.isLeader);
     if (listRes.status === 'fulfilled') {
       setReports(listRes.value.data.items);
+      cursor.current = listRes.value.data.nextCursor;
       setFailed(false);
     } else if (listRes.reason instanceof ApiError && listRes.reason.code === 'FORBIDDEN') {
       setIsLeader(false);
@@ -67,12 +101,38 @@ export default function ReviewReportScreen() {
   }, []);
 
   useFocusEffect(useCallback(() => void load('quiet'), [load]));
-  const acting = useRef(false);
+
+  const loadMore = async () => {
+    const next = cursor.current;
+    if (!next || morePending.current || acting.current || isLeader !== true) return;
+    const request = generation.current;
+    morePending.current = true;
+    setMoreState('loading');
+    try {
+      const { data } = await api.get('GET /crew/reports', { cursor: next });
+      if (!mounted.current || request !== generation.current || next !== cursor.current) return;
+      setReports((previous) => {
+        const ids = new Set(previous?.map((report) => report.id));
+        return [...(previous ?? []), ...data.items.filter((report) => !ids.has(report.id))];
+      });
+      cursor.current = data.nextCursor;
+      setMoreState('idle');
+    } catch (error) {
+      if (!mounted.current || request !== generation.current) return;
+      if (error instanceof ApiError && error.code === 'FORBIDDEN') setIsLeader(false);
+      else setMoreState('failed');
+    } finally {
+      if (request === generation.current) morePending.current = false;
+    }
+  };
 
   const act = async () => {
-    // 같은 프레임의 연속 탭은 confirm 이 비워지기 전이라 ref 로 막는다
-    if (!confirm || acting.current) return;
+    if (!confirm || acting.current || isLeader !== true) return;
     acting.current = true;
+    const request = ++generation.current;
+    morePending.current = false;
+    setMoreState('idle');
+    setRefreshing(false);
     const { report, action } = confirm;
     setConfirm(null);
     setBusyId(report.id);
@@ -83,6 +143,7 @@ export default function ReviewReportScreen() {
     } catch (e) {
       error = e;
     }
+    if (!mounted.current || request !== generation.current) return;
     setBusyId(null);
     acting.current = false;
     if (action === 'KICK') {
@@ -101,8 +162,9 @@ export default function ReviewReportScreen() {
   const back = () => (router.canGoBack() ? router.back() : router.replace('/notifications'));
 
   return (
-    <Screen scroll refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load('pull')} />}>
+    <Screen>
       <AppHeader title="신고 처리" onBack={back} />
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ gap: space.md }} onScroll={({ nativeEvent }) => { if (nearBottom(nativeEvent)) void loadMore(); }} scrollEventThrottle={200} refreshControl={<RefreshControl refreshing={refreshing} enabled={busyId == null} onRefresh={() => load('pull')} />}>
 
       {isLeader === false ? (
         <ErrorState
@@ -139,8 +201,10 @@ export default function ReviewReportScreen() {
               onAct={(action) => setConfirm({ report: r, action })}
             />
           ))}
+          {moreState === 'loading' ? <Loading label="신고를 더 불러오고 있어요" /> : moreState === 'failed' ? <Button label="다시 시도" variant="ghost" onPress={loadMore} /> : null}
         </>
       )}
+      </ScrollView>
 
       <Dialog visible={confirm != null} onClose={() => setConfirm(null)} title={confirm ? CONFIRM[confirm.action].title(confirm.report) : ''}
         actions={
