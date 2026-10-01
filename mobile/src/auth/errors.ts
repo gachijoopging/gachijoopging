@@ -42,10 +42,11 @@ export function mapNicknameError(error: unknown): NicknameFieldError {
 
 export type CrewCreateError = { field?: string; banner?: string; alreadyInCrew?: boolean };
 
-/** 1-7 크루 만들기 */
+/** 1-6 크루 만들기 시트 */
 export function mapCrewCreateError(error: unknown): CrewCreateError {
   if (error instanceof ApiError) {
     if (error.code === 'ALREADY_IN_CREW') return { banner: '이미 크루에 소속돼 있어요.', alreadyInCrew: true };
+    if (error.code === 'CREW_NAME_TAKEN') return { field: '이미 사용 중인 크루 이름이에요.' };
     if (error.code === 'VALIDATION') return { field: '크루 이름을 다시 확인해 주세요.' };
   }
   return { banner: '크루를 만들지 못했어요. 네트워크 상태를 확인하고 다시 시도해 주세요.' };

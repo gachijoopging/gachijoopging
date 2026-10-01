@@ -64,12 +64,12 @@ flowchart TD
 | 1-2 | 로그인 | fragment_login | [1-2-login.md](screens/1-2-login.md) | 승인 |
 | 1-3 | 회원가입 | fragment_signup | [1-3-sign-up.md](screens/1-3-sign-up.md) | 배치 승인 · 동의자료 대기 |
 | 1-4 | 소셜 첫 가입 닉네임 | fragment_nickname | [1-4-nickname.md](screens/1-4-nickname.md) | 배치 승인 · 동의자료 대기 |
-| 1-5 | 비밀번호 재설정·확인 | fragment_password_reset, fragment_password_reset_confirm | [1-5-reset-password.md](screens/1-5-reset-password.md) | 승인 |
+| 1-5 | 비밀번호 재설정 (요청·코드 입력 한 화면) | fragment_password_reset, fragment_password_reset_confirm | [1-5-reset-password.md](screens/1-5-reset-password.md) | 승인 |
 | 1-6 | 크루 만들기/가입하기 | 재조립 ← fragment_hood | [1-6-create-or-join-crew.md](screens/1-6-create-or-join-crew.md) | 승인 |
-| 1-7 | 크루 만들기 | 재조립 ← fragment_meet_create | [1-7-create-crew.md](screens/1-7-create-crew.md) | 승인 |
+| 1-7 | 크루 만들기 | 통합됨 → 1-6 시트 | [1-7-create-crew.md](screens/1-7-create-crew.md) | 통합됨 |
 | 1-8 | 초대 코드 입력 | fragment_invite_redeem | [1-8-enter-invite-code.md](screens/1-8-enter-invite-code.md) | 승인 |
 | 1-9 | 승인 대기 | 신규 | [1-9-pending-approval.md](screens/1-9-pending-approval.md) | 승인 |
-| 1-10 | 위치 권한 안내 | fragment_location_gate | [1-10-location-permission.md](screens/1-10-location-permission.md) | 승인 |
+| 1-10 | 위치 권한 안내 | 통합됨 → 4-2 시트 | [1-10-location-permission.md](screens/1-10-location-permission.md) | 통합됨 |
 | 2-1 | 홈 | fragment_home | [2-1-home.md](screens/2-1-home.md) | 승인 |
 | 2-2 | 활동 중인 크루원 목록 | 재조립 ← fragment_friends | [2-2-active-crew-members.md](screens/2-2-active-crew-members.md) | 승인 |
 | 2-3 | 알림 목록 | fragment_notification | [2-3-notifications.md](screens/2-3-notifications.md) | 승인 |

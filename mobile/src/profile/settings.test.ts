@@ -86,3 +86,23 @@ test('프로필 사진 업로드 응답이 유실돼도 같은 업로드 id로 �
   expect(uploads).toHaveLength(2);
   expect(uploads.map(([, body]) => body.get('mediaId'))).toEqual(['upload-1', 'upload-1']);
 });
+
+test('크루가 없거나 승인 대기여도 설정에 머물러 계정 행만 보이고 로그아웃할 수 있다', async () => {
+  const { router } = require('expo-router');
+  for (const status of ['NONE', 'PENDING']) {
+    router.replace.mockClear();
+    mockGet.mockImplementation((key: string) => Promise.resolve({ data: key === 'GET /users/me' ? { ...user, membership: { status, crew: null } } : null }));
+    await mount();
+    expect(router.replace).not.toHaveBeenCalled();
+    expect(row('크루 나가기')).toBeUndefined();
+    expect(row('위치 공유 기본값')).toBeUndefined();
+    expect(row('로그아웃')).toBeDefined();
+    expect(row('회원 탈퇴')).toBeDefined();
+    act(() => tree.unmount());
+  }
+  await mount();
+  await act(async () => row('로그아웃').props.onPress());
+  await act(async () => button('로그아웃')!.props.onPress());
+  expect(mockForget).toHaveBeenCalled();
+  expect(mockDismiss).toHaveBeenCalledWith('/start');
+});
