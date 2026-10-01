@@ -108,3 +108,30 @@ export function leaveFailure(error: unknown): 'delegate' | 'blocked' | 'retry' {
   if (error instanceof ApiError && error.code === 'CONFLICT') return 'blocked';
   return 'retry';
 }
+
+export type DraftPhoto = { key: string; uri: string; name: string; type: string; mediaId: string | null; failed: boolean };
+export type PostDraft = { text: string; photos: DraftPhoto[]; visibility: 'CREW' | 'PRIVATE'; requestId: string | null };
+export const EMPTY_DRAFT: PostDraft = { text: '', photos: [], visibility: 'CREW', requestId: null };
+
+export function parseDraft(text: string | null): PostDraft {
+  if (!text) return EMPTY_DRAFT;
+  try {
+    const raw = JSON.parse(text);
+    return {
+      text: typeof raw.text === 'string' ? raw.text : '',
+      photos: Array.isArray(raw.photos) ? raw.photos : [],
+      visibility: raw.visibility === 'PRIVATE' ? 'PRIVATE' : 'CREW',
+      requestId: typeof raw.requestId === 'string' ? raw.requestId : null,
+    };
+  } catch {
+    return EMPTY_DRAFT;
+  }
+}
+
+/** 보내는 중인 설정 키를 잠근다. 이미 잠겼으면 null — 같은 값을 두 번 보내지 않게 */
+export function lockSetting<K extends string>(locked: readonly K[], key: K): K[] | null {
+  return locked.includes(key) ? null : [...locked, key];
+}
+
+/** 소개글을 접는 글자 수 (5-4·5-5 공통) */
+export const INTRO_FOLD = 40;

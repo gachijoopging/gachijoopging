@@ -1,6 +1,6 @@
 import React from 'react';
 import FeedScreen from '../../app/(tabs)/feed';
-import ActivityDetailScreen from '../../app/5-3-activity-detail';
+import ActivityDetailScreen from '../../app/records/[id]';
 
 const { act, create } = require('react-test-renderer');
 const mockGet = jest.fn();
@@ -51,7 +51,7 @@ jest.mock('design-system/src', () => new Proxy({
   space: { sm: 8, md: 16, lg: 24, xs: 4 }, size: { minTouch: 48 }, radius: {},
   useRipple: () => undefined, useTheme: () => ({ colors: {} }),
   pressedOpacity: () => 1,
-}, { get: (target, key) => key in target ? target[key as keyof typeof target] : String(key) }));
+}, { get: (target, key) => key === 'Dialog' ? (props: any) => require('react').createElement('Dialog', props, props.children, props.actions) : key in target ? target[key as keyof typeof target] : String(key) }));
 jest.mock('../ui/useFlash', () => ({ useFlash: () => require('react').useState(null) }));
 jest.mock('../notifications/notifications', () => ({ relativeTime: () => '방금' }));
 
@@ -131,7 +131,7 @@ test('공유는 기본 경로 제외로 생성한 이미지 URI를 작성 화면
   expect(rendered.root.findByType('ShareCard').props.includeRoute).toBe(false);
   await act(async () => rendered.root.findAllByType('Button').find((b: any) => b.props.label === '피드에 공유하기').props.onPress());
   expect(mockCapture).toHaveBeenCalledTimes(1);
-  expect(require('expo-router').router.push).toHaveBeenCalledWith({ pathname: '/5-6-create-post', params: { imageUri: 'file:///share.png' } });
+  expect(require('expo-router').router.push).toHaveBeenCalledWith({ pathname: '/posts/new', params: { imageUri: 'file:///share.png' } });
 });
 
 test('오프라인 캐시를 보여 주면서 수정·공유·삭제 요청은 막는다', async () => {

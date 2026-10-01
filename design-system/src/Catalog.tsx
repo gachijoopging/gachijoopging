@@ -22,7 +22,8 @@ import { BottomSheet, Dialog } from './components/Sheet.tsx';
 import { Tabs, BottomNav } from './components/Tabs.tsx';
 import { ListRow, SelectRow } from './components/ListRow.tsx';
 import { Progress } from './components/Progress.tsx';
-import { Loading, EmptyState, ErrorState } from './components/States.tsx';
+import { Loading, Spinner, EmptyState, ErrorState } from './components/States.tsx';
+import { Thumb } from './components/Thumb.tsx';
 import { Screen } from './components/Screen.tsx';
 import { Snackbar } from './components/Snackbar.tsx';
 import { LinkText } from './components/LinkText.tsx';
@@ -336,6 +337,9 @@ export function Catalog({ scheme, onScheme }: { scheme: Scheme; onScheme: (s: Sc
             <Avatar name="서상혁" size="md" />
             <Avatar name="김영현" size="sm" />
             <Avatar name="이웃" size="md" ring />
+            <Avatar name="탈퇴한 크루원" size="md" withdrawn />
+            <Thumb uri={null} size="sm" />
+            <Thumb uri={null} size="md" />
             <Badge label={3} />
             <Badge label="새 소식" tone="deep" />
             <Badge label="12" tone="lime" />
@@ -405,6 +409,10 @@ export function Catalog({ scheme, onScheme }: { scheme: Scheme; onScheme: (s: Sc
           <Card padded={false} style={{ padding: space.sm }}>
             <Loading />
           </Card>
+          <Row>
+            <Spinner />
+            <Txt variant="section" bold>기록을 저장하고 있어요…</Txt>
+          </Row>
           <EmptyState
             icon="map-marker-off"
             title="아직 기록이 없어요"
@@ -437,12 +445,18 @@ export function Catalog({ scheme, onScheme }: { scheme: Scheme; onScheme: (s: Sc
         <Button label="닫기" variant="ghost" fullWidth onPress={() => setSheet(false)} />
       </BottomSheet>
 
-      <Dialog visible={dialog} onClose={() => setDialog(false)} title="모임을 나갈까요?">
+      <Dialog
+        visible={dialog}
+        onClose={() => setDialog(false)}
+        title="모임을 나갈까요?"
+        actions={
+          <>
+            <Button label="취소" variant="ghost" size="md" onPress={() => setDialog(false)} />
+            <Button label="나가기" variant="danger" size="md" onPress={() => setDialog(false)} />
+          </>
+        }
+      >
         <Txt variant="body" tone="muted">나가면 대화 내용을 볼 수 없습니다.</Txt>
-        <Row>
-          <Button label="나가기" size="md" onPress={() => setDialog(false)} />
-          <Button label="취소" variant="ghost" size="md" onPress={() => setDialog(false)} />
-        </Row>
       </Dialog>
 
     </>

@@ -35,7 +35,7 @@ export async function tick(now: number) {
   if (!session || ended || now - lastLiveAt < LIVE_EVERY_MS) return;
   lastLiveAt = now;
   const { title, body } = trackingNotice(session, now);
-  updateTrackingNotification(TRACKING_TASK, title, body, `gachijoopging://4-3-activity-in-progress?id=${session.activityId}`);
+  updateTrackingNotification(TRACKING_TASK, title, body, `gachijoopging://activity/[id]?id=${session.activityId}`);
   const [permission, enabled] = await Promise.all([
     Location.getForegroundPermissionsAsync().catch(() => null),
     Location.hasServicesEnabledAsync().catch(() => false),
@@ -59,7 +59,8 @@ export async function startTracking(): Promise<boolean> {
       foregroundService: { notificationTitle: title, notificationBody: body, killServiceOnDestroy: false },
     });
     return true;
-  } catch {
+  } catch (e) {
+    console.warn('[tracking] start failed', e instanceof Error ? e.message : String(e));
     return false;
   }
 }

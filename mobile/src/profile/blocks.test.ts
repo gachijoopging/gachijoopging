@@ -8,7 +8,7 @@ jest.mock('expo-router', () => ({ router: { back: jest.fn(), push: jest.fn() }, 
 jest.mock('react-native', () => ({ View: 'View', RefreshControl: 'RefreshControl', Platform: { OS: 'android', select: (options: Record<string, unknown>) => options.android ?? options.default } }));
 jest.mock('design-system/src', () => new Proxy({ space: { md: 16 } }, { get: (target, key) => key in target ? target[key as keyof typeof target] : String(key) }));
 jest.mock('../auth/account', () => ({ currentAccount: () => ({ id: 'viewer', hasCrew: true }) }));
-import Blocks from '../../app/5-9-manage-blocks';
+import Blocks from '../../app/settings/blocks';
 const users = ['a', 'b', 'c'].map((id) => ({ id, nickname: id, photoUrl: null, withdrawn: false }));
 const deferred = () => { let resolve!: (value?: unknown) => void; let reject!: (error: Error) => void; const promise = new Promise((yes, no) => { resolve = yes; reject = no; }); return { promise, resolve, reject }; };
 let tree: ReactTestRenderer;

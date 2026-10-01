@@ -136,7 +136,7 @@ export function RecordsPanel({ refreshKey }: { refreshKey: number }) {
                       onPress={() =>
                         mine
                           ? router.push('/(tabs)/profile')
-                          : router.push({ pathname: '/5-4-user-profile', params: { id: row.user.id } })
+                          : router.push({ pathname: '/users/[id]', params: { id: row.user.id } })
                       }
                     />
                   );

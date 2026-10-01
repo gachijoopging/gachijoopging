@@ -11,6 +11,7 @@ import com.kakao.vectormap.KakaoMapSdk
 import com.kakao.vectormap.LatLng
 import com.kakao.vectormap.MapLifeCycleCallback
 import com.kakao.vectormap.MapView
+import com.kakao.vectormap.camera.CameraAnimation
 import com.kakao.vectormap.camera.CameraUpdateFactory
 import com.kakao.vectormap.label.Label
 import com.kakao.vectormap.label.LabelOptions
@@ -38,6 +39,9 @@ class KakaoMapView(context: Context, appContext: AppContext) : ExpoView(context,
   private val onMarkerPress by EventDispatcher()
   private val onUserGesture by EventDispatcher()
 
+  // react-native-screens 는 다른 화면이 위에 오면 이 화면의 fragment 를 떼므로 지도가 창에서 빠진다.
+  // SDK 는 그때 finishManually 가 아니면 엔진을 스스로 끝내 버려 돌아와도 검게 남는다.
+  // 끝내기는 unmount 때 우리가 하고, 창에서 빠지고 붙을 때는 렌더 스레드만 멈췄다 잇는다
   private val mapView = MapView(context).also { addView(it) }
   private var map: KakaoMap? = null
   private var started = false
@@ -49,9 +53,23 @@ class KakaoMapView(context: Context, appContext: AppContext) : ExpoView(context,
   private var meAccuracy: Polygon? = null
   /** 첫 이동만 확대 수준을 정한다. 그 뒤로는 사용자가 맞춘 확대를 지킨다 */
   private var cameraPlaced = false
+  /** 따라가기 중 점마다 순간이동하면 지도가 1초 간격으로 끊긴다. 모션 줄이기면 끈다 */
+  var animateCamera = true
   private var pendingMarkers: List<Marker> = emptyList()
   /** id 로 추가·이동·제거를 가른다. 소켓 갱신마다 전부 다시 그리지 않기 위해서다 */
   private val labels = mutableMapOf<String, Pair<Marker, Label>>()
+
+  override fun onAttachedToWindow() {
+    super.onAttachedToWindow()
+    if (map != null) mapView.resume()
+  }
+
+  override fun onDetachedFromWindow() {
+    if (map != null) mapView.pause()
+    super.onDetachedFromWindow()
+  }
+
+  fun destroy() = mapView.finish()
 
   /** 키가 와야 SDK 를 초기화할 수 있고, 초기화 전에는 지도를 띄울 수 없다. */
   fun setAppKey(appKey: String) {
@@ -112,13 +130,19 @@ class KakaoMapView(context: Context, appContext: AppContext) : ExpoView(context,
         }
       },
     )
+    // start() 가 내부 SurfaceView 를 만든 뒤라야 먹는다. 그 전에 부르면 조용히 무시된다
+    mapView.setFinishManually(true)
   }
 
   private fun moveCamera(target: LatLng) {
     val kakaoMap = map ?: return
-    val update = if (cameraPlaced) CameraUpdateFactory.newCenterPosition(target) else CameraUpdateFactory.newCenterPosition(target, ZOOM_LEVEL)
-    cameraPlaced = true
-    kakaoMap.moveCamera(update)
+    if (!cameraPlaced) {
+      cameraPlaced = true
+      kakaoMap.moveCamera(CameraUpdateFactory.newCenterPosition(target, ZOOM_LEVEL))
+      return
+    }
+    val update = CameraUpdateFactory.newCenterPosition(target)
+    if (animateCamera) kakaoMap.moveCamera(update, CameraAnimation.from(CAMERA_MS)) else kakaoMap.moveCamera(update)
   }
 
   /** 일시정지로 끊긴 구간은 이어 긋지 않는다. 매번 통째로 다시 그린다 — 한 활동의 점 수로는 충분히 가볍다 */
@@ -226,6 +250,7 @@ class KakaoMapView(context: Context, appContext: AppContext) : ExpoView(context,
 
   private companion object {
     const val ZOOM_LEVEL = 16
+    const val CAMERA_MS = 300
     const val PATH_WIDTH_DP = 8f
     const val PATH_COLOR = 0xFF6FBF3F.toInt()
     const val MARKER_DP = 32f

@@ -90,12 +90,13 @@ export function Tabs<T extends string>({
         alignSelf: fullWidth ? 'stretch' : 'flex-start',
       }}
     >
-      {items.map((it) => {
+      {items.map((it, i) => {
         const on = it.value === value;
         return (
           <Pressable
             key={it.value}
             accessibilityRole="tab"
+            accessibilityLabel={`${it.label} 탭, ${items.length}개 중 ${i + 1}번째`}
             accessibilityState={{ selected: on }}
             onPress={() => onChange(it.value)}
             android_ripple={ripple}

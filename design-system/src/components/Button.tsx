@@ -161,9 +161,12 @@ export function Button({
 export function CaptureButton({
   onPress,
   disabled,
+  accessibilityLabel = '촬영',
 }: {
   onPress?: () => void;
   disabled?: boolean;
+  /** 무엇을 찍는지까지 말해야 하는 자리 (예: "쓰레기 촬영") */
+  accessibilityLabel?: string;
 }) {
   const { colors, shadows } = useTheme();
   const ripple = useRipple(undefined, true);
@@ -171,7 +174,7 @@ export function CaptureButton({
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel="촬영"
+      accessibilityLabel={accessibilityLabel}
       disabled={disabled}
       onPress={onPress}
       android_ripple={disabled ? undefined : ripple}

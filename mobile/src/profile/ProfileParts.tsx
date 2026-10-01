@@ -6,6 +6,7 @@ import {
   IconButton,
   IconCircle,
   MetricSplit,
+  Thumb,
   Tile,
   Txt,
   pressedOpacity,
@@ -45,8 +46,7 @@ export function StatsTile({ stats }: { stats: Stats | null }) {
   );
 }
 
-export function ActivityCardView({ card, onPress, onDelete }: { card: ActivityCard; onPress: () => void; onDelete?: () => void }) {
-  const { colors } = useTheme();
+export function ActivityCardView({ card, onPress, onMenu }: { card: ActivityCard; onPress: () => void; onMenu?: () => void }) {
   const title = activityTitle(card.startedAt);
   const empty = card.itemCount === 0;
   const label = `${title}, ${card.itemCount}개, ${formatElapsed(card.durationSec)}, ${spokenDistance(card.distanceM)}${empty ? ', 줍기 기록 없음' : ''}, 활동 기록 상세로 이동`;
@@ -56,15 +56,11 @@ export function ActivityCardView({ card, onPress, onDelete }: { card: ActivityCa
         <View style={{ gap: space.sm }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm, minHeight: sizes.iconButton }}>
             {card.thumbUrl ? (
-              <Image
-                source={{ uri: card.thumbUrl }}
-                accessible={false}
-                style={{ width: sizes.iconCircleMd, height: sizes.iconCircleMd, borderRadius: radius.pill, backgroundColor: colors.tint }}
-              />
+              <Thumb uri={card.thumbUrl} size="sm" />
             ) : (
               <IconCircle icon="sprout" tone="tint" size="md" />
             )}
-            <Txt variant="body" bold style={{ flex: 1, marginRight: onDelete ? sizes.iconButton : 0 }}>{title}</Txt>
+            <Txt variant="body" bold style={{ flex: 1, marginRight: onMenu ? sizes.iconButton : 0 }}>{title}</Txt>
           </View>
           <MetricSplit
             items={[
@@ -72,15 +68,14 @@ export function ActivityCardView({ card, onPress, onDelete }: { card: ActivityCa
               { value: formatElapsed(card.durationSec), label: '시간' },
               { value: formatDistance(card.distanceM), label: '거리' },
             ]}
-            accessibilityLabel={label}
           />
           {empty ? <Chip label="줍기 기록 없음" tone="neutral" /> : null}
         </View>
       </Card>
       {/* 카드 전체가 한 버튼이라 안에 두면 스크린리더가 닿지 못한다. 카드 밖 형제로 겹쳐 따로 읽히게 한다 */}
-      {onDelete ? (
+      {onMenu ? (
         <View style={{ position: 'absolute', top: space.md, right: space.md }}>
-          <IconButton icon="dots-horizontal" label="기록 삭제" onPress={onDelete} />
+          <IconButton icon="dots-horizontal" label="기록 관리" onPress={onMenu} />
         </View>
       ) : null}
     </View>
@@ -120,7 +115,7 @@ export function PostGrid({ posts, onOpen }: { posts: readonly Post[]; onOpen: (i
               )}
               {isPrivate ? (
                 <View style={{ position: 'absolute', left: space.xs, bottom: space.xs }}>
-                  <Chip label="🔒 나만 보기" tone="overlay" accessibilityLabel="나만 보기" />
+                  <Chip label="나만 보기" icon="lock-outline" tone="overlay" />
                 </View>
               ) : null}
             </Pressable>

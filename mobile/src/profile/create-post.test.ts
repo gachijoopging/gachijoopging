@@ -1,5 +1,5 @@
 import React from 'react';
-import CreatePostScreen from '../../app/5-6-create-post';
+import CreatePostScreen from '../../app/posts/new';
 import { emptyDraft, keepPhoto, loadDraft, rememberPostScope, saveDraft } from './post-draft';
 
 const { act, create } = require('react-test-renderer');
@@ -42,7 +42,7 @@ jest.mock('react-native', () => new Proxy({
 }, { get: (target, key) => key in target ? target[key as keyof typeof target] : jest.requireActual('react-native')[key] }));
 jest.mock('design-system/src', () => new Proxy({
   space: { sm: 8, md: 16, lg: 24, xs: 4 }, radius: {}, borderWidth: {},
-  useRipple: () => undefined, useTheme: () => ({ colors: {} }), pressedOpacity: () => 1,
+  useReduceMotion: () => true, useRipple: () => undefined, useTheme: () => ({ colors: {} }), pressedOpacity: () => 1,
 }, { get: (target, key) => key in target ? target[key as keyof typeof target] : String(key) }));
 
 const scope = { userId: 'u1', crewId: 'c1' };

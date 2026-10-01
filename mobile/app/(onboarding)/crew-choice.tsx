@@ -1,0 +1,111 @@
+// 화면 1-6 · docs/screens/1-6-create-or-join-crew.md
+import { useCallback, useRef, useState } from 'react';
+import { AppState, BackHandler, View } from 'react-native';
+import { router, useFocusEffect, useNavigation } from 'expo-router';
+import { AppHeader, Banner, Button, Card, Icon, Screen, Snackbar, Txt, space } from 'design-system/src';
+import { useFlash } from '../../src/ui/useFlash';
+import { onboardingApi as api } from '../../src/api/onboarding';
+import { resolveDestination } from '../../src/auth/destination';
+import { finishOnboarding, type OnboardingNavigation } from '../../src/auth/navigation';
+
+function CrewChoice({
+  icon,
+  title,
+  onPress,
+  disabled,
+}: {
+  icon: 'plus' | 'key-outline';
+  title: string;
+  onPress: () => void;
+  disabled: boolean;
+}) {
+  return (
+    <Card accessibilityLabel={title} onPress={onPress} disabled={disabled}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.md }}>
+        <Icon name={icon} />
+        <Txt variant="section" bold style={{ flex: 1 }}>{title}</Txt>
+        <Icon name="chevron-right" />
+      </View>
+    </Card>
+  );
+}
+
+export default function CreateOrJoinCrewScreen() {
+  const navigation = useNavigation<OnboardingNavigation>('/');
+  const busy = useRef(false);
+  const [checking, setChecking] = useState(false);
+  const [error, setError] = useState(false);
+  const [flash, setFlash] = useFlash();
+
+  const checkMembership = useCallback(async (next?: '/create-crew' | '/enter-invite-code') => {
+    if (busy.current) return;
+    busy.current = true;
+    setChecking(true);
+    setError(false);
+    try {
+      const me = await api.get('GET /users/me');
+      const destination = resolveDestination(me.data);
+      if (destination !== '/crew-choice') {
+        finishOnboarding(navigation, destination);
+      } else if (next) {
+        router.push(next);
+      }
+    } catch {
+      setError(true);
+      if (next) router.push(next);
+    } finally {
+      busy.current = false;
+      setChecking(false);
+    }
+  }, [navigation]);
+
+  useFocusEffect(useCallback(() => {
+    const appState = AppState.addEventListener('change', (state) => {
+      if (state === 'active') void checkMembership();
+    });
+    const back = BackHandler.addEventListener('hardwareBackPress', () => {
+      BackHandler.exitApp();
+      return true;
+    });
+    return () => { appState.remove(); back.remove(); };
+  }, [checkMembership]));
+
+  return (
+    <Screen scroll>
+      <AppHeader title="크루 시작하기" onBack={() => BackHandler.exitApp()} />
+
+      <View style={{ alignItems: 'center', gap: space.sm }}>
+        <Txt variant="title" bold style={{ textAlign: 'center' }}>
+          함께 줍는 크루를 선택해 주세요
+        </Txt>
+      </View>
+
+      <CrewChoice
+        icon="plus"
+        title="새 크루 만들기"
+        disabled={checking}
+        onPress={() => { void checkMembership('/create-crew'); }}
+      />
+      <CrewChoice
+        icon="key-outline"
+        title="초대 코드로 가입하기"
+        disabled={checking}
+        onPress={() => { void checkMembership('/enter-invite-code'); }}
+      />
+
+      {error ? <>
+        <Banner tone="danger">소속을 확인하지 못했어요. 네트워크 상태를 확인해 주세요.</Banner>
+        <Button label="다시 시도" disabled={checking} onPress={() => { void checkMembership(); }} />
+      </> : null}
+      <Button
+        label="내 활동 기록 보기"
+        variant="ghost"
+        size="lg"
+        fullWidth
+        accessibilityLabel="내 활동 기록 보기, 이전 크루의 내 기록 포함"
+        onPress={() => router.push('/records')}
+      />
+      <Snackbar visible={flash != null} message={flash ?? ''} onDismiss={() => setFlash(null)} />
+    </Screen>
+  );
+}

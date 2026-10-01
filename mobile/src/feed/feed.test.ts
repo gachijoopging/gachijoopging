@@ -5,6 +5,8 @@ import {
   manageAction,
   photoLabel,
   toggleLike,
+  likeRequest,
+  syncLike,
 } from './feed';
 
 const me = 'u1';
@@ -99,5 +101,48 @@ describe('사진 라벨', () => {
 
   test('여러 장이면 몇 번째인지 읽는다', () => {
     expect(photoLabel(0, 3)).toBe('게시물 사진, 3장 중 1번째');
+  });
+});
+
+describe('좋아요 동기화 — 마지막 상태만 보낸다', () => {
+  test('서버와 같으면 보내지 않는다', () => {
+    expect(likeRequest(true, true)).toBeNull();
+    expect(likeRequest(false, false)).toBeNull();
+  });
+
+  test('다르면 원하는 쪽으로 한 번 보낸다', () => {
+    expect(likeRequest(false, true)).toBe('PUT /posts/{postId}/like');
+    expect(likeRequest(true, false)).toBe('DELETE /posts/{postId}/like');
+  });
+});
+
+describe('좋아요 연타', () => {
+  test('보내는 사이에 다시 눌러 원래대로 돌아오면 두 번째 요청으로 되돌린다', async () => {
+    const st = { server: false, wanted: true };
+    const sent: string[] = [];
+    await syncLike(st, async (key) => {
+      sent.push(key);
+      if (sent.length === 1) st.wanted = false;
+    });
+    expect(sent).toEqual(['PUT /posts/{postId}/like', 'DELETE /posts/{postId}/like']);
+    expect(st.server).toBe(false);
+  });
+
+  test('두 번 눌러 제자리면 아무것도 보내지 않는다', async () => {
+    const send = jest.fn();
+    await syncLike({ server: true, wanted: true }, send);
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  test('중간에 실패해도 그때까지 반영된 서버 상태를 남긴다', async () => {
+    const st = { server: false, wanted: true };
+    let n = 0;
+    const send = async () => {
+      n++;
+      if (n === 1) st.wanted = false;
+      else throw new Error('offline');
+    };
+    await expect(syncLike(st, send)).rejects.toThrow();
+    expect(st.server).toBe(true);
   });
 });

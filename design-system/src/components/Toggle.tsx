@@ -12,6 +12,8 @@ export type SwitchProps = Omit<RNSwitchProps, 'disabled' | 'onValueChange' | 'va
   onValueChange: (value: boolean) => void;
   disabled?: boolean;
   style?: ViewStyle;
+  /** 행 제목이 이미 이름을 보일 때. 스크린리더에는 label 이 그대로 읽힙니다 */
+  hideLabel?: boolean;
 };
 
 /**
@@ -19,11 +21,11 @@ export type SwitchProps = Omit<RNSwitchProps, 'disabled' | 'onValueChange' | 'va
  * 반영되는 값이면 `Checkbox` 가 맞습니다.
  * 켬 트랙은 라임, 손잡이는 onLime 이라 라임 단독의 낮은 대비를 손잡이가 보강합니다.
  */
-export function Switch({ label, value, onValueChange, disabled, style, ...rest }: SwitchProps) {
+export function Switch({ label, value, onValueChange, disabled, style, hideLabel, ...rest }: SwitchProps) {
   const { colors } = useTheme();
   return (
     <View style={[{ minHeight: sizes.minTouch, flexDirection: 'row', alignItems: 'center', gap: space.md }, style]}>
-      <Txt variant="bodyLg" style={{ flex: 1 }}>{label}</Txt>
+      {hideLabel ? null : <Txt variant="bodyLg" style={{ flex: 1 }}>{label}</Txt>}
       <RNSwitch
         accessibilityLabel={label}
         accessibilityState={{ disabled: !!disabled, checked: value }}
@@ -31,7 +33,8 @@ export function Switch({ label, value, onValueChange, disabled, style, ...rest }
         onValueChange={onValueChange}
         disabled={disabled}
         trackColor={{ false: colors.track, true: colors.lime }}
-        thumbColor={value ? colors.onLime : colors.surface}
+        // 꺼짐 손잡이가 밝으면 밝은 트랙·바탕에 묻혀 상태가 안 보인다
+        thumbColor={value ? colors.onLime : colors.inkFaint}
         ios_backgroundColor={colors.track}
         {...rest}
       />

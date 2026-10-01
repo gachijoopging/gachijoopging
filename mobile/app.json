@@ -36,6 +36,13 @@
       ],
       "expo-notifications",
       [
+        "expo-camera",
+        {
+          "cameraPermission": "쓰레기 촬영과 AI 분류에 카메라를 사용해요.",
+          "recordAudioAndroid": false
+        }
+      ],
+      [
         "expo-location",
         {
           "isAndroidForegroundServiceEnabled": true,
@@ -43,7 +50,6 @@
         }
       ],
       "expo-dev-client",
-      ["expo-camera", {"recordAudioAndroid": false}],
       "@react-native-vector-icons/material-design-icons",
       [
         "expo-splash-screen",
@@ -62,6 +68,9 @@
           "microphonePermission": false
         }
       ]
-    ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
   }
 }

@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import { View } from 'react-native';
 import { captureRef } from 'react-native-view-shot';
-import { Txt, radius, space, useTheme } from 'design-system/src';
+import { Txt, radius, size, space, useTheme } from 'design-system/src';
 import type { LatLng } from '../../modules/kakao-map';
 import { summaryMeta } from './pickup';
 import { routeStrokes, shareLines } from './share';
@@ -32,7 +32,7 @@ export function useShareImage() {
 export function ShareCard({ cardRef, data, includeRoute }: { cardRef: React.RefObject<View | null>; data: ShareData; includeRoute: boolean }) {
   const { colors } = useTheme();
   const strokes = includeRoute ? routeStrokes(data.segments, SIDE - space.xl * 2, ROUTE_HEIGHT) : [];
-  const line = space.xs;
+  const line = size.routeStroke;
   return (
     <View pointerEvents="none" importantForAccessibility="no-hide-descendants" style={{ position: 'absolute', left: -SIDE * 4, top: 0 }}>
       <View

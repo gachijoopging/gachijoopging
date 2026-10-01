@@ -36,6 +36,12 @@ export function DashedBox({ children }: { children: ReactNode }) {
   );
 }
 
+/** 글자 옆에 서는 작은 진행 표시. 옆 글자가 무엇을 하는지 말하므로 읽지 않습니다 */
+export function Spinner() {
+  const { colors } = useTheme();
+  return <ActivityIndicator size="small" color={colors.deep} importantForAccessibility="no-hide-descendants" />;
+}
+
 /** 불러오는 중. 화면 전체를 덮지 말고 바뀌는 영역에만 두세요. */
 export function Loading({ label = '불러오는 중' }: { label?: string }) {
   const { colors } = useTheme();

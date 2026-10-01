@@ -48,6 +48,8 @@ export function Banner({
     <View
       // neutral 은 늘 떠 있는 안내문이라, 화면에 올 때마다 끼어들어 읽히면 소음입니다.
       accessibilityRole={tone === 'neutral' ? undefined : 'alert'}
+      // 안드로이드는 alert 역할만으로는 나타날 때 읽지 않는다
+      accessibilityLiveRegion={tone === 'neutral' ? 'none' : 'polite'}
       style={{
         flexDirection: 'row',
         gap: space.md,

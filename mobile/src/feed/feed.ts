@@ -53,3 +53,28 @@ export function emptyCopy(scope: FeedScope, filtered: boolean): { title: string;
 export function photoLabel(index: number, total: number): string {
   return total > 1 ? `게시물 사진, ${total}장 중 ${index + 1}번째` : '게시물 사진';
 }
+
+/** 빠르게 여러 번 눌러도 요청은 마지막 상태 하나만 — 서버가 이미 그 상태면 보내지 않는다 */
+export function likeRequest(server: boolean, wanted: boolean): 'PUT /posts/{postId}/like' | 'DELETE /posts/{postId}/like' | null {
+  if (server === wanted) return null;
+  return wanted ? 'PUT /posts/{postId}/like' : 'DELETE /posts/{postId}/like';
+}
+
+/**
+ * 서버 상태가 마지막으로 원한 상태와 같아질 때까지 보낸다. 성공할 때마다 st.server 를 고치므로
+ * 실패해도 st.server 가 실제 서버 상태다 — 부르는 쪽은 그 값으로 화면을 되돌린다
+ */
+export type LikeSync = { server: boolean; wanted: boolean };
+
+export async function syncLike(
+  st: LikeSync,
+  send: (key: 'PUT /posts/{postId}/like' | 'DELETE /posts/{postId}/like') => Promise<unknown>,
+): Promise<void> {
+  for (let req = likeRequest(st.server, st.wanted); req; req = likeRequest(st.server, st.wanted)) {
+    await send(req);
+    st.server = !st.server;
+  }
+}
+
+/** 탈퇴는 withdrawn 으로만 판별한다. 서버가 남긴 닉네임 문자열에 기대지 않는다 */
+export const displayName = (author: { nickname: string; withdrawn: boolean }) => (author.withdrawn ? '탈퇴한 크루원' : author.nickname);

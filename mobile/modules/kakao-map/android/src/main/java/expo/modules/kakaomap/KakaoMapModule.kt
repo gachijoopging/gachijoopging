@@ -11,8 +11,14 @@ class KakaoMapModule : Module() {
     View(KakaoMapView::class) {
       Events("onMapReady", "onMapError", "onMarkerPress", "onUserGesture")
 
+      OnViewDestroys { view: KakaoMapView -> view.destroy() }
+
       Prop("appKey") { view: KakaoMapView, appKey: String ->
         view.setAppKey(appKey)
+      }
+
+      Prop("animateCamera") { view: KakaoMapView, animate: Boolean ->
+        view.animateCamera = animate
       }
 
       Prop("center") { view: KakaoMapView, center: Map<String, Double>? ->

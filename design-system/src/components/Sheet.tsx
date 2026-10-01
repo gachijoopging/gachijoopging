@@ -213,13 +213,17 @@ export function Dialog({
   onClose,
   title,
   children,
+  actions,
 }: {
   visible: boolean;
   onClose: () => void;
   title: string;
-  children: ReactNode;
+  children?: ReactNode;
+  /** 오른쪽에 모이는 버튼 줄. 취소 쪽을 먼저 둡니다 — 뜨자마자 그 버튼부터 읽힙니다 */
+  actions?: ReactNode;
 }) {
   const { colors, shadows } = useTheme();
+  const titleRef = useRef<Text>(null);
   return (
     <Modal
       visible={visible}
@@ -228,6 +232,11 @@ export function Dialog({
       statusBarTranslucent
       navigationBarTranslucent
       onRequestClose={onClose}
+      // 떴다는 것과 무엇을 묻는지부터 읽히게 제목으로 초점을 옮긴다
+      onShow={() => {
+        const node = findNodeHandle(titleRef.current);
+        if (node) AccessibilityInfo.setAccessibilityFocus(node);
+      }}
     >
       <Pressable
         accessibilityLabel="닫기"
@@ -252,8 +261,11 @@ export function Dialog({
             ...depth('overlay', shadows.overlay),
           }}
         >
-          <Txt variant="title">{title}</Txt>
+          <Txt ref={titleRef} variant="title" accessibilityRole="header">{title}</Txt>
           {children}
+          {actions ? (
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'flex-end', gap: space.sm }}>{actions}</View>
+          ) : null}
         </Pressable>
       </Pressable>
     </Modal>

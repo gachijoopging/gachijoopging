@@ -27,7 +27,7 @@ import {
 import { ApiError, createMockClient, type ApiClient } from '../../src/api/client';
 import { canGoNextMonth, isFutureDate, kstToday, monthGrid, shiftMonth } from '../../src/crew/calendar';
 import { PostCard } from '../../src/feed/PostCard';
-import { beforeLabel, emptyCopy, toggleLike, type FeedScope, type Post } from '../../src/feed/feed';
+import { beforeLabel, emptyCopy, syncLike, toggleLike, type FeedScope, type LikeSync, type Post } from '../../src/feed/feed';
 import { leaveForMembership } from '../../src/feed/leave';
 import { useFlash } from '../../src/ui/useFlash';
 import { useBlockedUsers } from '../../src/profile/blocked-users';
@@ -57,7 +57,7 @@ export default function FeedScreen() {
   const [failed, setFailed] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [moreState, setMoreState] = useState<'idle' | 'loading' | 'failed'>('idle');
-  const [liking, setLiking] = useState<ReadonlySet<string>>(new Set());
+  const liking = useRef(new Map<string, LikeSync>());
   const [pickerOpen, setPickerOpen] = useState(false);
   const [snackbar, setSnackbar] = useFlash();
   const listRef = useRef<FlatList<Post>>(null);
@@ -155,35 +155,36 @@ export default function FeedScreen() {
     setPage((p) => p && { ...p, items: p.items.map((it) => (it.id === id ? fn(it) : it)) });
 
   const like = async (post: Post) => {
-    if (liking.has(post.id)) return;
-    setLiking((s) => new Set(s).add(post.id));
+    // 연타해도 요청은 마지막 상태 하나로 모인다. 보내는 동안의 탭은 원하는 값만 바꾼다
+    const running = liking.current.get(post.id);
+    const st = running ?? { server: post.liked, wanted: post.liked };
+    st.wanted = !st.wanted;
     updatePost(post.id, toggleLike);
+    if (running) return;
+    liking.current.set(post.id, st);
     try {
-      await api.mutate(post.liked ? 'DELETE /posts/{postId}/like' : 'PUT /posts/{postId}/like', { postId: post.id });
+      await syncLike(st, (key) => api.mutate(key, { postId: post.id }));
     } catch (e) {
       if (e instanceof ApiError && e.code === 'NOT_FOUND') {
         setPage((p) => p && { ...p, items: p.items.filter((it) => it.id !== post.id) });
         setSnackbar('삭제된 게시물이에요');
       } else {
-        updatePost(post.id, toggleLike);
+        updatePost(post.id, (p) => (p.liked === st.server ? p : toggleLike(p)));
         setSnackbar('좋아요를 반영하지 못했어요');
       }
     } finally {
-      setLiking((s) => {
-        const next = new Set(s);
-        next.delete(post.id);
-        return next;
-      });
+      liking.current.delete(post.id);
     }
   };
 
+
   const openAuthor = (post: Post) =>
-    post.author.id === meId ? router.push('/(tabs)/profile') : router.push({ pathname: '/5-4-user-profile', params: { id: post.author.id } });
+    post.author.id === meId ? router.push('/(tabs)/profile') : router.push({ pathname: '/users/[id]', params: { id: post.author.id } });
 
   const openPost = (post: Post, focusComment?: boolean) =>
-    router.push({ pathname: '/5-2-post-detail', params: { id: post.id, ...(focusComment ? { focus: 'comment' } : {}) } });
+    router.push({ pathname: '/posts/[id]', params: { id: post.id, ...(focusComment ? { focus: 'comment' } : {}) } });
 
-  const write = () => router.push('/5-6-create-post');
+  const write = () => router.push('/posts/new');
   const empty = emptyCopy(scope, before != null);
   const pill = before ? beforeLabel(before, today) : null;
 
@@ -218,9 +219,9 @@ export default function FeedScreen() {
 
       {!page ? (
         failed ? (
-          <ErrorState title="불러오지 못했어요" description="연결 상태를 확인하고 다시 시도해 주세요." onRetry={() => load('first')} />
+          <ErrorState title="게시물을 불러오지 못했어요" description="연결 상태를 확인하고 다시 시도해 주세요." onRetry={() => load('first')} />
         ) : (
-          <Loading label="불러오는 중…" />
+          <Loading label="게시물을 불러오고 있어요" />
         )
       ) : (
         <FlatList
@@ -236,7 +237,6 @@ export default function FeedScreen() {
               post={item}
               meId={meId}
               mineTab={scope === 'MINE'}
-              liking={liking.has(item.id)}
               onOpen={(focus) => openPost(item, focus)}
               onAuthor={() => openAuthor(item)}
               onLike={() => like(item)}
@@ -253,7 +253,7 @@ export default function FeedScreen() {
           }
           ListFooterComponent={
             moreState === 'loading' ? (
-              <Loading label="불러오는 중…" />
+              <Loading label="게시물을 불러오고 있어요" />
             ) : moreState === 'failed' ? (
               <Button label="다시 시도" variant="ghost" size="sm" onPress={loadMore} style={{ alignSelf: 'center' }} />
             ) : null

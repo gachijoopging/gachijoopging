@@ -16,7 +16,7 @@ type SheetTarget = { title: string } | null;
 
 /**
  * 1-3·1-4 가 공유하는 필수/선택 동의 목록. 실제 약관·개인정보 전문·버전·저장 계약은
- * 미결(screens/1-3-sign-up.md·1-4-nickname.md)이라 "내용 보기" 는 준비 중 안내만 보여 준다.
+ * 미결(screens/sign-up.md·1-4-nickname.md)이라 "내용 보기" 는 준비 중 안내만 보여 준다.
  */
 export function AgreementFields({
   termsChecked,

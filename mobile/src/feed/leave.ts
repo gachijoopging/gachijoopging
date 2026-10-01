@@ -8,6 +8,6 @@ export async function leaveForMembership(): Promise<void> {
     const { data } = await createMockClient().get('GET /users/me');
     router.replace(resolveDestination(data));
   } catch {
-    router.replace('/1-6-create-or-join-crew');
+    router.replace('/crew-choice');
   }
 }

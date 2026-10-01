@@ -59,7 +59,7 @@ afterEach(async () => { await unmount(); });
 async function mount(feed = false) {
   const React = require('react');
   const { act, create } = require('react-test-renderer');
-  const Component = feed ? require('../../app/(tabs)/feed').default : require('../../app/5-2-post-detail').default;
+  const Component = feed ? require('../../app/(tabs)/feed').default : require('../../app/posts/[id]').default;
   await act(async () => { rendered = create(React.createElement(Component)); });
 }
 

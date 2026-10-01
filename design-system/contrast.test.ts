@@ -160,6 +160,10 @@ for (const [name, p] of themes) {
     atLeast(p.kakaoInk, p.kakao, 4.5, `${name} Button kakao`);
     atLeast(p.inkMuted, p.track, 4.5, `${name} Button primary 비활성`);
 
+    // Switch 꺼짐 · 손잡이 위치가 상태를 말하므로 손잡이가 트랙·바탕 위에서 보여야 합니다(1.4.11)
+    atLeast(p.inkFaint, p.track, 3, `${name} Switch 꺼짐 손잡이/트랙`);
+    atLeast(p.inkFaint, p.surface, 3, `${name} Switch 꺼짐 손잡이/바탕`);
+
     // Tabs · 비선택 라벨은 트랙 위에 얹힙니다
     atLeast(p.inkMuted, p.track, 4.5, `${name} Tabs 비선택`);
 

@@ -6,8 +6,8 @@ jest.mock('../api/client', () => ({ ApiError: class extends Error { code: string
 jest.mock('expo/src/winter/fetch', () => ({ fetch: jest.fn() }));
 jest.mock('expo-router', () => ({ router: { canGoBack: () => true, back: jest.fn(), replace: jest.fn() }, useLocalSearchParams: () => ({}), useFocusEffect: (fn: () => void) => require('react').useEffect(fn, [fn]) }));
 jest.mock('react-native', () => ({ View: 'View', Pressable: 'Pressable', ScrollView: 'ScrollView', RefreshControl: 'RefreshControl', Image: 'Image', Platform: { OS: 'android', select: (options: Record<string, unknown>) => options.android ?? options.default } }));
-jest.mock('design-system/src', () => new Proxy({ space: { md: 16, sm: 8, xs: 4 }, size: { minTouch: 48 }, useRipple: () => undefined }, { get: (target, key) => key in target ? target[key as keyof typeof target] : String(key) }));
-import Review from '../../app/6-2-review-report';
+jest.mock('design-system/src', () => new Proxy({ space: { md: 16, sm: 8, xs: 4 }, size: { minTouch: 48 }, useRipple: () => undefined }, { get: (target, key) => key === 'Dialog' ? (props: any) => require('react').createElement('Dialog', props, props.children, props.actions) : key in target ? target[key as keyof typeof target] : String(key) }));
+import Review from '../../app/crew/reports';
 const MockApiError = require('../api/client').ApiError;
 const me = { data: { id: 'leader', membership: { crew: { isLeader: true } } } };
 const report = (id: string, targetType = 'POST', targetId = id) => ({ id, targetType, targetId, targetPreview: id, reporter: { nickname: 'reporter', photoUrl: null }, reason: 'SPAM', memo: null, createdAt: '2026-09-30T00:00:00Z' });

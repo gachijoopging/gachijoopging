@@ -39,7 +39,7 @@ export default function PloggingScreen() {
 
   const view = readyView({ last, failed });
   const now = Date.now();
-  const resume = (id: string) => router.push({ pathname: '/4-3-activity-in-progress', params: { id } });
+  const resume = (id: string) => router.push({ pathname: '/activity/[id]', params: { id } });
 
   return (
     <Screen scroll refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load(true)} />}>

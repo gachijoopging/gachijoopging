@@ -7,7 +7,7 @@ export function useLocationGate() {
   const gate = useRef(
     createLocationGate({
       hasPreciseLocation: async () => (await getPermissionMode()) === 'granted',
-      openGuide: () => router.push('/1-10-location-permission'),
+      openGuide: () => router.push('/location-permission'),
     }),
   ).current;
   useFocusEffect(useCallback(() => { void gate.resume(); }, [gate]));

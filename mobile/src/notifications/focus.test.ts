@@ -1,5 +1,5 @@
 import React from 'react';
-import NotificationsScreen from '../../app/2-3-notifications';
+import NotificationsScreen from '../../app/notifications';
 const { act, create } = require('react-test-renderer');
 const mockGet = jest.fn();
 let mockFocus: () => void;

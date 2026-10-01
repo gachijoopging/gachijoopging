@@ -1,6 +1,6 @@
 import React from 'react';
-import SettingsScreen from '../../app/5-7-settings';
-import EditProfileScreen from '../../app/5-8-edit-profile';
+import SettingsScreen from '../../app/settings/index';
+import EditProfileScreen from '../../app/settings/profile';
 
 const { act, create } = require('react-test-renderer');
 const mockGet = jest.fn();
@@ -20,7 +20,7 @@ jest.mock('expo-constants', () => ({ default: { expoConfig: {} } }));
 jest.mock('expo-network', () => ({ useNetworkState: () => ({ isConnected: !mockOffline }) }));
 jest.mock('../activity/store', () => ({ getStored: () => mockStored, loadLastAccount: () => mockStored, loadAccount: jest.fn() }));
 jest.mock('../auth/account', () => ({ currentAccount: () => ({ id: 'u1' }), rememberAccount: (...args: unknown[]) => mockRemember(...args), forgetAccount: () => mockForget() }));
-jest.mock('design-system/src', () => new Proxy({ space: {}, radius: {}, pressedOpacity: () => 1, useRipple: () => undefined }, { get: (target, key) => key in target ? target[key as keyof typeof target] : String(key) }));
+jest.mock('design-system/src', () => new Proxy({ space: {}, size: {}, borderWidth: {}, radius: {}, useTheme: () => ({ colors: {} }), pressedOpacity: () => 1, useRipple: () => undefined }, { get: (target, key) => key === 'Dialog' ? (props: any) => require('react').createElement('Dialog', props, props.children, props.actions) : key in target ? target[key as keyof typeof target] : String(key) }));
 
 let tree: ReturnType<typeof create>;
 const user = { id: 'u1', nickname: '테스터', intro: '', photoUrl: null, hasPassword: true, membership: { status: 'MEMBER', crew: { name: '크루', isLeader: false } }, settings: { shareLocationDefault: false, notifyActivityStart: false } };
@@ -33,7 +33,7 @@ beforeEach(() => {
   mockForget.mockClear(); mockRemember.mockClear(); mockDismiss.mockClear();
 });
 afterEach(() => { if (tree) act(() => tree.unmount()); });
-const row = (title: string) => tree.root.findAllByType('ListRow').find((node: any) => node.props.title === title);
+const row = (title: string) => tree.root.findAll((node: any) => (node.type === 'ListRow' && node.props.title === title) || (node.props.accessibilityRole === 'switch' && node.props.accessibilityLabel === title && node.props.onPress))[0];
 const button = (label: string) => tree.root.findAllByType('Button').find((node: any) => node.props.label === label);
 async function mount() { await act(async () => { tree = create(React.createElement(SettingsScreen)); }); }
 
@@ -42,7 +42,7 @@ test('서로 다른 설정의 동시 토글이 앞선 변경을 덮어쓰지 않
   mockMutate.mockImplementation(() => new Promise<void>((resolve) => { finish = resolve; }));
   await mount();
   await act(async () => { void row('위치 공유 기본값').props.onPress(); void row('활동 시작 알림').props.onPress(); });
-  expect(['위치 공유 기본값', '활동 시작 알림'].map((title) => row(title).props.right.props.value)).toEqual([true, true]);
+  expect(['위치 공유 기본값', '활동 시작 알림'].map((title) => row(title).props.accessibilityState.checked)).toEqual([true, true]);
   expect(mockMutate).toHaveBeenCalledTimes(2);
   await act(async () => { void row('활동 시작 알림').props.onPress(); });
   expect(mockMutate).toHaveBeenCalledTimes(2);
@@ -53,7 +53,7 @@ test('오프라인 토글은 되돌리고 서버 요청을 보내지 않는다',
   mockOffline = true;
   await mount();
   await act(async () => row('위치 공유 기본값').props.onPress());
-  expect(row('위치 공유 기본값').props.right.props.value).toBe(false);
+  expect(row('위치 공유 기본값').props.accessibilityState.checked).toBe(false);
   expect(mockMutate).not.toHaveBeenCalled();
 });
 
@@ -72,7 +72,7 @@ test('로그아웃 요청이 실패해도 사전 검증 완료 후 로컬 계정
   await act(async () => row('로그아웃').props.onPress());
   await act(async () => button('로그아웃').props.onPress());
   expect(mockForget).toHaveBeenCalledTimes(1);
-  expect(mockDismiss).toHaveBeenCalledWith('/1-1-start');
+  expect(mockDismiss).toHaveBeenCalledWith('/start');
 });
 
 test('프로필 사진 업로드 응답이 유실돼도 같은 업로드 id로 재시도한다', async () => {

@@ -184,7 +184,7 @@ export function restartLine(s: Session, now: number): Session {
 function spokenDuration(sec: number): string {
   const h = Math.floor(sec / 3600);
   const m = Math.floor((sec % 3600) / 60);
-  return `${h > 0 ? `${h}시간 ` : ''}${m}분 ${sec % 60}초`;
+  return `${h > 0 ? `${h}시간 ` : ''}${m}분`;
 }
 
 export function metricsLabel(s: Session, now: number): string {

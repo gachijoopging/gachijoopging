@@ -6,6 +6,7 @@ import {
   Avatar,
   Badge,
   Banner,
+  BottomSheet,
   Button,
   Chip,
   Dialog,
@@ -13,6 +14,7 @@ import {
   ErrorState,
   IconButton,
   LinkText,
+  ListRow,
   Loading,
   Screen,
   Snackbar,
@@ -25,6 +27,7 @@ import {
 } from 'design-system/src';
 import { createMockClient, type ApiClient } from '../api/client';
 import { useFlash } from '../ui/useFlash';
+import { INTRO_FOLD } from './profile';
 import { ActivityCardView, PostGrid, StatsTile, nearBottom, usePaged, type ActivityCard, type Post, type Stats } from './ProfileParts';
 
 type Me = { id: string; nickname: string; intro: string; photoUrl: string | null; crew: { name: string; isLeader: boolean } | null };
@@ -35,7 +38,6 @@ const TABS: { value: Tab; label: string }[] = [
   { value: 'records', label: '기록' },
   { value: 'posts', label: '게시물' },
 ];
-const INTRO_FOLD = 40;
 
 /**
  * 5-5 내 정보. recordsOnly 는 크루 소속이 없을 때 1-6 에서 들어오는 "내 활동 기록" —
@@ -49,6 +51,7 @@ export function MyProfile({ recordsOnly = false }: { recordsOnly?: boolean }) {
   const [tab, setTab] = useState<Tab>('records');
   const [refreshing, setRefreshing] = useState(false);
   const [introOpen, setIntroOpen] = useState(false);
+  const [menuFor, setMenuFor] = useState<ActivityCard | null>(null);
   const [deleting, setDeleting] = useState<ActivityCard | null>(null);
   const [busy, setBusy] = useState(false);
   const [snackbar, setSnackbar] = useFlash();
@@ -136,11 +139,11 @@ export function MyProfile({ recordsOnly = false }: { recordsOnly?: boolean }) {
   return (
     <Screen>
       {recordsOnly ? (
-        <AppHeader title="내 활동 기록" onBack={() => (router.canGoBack() ? router.back() : router.replace('/1-6-create-or-join-crew'))} />
+        <AppHeader title="내 활동 기록" onBack={() => (router.canGoBack() ? router.back() : router.replace('/crew-choice'))} />
       ) : (
         <AppHeader
           title="내 정보"
-          action={<IconButton icon="cog-outline" label="설정" onPress={() => router.push('/5-7-settings')} />}
+          action={<IconButton icon="cog-outline" label="설정" onPress={() => router.push('/settings')} />}
         />
       )}
       {offline ? <Banner tone="warn">인터넷 연결을 확인해 주세요.</Banner> : null}
@@ -158,7 +161,7 @@ export function MyProfile({ recordsOnly = false }: { recordsOnly?: boolean }) {
           meFailed ? (
             <ErrorState title="프로필을 불러오지 못했어요" onRetry={loadMe} />
           ) : (
-            <Loading label="불러오는 중…" />
+            <Loading label="프로필을 불러오고 있어요" />
           )
         ) : (
           <View style={{ gap: space.sm }}>
@@ -167,10 +170,10 @@ export function MyProfile({ recordsOnly = false }: { recordsOnly?: boolean }) {
                 accessibilityRole="button"
                 accessibilityLabel="프로필 사진, 프로필 수정으로 이동"
                 android_ripple={ripple}
-                onPress={() => router.push('/5-8-edit-profile')}
+                onPress={() => router.push('/settings/profile')}
                 style={({ pressed }) => ({ borderRadius: radius.pill, overflow: 'hidden', opacity: pressedOpacity(pressed) })}
               >
-                <Avatar name={me.nickname} uri={me.photoUrl ?? undefined} size="lg" />
+                <Avatar name={me.nickname} uri={me.photoUrl ?? undefined} size="lg" decorative />
               </Pressable>
               <View style={{ flex: 1, gap: space.xs }}>
                 <View
@@ -196,10 +199,10 @@ export function MyProfile({ recordsOnly = false }: { recordsOnly?: boolean }) {
                   icon="chevron-right"
                   iconEnd
                   accessibilityLabel={`${me.crew.name}, 크루 정보 보기`}
-                  onPress={() => router.push('/3-2-crew-info')}
+                  onPress={() => router.push('/crew/info')}
                 />
               ) : <View />}
-              <Button label="프로필 수정" size="sm" onPress={() => router.push('/5-8-edit-profile')} />
+              <Button label="프로필 수정" size="sm" onPress={() => router.push('/settings/profile')} />
             </View>
           </View>
         )}
@@ -214,12 +217,12 @@ export function MyProfile({ recordsOnly = false }: { recordsOnly?: boolean }) {
         {tab === 'records' ? (
           <RecordsList
             list={records}
-            onOpen={(id) => router.push({ pathname: '/5-3-activity-detail', params: { id } })}
-            onDelete={setDeleting}
+            onOpen={(id) => router.push({ pathname: '/records/[id]', params: { id } })}
+            onMenu={setMenuFor}
             onStart={recordsOnly ? undefined : () => router.push('/(tabs)/plogging')}
           />
         ) : !posts.items ? (
-          posts.failed ? <ErrorState onRetry={posts.reload} /> : <Loading label="불러오는 중…" />
+          posts.failed ? <ErrorState title="게시물을 불러오지 못했어요" onRetry={posts.reload} /> : <Loading label="게시물을 불러오고 있어요" />
         ) : posts.items.length === 0 ? (
           <EmptyState
             icon="image-multiple-outline"
@@ -228,18 +231,37 @@ export function MyProfile({ recordsOnly = false }: { recordsOnly?: boolean }) {
           />
         ) : (
           <>
-            <PostGrid posts={posts.items} onOpen={(id) => router.push({ pathname: '/5-2-post-detail', params: { id } })} />
-            {posts.loadingMore ? <Loading label="불러오는 중…" /> : null}
+            <PostGrid posts={posts.items} onOpen={(id) => router.push({ pathname: '/posts/[id]', params: { id } })} />
+            {posts.loadingMore ? <Loading label="게시물을 불러오고 있어요" /> : null}
           </>
         )}
       </ScrollView>
 
-      <Dialog visible={deleting != null} onClose={() => !busy && setDeleting(null)} title="활동 기록을 삭제할까요?">
-        <Txt variant="body">수거·시간·거리와 활동 사진이 모두 삭제돼요. 되돌릴 수 없어요.</Txt>
-        <View style={{ flexDirection: 'row', gap: space.sm, justifyContent: 'flex-end' }}>
-          <Button label="취소" variant="ghost" size="md" disabled={busy} onPress={() => setDeleting(null)} />
-          <Button label="기록 삭제" variant="danger" size="md" loading={busy} onPress={deleteRecord} />
-        </View>
+      <BottomSheet visible={menuFor != null} onClose={() => setMenuFor(null)} title="활동 기록">
+        <ListRow
+          icon="delete-outline"
+          title="기록 삭제"
+          tone="danger"
+          chevron={false}
+          onPress={() => {
+            setDeleting(menuFor);
+            setMenuFor(null);
+          }}
+        />
+      </BottomSheet>
+
+      <Dialog
+        visible={deleting != null}
+        onClose={() => !busy && setDeleting(null)}
+        title="활동 기록을 삭제할까요?"
+        actions={
+          <>
+            <Button label="취소" variant="ghost" size="md" disabled={busy} onPress={() => setDeleting(null)} />
+            <Button label="기록 삭제" variant="danger" size="md" loading={busy} onPress={deleteRecord} />
+          </>
+        }
+      >
+        <Txt variant="body">줍기·시간·거리와 활동 사진이 모두 삭제돼요. 되돌릴 수 없어요.</Txt>
       </Dialog>
 
       <Snackbar visible={snackbar != null} message={snackbar ?? ''} onDismiss={() => setSnackbar(null)} />
@@ -252,17 +274,17 @@ type Paged<T> = ReturnType<typeof usePaged<T & { id: string }>>;
 export function RecordsList({
   list,
   onOpen,
-  onDelete,
+  onMenu,
   onStart,
-  emptyDescription = '첫 줍깅을 시작하면 수거, 시간, 거리가 여기에 쌓여요.',
+  emptyDescription = '첫 줍깅을 시작하면 줍기, 시간, 거리가 여기에 쌓여요.',
 }: {
   list: Paged<ActivityCard>;
   onOpen: (id: string) => void;
-  onDelete?: (card: ActivityCard) => void;
+  onMenu?: (card: ActivityCard) => void;
   onStart?: () => void;
   emptyDescription?: string;
 }) {
-  if (!list.items) return list.failed ? <ErrorState onRetry={list.reload} /> : <Loading label="불러오는 중…" />;
+  if (!list.items) return list.failed ? <ErrorState title="활동 기록을 불러오지 못했어요" onRetry={list.reload} /> : <Loading label="활동 기록을 불러오고 있어요" />;
   if (list.items.length === 0) {
     return (
       <EmptyState
@@ -277,9 +299,9 @@ export function RecordsList({
   return (
     <View style={{ gap: space.md }}>
       {list.items.map((card) => (
-        <ActivityCardView key={card.id} card={card} onPress={() => onOpen(card.id)} onDelete={onDelete ? () => onDelete(card) : undefined} />
+        <ActivityCardView key={card.id} card={card} onPress={() => onOpen(card.id)} onMenu={onMenu ? () => onMenu(card) : undefined} />
       ))}
-      {list.loadingMore ? <Loading label="불러오는 중…" /> : null}
+      {list.loadingMore ? <Loading label="활동 기록을 불러오고 있어요" /> : null}
       {list.moreFailed ? <LinkText label="다시 시도" tone="muted" onPress={list.loadMore} /> : null}
     </View>
   );

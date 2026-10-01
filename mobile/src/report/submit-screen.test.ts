@@ -1,5 +1,5 @@
 import React from 'react';
-import ReportScreen from '../../app/6-1-report';
+import ReportScreen from '../../app/report';
 import { ApiError } from '../api/client';
 import { clearReportDraft, editReportDraft, reportDraftFor } from './report';
 

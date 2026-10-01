@@ -21,7 +21,7 @@ npm run gen:mocks      # docs/openapi.yaml 의 example → src/api/mocks.generat
 ## 구조
 
 ```
-app/            expo-router. app/(tabs)/ 가 탭 5개, 파일 이름이 곧 라우트
+app/            expo-router. app/(tabs)/ 가 탭 5개, 파일 이름이 곧 URL — 아래 §라우트
 src/api/        목 데이터 계층. 화면은 ApiClient 인터페이스만 본다
 src/tabs.ts     탭 구성. 가운데(줍깅)가 BottomNav 의 시작 버튼 자리다
 modules/        Expo Modules 로컬 네이티브 모듈 (배포하지 않는다)
@@ -31,6 +31,17 @@ android/        expo prebuild 산출물. 커밋하지 않고 직접 고치지도
 
 **`android/` 를 손으로 고치지 않는다.** `prebuild --clean` 이 지운다. 네이티브 설정이 필요하면
 `plugins/` 에 config plugin 을 만든다 (예: `with-kakao-maven.js`).
+
+## 라우트
+
+파일 이름은 URL 이다. 화면 번호(4-3)는 `docs/screens/` 문서 이름이고 코드에는 쓰지 않는다 —
+`app/4-3-activity-in-progress.tsx` 가 아니라 `app/activity/[id]/index.tsx` 다.
+
+- 그룹 `(auth)/`·`(onboarding)/`·`(tabs)/` 는 URL 에 안 나오고 묶기만 한다
+- 자원은 폴더, 식별자는 `[id]`: `posts/[id]`·`users/[id]`·`records/[id]`·`crew/notices/[id]`
+- 한 자원의 하위 화면은 그 폴더 안: `activity/[id]/{index,photo,review,summary}`
+- `typedRoutes` 가 켜져 있어 `router.push` 의 pathname·params 가 라우트 파일과 어긋나면 `tsc` 가 잡는다.
+  라우트 타입은 Metro 가 `.expo/types/` 에 만들고, 커밋하지 않는다
 
 ## design-system 임포트
 

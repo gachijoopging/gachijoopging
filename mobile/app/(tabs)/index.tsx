@@ -75,13 +75,13 @@ export default function HomeScreen() {
           iconEnd
           accessibilityLabel={home ? `${home.crew.name}, 크루 정보 보기` : undefined}
           disabled={!home}
-          onPress={() => router.push('/3-2-crew-info')}
+          onPress={() => router.push('/crew/info')}
         />
         <View>
           <IconButton
             icon="bell-outline"
             label={unread > 0 ? `알림, 안 읽음 ${unread}개` : '알림'}
-            onPress={() => router.push('/2-3-notifications')}
+            onPress={() => router.push('/notifications')}
           />
           {unread > 0 ? (
             <View style={{ position: 'absolute', top: space.sm, right: space.sm }} pointerEvents="none">
@@ -142,7 +142,7 @@ function HomeCards({ home }: { home: Home }) {
       <View style={{ flexDirection: 'row', gap: space.md }}>
         <Card
           style={{ flex: 1, gap: space.xs }}
-          onPress={() => router.push('/2-2-active-crew-members')}
+          onPress={() => router.push('/crew/live')}
           accessibilityLabel={`지금 활동 중인 크루원, ${live.count}명${live.count > 0 ? ', 목록 보기' : ''}`}
         >
           <Txt variant="caption" tone="muted">{'지금 활동 중인\n크루원'}</Txt>

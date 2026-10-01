@@ -15,12 +15,15 @@ export function Appear({
   rise = space.md,
   pointerEvents,
   style,
+  replayKey,
   children,
 }: {
   visible: boolean;
   /** 아래에서 떠오르는 거리. 0 이면 제자리에서 흐려졌다 선명해진다 */
   rise?: number;
   pointerEvents?: 'box-none' | 'none' | 'auto';
+  /** 보이는 채로 내용만 바뀔 때(문구 교체) 이 값이 바뀌면 다시 흐려졌다 선명해진다 */
+  replayKey?: string | number;
   style?: StyleProp<ViewStyle>;
   children: ReactNode;
 }) {
@@ -39,6 +42,14 @@ export function Appear({
       ({ finished }) => finished && !visible && setMounted(false),
     );
   }, [visible, reduce, progress]);
+
+  const firstKey = useRef(replayKey);
+  useEffect(() => {
+    if (replayKey === firstKey.current || !visible || reduce) return;
+    firstKey.current = replayKey;
+    progress.setValue(0);
+    Animated.spring(progress, { toValue: 1, ...motion.settle, useNativeDriver: true }).start();
+  }, [replayKey, visible, reduce, progress]);
 
   if (!mounted) return null;
   return (

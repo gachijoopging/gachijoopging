@@ -6,7 +6,7 @@ import { useNetworkState } from 'expo-network';
 import { Snackbar, size, space } from 'design-system/src';
 import { createMockClient, type ApiClient } from '../api/client';
 import { useLocationGate } from '../auth/useLocationGate';
-import { getStored, loadAccount, loadLastAccount } from '../activity/store';
+import { getStored, loadLastAccount, openAccount } from '../activity/store';
 import { syncOutbox } from '../activity/tracking';
 import { ploggingEntry } from './entry';
 import { StartSheet } from './StartSheet';
@@ -33,7 +33,7 @@ export function usePloggingLauncher(): Launcher {
 }
 
 const resume = (id: string, params: { flash?: string; startedAt?: string; shared?: string } = {}) =>
-  router.push({ pathname: '/4-3-activity-in-progress', params: { id, ...params } });
+  router.push({ pathname: '/activity/[id]', params: { id, ...params } });
 
 /** 시작 시트는 어느 탭 위에서든 뜨므로 탭 레이아웃이 한 벌만 가진다. */
 export function PloggingLauncher({ children }: { children: ReactNode }) {
@@ -55,16 +55,17 @@ export function PloggingLauncher({ children }: { children: ReactNode }) {
   const requireLocation = useLocationGate();
 
   useEffect(() => {
-    loadLastAccount();
-    api
-      .get('GET /users/me')
-      .then((me) => {
-        loadAccount(me.data.id);
-        // 지난 실행에서 못 보낸 줍기·종료가 있으면 앱을 켤 때 이어서 보낸다
-        void syncOutbox();
-        setShareDefault(me.data.settings.shareLocationDefault);
-      })
-      .catch(() => {});
+    const me = api.get('GET /users/me');
+    me.then((r) => setShareDefault(r.data.settings.shareLocationDefault)).catch(() => {});
+    // 지난 실행에서 못 보낸 줍기·종료가 있으면 앱을 켤 때 이어서 보낸다.
+    // 진행 중인 활동이 기기에 남아 있으면 홈을 거치지 않고 곧장 4-3 으로 — 홈이 먼저 뜨면 활동이 끝난 줄 안다
+    void openAccount(() => me.then((r) => r.data.id)).then(() => {
+      void syncOutbox();
+      const { session, ended, outbox } = getStored();
+      const local = session ? { activityId: session.activityId, ended: !!ended, unsynced: outbox.length > 0 } : null;
+      const entry = ploggingEntry({ onboarded: onboardedFlag.exists, current: null, local });
+      if (entry.kind === 'resume') resume(entry.id);
+    });
   }, []);
 
   const start = useCallback(() => {
@@ -149,7 +150,7 @@ export function PloggingLauncher({ children }: { children: ReactNode }) {
           visible={noCrew}
           message="크루에 소속돼야 활동을 시작할 수 있어요"
           actionLabel="크루 찾기"
-          onAction={() => { setNoCrew(false); router.replace('/1-6-create-or-join-crew'); }}
+          onAction={() => { setNoCrew(false); router.replace('/crew-choice'); }}
           onDismiss={() => setNoCrew(false)}
         />
         <Snackbar
