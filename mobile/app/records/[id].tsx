@@ -17,34 +17,27 @@ import {
   ErrorState,
   IconButton,
   Loading,
-  MetricSplit,
   NumberStepper,
   Screen,
   Snackbar,
   Switch,
-  Tile,
   Txt,
-  radius,
   size,
   space,
 } from 'design-system/src';
-import { KakaoMapView } from '../../modules/kakao-map';
 import { ApiError, createMockClient, type ApiClient } from '../../src/api/client';
 import { CATEGORY_LABEL, type Category } from '../../src/category';
 import {
-  categoryChips,
   changedItems,
-  formatDuration,
   kstDateTime,
-  metricsLabel,
   routeToPath,
   QUANTITY_MAX,
   type EditableItem,
 } from '../../src/feed/activity-detail';
 import { PhotoPager } from '../../src/feed/PhotoPager';
-import { formatDistance } from '../../src/format';
 import { useFlash } from '../../src/ui/useFlash';
 import { ShareCard, useShareImage } from '../../src/activity/ShareCard';
+import { ActivityMetrics, CategoryChips, RouteMap } from '../../src/activity/SummaryBlocks';
 import { currentAccount, rememberAccount } from '../../src/auth/account';
 
 /** docs/openapi.yaml 의 Activity. 목 example 은 리터럴이라 그대로 쓰면 타입이 좁다 */
@@ -82,7 +75,6 @@ export default function ActivityDetailScreen() {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [includeRoute, setIncludeRoute] = useState(false);
-  const [mapFailed, setMapFailed] = useState(false);
   const [sharing, setSharing] = useState(false);
   const shareImage = useShareImage();
   const [snackbar, setSnackbar] = useFlash();
@@ -187,42 +179,14 @@ export default function ActivityDetailScreen() {
 
           <View style={{ gap: space.sm }}>
             <Txt variant="body">{kstDateTime(activity.startedAt)}</Txt>
-            <View
-              accessible
-              accessibilityLabel={path.length >= 2 ? '활동 경로 지도' : '경로 없음'}
-              style={{ height: size.mapFrame, borderRadius: radius.card, overflow: 'hidden' }}
-            >
-              {path.length >= 2 && appKey && !mapFailed ? (
-                <KakaoMapView appKey={appKey} center={path[0]} segments={[path]} onMapError={() => setMapFailed(true)} style={{ flex: 1 }} />
-              ) : (
-                <Tile style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-                  <Txt variant="caption" tone="muted">{path.length >= 2 ? '지도를 불러오지 못했어요' : '경로 없음'}</Txt>
-                </Tile>
-              )}
-            </View>
+            {own || activity.locationShared ? <RouteMap appKey={appKey} segments={[path]} /> : null}
           </View>
 
-          <Card>
-            <MetricSplit
-              divider="dashed"
-              accessibilityLabel={metricsLabel(activity)}
-              items={[
-                { value: `${activity.itemCount}개`, label: '줍기' },
-                { value: formatDuration(activity.durationSec), label: '활동 시간' },
-                { value: formatDistance(activity.distanceM), label: '이동 거리' },
-                // 미측정(null)은 0걸음과 다르다 — 칸 자체를 뺀다
-                ...(activity.steps != null ? [{ value: activity.steps.toLocaleString('ko-KR'), label: '걸음' }] : []),
-              ]}
-            />
-          </Card>
+          <ActivityMetrics itemCount={activity.itemCount} durationSec={activity.durationSec} distanceM={activity.distanceM} steps={activity.steps} />
 
           <View style={{ gap: space.sm }}>
             <Txt variant="section" bold accessibilityRole="header">줍기 항목</Txt>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.sm }}>
-              {categoryChips(activity.byCategory).map((c) => (
-                <Chip key={c} label={c} tone="neutral" />
-              ))}
-            </View>
+            <CategoryChips byCategory={activity.byCategory} />
             {own && ended ? (
               <Button label="줍기 목록 수정" variant="ghost" icon="pencil-outline" disabled={offline} onPress={() => setEditOpen(true)} style={{ alignSelf: 'flex-start' }} />
             ) : null}

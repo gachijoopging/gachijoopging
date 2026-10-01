@@ -9,26 +9,21 @@ import {
   Banner,
   Button,
   Card,
-  Chip,
   Dialog,
   Icon,
-  MetricSplit,
   Screen,
   Snackbar,
   Spinner,
   Switch,
   Tile,
   Txt,
-  radius,
   size,
   space,
   useTheme,
 } from 'design-system/src';
-import { KakaoMapView } from '../../../modules/kakao-map';
 import { createMockClient, type ApiClient } from '../../../src/api/client';
-import { CATEGORY_ICON, CATEGORY_LABEL } from '../../../src/category';
-import { formatDistance } from '../../../src/format';
-import { byCategoryChips, summaryDuration, summaryMeta, summaryMetaSpoken } from '../../../src/activity/pickup';
+import { summaryMeta, summaryMetaSpoken } from '../../../src/activity/pickup';
+import { ActivityMetrics, CategoryChips, RouteMap } from '../../../src/activity/SummaryBlocks';
 import { getStored, loadLastAccount, subscribe, updateStored, type Stored } from '../../../src/activity/store';
 import { applyEndedActivity, syncOutbox } from '../../../src/activity/tracking';
 import { ShareCard, useShareImage } from '../../../src/activity/ShareCard';
@@ -48,7 +43,6 @@ export default function ActivitySummaryScreen() {
   const [failed, setFailed] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [includeRoute, setIncludeRoute] = useState(false);
-  const [mapFailed, setMapFailed] = useState(!appKey);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [snackbar, setSnackbar] = useState<string | null>(null);
@@ -124,11 +118,7 @@ export default function ActivitySummaryScreen() {
     );
   }
 
-  const chips = byCategoryChips(session.byCategory);
-  const route = session.segments.flat();
   const meta = summaryMeta({ startedAt: session.startedAt, endedAt: snapshot.endedAt, pausedSec: snapshot.pausedSec, steps: snapshot.steps });
-  const distance = formatDistance(snapshot.distanceM);
-  const duration = summaryDuration(snapshot.durationSec);
   const openShare = async () => {
     if (sharing) return;
     setSharing(true);
@@ -156,55 +146,12 @@ export default function ActivitySummaryScreen() {
           {meta}
         </Txt>
 
-        {route.length === 0 ? (
-          // 경로가 없으면 큰 빈 지도 틀 대신 한 줄로 알린다
-          <Tile tone="surface" style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm, minHeight: size.minTouch }}>
-            <Icon name="map-marker-off" size={size.iconCard} color={colors.inkMuted} />
-            <Txt variant="caption" tone="muted">경로가 기록되지 않았어요</Txt>
-          </Tile>
-        ) : (
-          <View
-            style={{ height: size.mapFrame, borderRadius: radius.card, overflow: 'hidden', backgroundColor: colors.neutral }}
-            accessible
-            accessibilityLabel={`이동 경로 지도, ${distance.replace('km', '킬로미터').replace(/m$/, '미터')}`}
-            pointerEvents="none"
-          >
-            {mapFailed ? (
-              <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-                <Txt variant="caption" tone="muted">지도를 불러오지 못했어요</Txt>
-              </View>
-            ) : (
-              <KakaoMapView appKey={appKey} center={route[Math.floor(route.length / 2)]} segments={session.segments} onMapError={() => setMapFailed(true)} style={{ flex: 1 }} />
-            )}
-            <View style={{ position: 'absolute', top: space.md, left: space.md }}>
-              <Chip tone="neutral" icon="map-marker-outline" label="이동 경로" />
-            </View>
-          </View>
-        )}
+        <RouteMap appKey={appKey} segments={session.segments} />
 
-        <Card>
-          <MetricSplit
-            divider="dashed"
-            items={[
-              { value: String(session.itemCount), label: '줍기 개수', spoken: `줍기 개수 ${session.itemCount}개` },
-              { value: duration, label: '활동 시간', spoken: `활동 시간 ${duration}` },
-              { value: distance, label: '이동 거리', spoken: `이동 거리 ${distance}` },
-            ]}
-          />
-        </Card>
+        <ActivityMetrics itemCount={session.itemCount} durationSec={snapshot.durationSec} distanceM={snapshot.distanceM} />
 
         {session.itemCount > 0 ? (
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.sm }}>
-            {chips.map(({ category, count }) => (
-              <Chip
-                key={category}
-                tone="neutral"
-                icon={CATEGORY_ICON[category]}
-                label={`${CATEGORY_LABEL[category]} ${count}`}
-                accessibilityLabel={`${CATEGORY_LABEL[category]} ${count}개`}
-              />
-            ))}
-          </View>
+          <CategoryChips byCategory={session.byCategory} />
         ) : (
           <Banner tone="info">줍기 기록 없이 활동만 저장돼요. 활동 시간과 이동 거리도 소중한 기록이에요.</Banner>
         )}

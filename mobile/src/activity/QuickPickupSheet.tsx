@@ -14,7 +14,7 @@ type Failure = { kind: 'add'; category: Category; quantity: number } | { kind: '
 export function QuickPickupSheet({ visible, onClose, session }: { visible: boolean; onClose: () => void; session: Session | null }) {
   const [amounts, setAmounts] = useState<Partial<Record<Category, number>>>({});
   const [invalid, setInvalid] = useState<Partial<Record<Category, boolean>>>({});
-  // 여러 개 담기는 한 카드씩만 펼친다 — 모든 카드에 수량 입력을 늘어놓으면 조작이 스무 개가 넘는다
+  // 수량 입력은 길게 누른 카드 하나만 펼친다. 대부분은 한 번 누를 때마다 하나다
   const [expanded, setExpanded] = useState<Category | null>(null);
   const [last, setLast] = useState<LastPickup | null>(null);
   const [failed, setFailed] = useState<Failure | null>(null);
@@ -48,7 +48,7 @@ export function QuickPickupSheet({ visible, onClose, session }: { visible: boole
   return (
     <BottomSheet visible={visible} onClose={onClose} title={`이번 활동 줍기 ${total}개`}>
       <Txt variant="caption" tone="muted">
-        {total === 0 ? '아직 주운 게 없어요. 하나 담기를 누르거나 수량을 입력해 주세요' : '하나 담기를 누르거나 수량을 입력해 주세요'}
+        {total === 0 ? '아직 주운 게 없어요. 누를 때마다 하나씩, 길게 누르면 여러 개 담아요' : '누를 때마다 하나씩, 길게 누르면 여러 개 담아요'}
       </Txt>
 
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.sm }}>
@@ -62,19 +62,10 @@ export function QuickPickupSheet({ visible, onClose, session }: { visible: boole
               key={c}
               category={c}
               selected={open}
-              headerLabel={`${name}, 총 ${count}개`}
+              headerLabel={`${name}, 총 ${count}개, 하나 담기`}
               aside={<Txt variant="caption" tone="muted">총 {count}개</Txt>}
+              press={{ onPress: () => add(c, 1), onLongPress: () => setExpanded(c), longPressLabel: '수량 입력' }}
             >
-              <Button label="하나 담기" size="sm" variant="soft" fullWidth accessibilityLabel={`${name} 하나 담기`} onPress={() => add(c, 1)} />
-              <Button
-                label={open ? '접기' : '여러 개'}
-                size="sm"
-                variant="ghost"
-                fullWidth
-                accessibilityLabel={open ? `${name} 수량 입력 접기` : `${name} 여러 개 담기`}
-                accessibilityState={{ expanded: open }}
-                onPress={() => setExpanded(open ? null : c)}
-              />
               {open ? (
                 <>
                   <NumberStepper
@@ -96,6 +87,7 @@ export function QuickPickupSheet({ visible, onClose, session }: { visible: boole
                     disabled={invalid[c]}
                     onPress={() => add(c, amount)}
                   />
+                  <Button label="접기" size="sm" variant="ghost" fullWidth accessibilityLabel={`${name} 수량 입력 접기`} onPress={() => setExpanded(null)} />
                 </>
               ) : null}
             </CategoryTile>

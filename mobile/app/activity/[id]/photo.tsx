@@ -109,17 +109,21 @@ export default function TakePhotoScreen() {
       const takenAt = new Date().toISOString();
       const res = await camera.current?.takePictureAsync({ quality: 0.8, exif: false });
       if (res) {
-        setShot({ uri: res.uri, takenAt, mediaId: Crypto.randomUUID(), location: here ? { lat: here.latitude, lng: here.longitude } : null });
+        const next = { uri: res.uri, takenAt, mediaId: Crypto.randomUUID(), location: here ? { lat: here.latitude, lng: here.longitude } : null };
+        setShot(next);
         setRejected(false);
+        setShooting(false);
+        // 고르는 단계 없이 바로 올린다. 잘못 찍었으면 4-5 의 다시 촬영이 받는다
+        void upload(next);
+        return;
       }
     } catch {
       setSnackbar({ text: '사진을 찍지 못했어요. 다시 시도해 주세요.' });
-    } finally {
-      setShooting(false);
     }
+    setShooting(false);
   };
 
-  const upload = async () => {
+  const upload = async (shot: Shot | null) => {
     if (!shot || uploading) return;
     setUploading(true);
     setProgress(0);
@@ -253,16 +257,19 @@ export default function TakePhotoScreen() {
           </Txt>
         </Tile>
 
-        {shot ? (
+        {shot && !uploading ? (
+          // 올리지 못한 사진만 여기 남는다. 같은 mediaId 로 다시 올려 서버가 중복을 거른다
           <View style={{ flexDirection: 'row', gap: space.sm }}>
             <View style={{ flex: 1 }}>
-              <Button label="다시 찍기" variant="translucent" size="lg" fullWidth disabled={uploading} onPress={() => { setShot(null); setRejected(false); }} />
+              <Button label="다시 찍기" variant="translucent" size="lg" fullWidth onPress={() => { setShot(null); setRejected(false); }} />
             </View>
-            <View style={{ flex: 1 }}>
-              <Button label="이 사진으로 분류" size="lg" fullWidth loading={uploading} disabled={uploading || rejected || offline} onPress={upload} />
-            </View>
+            {rejected ? null : (
+              <View style={{ flex: 1 }}>
+                <Button label="다시 올리기" size="lg" fullWidth disabled={offline} onPress={() => void upload(shot)} />
+              </View>
+            )}
           </View>
-        ) : (
+        ) : shot ? null : (
           <View style={{ alignItems: 'center' }}>
             <CaptureButton disabled={perm !== 'granted' || !ready || shooting || offline} onPress={shoot} />
           </View>
@@ -273,7 +280,7 @@ export default function TakePhotoScreen() {
         visible={snackbar != null}
         message={snackbar?.text ?? ''}
         actionLabel={snackbar?.retry ? '다시 시도' : undefined}
-        onAction={snackbar?.retry ? () => { setSnackbar(null); void upload(); } : undefined}
+        onAction={snackbar?.retry ? () => { setSnackbar(null); void upload(shot); } : undefined}
         onDismiss={() => setSnackbar(null)}
       />
     </Screen>

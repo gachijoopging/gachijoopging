@@ -189,8 +189,8 @@ test('타인의 공유하지 않은 경로는 상세 지도에 표시하지 않�
     data: { ...detail, user: { id: 'u2', nickname: '다른 크루원' }, route: [[127, 37], [127.001, 37.001]] },
   }));
   await act(async () => { rendered = create(React.createElement(ActivityDetailScreen)); });
-  expect(rendered.root.findAllByType('View').some((v: any) => v.props.accessibilityLabel === '경로 없음')).toBe(true);
-  expect(rendered.root.findAllByType('View').some((v: any) => v.props.accessibilityLabel === '활동 경로 지도')).toBe(false);
+  // 경로가 없어서가 아니라 공유하지 않아서 안 보이므로, "기록되지 않았어요" 대신 지도 자리를 비우고 안내 배너가 이유를 말한다
+  expect(rendered.root.findAll((v: any) => v.props.accessibilityLabel === '이동 경로 지도' || v.props.children === '경로가 기록되지 않았어요')).toHaveLength(0);
   expect(rendered.root.findAllByType('ShareCard').length).toBe(0);
 });
 
