@@ -27,7 +27,7 @@ import {
 import { ApiError, createMockClient, type ApiClient } from '../../src/api/client';
 import { canGoNextMonth, isFutureDate, kstToday, monthGrid, shiftMonth } from '../../src/crew/calendar';
 import { PostCard } from '../../src/feed/PostCard';
-import { beforeLabel, emptyCopy, syncLike, toggleLike, type FeedScope, type LikeSync, type Post } from '../../src/feed/feed';
+import { emptyCopy, rangeLabel, syncLike, tapRange, toggleLike, type DateRange, type FeedScope, type LikeSync, type Post, type RangeDraft } from '../../src/feed/feed';
 import { leaveForMembership } from '../../src/feed/leave';
 import { useFlash } from '../../src/ui/useFlash';
 import { useBlockedUsers } from '../../src/profile/blocked-users';
@@ -50,7 +50,7 @@ type Page = { items: Post[]; nextCursor: string | null };
 export default function FeedScreen() {
   const today = kstToday();
   const [scope, setScopeState] = useState<FeedScope>(lastScope);
-  const [before, setBefore] = useState<string | null>(null);
+  const [range, setRange] = useState<DateRange | null>(null);
   const [page, setPage] = useState<Page | null>(null);
   const [meId, setMeId] = useState<string>();
   const blocked = useBlockedUsers(meId);
@@ -74,7 +74,7 @@ export default function FeedScreen() {
       }
       if (mode === 'pull') setRefreshing(true);
       try {
-        const { data } = await api.get('GET /crew/posts', { scope, before, limit: 20 });
+        const { data } = await api.get('GET /crew/posts', { scope, ...range, limit: 20 });
         if (id !== request.current) return;
         const first = [...data.items] as Post[];
         const previousFirstSize = firstPageSize.current;
@@ -96,7 +96,7 @@ export default function FeedScreen() {
         if (id === request.current) setRefreshing(false);
       }
     },
-    [scope, before, setSnackbar],
+    [scope, range, setSnackbar],
   );
 
   useEffect(() => {
@@ -137,7 +137,7 @@ export default function FeedScreen() {
     const cursor = page.nextCursor;
     setMoreState('loading');
     try {
-      const { data } = await api.get('GET /crew/posts', { scope, before, cursor, limit: 20 });
+      const { data } = await api.get('GET /crew/posts', { scope, ...range, cursor, limit: 20 });
       if (generation !== request.current) return;
       setPage((p) => {
         if (!p || p.nextCursor !== cursor) return p;
@@ -185,8 +185,9 @@ export default function FeedScreen() {
     router.push({ pathname: '/posts/[id]', params: { id: post.id, ...(focusComment ? { focus: 'comment' } : {}) } });
 
   const write = () => router.push('/posts/new');
-  const empty = emptyCopy(scope, before != null);
-  const pill = before ? beforeLabel(before, today) : null;
+  const empty = emptyCopy(scope, range != null);
+  const pill = range ? rangeLabel(range, today) : null;
+  const pillSpoken = range ? rangeLabel(range, today, true) : null;
 
   return (
     <Screen edges={['top', 'left', 'right']}>
@@ -195,7 +196,7 @@ export default function FeedScreen() {
         <View>
           <IconButton
             icon="calendar-month-outline"
-            label={pill ? `날짜로 찾기, ${pill.replace(' 이전', ' 이전 보는 중')}` : '날짜로 찾기'}
+            label={pillSpoken ? `날짜로 찾기, ${pillSpoken} 보는 중` : '날짜로 찾기'}
             onPress={() => setPickerOpen(true)}
           />
           {pill ? (
@@ -211,7 +212,7 @@ export default function FeedScreen() {
         <Tabs items={SCOPES} value={scope} onChange={setScope} fullWidth />
         {pill ? (
           <View style={{ alignSelf: 'flex-start' }}>
-            <Chip label={pill} tone="neutral" icon="close" iconEnd accessibilityLabel={`${pill}, 필터 지우기`} onPress={() => setBefore(null)} />
+            <Chip label={pill} tone="neutral" icon="close" iconEnd accessibilityLabel={`${pillSpoken}, 필터 지우기`} onPress={() => setRange(null)} />
           </View>
         ) : null}
         {page && failed ? <Banner tone="warn">인터넷 연결을 확인해 주세요.</Banner> : null}
@@ -264,11 +265,11 @@ export default function FeedScreen() {
       <DatePickSheet
         visible={pickerOpen}
         today={today}
-        value={before}
+        value={range}
         onClose={() => setPickerOpen(false)}
-        onPick={(d) => {
+        onPick={(r) => {
           setPickerOpen(false);
-          setBefore(d);
+          setRange(r);
         }}
       />
 
@@ -286,17 +287,17 @@ function DatePickSheet({
 }: {
   visible: boolean;
   today: string;
-  value: string | null;
+  value: DateRange | null;
   onClose: () => void;
-  onPick: (date: string | null) => void;
+  onPick: (range: DateRange | null) => void;
 }) {
-  const [month, setMonth] = useState((value ?? today).slice(0, 7));
-  const [selected, setSelected] = useState(value ?? today);
+  const [month, setMonth] = useState((value?.to ?? today).slice(0, 7));
+  const [draft, setDraft] = useState<RangeDraft | null>(value);
 
   useEffect(() => {
     if (!visible) return;
-    setMonth((value ?? today).slice(0, 7));
-    setSelected(value ?? today);
+    setMonth((value?.to ?? today).slice(0, 7));
+    setDraft(value);
   }, [visible, value, today]);
 
   const [year, m] = month.split('-').map(Number);
@@ -325,9 +326,9 @@ function DatePickSheet({
                 <DayButton
                   key={c.date}
                   date={c.date}
-                  selected={c.date === selected}
+                  selected={draft != null && c.date >= draft.from && c.date <= (draft.to ?? draft.from)}
                   future={isFutureDate(c.date, today)}
-                  onPress={() => setSelected(c.date)}
+                  onPress={() => setDraft((d) => tapRange(d, c.date))}
                 />
               ) : (
                 <View key={c.date} style={{ flex: 1, minHeight: size.minTouch }} />
@@ -335,7 +336,12 @@ function DatePickSheet({
             )}
           </View>
         ))}
-        <Button label="이 날 이전 보기" fullWidth onPress={() => onPick(selected)} />
+        <Button
+          label="이 기간 보기"
+          fullWidth
+          disabled={draft?.to == null}
+          onPress={() => draft?.to != null && onPick({ from: draft.from, to: draft.to })}
+        />
         {value ? <Button label="필터 지우기" variant="ghost" fullWidth onPress={() => onPick(null)} /> : null}
       </View>
     </BottomSheet>

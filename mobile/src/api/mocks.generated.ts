@@ -77,6 +77,30 @@ export const MOCKS = {
   "GET /activities/current": {
     "data": null
   },
+  "GET /agreements": {
+    "data": {
+      "items": [
+        {
+          "type": "TERMS",
+          "version": "2026-09",
+          "required": true,
+          "url": "https://www.gachi-joopging.site/terms"
+        },
+        {
+          "type": "PRIVACY",
+          "version": "2026-09",
+          "required": true,
+          "url": "https://www.gachi-joopging.site/privacy"
+        },
+        {
+          "type": "MARKETING",
+          "version": "2026-09",
+          "required": false,
+          "url": "https://www.gachi-joopging.site/marketing"
+        }
+      ]
+    }
+  },
   "GET /crew": {
     "data": {
       "id": "c001",
@@ -249,38 +273,41 @@ export const MOCKS = {
     }
   },
   "GET /crew/join-requests": {
-    "data": [
-      {
-        "id": "jr002",
-        "crew": {
-          "id": "c001",
-          "name": "한강줍깅크루"
+    "data": {
+      "items": [
+        {
+          "id": "jr003",
+          "crew": {
+            "id": "c001",
+            "name": "한강줍깅크루"
+          },
+          "user": {
+            "id": "7c4f…",
+            "nickname": "민수",
+            "photoUrl": null,
+            "withdrawn": false
+          },
+          "status": "PENDING",
+          "createdAt": "2026-09-01T09:00:00Z"
         },
-        "user": {
-          "id": "9b3e…",
-          "nickname": "지수",
-          "photoUrl": null,
-          "withdrawn": false
-        },
-        "status": "PENDING",
-        "createdAt": "2026-09-02T09:00:00Z"
-      },
-      {
-        "id": "jr003",
-        "crew": {
-          "id": "c001",
-          "name": "한강줍깅크루"
-        },
-        "user": {
-          "id": "7c4f…",
-          "nickname": "민수",
-          "photoUrl": null,
-          "withdrawn": false
-        },
-        "status": "PENDING",
-        "createdAt": "2026-09-01T09:00:00Z"
-      }
-    ]
+        {
+          "id": "jr002",
+          "crew": {
+            "id": "c001",
+            "name": "한강줍깅크루"
+          },
+          "user": {
+            "id": "9b3e…",
+            "nickname": "지수",
+            "photoUrl": null,
+            "withdrawn": false
+          },
+          "status": "PENDING",
+          "createdAt": "2026-09-02T09:00:00Z"
+        }
+      ],
+      "nextCursor": null
+    }
   },
   "GET /crew/live": {
     "data": [
@@ -765,7 +792,26 @@ export const MOCKS = {
           "text": "다음엔 같이 가요",
           "createdAt": "2026-09-06T13:00:00Z"
         }
-      ]
+      ],
+      "commentsNextCursor": null
+    }
+  },
+  "GET /posts/{postId}/comments": {
+    "data": {
+      "items": [
+        {
+          "id": "c0",
+          "author": {
+            "id": "9b3e…",
+            "nickname": "지수",
+            "photoUrl": null,
+            "withdrawn": false
+          },
+          "text": "사진 좋네요",
+          "createdAt": "2026-09-06T11:30:00Z"
+        }
+      ],
+      "nextCursor": null
     }
   },
   "GET /users/me": {
@@ -818,21 +864,56 @@ export const MOCKS = {
       "nextCursor": null
     }
   },
+  "GET /users/me/agreements": {
+    "data": {
+      "complete": false,
+      "items": [
+        {
+          "type": "TERMS",
+          "version": "2026-09",
+          "required": true,
+          "url": "https://www.gachi-joopging.site/terms",
+          "agreed": false,
+          "agreedAt": null
+        },
+        {
+          "type": "PRIVACY",
+          "version": "2026-09",
+          "required": true,
+          "url": "https://www.gachi-joopging.site/privacy",
+          "agreed": false,
+          "agreedAt": null
+        },
+        {
+          "type": "MARKETING",
+          "version": "2026-09",
+          "required": false,
+          "url": "https://www.gachi-joopging.site/marketing",
+          "agreed": false,
+          "agreedAt": null
+        }
+      ]
+    }
+  },
   "GET /users/me/blocked": {
-    "data": [
-      {
-        "id": "3b7e…",
-        "nickname": "지수",
-        "photoUrl": null,
-        "withdrawn": false
-      },
-      {
-        "id": "0d4a…",
-        "nickname": "탈퇴한 크루원",
-        "photoUrl": null,
-        "withdrawn": true
-      }
-    ]
+    "data": {
+      "items": [
+        {
+          "id": "3b7e…",
+          "nickname": "지수",
+          "photoUrl": null,
+          "withdrawn": false
+        },
+        {
+          "id": "0d4a…",
+          "nickname": "탈퇴한 크루원",
+          "photoUrl": null,
+          "withdrawn": true
+        }
+      ],
+      "nextCursor": null,
+      "total": 2
+    }
   },
   "GET /users/me/stats": {
     "data": {
@@ -1140,6 +1221,37 @@ export const MOCKS = {
       },
       "text": "저도 다음엔 갈게요",
       "createdAt": "2026-09-06T14:00:00Z"
+    }
+  },
+  "PUT /users/me/agreements": {
+    "data": {
+      "complete": true,
+      "items": [
+        {
+          "type": "TERMS",
+          "version": "2026-09",
+          "required": true,
+          "url": "https://www.gachi-joopging.site/terms",
+          "agreed": true,
+          "agreedAt": "2026-09-01T00:00:00Z"
+        },
+        {
+          "type": "PRIVACY",
+          "version": "2026-09",
+          "required": true,
+          "url": "https://www.gachi-joopging.site/privacy",
+          "agreed": true,
+          "agreedAt": "2026-09-01T00:00:00Z"
+        },
+        {
+          "type": "MARKETING",
+          "version": "2026-09",
+          "required": false,
+          "url": "https://www.gachi-joopging.site/marketing",
+          "agreed": false,
+          "agreedAt": null
+        }
+      ]
     }
   },
 } as const;

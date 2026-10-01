@@ -1,3 +1,4 @@
+jest.mock('../api/media', () => ({ mediaFile: async (uri: string) => ({ uri, name: 'photo.jpg', type: 'image/jpeg' }) }));
 import React from 'react';
 import FeedScreen from '../../app/(tabs)/feed';
 import ActivityDetailScreen from '../../app/records/[id]';

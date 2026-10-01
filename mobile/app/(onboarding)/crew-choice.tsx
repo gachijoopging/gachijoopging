@@ -5,7 +5,7 @@ import { router, useFocusEffect, useNavigation } from 'expo-router';
 import { AppHeader, Banner, Button, Card, Icon, Screen, Snackbar, Txt, space } from 'design-system/src';
 import { useFlash } from '../../src/ui/useFlash';
 import { onboardingApi as api } from '../../src/api/onboarding';
-import { resolveDestination } from '../../src/auth/destination';
+import { authenticatedDestination } from '../../src/auth/destination';
 import { finishOnboarding, type OnboardingNavigation } from '../../src/auth/navigation';
 
 function CrewChoice({
@@ -44,7 +44,7 @@ export default function CreateOrJoinCrewScreen() {
     setError(false);
     try {
       const me = await api.get('GET /users/me');
-      const destination = resolveDestination(me.data);
+      const destination = await authenticatedDestination(api, me.data);
       if (destination !== '/crew-choice') {
         finishOnboarding(navigation, destination);
       } else if (next) {

@@ -1,3 +1,6 @@
+import * as Crypto from 'expo-crypto';
+import { File, Paths } from 'expo-file-system';
+
 export const NOTICE_TITLE_MAX = 100;
 export const NOTICE_BODY_MAX = 3000;
 
@@ -39,4 +42,22 @@ export function saveNoticeDraft(key: NoticeDraftKey, form: NoticeForm): void {
 
 export function clearNoticeDraft(key: NoticeDraftKey): void {
   drafts.delete(draftKey(key));
+}
+
+// 새 공지의 id 는 재실행 뒤에도 같아야 서버가 재전송을 흡수한다. 그래서 초안과 달리 파일에 둔다
+const requestFile = ({ meId, crewId }: NoticeDraftKey) =>
+  new File(Paths.document, `notice-request-${encodeURIComponent(meId)}-${encodeURIComponent(crewId)}.json`);
+
+/** 같은 제목·내용으로 다시 올리면 지난번 id 를 돌려준다 */
+export function noticeRequestId(key: NoticeDraftKey, submit: NoticeForm): string {
+  const file = requestFile(key);
+  let previous: { id?: unknown; title?: string; body?: string } | null = null;
+  try { previous = file.exists ? JSON.parse(file.textSync()) : null; } catch {}
+  const id = previous?.title === submit.title && previous.body === submit.body && typeof previous.id === 'string' ? previous.id : Crypto.randomUUID();
+  file.write(JSON.stringify({ id, ...submit }));
+  return id;
+}
+
+export function clearNoticeRequest(key: NoticeDraftKey): void {
+  try { const file = requestFile(key); if (file.exists) file.delete(); } catch {}
 }

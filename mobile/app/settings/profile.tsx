@@ -1,4 +1,5 @@
 // 화면 5-8 · docs/screens/5-8-edit-profile.md
+import { mediaFile } from '../../src/api/media';
 import * as Crypto from 'expo-crypto';
 import * as ImagePicker from 'expo-image-picker';
 import { router, useNavigation } from 'expo-router';
@@ -102,7 +103,7 @@ export default function EditProfileScreen() {
           const body = new FormData();
           body.append('mediaId', picked.uploadId);
           body.append('purpose', 'PROFILE');
-          body.append('file', { uri: picked.uri, name: picked.name, type: picked.type } as unknown as Blob);
+          body.append('file', await mediaFile(picked.uri) as unknown as Blob);
           const { data } = await api.mutate('POST /media', body);
           mediaId = data.mediaId;
           setPicked({ ...picked, mediaId });

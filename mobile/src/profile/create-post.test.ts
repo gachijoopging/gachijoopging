@@ -1,3 +1,4 @@
+jest.mock('../api/media', () => ({ mediaFile: async (uri: string) => ({ uri, name: 'photo.jpg', type: 'image/jpeg' }) }));
 import React from 'react';
 import CreatePostScreen from '../../app/posts/new';
 import { emptyDraft, keepPhoto, loadDraft, rememberPostScope, saveDraft } from './post-draft';

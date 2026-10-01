@@ -1,4 +1,5 @@
 // 화면 5-6 · docs/screens/5-6-create-post.md
+import { mediaFile } from '../../src/api/media';
 import * as Crypto from 'expo-crypto';
 import * as ImagePicker from 'expo-image-picker';
 import { useNetworkState } from 'expo-network';
@@ -160,7 +161,7 @@ export default function CreatePostScreen() {
       const body = new FormData();
       body.append('mediaId', photo.key);
       body.append('purpose', 'POST');
-      body.append('file', { uri: photo.uri, name: photo.name, type: photo.type } as unknown as Blob);
+      body.append('file', await mediaFile(photo.uri) as unknown as Blob);
       const { data } = await api.mutate('POST /media', body);
       updatePhoto(photo.key, { mediaId: data.mediaId, failed: false });
       return data.mediaId;

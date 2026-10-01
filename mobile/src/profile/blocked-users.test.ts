@@ -69,6 +69,13 @@ test('account isolation, persisted data, and stale server reconciliation', () =>
   expect(blockedUsers('cold').has('target')).toBe(true);
 });
 
+test('첫 페이지만 조회하면 아직 조회하지 않은 차단 캐시는 보존한다', () => {
+  setUserBlocked('partial-page', 'tail-user', true);
+  const snapshot = blockedUsers('partial-page');
+  reconcileBlockedUsers('partial-page', ['first-user'], snapshot, false);
+  expect([...blockedUsers('partial-page')]).toEqual(['tail-user', 'first-user']);
+});
+
 test('subscribed chat-shaped cached items change immediately with account-specific blocks', () => {
   const items = [{ author: user('target') }, { author: user('other') }];
   let visible: typeof items = [];

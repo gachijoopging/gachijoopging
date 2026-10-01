@@ -51,6 +51,8 @@
 | ④-b | 다시 찍기 | "다시 찍기". ②단계만 | `Button` ghost lg | 사진을 버리고 ①단계로 |
 | ④-b | 사용 | "사용". ②단계만 | `Button` primary lg | `POST /media` — `mediaId`(앱이 만든 uuid) · `file` · `purpose`=ACTIVITY · `activityId`(4-3 의 `Activity.id`) · `takenAt`(찍은 시각) · `lat`·`lng`(찍은 순간 위치, 없으면 생략). 성공하면 4-5 |
 
+올리기 전에 앱이 긴 변 2048px·JPEG 85% 로 다시 저장한다(`mobile/src/api/media.ts`). 갤러리의 HEIC 처럼 계약이 받지 않는 형식도 이 단계에서 JPEG 가 된다.
+
 업로드 성공 뒤 4-5 로 넘길 것은 `POST /media` 응답 `data` 전체다.
 
 | 응답 | 값 | 4-5 에 넘기는 것 |
@@ -122,6 +124,4 @@
 
 ## 미결
 
-
-- `POST /media` 파일 형식·용량·리사이즈 제한과 같은 `mediaId` 재시도의 멱등 처리를 계약·구현에서 확정해야 한다.
-- 이미 업로드했지만 담지 않은 사진의 정리 정책·API는 미정이다. 업로드 후 AI만 실패하면 사진은 보존하고 4-5 수동 수량 입력으로 이어진다.
+- 없음

@@ -1,4 +1,5 @@
 // 화면 4-4 · docs/screens/4-4-take-photo.md
+import { mediaFile } from '../../../src/api/media';
 import * as Crypto from 'expo-crypto';
 import { CameraView, Camera } from 'expo-camera';
 import * as Linking from 'expo-linking';
@@ -121,7 +122,7 @@ export default function TakePhotoScreen() {
       setProgress(0.4);
       const body = new FormData();
       body.append('mediaId', shot.mediaId);
-      body.append('file', { uri: shot.uri, name: 'pickup.jpg', type: 'image/jpeg' } as unknown as Blob);
+      body.append('file', await mediaFile(shot.uri) as unknown as Blob);
       body.append('purpose', 'ACTIVITY');
       body.append('activityId', id);
       body.append('takenAt', shot.takenAt);

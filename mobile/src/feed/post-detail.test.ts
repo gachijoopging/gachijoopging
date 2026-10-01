@@ -137,3 +137,32 @@ test('댓글 신고에 선택한 댓글의 미리보기를 전달한다', async 
   await act(async () => rendered.root.findAllByType('Button').filter((button: any) => button.props.label === '신고').at(-1).props.onPress());
   expect(router.push).toHaveBeenCalledWith(expect.objectContaining({ params: expect.objectContaining({ targetType: 'COMMENT', targetId: 'c1', nickname: '나', text: '신고할 댓글' }) }));
 });
+
+test('이전 댓글을 한 번 요청해 순서대로 앞에 붙이고 마지막 커서에서 버튼을 숨긴다', async () => {
+  const recent = { id: 'recent', author: post.author, text: '최근 댓글', createdAt: post.createdAt };
+  const older = { ...recent, id: 'older', text: '이전 댓글' };
+  let finish!: (value: unknown) => void;
+  mockGet.mockImplementation((key: string) => key === 'GET /users/me' ? Promise.resolve({ data: { id: account, membership: { crew: { isLeader: false } } } }) : key === 'GET /posts/{postId}/comments' ? new Promise((resolve) => { finish = resolve; }) : Promise.resolve({ data: { ...post, comments: [recent], commentsNextCursor: 'older-cursor' } }));
+  await mount();
+  const { act } = require('react-test-renderer');
+  const button = rendered.root.findAllByType('Button').find((node: any) => node.props.label === '이전 댓글 더 보기');
+  act(() => { void button.props.onPress(); void button.props.onPress(); });
+  expect(mockGet.mock.calls.filter(([key]) => key === 'GET /posts/{postId}/comments')).toEqual([['GET /posts/{postId}/comments', { postId: 'p1', cursor: 'older-cursor' }]]);
+  await act(async () => finish({ data: { items: [older, recent], nextCursor: null } }));
+  const comments = rendered.root.findAll((node: any) => node.props.comment && !node.props.sending).map((node: any) => node.props.comment.id);
+  expect(comments).toEqual(['older', 'recent']);
+  expect(rendered.root.findAllByType('Button').some((node: any) => node.props.label === '이전 댓글 더 보기')).toBe(false);
+  expect(rendered.root.findByType('ScrollView').props.maintainVisibleContentPosition).toEqual({ minIndexForVisible: 2 });
+});
+
+test('새로고침 후 오래된 이전 댓글 응답이 복구된 목록에 섞이지 않는다', async () => {
+  let finish!: (value: unknown) => void;
+  const recent = { id: 'recent', author: post.author, text: '최근 댓글', createdAt: post.createdAt };
+  mockGet.mockImplementation((key: string) => key === 'GET /users/me' ? Promise.resolve({ data: { id: account, membership: { crew: { isLeader: false } } } }) : key === 'GET /posts/{postId}/comments' ? new Promise((resolve) => { finish = resolve; }) : Promise.resolve({ data: { ...post, comments: [recent], commentsNextCursor: 'older-cursor' } }));
+  await mount();
+  const { act } = require('react-test-renderer');
+  act(() => { void rendered.root.findAllByType('Button').find((node: any) => node.props.label === '이전 댓글 더 보기').props.onPress(); });
+  await act(async () => { await rendered.root.findByType('ScrollView').props.refreshControl.props.onRefresh(); });
+  await act(async () => finish({ data: { items: [{ ...recent, id: 'stale' }], nextCursor: null } }));
+  expect(rendered.root.findAll((node: any) => node.props.comment).map((node: any) => node.props.comment.id)).toEqual(['recent']);
+});

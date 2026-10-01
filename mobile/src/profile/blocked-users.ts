@@ -35,9 +35,9 @@ export function setUserBlocked(accountId: string, userId: string, blocked: boole
   replace(accountId, next);
 }
 
-export function reconcileBlockedUsers(accountId: string, ids: readonly string[], expected: ReadonlySet<string>): void {
+export function reconcileBlockedUsers(accountId: string, ids: readonly string[], expected: ReadonlySet<string>, complete = true): void {
   if (blockedUsers(accountId) !== expected) return;
-  replace(accountId, new Set(ids));
+  replace(accountId, new Set(complete ? ids : [...expected, ...ids]));
 }
 
 const subscribe = (listener: () => void) => { listeners.add(listener); return () => { listeners.delete(listener); }; };
