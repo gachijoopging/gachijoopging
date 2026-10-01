@@ -1,0 +1,37 @@
+import React from 'react';
+import { act, create, type ReactTestRenderer } from 'react-test-renderer';
+const mockGet = jest.fn();
+const mockMutate = jest.fn();
+jest.mock('../api/client', () => ({ createMockClient: () => ({ get: (...args: unknown[]) => mockGet(...args), mutate: (...args: unknown[]) => mockMutate(...args) }) }));
+jest.mock('expo/src/winter/fetch', () => ({ fetch: jest.fn() }));
+jest.mock('expo-router', () => ({ router: { back: jest.fn(), push: jest.fn() }, useFocusEffect: (fn: () => void) => require('react').useEffect(fn, [fn]) }));
+jest.mock('react-native', () => ({ View: 'View', RefreshControl: 'RefreshControl', Platform: { OS: 'android', select: (options: Record<string, unknown>) => options.android ?? options.default } }));
+jest.mock('design-system/src', () => new Proxy({ space: { md: 16 } }, { get: (target, key) => key in target ? target[key as keyof typeof target] : String(key) }));
+jest.mock('../auth/account', () => ({ currentAccount: () => ({ id: 'viewer', hasCrew: true }) }));
+import Blocks from '../../app/5-9-manage-blocks';
+const users = ['a', 'b', 'c'].map((id) => ({ id, nickname: id, photoUrl: null, withdrawn: false }));
+const deferred = () => { let resolve!: (value?: unknown) => void; let reject!: (error: Error) => void; const promise = new Promise((yes, no) => { resolve = yes; reject = no; }); return { promise, resolve, reject }; };
+let tree: ReactTestRenderer;
+const names = () => tree.root.findAllByType('ListRow' as never).map((row) => row.props.title);
+beforeEach(() => { jest.clearAllMocks(); mockGet.mockResolvedValue({ data: users }); (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true; });
+afterEach(() => { act(() => tree.unmount()); });
+test('same-frame unblocks both remove rows and failed requests restore their order', async () => {
+  const first = deferred(); const second = deferred();
+  mockMutate.mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise);
+  await act(async () => { tree = create(React.createElement(Blocks)); });
+  const buttons = tree.root.findAllByType('Button' as never);
+  act(() => { void buttons[0].props.onPress(); void buttons[1].props.onPress(); });
+  expect(names()).toEqual(['c']);
+  await act(async () => { second.reject(new Error('fail')); });
+  await act(async () => { first.reject(new Error('fail')); });
+  expect(names()).toEqual(['a', 'b', 'c']);
+});
+test('refresh does not restore a pending removal or duplicate its failed rollback', async () => {
+  const pending = deferred(); mockMutate.mockReturnValue(pending.promise);
+  await act(async () => { tree = create(React.createElement(Blocks)); });
+  act(() => { void tree.root.findAllByType('Button' as never)[0].props.onPress(); });
+  await act(async () => { await tree.root.findByType('Screen' as never).props.refreshControl.props.onRefresh(); });
+  expect(names()).toEqual(['b', 'c']);
+  await act(async () => { pending.reject(new Error('fail')); });
+  expect(names()).toEqual(['a', 'b', 'c']);
+});

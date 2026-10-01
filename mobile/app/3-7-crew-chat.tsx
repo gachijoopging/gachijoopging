@@ -2,6 +2,7 @@ import * as Crypto from 'expo-crypto';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { useBlockedUsers } from '../src/profile/blocked-users';
 import {
   AccessibilityInfo,
   ActivityIndicator,
@@ -87,6 +88,9 @@ const spokenTime = (iso: string) => chatTime(iso).replace(/:0?(\d+)/, '시 $1분
 export default function CrewChatScreen() {
   const { colors } = useTheme();
   const [me, setMe] = useState<Me | null>(null);
+  const blocked = useBlockedUsers(me?.author.id);
+  const blockedRef = useRef(blocked);
+  blockedRef.current = blocked;
   const [memberCount, setMemberCount] = useState<number | null>(null);
   const [chat, setChat] = useState<ChatState>(emptyChat);
   const [phase, setPhase] = useState<'loading' | 'error' | 'ready'>('loading');
@@ -153,6 +157,7 @@ export default function CrewChatScreen() {
       clearTimeout(timers.current.get(event.data.id));
       timers.current.delete(event.data.id);
       update((s) => receive(s, event.data));
+      if (blockedRef.current.has(event.data.author.id)) return;
       if (!fromOther) return;
       if (atBottom.current) markRead();
       else {
@@ -317,7 +322,7 @@ export default function CrewChatScreen() {
   const openProfile = (author: ChatMessage['author']) =>
     router.push({ pathname: '/5-4-user-profile', params: { id: author.id } });
 
-  const rows = me ? chatRows(chat.items, me.author.id, kstToday()) : [];
+  const rows = me ? chatRows(chat.items.filter((item) => !blocked.has(item.author.id)), me.author.id, kstToday()) : [];
   const limitNotice = chatLimitNotice(text);
   const ready = phase === 'ready';
 

@@ -30,6 +30,7 @@ import { PostCard } from '../../src/feed/PostCard';
 import { beforeLabel, emptyCopy, toggleLike, type FeedScope, type Post } from '../../src/feed/feed';
 import { leaveForMembership } from '../../src/feed/leave';
 import { useFlash } from '../../src/ui/useFlash';
+import { useBlockedUsers } from '../../src/profile/blocked-users';
 
 const api: ApiClient = createMockClient({ delayMs: 300 });
 const SCOPES: { value: FeedScope; label: string }[] = [
@@ -52,6 +53,7 @@ export default function FeedScreen() {
   const [before, setBefore] = useState<string | null>(null);
   const [page, setPage] = useState<Page | null>(null);
   const [meId, setMeId] = useState<string>();
+  const blocked = useBlockedUsers(meId);
   const [failed, setFailed] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [moreState, setMoreState] = useState<'idle' | 'loading' | 'failed'>('idle');
@@ -223,7 +225,7 @@ export default function FeedScreen() {
       ) : (
         <FlatList
           ref={listRef}
-          data={page.items}
+          data={page.items.filter((post) => !blocked.has(post.author.id))}
           keyExtractor={(p) => p.id}
           contentContainerStyle={{ gap: space.md, paddingBottom: space['3xl'], flexGrow: 1 }}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load('pull')} />}

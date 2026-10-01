@@ -50,6 +50,7 @@ import { getStored, loadAccount, loadLastAccount, subscribe, updateStored } from
 import { startTracking, stopTracking, syncOutbox, tick } from '../src/activity/tracking';
 import { formatClock, formatDistance } from '../src/format';
 import { crewMarkers } from '../src/live/live';
+import { useBlockedUsers } from '../src/profile/blocked-users';
 import { useFlash } from '../src/ui/useFlash';
 
 type Member = (typeof MOCKS)['GET /crew/live']['data'][number];
@@ -80,6 +81,7 @@ export default function ActivityInProgressScreen() {
     return st.session?.activityId === id && !st.ended ? st.session : null;
   });
   const [myId, setMyId] = useState<string | null>(null);
+  const blocked = useBlockedUsers(myId);
   const [now, setNow] = useState(Date.now());
   const [members, setMembers] = useState<readonly Member[] | null>(null);
   const [unreadChat, setUnreadChat] = useState(false);
@@ -200,7 +202,7 @@ export default function ActivityInProgressScreen() {
     if (bubbleTimer.current) clearTimeout(bubbleTimer.current);
   }, []);
 
-  const others = members?.filter((m) => m.user.id !== myId) ?? null;
+  const others = members?.filter((m) => m.user.id !== myId && !blocked.has(m.user.id)) ?? null;
   const markers = others ? crewMarkers([...others]) : [];
   const bubble = others?.find((m) => m.user.id === bubbleId) ?? null;
 

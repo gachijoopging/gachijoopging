@@ -345,6 +345,50 @@ export const MOCKS = {
       }
     ]
   },
+  "GET /crew/members/{userId}": {
+    "data": {
+      "id": "8a2d…",
+      "nickname": "상혁",
+      "photoUrl": null,
+      "withdrawn": false,
+      "isLeader": false,
+      "joinedAt": "2026-09-02T00:00:00Z",
+      "following": true,
+      "intro": "여의도 저녁 줍깅",
+      "blocked": false,
+      "totalItems": 380,
+      "totalDistanceM": 31200,
+      "totalActivities": 10,
+      "activeDays": [
+        "2026-09-06",
+        "2026-09-04",
+        "2026-08-30"
+      ]
+    }
+  },
+  "GET /crew/members/{userId}/activities": {
+    "data": {
+      "items": [
+        {
+          "id": "a100",
+          "startedAt": "2026-09-04T09:02:00Z",
+          "durationSec": 2520,
+          "distanceM": 3100,
+          "itemCount": 27,
+          "thumbUrl": "https://cdn.example.com/a100/p1_t.jpg"
+        },
+        {
+          "id": "a099",
+          "startedAt": "2026-09-02T22:10:00Z",
+          "durationSec": 1080,
+          "distanceM": 1200,
+          "itemCount": 0,
+          "thumbUrl": null
+        }
+      ],
+      "nextCursor": null
+    }
+  },
   "GET /crew/members/{userId}/posts": {
     "data": {
       "items": [
@@ -699,6 +743,57 @@ export const MOCKS = {
       }
     }
   },
+  "GET /users/me/activities": {
+    "data": {
+      "items": [
+        {
+          "id": "a100",
+          "startedAt": "2026-09-04T09:02:00Z",
+          "durationSec": 2520,
+          "distanceM": 3100,
+          "itemCount": 27,
+          "thumbUrl": "https://cdn.example.com/a100/p1_t.jpg"
+        },
+        {
+          "id": "a099",
+          "startedAt": "2026-09-02T22:10:00Z",
+          "durationSec": 1080,
+          "distanceM": 1200,
+          "itemCount": 0,
+          "thumbUrl": null
+        }
+      ],
+      "nextCursor": null
+    }
+  },
+  "GET /users/me/blocked": {
+    "data": [
+      {
+        "id": "3b7e…",
+        "nickname": "지수",
+        "photoUrl": null,
+        "withdrawn": false
+      },
+      {
+        "id": "0d4a…",
+        "nickname": "탈퇴한 크루원",
+        "photoUrl": null,
+        "withdrawn": true
+      }
+    ]
+  },
+  "GET /users/me/stats": {
+    "data": {
+      "totalItems": 412,
+      "totalDistanceM": 38400,
+      "totalActivities": 12,
+      "activeDays": [
+        "2026-09-05",
+        "2026-09-03",
+        "2026-08-28"
+      ]
+    }
+  },
   "PATCH /activities/{id}/items/{itemId}": {
     "data": {
       "itemCount": 27,
@@ -866,6 +961,24 @@ export const MOCKS = {
       "pinned": true,
       "commentCount": 0,
       "createdAt": "2026-09-28T09:00:00Z"
+    }
+  },
+  "POST /crew/posts": {
+    "data": {
+      "id": "5d0e…",
+      "author": {
+        "id": "6f1c…",
+        "nickname": "관열",
+        "photoUrl": null,
+        "withdrawn": false
+      },
+      "text": "오늘도 한강 한 바퀴",
+      "visibility": "CREW",
+      "media": [],
+      "likeCount": 0,
+      "liked": false,
+      "commentCount": 0,
+      "createdAt": "2026-09-06T12:00:00Z"
     }
   },
   "POST /crews": {
