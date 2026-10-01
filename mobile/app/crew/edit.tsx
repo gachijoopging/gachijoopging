@@ -95,7 +95,7 @@ export default function EditCrewScreen() {
       saved.current = true;
       // 떠나는 화면은 다시 그리지 않는다. 전환 중에 입력·스테퍼가 되살아나면 안드로이드 Fabric 이
       // 사라지는 뷰를 다시 붙이려다 "child already has a parent" 로 죽는다
-      router.dismissTo({ pathname: '/crew/info', params: { flash: '크루 정보를 저장했어요.' } });
+      router.dismissTo({ pathname: '/crew/members', params: { flash: '크루 정보를 저장했어요.' } });
       return;
     } catch (e) {
       if (e instanceof ApiError && e.code === 'FORBIDDEN') setDenied(true);
@@ -154,7 +154,7 @@ export default function EditCrewScreen() {
           description={null}
           icon="lock-outline"
           actionLabel="크루 정보로"
-          onRetry={() => router.dismissTo('/crew/info')}
+          onRetry={() => router.dismissTo('/crew/members')}
         />
       ) : !form || !original ? (
         failed ? (

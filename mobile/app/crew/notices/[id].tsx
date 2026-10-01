@@ -111,7 +111,7 @@ export default function NoticeDetailScreen() {
     try {
       await api.mutate('DELETE /notices/{noticeId}', { noticeId: id });
       // 이 화면은 사라지므로 삭제 안내는 목록이 띄운다
-      router.dismissTo({ pathname: '/crew/notices', params: { flash: '공지를 삭제했어요.' } });
+      router.dismissTo({ pathname: '/(tabs)/crew', params: { tab: 'notices', flash: '공지를 삭제했어요.' } });
     } catch {
       setSnackbar('공지를 삭제하지 못했어요. 다시 시도해 주세요.');
     }
@@ -157,7 +157,7 @@ export default function NoticeDetailScreen() {
           title="공지를 볼 수 없어요"
           description="삭제되었거나 더 이상 이 크루의 공지가 아니에요."
           actionLabel={cameFromNotifications ? '알림으로' : '공지 목록으로'}
-          onAction={() => (router.canGoBack() ? router.back() : router.replace('/crew/notices'))}
+          onAction={() => (router.canGoBack() ? router.back() : router.replace({ pathname: '/(tabs)/crew', params: { tab: 'notices' } }))}
         />
       ) : !notice ? (
         failed ? (

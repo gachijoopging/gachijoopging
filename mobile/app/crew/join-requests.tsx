@@ -126,7 +126,7 @@ export default function ManageJoinRequestsScreen() {
     deciding.current = false;
   };
 
-  const back = () => (router.canGoBack() ? router.back() : router.replace('/crew/info'));
+  const back = () => (router.canGoBack() ? router.back() : router.replace('/crew/members'));
 
   const confirmTitle = confirm
     ? `${confirm.request.user.nickname} 님의 가입을 ${confirm.decision === 'APPROVE' ? '승인' : '거절'}할까요?`
@@ -142,7 +142,7 @@ export default function ManageJoinRequestsScreen() {
           description={null}
           icon="lock-outline"
           actionLabel="크루 정보로"
-          onRetry={() => router.dismissTo('/crew/info')}
+          onRetry={() => router.dismissTo('/crew/members')}
         />
       ) : !requests ? (
         failed ? (

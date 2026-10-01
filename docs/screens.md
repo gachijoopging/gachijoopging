@@ -74,16 +74,16 @@ flowchart TD
 | 2-2 | 활동 중인 크루원 목록 | 재조립 ← fragment_friends | [2-2-active-crew-members.md](screens/2-2-active-crew-members.md) | 승인 |
 | 2-3 | 알림 목록 | fragment_notification | [2-3-notifications.md](screens/2-3-notifications.md) | 승인 |
 | 3-1 | 모이깅 | 재조립 ← fragment_meet | [3-1-crew.md](screens/3-1-crew.md) | 승인 |
-| 3-2 | 크루 정보 | 재조립 ← fragment_meet_manage | [3-2-crew-info.md](screens/3-2-crew-info.md) | 승인 |
-| 3-3 | 초대 코드 | 재조립 ← fragment_meet_manage | [3-3-invite-code.md](screens/3-3-invite-code.md) | 승인 |
+| 3-2 | 크루 정보 | 통합됨 → 3-11 | [3-2-crew-info.md](screens/3-2-crew-info.md) | 통합됨 |
+| 3-3 | 초대 코드 | 통합됨 → 3-11 시트 | [3-3-invite-code.md](screens/3-3-invite-code.md) | 통합됨 |
 | 3-4 | 크루 기록 | 재조립 ← fragment_group_record | [3-4-crew-records.md](screens/3-4-crew-records.md) (3-1 탭으로 통합) | 승인 |
-| 3-5 | 공지 목록 | 재조립 ← fragment_feed | [3-5-notices.md](screens/3-5-notices.md) | 승인 |
+| 3-5 | 공지 목록 | 재조립 ← fragment_feed | [3-5-notices.md](screens/3-5-notices.md) (3-1 탭으로 통합) | 승인 |
 | 3-6 | 공지 상세 | 재조립 ← fragment_post_detail | [3-6-notice-detail.md](screens/3-6-notice-detail.md) | 승인 |
 | 3-7 | 크루 채팅 | fragment_chat | [3-7-crew-chat.md](screens/3-7-crew-chat.md) | 승인 |
 | 3-8 | 가입 신청 관리 | 재조립 ← fragment_friends | [3-8-manage-join-requests.md](screens/3-8-manage-join-requests.md) | 승인 |
 | 3-9 | 활동 달력 | 신규 | [3-9-activity-calendar.md](screens/3-9-activity-calendar.md) (3-1 탭으로 통합) | 승인 |
 | 3-10 | 크루 정보 수정 | 재조립 ← fragment_meet_edit | [3-10-edit-crew.md](screens/3-10-edit-crew.md) | 승인 |
-| 3-11 | 크루원 목록·관리 | 재조립 ← fragment_meet_manage | [3-11-manage-crew-members.md](screens/3-11-manage-crew-members.md) | 승인 |
+| 3-11 | 크루 정보·크루원 | 재조립 ← fragment_meet_manage | [3-11-manage-crew-members.md](screens/3-11-manage-crew-members.md) | 승인 |
 | 3-12 | 공지 작성·수정 | 재조립 ← fragment_publish | [3-12-edit-notice.md](screens/3-12-edit-notice.md) | 승인 |
 | 4-1 | 줍깅 대기 | 재조립 ← sheet_start | [4-1-plogging-ready.md](screens/4-1-plogging-ready.md) | 승인 |
 | 4-2 | 활동 시작 시트 | sheet_start | [4-2-start-activity-sheet.md](screens/4-2-start-activity-sheet.md) | 승인 |

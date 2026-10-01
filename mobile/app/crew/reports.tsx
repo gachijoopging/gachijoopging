@@ -170,7 +170,7 @@ export default function ReviewReportScreen() {
           description={null}
           icon="lock-outline"
           actionLabel="크루 정보로"
-          onRetry={() => router.replace('/crew/info')}
+          onRetry={() => router.replace('/crew/members')}
         />
       ) : !reports || isLeader == null ? (
         failed ? (

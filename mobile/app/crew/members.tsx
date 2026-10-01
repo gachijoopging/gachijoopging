@@ -1,4 +1,4 @@
-// 화면 3-11 · docs/screens/3-11-manage-crew-members.md
+// 화면 3-11 · docs/screens/3-11-manage-crew-members.md (3-2 크루 정보 · 3-3 초대 코드를 흡수)
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 import { ActivityIndicator, RefreshControl, View } from 'react-native';
@@ -24,7 +24,10 @@ import {
 import { createMockClient, type ApiClient } from '../../src/api/client';
 import type { MOCKS } from '../../src/api/mocks.generated';
 import { ExportSheet } from '../../src/crew/ExportSheet';
+import { InviteCodeSheet } from '../../src/crew/InviteCodeSheet';
 import { memberActionOutcome, memberMenu, type MemberAction } from '../../src/crew/manage';
+import { useFlash } from '../../src/ui/useFlash';
+import type { Crew } from '../(tabs)/crew';
 
 type Member = (typeof MOCKS)['GET /crew/members']['data'][number];
 
@@ -39,14 +42,15 @@ export default function ManageCrewMembersScreen() {
   const { colors } = useTheme();
   const [members, setMembers] = useState<readonly Member[] | null>(null);
   const [me, setMe] = useState<{ id: string; isLeader: boolean } | null>(null);
-  const [crewInfo, setCrewInfo] = useState<{ inviteCode: string; pendingJoinRequests: number } | null>(null);
+  const [crew, setCrew] = useState<Crew | null>(null);
   const [failed, setFailed] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [menuTarget, setMenuTarget] = useState<Member | null>(null);
   const [confirm, setConfirm] = useState<{ member: Member; action: MemberAction } | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [snackbar, setSnackbar] = useState<string | null>(null);
+  const [snackbar, setSnackbar] = useFlash();
   const [exporting, setExporting] = useState(false);
+  const [inviting, setInviting] = useState(false);
 
   const load = useCallback(async (mode: 'quiet' | 'pull') => {
     if (mode === 'pull') setRefreshing(true);
@@ -56,10 +60,7 @@ export default function ManageCrewMembersScreen() {
       api.get('GET /users/me'),
     ]);
     setRefreshing(false);
-    if (crewRes.status === 'fulfilled') {
-      const { inviteCode, pendingJoinRequests } = crewRes.value.data;
-      setCrewInfo({ inviteCode, pendingJoinRequests });
-    }
+    if (crewRes.status === 'fulfilled') setCrew(crewRes.value.data);
     if (crewRes.status === 'fulfilled' && meRes.status === 'fulfilled') {
       setMe({ id: meRes.value.data.id, isLeader: crewRes.value.data.isLeader });
     }
@@ -89,8 +90,6 @@ export default function ManageCrewMembersScreen() {
       error = e;
     }
     const outcome = memberActionOutcome(action, member.nickname, error);
-    // 위임하면 내 역할이 바뀌므로 3-2 로 돌아가 거기서 안내한다. 떠나는 화면은 다시 그리지 않는다(3-10 과 같은 이유)
-    if (outcome.next === 'leave') return router.dismissTo({ pathname: '/crew/info', params: { flash: outcome.message ?? '' } });
     setBusyId(null);
     acting.current = false;
     if (outcome.message) setSnackbar(outcome.message);
@@ -109,7 +108,11 @@ export default function ManageCrewMembersScreen() {
 
   return (
     <Screen scroll refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load('pull')} />}>
-      <AppHeader title="크루원 관리" onBack={() => (router.canGoBack() ? router.back() : router.replace('/crew/info'))} />
+      <AppHeader
+        title="크루 정보"
+        onBack={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)/crew'))}
+        action={me?.isLeader ? <IconButton icon="pencil-outline" label="크루 정보 수정" onPress={() => router.push('/crew/edit')} /> : undefined}
+      />
 
       {!members ? (
         failed ? (
@@ -120,16 +123,30 @@ export default function ManageCrewMembersScreen() {
       ) : (
         <>
           {failed ? <Banner tone="warn">인터넷 연결을 확인해 주세요.</Banner> : null}
-          {crewInfo ? (
+          {crew ? (
+            <Card style={{ alignItems: 'center', gap: space.sm }}>
+              <View
+                accessible
+                accessibilityLabel={[crew.name, crew.intro, `14일 목표 ${crew.goalCount}개`].filter(Boolean).join(', ')}
+                style={{ alignItems: 'center', gap: space.sm }}
+              >
+                <Avatar name={crew.name} uri={crew.photoUrl ?? undefined} size="xl" />
+                <Txt variant="display" style={{ textAlign: 'center' }}>{crew.name}</Txt>
+                {crew.intro ? <Txt variant="body" tone="muted" style={{ textAlign: 'center' }}>{crew.intro}</Txt> : null}
+                <Txt variant="caption" tone="muted">{`14일 목표 ${crew.goalCount}개`}</Txt>
+              </View>
+            </Card>
+          ) : null}
+          {crew ? (
             <Card style={{ paddingVertical: 0 }}>
               <ListRow
                 icon="ticket-outline"
                 title="초대 코드"
-                subtitle={crewInfo.inviteCode}
+                subtitle={crew.inviteCode}
                 divider={!!me?.isLeader}
                 chevron
-                accessibilityLabel={`초대 코드, ${crewInfo.inviteCode}`}
-                onPress={() => router.push('/crew/invite-code')}
+                accessibilityLabel={`초대 코드, ${crew.inviteCode}`}
+                onPress={() => setInviting(true)}
               />
               {me?.isLeader ? (
                 <>
@@ -137,9 +154,15 @@ export default function ManageCrewMembersScreen() {
                     icon="account-clock-outline"
                     title="가입 신청"
                     chevron
-                    right={crewInfo.pendingJoinRequests > 0 ? <Badge label={crewInfo.pendingJoinRequests} tone="danger" /> : undefined}
-                    accessibilityLabel={`가입 신청 ${crewInfo.pendingJoinRequests}건`}
+                    right={crew.pendingJoinRequests > 0 ? <Badge label={crew.pendingJoinRequests} tone="danger" /> : undefined}
+                    accessibilityLabel={`가입 신청 ${crew.pendingJoinRequests}건`}
                     onPress={() => router.push('/crew/join-requests')}
+                  />
+                  <ListRow
+                    icon="flag-outline"
+                    title="신고 처리"
+                    chevron
+                    onPress={() => router.push('/crew/reports')}
                   />
                   <ListRow
                     icon="file-export-outline"
@@ -231,6 +254,17 @@ export default function ManageCrewMembersScreen() {
           </>
         }
       />
+
+      {crew ? (
+        <InviteCodeSheet
+          visible={inviting}
+          code={crew.inviteCode}
+          isLeader={!!me?.isLeader}
+          onClose={() => setInviting(false)}
+          onReissued={(inviteCode) => setCrew((c) => c && ({ ...c, inviteCode } as Crew))}
+          onMessage={setSnackbar}
+        />
+      ) : null}
 
       <ExportSheet
         visible={exporting}

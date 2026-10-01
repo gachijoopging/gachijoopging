@@ -71,7 +71,7 @@ export default function EditNoticeScreen() {
     void load();
   }, [id]);
 
-  const goneBack = () => router.dismissTo({ pathname: '/crew/notices', params: { flash: '삭제된 공지예요.' } });
+  const goneBack = () => router.dismissTo({ pathname: '/(tabs)/crew', params: { tab: 'notices', flash: '삭제된 공지예요.' } });
 
   const change = (next: Partial<NoticeForm>) => {
     if (!form || !key) return;
@@ -124,7 +124,7 @@ export default function EditNoticeScreen() {
           description={null}
           icon="lock-outline"
           actionLabel="공지 목록으로"
-          onRetry={() => router.dismissTo('/crew/notices')}
+          onRetry={() => router.dismissTo({ pathname: '/(tabs)/crew', params: { tab: 'notices' } })}
         />
       ) : !form ? (
         failed ? (
