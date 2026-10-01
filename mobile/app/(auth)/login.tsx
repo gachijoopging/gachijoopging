@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { Image, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { AppHeader, Banner, Button, Chip, Field, LinkText, Screen, Snackbar, Txt, space } from 'design-system/src';
+import { AppHeader, Banner, Button, Chip, Field, LinkText, Screen, Snackbar, Txt, space, useTheme } from 'design-system/src';
 import { onboardingApi as api } from '../../src/api/onboarding';
 import { authenticatedDestination } from '../../src/auth/destination';
 import { loginErrorMessage } from '../../src/auth/errors';
@@ -10,8 +10,10 @@ import { validateEmail } from '../../src/auth/validators';
 import { forgetAccount, rememberAccount } from '../../src/auth/account';
 
 const wordmark = require('../../../design-system/assets/logo-wordmark.png');
+const wordmarkDark = require('../../../design-system/assets/logo-wordmark-dark.png');
 
 export default function LoginScreen() {
+  const { scheme } = useTheme();
   const params = useLocalSearchParams<{ justReset?: string }>();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -59,7 +61,7 @@ export default function LoginScreen() {
       <AppHeader title="이메일 로그인" subtitle="기존 계정" onBack={() => router.back()} backDisabled={loading} />
 
       <View style={{ alignItems: 'center', gap: space.sm }}>
-        <Image source={wordmark} accessibilityLabel="가치줍깅" resizeMode="contain" style={{ width: 190, height: (190 * 301) / 840 }} />
+        <Image source={scheme === 'dark' ? wordmarkDark : wordmark} accessibilityLabel="가치줍깅" resizeMode="contain" style={{ width: 190, height: (190 * 301) / 840 }} />
         <Txt variant="title" bold style={{ textAlign: 'center' }}>
           다시 만나서 반가워요
         </Txt>

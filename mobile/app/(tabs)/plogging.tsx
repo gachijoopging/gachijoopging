@@ -42,7 +42,7 @@ export default function PloggingScreen() {
   const resume = (id: string) => router.push({ pathname: '/activity/[id]', params: { id } });
 
   return (
-    <Screen scroll refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load(true)} />}>
+    <Screen scroll edges={['top', 'left', 'right']} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load(true)} />}>
       <Txt variant="display">줍깅</Txt>
       {'stale' in view && view.stale ? <Banner tone="warn">인터넷 연결을 확인해 주세요.</Banner> : null}
 

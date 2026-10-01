@@ -4,7 +4,8 @@ import { useKeepAwake } from 'expo-keep-awake';
 import * as Linking from 'expo-linking';
 import * as Location from 'expo-location';
 import { useNetworkState } from 'expo-network';
-import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { router, useFocusEffect, useIsFocused, useLocalSearchParams } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -72,6 +73,7 @@ const BANNER_TEXT: Record<Exclude<BannerKind, 'locationOff'>, { text: string; to
 };
 
 export default function ActivityInProgressScreen() {
+  const focused = useIsFocused();
   useKeepAwake();
   const { id, flash, startedAt, shared, quick } = useLocalSearchParams<{ id: string; flash?: string; startedAt?: string; shared?: string; quick?: string }>();
   const { colors, shadows } = useTheme();
@@ -286,6 +288,8 @@ export default function ActivityInProgressScreen() {
 
   return (
     <Screen bleed edges={['left', 'right']} contentStyle={{ paddingTop: 0 }}>
+      {/* 지도 타일은 다크 모드에서도 밝다. 위에 다른 화면이 올라오면 거둬 그 화면이 테마를 따르게 한다 */}
+      {focused ? <StatusBar style="dark" /> : null}
       <View style={{ flex: 1 }}>
         <View
           style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: colors.neutral }}

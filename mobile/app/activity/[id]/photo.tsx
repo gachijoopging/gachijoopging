@@ -4,6 +4,7 @@ import * as Crypto from 'expo-crypto';
 import { CameraView, Camera } from 'expo-camera';
 import * as Linking from 'expo-linking';
 import { useNetworkState } from 'expo-network';
+import { StatusBar } from 'expo-status-bar';
 import { router, useFocusEffect, useLocalSearchParams, useNavigation } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, Image, ScrollView, View } from 'react-native';
@@ -204,6 +205,8 @@ export default function TakePhotoScreen() {
 
   return (
     <Screen style={{ backgroundColor: colors.camera.bg }}>
+      {/* 카메라 배경은 테마와 무관하게 어둡다. 위에 다른 화면이 올라오면 거둬 그 화면이 테마를 따르게 한다 */}
+      {focused ? <StatusBar style="light" /> : null}
       <ScrollView contentContainerStyle={{ flexGrow: 1, gap: space.md, paddingBottom: space.lg }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
           <IconButton icon="arrow-left" label="뒤로" tone="translucent" disabled={uploading} onPress={() => router.back()} />

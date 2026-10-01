@@ -136,8 +136,9 @@ export function MyProfile({ recordsOnly = false }: { recordsOnly?: boolean }) {
 
   const offline = (meFailed && !!me) || (records.failed && !!records.items);
 
+  // 탭 화면은 하단 안전 영역을 탭 바가 맡는다
   return (
-    <Screen>
+    <Screen edges={recordsOnly ? undefined : ['top', 'left', 'right']}>
       {recordsOnly ? (
         <AppHeader title="내 활동 기록" onBack={() => (router.canGoBack() ? router.back() : router.replace('/crew-choice'))} />
       ) : (

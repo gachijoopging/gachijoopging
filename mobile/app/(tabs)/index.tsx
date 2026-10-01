@@ -63,7 +63,7 @@ export default function HomeScreen() {
   const unread = home?.unreadNotifications ?? 0;
 
   return (
-    <Screen scroll refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load('pull')} />}>
+    <Screen scroll edges={['top', 'left', 'right']} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load('pull')} />}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
         <View style={{ flex: 1, gap: space.xs }}>
           <Image source={scheme === 'dark' ? wordmarkDark : wordmark} accessible={false} resizeMode="contain" style={{ width: 110, height: (110 * 301) / 840 }} />
