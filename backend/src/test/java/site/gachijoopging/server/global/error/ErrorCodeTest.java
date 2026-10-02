@@ -16,6 +16,7 @@ class ErrorCodeTest {
     assertThat(ErrorCode.NOT_FOUND.status()).isEqualTo(HttpStatus.NOT_FOUND);
     assertThat(ErrorCode.METHOD_NOT_ALLOWED.status()).isEqualTo(HttpStatus.METHOD_NOT_ALLOWED);
     assertThat(ErrorCode.CONFLICT.status()).isEqualTo(HttpStatus.CONFLICT);
+    assertThat(ErrorCode.NICKNAME_TAKEN.status()).isEqualTo(HttpStatus.CONFLICT);
     assertThat(ErrorCode.MEET_FULL.status()).isEqualTo(HttpStatus.CONFLICT);
     assertThat(ErrorCode.VALIDATION.status()).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
     assertThat(ErrorCode.RATE_LIMITED.status()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
@@ -23,7 +24,7 @@ class ErrorCodeTest {
   }
 
   @Test
-  void 코드는_열한_종뿐이다() {
-    assertThat(ErrorCode.values()).hasSize(11);
+  void 코드는_열두_종뿐이다() {
+    assertThat(ErrorCode.values()).hasSize(12);
   }
 }

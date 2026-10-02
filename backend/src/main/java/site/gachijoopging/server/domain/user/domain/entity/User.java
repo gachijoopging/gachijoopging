@@ -9,6 +9,7 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import java.util.Optional;
 import java.util.UUID;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -75,6 +76,31 @@ public class User {
 
   public void linkGoogle(String googleSub, Instant now) {
     this.googleSub = requireNonNull(googleSub, "googleSub");
+    this.updatedAt = now;
+  }
+
+  public void updateProfile(
+      String nickname,
+      String intro,
+      Optional<UUID> photoMediaId,
+      Boolean shareLocationDefault,
+      Boolean notifyActivityStart,
+      Instant now) {
+    if (nickname != null) {
+      this.nickname = nickname;
+    }
+    if (intro != null) {
+      this.intro = intro;
+    }
+    if (photoMediaId != null) {
+      this.photoMediaId = photoMediaId.orElse(null);
+    }
+    if (shareLocationDefault != null) {
+      this.shareLocationDefault = shareLocationDefault;
+    }
+    if (notifyActivityStart != null) {
+      this.notifyActivityStart = notifyActivityStart;
+    }
     this.updatedAt = now;
   }
 

@@ -15,6 +15,7 @@ import site.gachijoopging.server.domain.media.domain.policy.MediaSignedUrl;
 import site.gachijoopging.server.domain.media.domain.service.MediaService;
 import site.gachijoopging.server.domain.user.domain.entity.User;
 import site.gachijoopging.server.domain.user.dto.MeResponse;
+import site.gachijoopging.server.domain.user.dto.MeUpdateRequest;
 import site.gachijoopging.server.domain.user.dto.UserAccount;
 import site.gachijoopging.server.domain.user.infrastructure.persistence.UserRepository;
 import site.gachijoopging.server.global.error.BusinessException;
@@ -66,8 +67,6 @@ public class UserService implements AccountAuthorityLoader {
     return usable(userRepository.findByGoogleSub(googleSub));
   }
 
-  // ponytail: 확인 후 갱신이라 같은 소셜 계정을 두 사람이 동시에 연결하면 UNIQUE 위반이 500 으로 난다.
-  // 실제로 나면 조건부 UPDATE 로 바꾼다
   @Transactional
   public void linkKakao(UUID userId, String kakaoId) {
     User me = activeUser(userId);
@@ -111,6 +110,26 @@ public class UserService implements AccountAuthorityLoader {
         new MeResponse.Linked(me.getKakaoId() != null, me.getGoogleSub() != null),
         new MeResponse.Settings(me.isShareLocationDefault(), me.isNotifyActivityStart()),
         new MeResponse.Membership(MeResponse.MembershipStatus.NONE, null));
+  }
+
+  @Transactional
+  public MeResponse updateMe(UUID userId, MeUpdateRequest request) {
+    User me = activeUser(userId);
+    if (request.nickname() != null
+        && userRepository.existsByNicknameAndIdNot(request.nickname(), userId)) {
+      throw new BusinessException(ErrorCode.NICKNAME_TAKEN, "이미 쓰는 닉네임이다");
+    }
+    if (request.photoMediaId() != null) {
+      request.photoMediaId().ifPresent(mediaId -> mediaService.requireOwnedBy(mediaId, userId));
+    }
+    me.updateProfile(
+        request.nickname(),
+        request.intro(),
+        request.photoMediaId(),
+        request.shareLocationDefault(),
+        request.notifyActivityStart(),
+        clock.instant());
+    return getMe(userId);
   }
 
   @Transactional(readOnly = true)

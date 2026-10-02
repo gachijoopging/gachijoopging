@@ -17,6 +17,8 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
   Optional<User> findByGoogleSub(String googleSub);
 
+  boolean existsByNicknameAndIdNot(String nickname, UUID id);
+
   @Modifying
   @Query(
       value =
