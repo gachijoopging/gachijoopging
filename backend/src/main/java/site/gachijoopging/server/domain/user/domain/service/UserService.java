@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import site.gachijoopging.server.domain.media.domain.policy.MediaSignedUrl;
 import site.gachijoopging.server.domain.media.domain.service.MediaService;
 import site.gachijoopging.server.domain.user.domain.entity.User;
+import site.gachijoopging.server.domain.user.dto.DeviceRequest;
 import site.gachijoopging.server.domain.user.dto.MeResponse;
 import site.gachijoopging.server.domain.user.dto.MeUpdateRequest;
 import site.gachijoopging.server.domain.user.dto.UserAccount;
@@ -26,7 +27,8 @@ import site.gachijoopging.server.global.security.AccountAuthorityLoader;
 @RequiredArgsConstructor
 public class UserService implements AccountAuthorityLoader {
 
-  private static final List<GrantedAuthority> USER = List.of(new SimpleGrantedAuthority("ROLE_USER"));
+  private static final List<GrantedAuthority> USER =
+      List.of(new SimpleGrantedAuthority("ROLE_USER"));
 
   private final UserRepository userRepository;
   private final PasswordEncoder passwordEncoder;
@@ -38,7 +40,8 @@ public class UserService implements AccountAuthorityLoader {
   public UserAccount create(String email, String password) {
     UUID id = UUID.randomUUID();
     int inserted =
-        userRepository.insertEmailIfAbsent(id, email, passwordEncoder.encode(password), clock.instant());
+        userRepository.insertEmailIfAbsent(
+            id, email, passwordEncoder.encode(password), clock.instant());
     if (inserted == 0) {
       throw new BusinessException(ErrorCode.CONFLICT, "이미 가입된 이메일이다");
     }
@@ -132,6 +135,13 @@ public class UserService implements AccountAuthorityLoader {
     return getMe(userId);
   }
 
+  @Transactional
+  public void registerDevice(UUID userId, DeviceRequest request) {
+    activeUser(userId);
+    userRepository.upsertDevice(
+        request.pushToken(), userId, request.platform().name(), clock.instant());
+  }
+
   @Transactional(readOnly = true)
   public Optional<UUID> findPasswordOwnerId(String email) {
     return userRepository
@@ -174,6 +184,9 @@ public class UserService implements AccountAuthorityLoader {
     if (photoMediaId == null) {
       return null;
     }
-    return mediaService.find(photoMediaId).map(media -> mediaSignedUrl.of(media.objectKey())).orElse(null);
+    return mediaService
+        .find(photoMediaId)
+        .map(media -> mediaSignedUrl.of(media.objectKey()))
+        .orElse(null);
   }
 }

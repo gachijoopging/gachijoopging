@@ -57,4 +57,21 @@ public interface UserRepository extends JpaRepository<User, UUID> {
       nativeQuery = true)
   int insertGoogleIfAbsent(
       @Param("id") UUID id, @Param("googleSub") String googleSub, @Param("now") Instant now);
+
+  // 같은 기기에 다른 계정으로 로그인하면 토큰의 주인이 바뀐다
+  @Modifying
+  @Query(
+      value =
+          """
+          INSERT INTO devices (push_token, user_id, platform, created_at, updated_at)
+          VALUES (:pushToken, :userId, :platform, :now, :now)
+          ON CONFLICT (push_token)
+          DO UPDATE SET user_id = :userId, platform = :platform, updated_at = :now
+          """,
+      nativeQuery = true)
+  void upsertDevice(
+      @Param("pushToken") String pushToken,
+      @Param("userId") UUID userId,
+      @Param("platform") String platform,
+      @Param("now") Instant now);
 }

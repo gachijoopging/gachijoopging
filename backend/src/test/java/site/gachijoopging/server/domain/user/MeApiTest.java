@@ -1,7 +1,9 @@
 package site.gachijoopging.server.domain.user;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static site.gachijoopging.server.support.TestAccounts.가입한다;
@@ -123,6 +125,40 @@ class MeApiTest extends IntegrationTest {
   @Test
   void 토큰이_없으면_401_이다() throws Exception {
     mockMvc.perform(get("/api/v1/users/me")).andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  void 같은_기기에_다른_계정으로_등록하면_토큰의_주인이_바뀐다() throws Exception {
+    TestAccount 먼저 = 가입한다(mockMvc, "me-device-a@test.io");
+    TestAccount 나중 = 가입한다(mockMvc, "me-device-b@test.io");
+
+    mockMvc.perform(기기(먼저, "push-shared")).andExpect(status().isNoContent());
+    mockMvc.perform(기기(나중, "push-shared")).andExpect(status().isNoContent());
+
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT user_id FROM devices WHERE push_token = 'push-shared'", UUID.class))
+        .isEqualTo(나중.id());
+  }
+
+  @Test
+  void 모르는_플랫폼은_422_다() throws Exception {
+    TestAccount 나 = 가입한다(mockMvc, "me-device-ios@test.io");
+
+    mockMvc
+        .perform(
+            put("/api/v1/users/me/devices")
+                .header(HttpHeaders.AUTHORIZATION, 나.bearer())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"pushToken\":\"p\",\"platform\":\"IOS\"}"))
+        .andExpect(status().isUnprocessableEntity());
+  }
+
+  private MockHttpServletRequestBuilder 기기(TestAccount 나, String 토큰) {
+    return put("/api/v1/users/me/devices")
+        .header(HttpHeaders.AUTHORIZATION, 나.bearer())
+        .contentType(MediaType.APPLICATION_JSON)
+        .content("{\"pushToken\":\"" + 토큰 + "\",\"platform\":\"ANDROID\"}");
   }
 
   private MockHttpServletRequestBuilder 수정(TestAccount 나, String 본문) {
