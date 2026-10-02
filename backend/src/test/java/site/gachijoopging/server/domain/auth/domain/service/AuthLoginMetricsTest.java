@@ -17,7 +17,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import site.gachijoopging.server.domain.auth.infrastructure.persistence.DailyActiveUserRepository;
 import site.gachijoopging.server.domain.auth.infrastructure.persistence.RefreshTokenRepository;
 import site.gachijoopging.server.domain.user.domain.service.UserService;
 import site.gachijoopging.server.domain.user.dto.UserAccount;
@@ -31,7 +30,6 @@ class AuthLoginMetricsTest {
   private static final Instant 고정_시각 = Instant.parse("2026-08-05T04:00:00Z");
 
   @Mock private RefreshTokenRepository refreshTokenRepository;
-  @Mock private DailyActiveUserRepository dailyActiveUserRepository;
   @Mock private RefreshTokenFamilyRevoker familyRevoker;
   @Mock private UserService userService;
   @Mock private JwtIssuer jwtIssuer;
@@ -45,7 +43,6 @@ class AuthLoginMetricsTest {
     authService =
         new AuthService(
             refreshTokenRepository,
-            dailyActiveUserRepository,
             familyRevoker,
             userService,
             jwtIssuer,
