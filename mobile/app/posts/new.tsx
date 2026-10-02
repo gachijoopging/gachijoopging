@@ -176,6 +176,7 @@ export default function CreatePostScreen() {
     setPosting(true);
     setPostFailed(false);
     setSelected(null);
+    let left = false;
     try {
       const uploaded = new Map(photos.map((p) => [p.key, p.mediaId]));
       setDone(photos.length - photosToUpload(photos).length);
@@ -190,8 +191,11 @@ export default function CreatePostScreen() {
       commit({ ...draftRef.current, requestId });
       await api.mutate('POST /crew/posts', { id: requestId, text: text.trim(), visibility, mediaIds });
       const publishedPhotos = draftRef.current.photos;
-      commit(emptyDraft());
+      // 닫히는 전환 중에 이 화면을 다시 그리면 Fabric Android 가 addViewAt 에서 죽는다. 비운 초안은 파일에만 남긴다
+      saveDraft(scope, emptyDraft());
+      draftRef.current = emptyDraft();
       discardPhotos(publishedPhotos);
+      left = true;
       router.dismissTo({ pathname: '/(tabs)/feed', params: { flash: '게시물을 올렸어요' } });
     } catch (e) {
       if (e instanceof ApiError && e.code === 'NO_CREW') {
@@ -200,8 +204,10 @@ export default function CreatePostScreen() {
       }
       setPostFailed(true);
     } finally {
-      busy.current = false;
-      setPosting(false);
+      if (!left) {
+        busy.current = false;
+        setPosting(false);
+      }
     }
   };
 
