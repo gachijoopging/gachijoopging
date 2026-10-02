@@ -188,9 +188,9 @@ export default function SettingsScreen() {
       if (outcome === 'delegate') setModal({ kind: 'delegate' });
       else if (outcome === 'blocked') setModal({ kind: 'blocked', action });
       else setSnackbar(action === 'leave' ? '나가지 못했어요. 다시 시도해 주세요.' : '탈퇴하지 못했어요. 다시 시도해 주세요.');
-    } finally {
-      setBusy(false);
     }
+    // 성공하면 위에서 떠났다. 떠나는 화면은 다시 그리지 않는다 — 전환 중 재렌더가 Fabric 을 죽인다
+    setBusy(false);
   };
 
   const version = Constants.expoConfig?.version ?? '';

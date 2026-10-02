@@ -41,14 +41,15 @@ export default function LoginScreen() {
         const me = await api.get('GET /users/me');
         rememberAccount(me.data);
         router.replace(await authenticatedDestination(api, me.data));
+        // 떠나는 화면은 다시 그리지 않는다. 전환 중 재렌더가 Fabric 을 죽인다
+        return;
       } catch {
         setBanner('내 정보를 불러오지 못했어요. 다시 시도해 주세요.');
       }
     } catch (error) {
       setBanner(loginErrorMessage(error));
-    } finally {
-      setLoading(false);
     }
+    setLoading(false);
   }
 
   function goToReset() {
