@@ -73,7 +73,16 @@ erDiagram
 
 비밀번호 재설정 성공 시 모든 기기의 access/refresh 세션을 무효화하고 재로그인을 요구한다. 소셜 전용 계정에 새 비밀번호를 만드는 기능은 없다. 세션 무효화의 실제 저장/검증 방식은 구현에서 결정한다.
 
-**refresh_tokens** · **password_reset_tokens** · **devices** — 옛 것 그대로. `devices.platform` 은 `ANDROID`(iOS 는 이후).
+**refresh_tokens** · **password_reset_tokens** — 이관한 `auth` Entity 그대로.
+
+**devices** — `PUT /users/me/devices`. 같은 기기에 다른 계정으로 로그인하면 토큰의 주인이 바뀐다.
+
+| 컬럼 | 타입 | 제약 |
+|---|---|---|
+| push_token | text | PK |
+| user_id | uuid | NOT NULL → users |
+| platform | text | NOT NULL. `ANDROID`(iOS 는 이후) |
+| created_at · updated_at | timestamptz | |
 
 **media** — 옛 것 그대로(`owner_id` · `object_key` · `thumb_key`).
 
@@ -127,6 +136,11 @@ erDiagram
 
 **blocks** — 한 방향. 차단자의 개인 게시물·댓글·채팅·위치 조회에서 대상만 숨긴다. 상대방 조회에 대칭 적용하지 않는다. 공식 공지와 필요한 크루장 관리 정보는 유지한다.
 
+| 컬럼 | 제약 |
+|---|---|
+| blocker_id · blocked_id | → users, PK (둘), CHECK 자기 자신 아님 |
+| created_at | |
+
 ### 활동
 
 **activities** — `meet_id` · `type` · `title` · `gps_weak` 를 빼고 `crew_id` · 진행 상태 · 일시정지를 넣는다.
@@ -152,7 +166,20 @@ erDiagram
 | created_at · deleted_at | timestamptz | |
 | | | 부분 UNIQUE (user_id) WHERE status = 'IN_PROGRESS' |
 
-**activity_photos** — `hood_code` · `sido/sigungu/dong` 을 뺀다. 나머지(`media_id` · `point` · `taken_at` · `model_version` · `inference_ms` · `inference_source` · `order_index`) 그대로.
+**activity_photos** — `POST /media` 의 `purpose=ACTIVITY` 가 만든다. 옛 `hood_code` · `sido/sigungu/dong` 은 없다.
+
+| 컬럼 | 타입 | 제약 |
+|---|---|---|
+| id | uuid | PK. API `photoId` |
+| activity_id | uuid | NOT NULL → activities |
+| media_id | uuid | NOT NULL UNIQUE → media |
+| point | geometry(Point, 4326) | 촬영 위치. 없으면 null |
+| taken_at | timestamptz | NOT NULL |
+| inference_status | text | NOT NULL. OK · UNAVAILABLE — 추론이 실패해도 사진은 남긴다 |
+| model_version | text | UNAVAILABLE 면 null |
+| inference_ms | int | UNAVAILABLE 면 null |
+| order_index | int | NOT NULL |
+| created_at | timestamptz | |
 
 **activity_items** — 사진 없는 빠른 줍기(Q29)를 허용한다.
 
@@ -199,7 +226,27 @@ erDiagram
 | created_at · updated_at · deleted_at | timestamptz | |
 | deleted_by | uuid | 크루장이 지웠으면 그 사람(Q39) |
 
-**post_media** (post_id, media_id, order_index) · **post_likes** (post_id, user_id, PK 둘; 옛 `post_thanks` 개명) · **comments** — 옛 것 그대로, `deleted_by` 추가.
+**post_media** — 게시물당 10장까지.
+
+| 컬럼 | 제약 |
+|---|---|
+| post_id | → posts |
+| media_id | → media |
+| order_index | NOT NULL |
+| | PK (post_id, media_id), UNIQUE (post_id, order_index) |
+
+**post_likes** — 옛 `post_thanks` 개명. (post_id, user_id) PK 둘, created_at.
+
+**comments** — 수정 기능이 없어 `updated_at` 이 없다.
+
+| 컬럼 | 타입 | 제약 |
+|---|---|---|
+| id | uuid | PK. 앱 생성, 같은 id 재전송 멱등 |
+| post_id | uuid | NOT NULL → posts |
+| author_id | uuid | NOT NULL → users |
+| text | text | NOT NULL, ≤ 500 |
+| created_at · deleted_at | timestamptz | |
+| deleted_by | uuid | 크루장이 지웠으면 그 사람(Q39) |
 
 ### 크루 운영
 
@@ -218,7 +265,20 @@ erDiagram
 
 **notice_comments** — `comments` 와 같은 모양, `notice_id`.
 
-**chat_messages** — `meet_id` → `crew_id`. 텍스트만(사진은 피드로). `seq` 는 크루별 정렬·이어받기 키. **chat_reads** (crew_id, user_id, last_seq).
+**chat_messages** — 텍스트만(사진은 피드로). `seq` 는 크루별 정렬·이어받기 키(`realtime.md`).
+
+| 컬럼 | 타입 | 제약 |
+|---|---|---|
+| id | uuid | PK. 앱 생성, 같은 id 재전송 멱등 |
+| crew_id | uuid | NOT NULL → crews |
+| seq | bigint | NOT NULL. 크루 안에서 1씩 증가 |
+| author_id | uuid | NOT NULL → users |
+| text | text | NOT NULL, ≤ 500 |
+| created_at · deleted_at | timestamptz | |
+| deleted_by | uuid | 크루장이 신고 처리로 지웠으면 그 사람(`CHAT_DELETED`) |
+| | | UNIQUE (crew_id, seq) |
+
+**chat_reads** — (crew_id, user_id) PK, last_seq bigint NOT NULL, updated_at.
 
 **reports**
 
@@ -254,7 +314,17 @@ erDiagram
 
 ## 회원 탈퇴 때 (Q32)
 
-`users.status = DELETED`, 닉네임·이메일·소셜 식별자·사진을 지운다. `activities` 는 행을 지우되 크루 합산을 보존하기 위해 **크루별·일별 합산을 `crew_daily_stats`(crew_id, date, item_count, distance_m, duration_sec, activity_count, by_category) 에 적립**해 둔다. 이 표는 홈 카드·캐릭터·크루 기록의 집계 원본이며 활동 종료 시 멱등 갱신한다. 회원 탈퇴 시 이미 반영된 활동을 재가산하지 않고 보존한다. 시간·활동 횟수도 삭제 후 보존한다. 날짜는 KST, 주간은 이번 월요일부터, 월간은 이번 달 1일부터이며 ALL 추이는 월별이다. 순위는 줍기 수량 기준 공동 순위, 달력은 사람 수 대신 활동 횟수다. `posts` · `comments` 는 남기고 작성자 표시만 "탈퇴한 크루원" 으로.
+`users.status = DELETED`, 닉네임·이메일·소셜 식별자·사진을 지운다. `activities` 는 행을 지우되 크루 합산을 보존하기 위해 **크루별·일별 합산을 `crew_daily_stats` 에 적립**해 둔다.
+
+| 컬럼 | 타입 | 제약 |
+|---|---|---|
+| crew_id | uuid | → crews |
+| date | date | KST |
+| item_count · distance_m · duration_sec · activity_count | int | NOT NULL DEFAULT 0 |
+| by_category | jsonb | NOT NULL DEFAULT '{}' |
+| | | PK (crew_id, date) |
+
+이 표는 홈 카드·캐릭터·크루 기록의 집계 원본이며 활동 종료 시 멱등 갱신한다. 회원 탈퇴 시 이미 반영된 활동을 재가산하지 않고 보존한다. 시간·활동 횟수도 삭제 후 보존한다. 날짜는 KST, 주간은 이번 월요일부터, 월간은 이번 달 1일부터이며 ALL 추이는 월별이다. 순위는 줍기 수량 기준 공동 순위, 달력은 사람 수 대신 활동 횟수다. `posts` · `comments` 는 남기고 작성자 표시만 "탈퇴한 크루원" 으로.
 
 ## 만들지 않는 옛 테이블
 
