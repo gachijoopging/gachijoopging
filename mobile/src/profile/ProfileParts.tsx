@@ -3,6 +3,7 @@ import { Image, Pressable, View } from 'react-native';
 import {
   Card,
   Chip,
+  Icon,
   IconButton,
   IconCircle,
   MetricSplit,
@@ -86,6 +87,7 @@ export function ActivityCardView({ card, onPress, onMenu }: { card: ActivityCard
 export function PostTile({ post: p, onOpen }: { post: Post; onOpen: (id: string) => void }) {
   const { colors } = useTheme();
   const ripple = useRipple();
+  const [broken, setBroken] = useState(false);
   const thumb = p.media[0]?.thumbUrl;
   const isPrivate = (p.visibility as string) === 'PRIVATE';
   const label = ['게시물', thumb ? '사진' : p.text.slice(0, 40), isPrivate ? '나만 보기' : ''].filter(Boolean).join(', ');
@@ -100,20 +102,25 @@ export function PostTile({ post: p, onOpen }: { post: Post; onOpen: (id: string)
           flex: 1,
           borderRadius: radius.tile,
           overflow: 'hidden',
-          backgroundColor: colors.tint,
+          // tint 는 bg 를 묽힌 색이라 화면 배경 위에서는 사라진다. 기록 카드와 같은 surface 로 칸을 세운다
+          backgroundColor: colors.surface,
           justifyContent: 'center',
           padding: thumb ? 0 : space.sm,
           opacity: pressedOpacity(pressed),
         })}
       >
-        {thumb ? (
-          <Image source={{ uri: thumb }} accessible={false} style={{ width: '100%', height: '100%' }} />
+        {thumb && !broken ? (
+          <Image source={{ uri: thumb }} accessible={false} onError={() => setBroken(true)} style={{ width: '100%', height: '100%' }} />
+        ) : thumb ? (
+          // 사진을 못 받으면 빈 칸 대신 Thumb 과 같은 자리 표시를 둔다
+          <View style={{ alignItems: 'center' }}><Icon name="image-outline" size={sizes.thumbMd / 2} color={colors.inkFaint} /></View>
         ) : (
           <Txt variant="micro" tone="muted" numberOfLines={5} style={{ textAlign: 'center' }}>{p.text}</Txt>
         )}
+        {/* 칸이 손가락 두 개 폭이라 글자 칩은 본문을 덮는다. 자물쇠만 모서리에 두고 뜻은 라벨이 읽는다 */}
         {isPrivate ? (
-          <View style={{ position: 'absolute', left: space.xs, bottom: space.xs }}>
-            <Chip label="나만 보기" icon="lock-outline" tone="overlay" />
+          <View style={{ position: 'absolute', right: space.xs, top: space.xs, padding: space.xs / 2, borderRadius: radius.pill, backgroundColor: colors.photoBadge }}>
+            <Icon name="lock-outline" size={14} color={colors.onPhoto} />
           </View>
         ) : null}
       </Pressable>
@@ -126,23 +133,27 @@ export function ActivityCalendar({ activeDays }: { activeDays: readonly string[]
   const grid = activeDaysGrid(activeDays, kstToday());
   const count = grid.flat().filter((c) => c?.active).length;
   const gap = space.xs / 2;
+  // 빈 날 칸(tint)은 surface 위에서만 보인다. 카드에 얹지 않으면 활동한 날만 허공에 떠 보인다
   return (
-    <View accessible accessibilityLabel={`최근 6개월 활동 달력, ${count}일 활동`} style={{ flexDirection: 'row', gap }}>
-      {grid.map((week, w) => (
-        <View key={w} style={{ flex: 1, gap }}>
-          {week.map((cell, d) => (
-            <View
-              key={d}
-              style={{
-                aspectRatio: 1,
-                borderRadius: gap,
-                backgroundColor: cell == null ? 'transparent' : cell.active ? colors.lime : colors.tint,
-              }}
-            />
-          ))}
-        </View>
-      ))}
-    </View>
+    <Card>
+      <View accessible accessibilityLabel={`최근 6개월 활동 달력, ${count}일 활동`} style={{ flexDirection: 'row', gap }}>
+        {grid.map((week, w) => (
+          <View key={w} style={{ flex: 1, gap }}>
+            {week.map((cell, d) => (
+              <View
+                key={d}
+                style={{
+                  aspectRatio: 1,
+                  borderRadius: gap,
+                  // lime 은 surface 위 1.41:1 이라 칸으로 안 보인다. 카드 위 표시는 deep 으로
+                  backgroundColor: cell == null ? 'transparent' : cell.active ? colors.deep : colors.tint,
+                }}
+              />
+            ))}
+          </View>
+        ))}
+      </View>
+    </Card>
   );
 }
 

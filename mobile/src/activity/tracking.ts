@@ -54,7 +54,10 @@ export async function startTracking(): Promise<boolean> {
     const { title, body } = trackingNotice(session, Date.now());
     await Location.startLocationUpdatesAsync(TRACKING_TASK, {
       accuracy: Location.Accuracy.BestForNavigation,
-      timeInterval: 1_000,
+      // expo-location 은 앱이 앞에 있으면 위치마다 메인 스레드에서 JobScheduler 에 작업을 건다.
+      // 1초 간격이면 Android 16 에서 이 호출이 밀려 ANR(TaskJobService 20초 초과)이 났다.
+      // 소켓은 5초, GPS 상태 판단은 10초 기준이라 3초면 충분하다
+      timeInterval: 3_000,
       distanceInterval: 0,
       foregroundService: { notificationTitle: title, notificationBody: body, killServiceOnDestroy: false },
     });
