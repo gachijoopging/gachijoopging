@@ -15,15 +15,13 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
 import site.gachijoopging.server.global.config.WebConfig;
-import site.gachijoopging.server.global.web.NoApiPrefix;
 
-@WebMvcTest(controllers = {SecurityConfigTest.탐침_컨트롤러.class, SecurityConfigTest.웹훅_탐침_컨트롤러.class})
+@WebMvcTest(controllers = SecurityConfigTest.탐침_컨트롤러.class)
 @Import({
   WebConfig.class,
   SecurityConfig.class,
   JwtAuthenticationFilter.class,
-  SecurityConfigTest.탐침_컨트롤러.class,
-  SecurityConfigTest.웹훅_탐침_컨트롤러.class
+  SecurityConfigTest.탐침_컨트롤러.class
 })
 class SecurityConfigTest {
 
@@ -51,11 +49,6 @@ class SecurityConfigTest {
     mockMvc.perform(post("/api/v1/auth/probe")).andExpect(status().isOk());
   }
 
-  @Test
-  void livekit_웹훅은_인증_없이_통과한다() throws Exception {
-    mockMvc.perform(post("/livekit/webhook")).andExpect(status().isOk());
-  }
-
   @RestController
   static class 탐침_컨트롤러 {
 
@@ -66,16 +59,6 @@ class SecurityConfigTest {
 
     @PostMapping("/auth/probe")
     String post() {
-      return "ok";
-    }
-  }
-
-  @NoApiPrefix
-  @RestController
-  static class 웹훅_탐침_컨트롤러 {
-
-    @PostMapping("/livekit/webhook")
-    String 웹훅() {
       return "ok";
     }
   }

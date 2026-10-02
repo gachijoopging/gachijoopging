@@ -15,13 +15,10 @@ import site.gachijoopging.server.global.config.WebConfig;
 @EnableWebSecurity
 public class SecurityConfig {
 
-  public static final String LIVEKIT_WEBHOOK_PATH = "/livekit/webhook";
-
   static final String[] OPEN_PATHS = {
     WebConfig.API_BASE_PATH + "/health",
     WebConfig.API_BASE_PATH + "/auth/**",
-    "/actuator/**",
-    LIVEKIT_WEBHOOK_PATH
+    "/actuator/**"
   };
 
   private static final String[] ADMIN_PATHS = {WebConfig.ADMIN_BASE_PATH + "/**"};

@@ -5,8 +5,6 @@ import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
-import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,7 +12,6 @@ import site.gachijoopging.server.domain.auth.domain.entity.RefreshToken;
 import site.gachijoopging.server.domain.auth.domain.policy.OpaqueToken;
 import site.gachijoopging.server.domain.auth.dto.AuthDtos.SessionResponse;
 import site.gachijoopging.server.domain.auth.dto.AuthDtos.TokenPairResponse;
-import site.gachijoopging.server.domain.auth.infrastructure.persistence.DailyActiveUserRepository;
 import site.gachijoopging.server.domain.auth.infrastructure.persistence.RefreshTokenRepository;
 import site.gachijoopging.server.domain.user.domain.service.UserService;
 import site.gachijoopging.server.domain.user.dto.UserAccount;
@@ -29,10 +26,7 @@ public class AuthService {
 
   private static final Duration REFRESH_TOKEN_TTL = Duration.ofDays(30);
 
-  private static final ZoneId KST = ZoneId.of("Asia/Seoul");
-
   private final RefreshTokenRepository refreshTokenRepository;
-  private final DailyActiveUserRepository dailyActiveUserRepository;
   private final RefreshTokenFamilyRevoker familyRevoker;
   private final UserService userService;
   private final JwtIssuer jwtIssuer;
@@ -44,14 +38,12 @@ public class AuthService {
 
   public AuthService(
       RefreshTokenRepository refreshTokenRepository,
-      DailyActiveUserRepository dailyActiveUserRepository,
       RefreshTokenFamilyRevoker familyRevoker,
       UserService userService,
       JwtIssuer jwtIssuer,
       Clock clock,
       MeterRegistry meterRegistry) {
     this.refreshTokenRepository = refreshTokenRepository;
-    this.dailyActiveUserRepository = dailyActiveUserRepository;
     this.familyRevoker = familyRevoker;
     this.userService = userService;
     this.jwtIssuer = jwtIssuer;
@@ -140,7 +132,6 @@ public class AuthService {
 
   private String issueRefreshToken(UUID userId, UUID familyId) {
     Instant now = clock.instant();
-    dailyActiveUserRepository.record(LocalDate.ofInstant(now, KST), userId);
     String rawToken = OpaqueToken.newToken();
     refreshTokenRepository.save(
         RefreshToken.builder()
