@@ -254,6 +254,8 @@ export default function CreatePostScreen() {
                 style={({ pressed }) => ({
                   width: THUMB,
                   height: THUMB,
+                  // 옆 썸네일이 삭제 버튼 자리로 위에 둔 여백만큼 내려 윗선을 맞춘다
+                  marginTop: space.md,
                   borderRadius: radius.tile,
                   borderWidth: borderWidth.hairline,
                   borderColor: colors.borderDotted,
