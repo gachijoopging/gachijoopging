@@ -8,7 +8,7 @@ import { useNetworkState } from 'expo-network';
 import { StatusBar } from 'expo-status-bar';
 import { router, useFocusEffect, useLocalSearchParams, useNavigation } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { AppState, Image, ScrollView, View } from 'react-native';
+import { Animated, AppState, Image, ScrollView, View } from 'react-native';
 import {
   Banner,
   Button,
@@ -23,6 +23,7 @@ import {
   Tile,
   Txt,
   borderWidth,
+  motion,
   radius,
   size,
   space,
@@ -48,6 +49,8 @@ export default function TakePhotoScreen() {
   const [perm, setPerm] = useState<Perm>('unknown');
   const [shot, setShot] = useState<Shot | null>(() => shots.get(id) ?? null);
   const [shooting, setShooting] = useState(false);
+  const [flashing, setFlashing] = useState(false);
+  const flash = useRef(new Animated.Value(0)).current;
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const camera = useRef<CameraView>(null);
@@ -104,6 +107,12 @@ export default function TakePhotoScreen() {
     setShooting(true);
     // 진동 끄기 설정을 따르는 시스템 햅틱이다. 지원하지 않는 기기에서는 조용히 넘어간다
     performAndroidHapticsAsync(AndroidHaptics.Context_Click).catch(() => {});
+    // 실기기는 찍는 데 1초 가까이 걸린다. 번쩍임은 찍기가 끝나길 기다리지 않고 바로 걷힌다
+    if (!reduceMotion) {
+      flash.setValue(1);
+      setFlashing(true);
+      Animated.spring(flash, { toValue: 0, ...motion.settle, useNativeDriver: true }).start(() => setFlashing(false));
+    }
     try {
       const here = getStored().session?.here;
       const takenAt = new Date().toISOString();
@@ -195,9 +204,9 @@ export default function TakePhotoScreen() {
         {perm === 'granted' && focused && appActive ? (
           <CameraView ref={camera} facing="back" style={{ flex: 1 }} onCameraReady={() => setReady(true)} />
         ) : null}
-        {/* 찍힌 순간을 눈으로도 알린다. 찍는 동안만 켜지므로 사진에는 들어가지 않는다 */}
-        {shooting && !reduceMotion ? (
-          <View testID="shutter-flash" pointerEvents="none" style={{ position: 'absolute', inset: 0, backgroundColor: colors.white }} />
+        {/* 찍힌 순간을 눈으로도 알린다. 미리보기 위에 얹는 막이라 사진에는 들어가지 않는다 */}
+        {flashing ? (
+          <Animated.View testID="shutter-flash" pointerEvents="none" style={{ position: 'absolute', inset: 0, backgroundColor: colors.white, opacity: flash }} />
         ) : null}
         {/* 프리뷰가 밝아도 안내가 읽히게 어두운 막을 얹는다. 사진에는 들어가지 않는다 */}
         <View
