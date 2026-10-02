@@ -1,14 +1,17 @@
 package site.gachijoopging.server.domain.user.domain.service;
 
+import java.util.Collection;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Service;
 import site.gachijoopging.server.domain.user.dto.MeResponse;
 import site.gachijoopging.server.domain.user.dto.UserAccount;
+import site.gachijoopging.server.global.security.AccountAuthorityLoader;
 
 // ponytail: 시그니처만 있다. user 도메인 본체가 들어오기 전에는 호출되면 실패한다
 @Service
-public class UserService {
+public class UserService implements AccountAuthorityLoader {
 
   public UserAccount create(String email, String password) {
     throw notYet();
@@ -47,6 +50,11 @@ public class UserService {
   }
 
   public void changePassword(UUID userId, String newPassword) {
+    throw notYet();
+  }
+
+  @Override
+  public Collection<? extends GrantedAuthority> authoritiesOf(UUID userId) {
     throw notYet();
   }
 
