@@ -1,4 +1,4 @@
-import { useState, useSyncExternalStore, type ReactNode } from 'react';
+import { useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { View } from 'react-native';
 import { Appear, Banner, BottomSheet, Button, NumberStepper, Txt, space } from 'design-system/src';
 import { CATEGORIES, CATEGORY_LABEL, type Category } from '../category';
@@ -37,6 +37,8 @@ export function QuickPickupSheet({ visible, onClose, session }: { visible: boole
   const [expanded, setExpanded] = useState<Category | null>(null);
   const [last, setLast] = useState<LastPickup | null>(null);
   const [failed, setFailed] = useState<Failure | null>(null);
+  // 빠른 연타는 setLast(null) 이 그려지기 전에 같은 last 로 다시 들어온다. 같은 담기를 두 번 빼지 않게 기억한다
+  const undone = useRef<string | null>(null);
   // 큐만 바뀌어도(보내기 끝남) "동기화 대기 → 저장됨" 을 다시 그린다
   useSyncExternalStore(subscribe, getStored);
 
@@ -50,9 +52,10 @@ export function QuickPickupSheet({ visible, onClose, session }: { visible: boole
   };
 
   const undo = () => {
-    if (!last) return;
+    if (!last || undone.current === last.itemId) return;
     try {
       undoPickup(last);
+      undone.current = last.itemId;
       setLast(null);
       setFailed(null);
     } catch {
