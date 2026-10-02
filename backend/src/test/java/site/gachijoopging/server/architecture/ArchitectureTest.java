@@ -38,17 +38,16 @@ class ArchitectureTest {
       List.of(
           "auth",
           "user",
-          "friend",
-          "safety",
-          "neighborhood",
-          "media",
+          "crew",
           "activity",
-          "post",
-          "notification",
-          "meet",
-          "chat",
           "live",
-          "admin");
+          "post",
+          "notice",
+          "chat",
+          "notification",
+          "safety",
+          "stats",
+          "media");
 
   private static final Pattern QUERYDSL_GENERATED = Pattern.compile("Q[A-Z]\\w*");
 
@@ -67,8 +66,8 @@ class ArchitectureTest {
     Set<String> apiOwners = domainsHavingPackageSegment(".api.");
     Set<String> infraOwners = domainsHavingPackageSegment(".infrastructure.");
 
-    assertThat(apiOwners).containsExactlyInAnyOrderElementsOf(DOMAINS);
-    assertThat(infraOwners).containsExactlyInAnyOrderElementsOf(DOMAINS);
+    assertThat(apiOwners).containsExactlyInAnyOrderElementsOf(실제_도메인());
+    assertThat(infraOwners).containsExactlyInAnyOrderElementsOf(실제_도메인());
   }
 
   @Test
@@ -210,16 +209,17 @@ class ArchitectureTest {
   }
 
   @Test
-  void 도메인_목록은_01구조_문서의_13개다() {
-    assertThat(DOMAINS).hasSize(13).doesNotHaveDuplicates();
+  void 도메인은_backend_migration_문서의_12개_안에만_있다() {
+    assertThat(DOMAINS).hasSize(12).doesNotHaveDuplicates();
 
-    Set<String> 실제 =
-        CLASSES.stream()
-            .map(ArchitectureTest::domainOf)
-            .flatMap(Optional::stream)
-            .collect(Collectors.toSet());
+    assertThat(DOMAINS).containsAll(실제_도메인());
+  }
 
-    assertThat(실제).containsExactlyInAnyOrderElementsOf(DOMAINS);
+  private static Set<String> 실제_도메인() {
+    return CLASSES.stream()
+        .map(ArchitectureTest::domainOf)
+        .flatMap(Optional::stream)
+        .collect(Collectors.toSet());
   }
 
   @Test
