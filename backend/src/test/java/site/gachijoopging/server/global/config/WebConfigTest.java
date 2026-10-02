@@ -13,7 +13,6 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
-import site.gachijoopging.server.domain.admin.api.controller.PrefixProbeController;
 import site.gachijoopging.server.global.security.AccountAuthorityLoader;
 import site.gachijoopging.server.global.security.jwt.JwtVerifier;
 import site.gachijoopging.server.global.web.HealthController;
@@ -22,13 +21,11 @@ import site.gachijoopging.server.global.web.NoApiPrefix;
 @WebMvcTest(
     controllers = {
       HealthController.class,
-      PrefixProbeController.class,
       WebConfigTest.접두사_없는_탐침_컨트롤러.class
     })
 @Import({
   WebConfig.class,
   HealthController.class,
-  PrefixProbeController.class,
   WebConfigTest.접두사_없는_탐침_컨트롤러.class
 })
 class WebConfigTest {
@@ -43,11 +40,6 @@ class WebConfigTest {
   @Test
   void 기존_도메인은_api_v1_접두사를_유지한다() {
     assertThat(등록된_경로()).contains("/api/v1/health");
-  }
-
-  @Test
-  void 관리자_컨트롤러는_admin_접두사로_나간다() {
-    assertThat(등록된_경로()).contains("/admin/probe").doesNotContain("/api/v1/admin/probe");
   }
 
   @Test
