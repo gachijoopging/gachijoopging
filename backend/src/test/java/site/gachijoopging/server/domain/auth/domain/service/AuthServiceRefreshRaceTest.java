@@ -16,7 +16,6 @@ import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import site.gachijoopging.server.domain.auth.domain.entity.RefreshToken;
-import site.gachijoopging.server.domain.auth.infrastructure.persistence.DailyActiveUserRepository;
 import site.gachijoopging.server.domain.auth.infrastructure.persistence.RefreshTokenRepository;
 import site.gachijoopging.server.domain.user.domain.service.UserService;
 import site.gachijoopging.server.global.error.BusinessException;
@@ -34,7 +33,6 @@ class AuthServiceRefreshRaceTest {
   private final AuthService authService =
       new AuthService(
           refreshTokenRepository,
-          mock(DailyActiveUserRepository.class),
           familyRevoker,
           mock(UserService.class),
           jwtIssuer,

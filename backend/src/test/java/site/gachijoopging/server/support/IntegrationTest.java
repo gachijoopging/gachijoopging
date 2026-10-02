@@ -80,11 +80,6 @@ public abstract class IntegrationTest {
   }
 
   @DynamicPropertySource
-  static void kakaoLocalProperties(DynamicPropertyRegistry registry) {
-    registry.add("app.kakao-local.rest-api-key", () -> "test-kakao-rest-key");
-  }
-
-  @DynamicPropertySource
   static void mediaProperties(DynamicPropertyRegistry registry) {
     registry.add("app.media.root", UPLOAD_ROOT::toString);
     registry.add("app.media.base-url", () -> MEDIA_BASE_URL);

@@ -63,19 +63,8 @@ app:
     # openapi.yaml 의 TokenPair — accessToken 수명 1시간
     access-token-ttl: 1h
 
-  kakao-local:
-    base-url: https://dapi.kakao.com
-    # REST API 키다 — 네이티브 앱 키를 넣으면 카카오가 타입 불일치로 거절한다.
-    # 기본값을 두지 않는다: 값이 없으면 기동에서 죽는 편이, 좌표 조회가 전부
-    # 실패하는 서버가 뜨는 것보다 낫다 (02-컨벤션 §14).
-    rest-api-key: ${KAKAO_REST_API_KEY}
-    # 없으면 카카오가 죽지 않고 멈추기만 해도 모임 생성·동네 조회가 무한정 매달린다.
-    # 자동완성은 사용자가 타이핑 중에 기다리는 값이라 길게 잡을 이유가 없다.
-    timeout: 3s
-
-  # 소셜 로그인. 위 kakao-local 과 다른 API 이고 다른 자격증명이다 —
-  # 그쪽은 서버가 보관한 REST 키로 지도를 조회하고, 이쪽은 앱이 받아 온 사용자
-  # 액세스 토큰을 카카오에 되물어 검증한다. 그래서 REST 키가 아니라 앱 ID 가 필요하다.
+  # 소셜 로그인. 앱이 받아 온 사용자 액세스 토큰을 카카오에 되물어 검증한다.
+  # 그래서 REST 키가 아니라 앱 ID 가 필요하다.
   kakao-auth:
     base-url: https://kapi.kakao.com
     # ⚠️ 값이 비어 있는 것이 지금의 정상 상태다. 카카오 콘솔에서 받아야 하고 아직 정해지지 않았다.
@@ -97,10 +86,6 @@ app:
     # (accounts.google.com 의 OpenID 설정 문서가 가리키는 jwks_uri).
     jwks-uri: https://www.googleapis.com/oauth2/v3/certs
     timeout: 3s
-
-  meet:
-    # openapi.yaml — "거절 후 재요청 10분 쿨다운". 남은 초가 Retry-After 로 나간다.
-    reject-cooldown: 10m
 
   invite:
     # 초대 링크의 앞부분 (openapi.yaml POST /meets/{id}/invite-link). 공개 도메인이라 비밀이 아니다.
@@ -149,38 +134,6 @@ app:
     # 경로까지 함께 죽는다. app.ai 가 같은 이유로 같은 모양이다.
     # 값은 서비스 계정 JSON 본문이다 (파일 경로가 아니다) — JWT 개인키를 PEM 본문으로 넣는 것과 같다.
     credentials: ${FCM_CREDENTIALS:}
-
-  livekit:
-    # ⚠️ 시크릿이 비어 있는 것이 지금의 정상 상태다. infra/.env.example 의 LIVEKIT_API_SECRET 이
-    # 아직 비어 있고(운영에서 generate-keys 로 만들어 넣는다), 여기서 기동을 막으면 음성과 무관한
-    # 비어 있으면 LiveKitWebhookVerifier 가 모든 웹훅을 거부하고 토큰 발급도 거부한다 (fail closed).
-    #
-    # 이름은 infra/docker-compose.yml 의 APP_LIVEKIT_* 와 짝이다 — 바꾸면 컨테이너가 값을 못 받는다.
-    url: ${LIVEKIT_URL:}
-    # 키의 "이름"이라 시크릿이 아니다. infra/livekit/livekit.yaml 의 webhook.api_key 와 같아야 하고,
-    # 다르면 서명 검증이 에러 로그도 없이 실패한다 — 그래서 기본값을 그 파일과 미리 맞춰 둔다.
-    api-key: ${LIVEKIT_API_KEY:gachikey}
-    api-secret: ${LIVEKIT_API_SECRET:}
-    # 앱 accessToken(1시간)보다 길다. 음성은 한 번 붙으면 모임이 끝날 때까지 이어지는데, 그보다 짧으면
-    # 통화 중에 재발급이 필요해진다. 비밀이 아니라 정책 수치라 환경변수로 두지 않는다.
-    token-ttl: 6h
-    # 서버 → LiveKit RoomService(강퇴). 위 url 과 다른 값이다 — 그쪽은 앱에 주는 wss 시그널링
-    # 주소이고, nginx 의 /livekit 프록시는 경로를 그대로 넘겨 /livekit/twirp/... 가 되므로
-    # LiveKit 이 404 를 낸다. 운영은 LiveKit 이 network_mode: host 라 호스트 게이트웨이로 간다
-    # (infra/docker-compose.yml 의 x-spring extra_hosts).
-    # 비어 있으면 강퇴를 건너뛴다 — 나가기·해산 자체는 성공해야 한다.
-    api-url: ${LIVEKIT_API_URL:}
-    # 없으면 LiveKit 이 죽지 않고 멈추기만 해도 나가기 요청 스레드가 무한정 붙잡힌다.
-    api-timeout: 3s
-
-  turn:
-    # 비어 있으면 CloudflareTurnClient 가 호출을 건너뛰고 voice-token 의 iceServers 가 빈
-    # 배열로 나간다 — 앱은 직결(UDP 3478·TCP 8443)만 시도한다. app.ai 와 같은 이유로
-    # 기동을 막지 않는다.
-    key-id: ${CF_TURN_KEY_ID:}
-    api-token: ${CF_TURN_API_TOKEN:}
-    # 통화 입장 직전에 불린다 — CF 가 느려도 입장을 이 이상 지연시키지 않는다.
-    timeout: 2s
 
   notification:
     # THANKS 묶음 창 (03-데이터 §2). 기준은 묶음의 최초 created_at 이다 — 최신 갱신 시각으로 재면
