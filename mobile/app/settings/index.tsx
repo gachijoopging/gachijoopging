@@ -204,7 +204,7 @@ export default function SettingsScreen() {
       ) : (
         <>
           {failed || offline ? <Banner tone="warn">인터넷 연결을 확인해 주세요.</Banner> : null}
-          <Card padded={false}>
+          <Card style={{ paddingVertical: 0 }}>
             <ListRow title="프로필 수정" subtitle="닉네임과 사진을 바꿔요." onPress={() => router.push('/settings/profile')} />
             {me.member ? <>
             <ToggleRow
@@ -225,7 +225,7 @@ export default function SettingsScreen() {
             <ListRow title="차단 관리" divider={false} onPress={() => router.push('/settings/blocks')} />
           </Card>
 
-          <Card padded={false}>
+          <Card style={{ paddingVertical: 0 }}>
             {me.member ? (
               <ListRow
                 title="크루 나가기"

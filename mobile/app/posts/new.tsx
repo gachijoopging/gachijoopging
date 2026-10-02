@@ -10,7 +10,7 @@ import {
   AppHeader,
   Banner,
   Button,
-  Chip,
+  Badge,
   Icon,
   IconButton,
   Progress,
@@ -286,9 +286,7 @@ export default function CreatePostScreen() {
                 >
                   <Thumb uri={p.uri} size="md" />
                   {i === 0 ? (
-                    <View style={{ position: 'absolute', left: space.xs / 2, bottom: space.xs / 2 }}>
-                      <Chip label="대표" tone="deep" />
-                    </View>
+                    <Badge label="대표" tone="deep" style={{ position: 'absolute', left: space.xs, bottom: space.xs }} />
                   ) : null}
                   {posting && p.mediaId == null && !p.failed ? (
                     <View style={{ position: 'absolute', inset: 0, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface85 }}>
@@ -301,7 +299,7 @@ export default function CreatePostScreen() {
                     <IconButton icon="alert-circle" label="업로드 실패, 다시 시도하려면 두 번 탭" tone="surface" disabled={offline} onPress={() => retryPhoto(p)} />
                   </View>
                 ) : null}
-                <View style={{ position: 'absolute', top: 0, right: 0 }}>
+                <View style={{ position: 'absolute', top: 0, right: 0, zIndex: 1 }}>
                   <IconButton
                     icon="close"
                     label={`${i + 1}번째 사진 삭제`}
