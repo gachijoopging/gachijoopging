@@ -51,6 +51,10 @@ export function Appear({
     Animated.spring(progress, { toValue: 1, ...motion.settle, useNativeDriver: true }).start();
   }, [replayKey, visible, reduce, progress]);
 
+  // 부르는 쪽은 보통 `visible` 과 함께 내용도 null 로 바꾼다. 퇴장 중에는 마지막 내용을 그려야 흐려지는 게 보인다
+  const shown = useRef(children);
+  if (visible) shown.current = children;
+
   if (!mounted) return null;
   return (
     <Animated.View
@@ -63,7 +67,7 @@ export function Appear({
         },
       ]}
     >
-      {children}
+      {shown.current}
     </Animated.View>
   );
 }
