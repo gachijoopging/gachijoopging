@@ -38,7 +38,7 @@ class RefreshTokenRepositoryTest extends IntegrationTest {
   }
 
   private String 살아있는_토큰을_만든다() {
-    UUID 사용자 = jdbc.queryForObject("INSERT INTO users DEFAULT VALUES RETURNING id", UUID.class);
+    UUID 사용자 = jdbc.queryForObject("INSERT INTO users (id, updated_at) VALUES (gen_random_uuid(), now()) RETURNING id", UUID.class);
     String 해시 = UUID.randomUUID().toString();
     jdbc.update(
         """

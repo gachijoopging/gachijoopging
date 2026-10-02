@@ -62,7 +62,7 @@ class PasswordResetTest extends IntegrationTest {
   @Test
   void 소셜_전용_계정에는_토큰이_생기지_않는다() throws Exception {
     jdbcTemplate.update(
-        "INSERT INTO users (email, kakao_id, password_hash) VALUES ('social@test.io', 'kakao-1', NULL)");
+        "INSERT INTO users (id, email, kakao_id, password_hash, updated_at) VALUES (gen_random_uuid(), 'social@test.io', 'kakao-1', NULL, now())");
 
     mockMvc.perform(재설정요청("social@test.io")).andExpect(status().isAccepted());
 

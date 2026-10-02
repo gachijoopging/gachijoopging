@@ -14,7 +14,7 @@ CREATE TABLE users (
   share_location_default boolean     NOT NULL DEFAULT true,
   notify_activity_start  boolean     NOT NULL DEFAULT true,
   status                 text        NOT NULL DEFAULT 'ACTIVE' CHECK (status IN ('ACTIVE', 'DELETED')),
-  created_at             timestamptz NOT NULL,
+  created_at             timestamptz NOT NULL DEFAULT now(),
   updated_at             timestamptz NOT NULL,
   deleted_at             timestamptz
 );
@@ -24,7 +24,7 @@ CREATE TABLE media (
   owner_id   uuid        NOT NULL REFERENCES users (id),
   object_key text        NOT NULL,
   thumb_key  text        NOT NULL,
-  created_at timestamptz NOT NULL
+  created_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX media_owner_created_idx ON media (owner_id, created_at);
 
@@ -38,7 +38,7 @@ CREATE TABLE refresh_tokens (
   family_id  uuid        NOT NULL,
   expires_at timestamptz NOT NULL,
   revoked_at timestamptz,
-  created_at timestamptz NOT NULL
+  created_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX refresh_tokens_user_idx ON refresh_tokens (user_id);
 CREATE INDEX refresh_tokens_family_idx ON refresh_tokens (family_id);
@@ -50,7 +50,7 @@ CREATE TABLE password_reset_tokens (
   token_hash text        NOT NULL UNIQUE,
   expires_at timestamptz NOT NULL,
   used_at    timestamptz,
-  created_at timestamptz NOT NULL
+  created_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX password_reset_tokens_user_idx ON password_reset_tokens (user_id);
 
@@ -58,7 +58,7 @@ CREATE TABLE devices (
   push_token text        PRIMARY KEY,
   user_id    uuid        NOT NULL REFERENCES users (id),
   platform   text        NOT NULL CHECK (platform IN ('ANDROID')),
-  created_at timestamptz NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL
 );
 CREATE INDEX devices_user_idx ON devices (user_id);
@@ -82,7 +82,7 @@ CREATE TABLE crews (
   leader_id      uuid        NOT NULL REFERENCES users (id),
   invite_code    text        NOT NULL UNIQUE,
   goal_count     int         NOT NULL DEFAULT 200 CHECK (goal_count > 0),
-  created_at     timestamptz NOT NULL,
+  created_at     timestamptz NOT NULL DEFAULT now(),
   updated_at     timestamptz NOT NULL,
   deleted_at     timestamptz
 );
@@ -100,7 +100,7 @@ CREATE TABLE crew_join_requests (
   user_id    uuid        NOT NULL REFERENCES users (id),
   status     text        NOT NULL CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED', 'CANCELED')),
   decided_by uuid        REFERENCES users (id),
-  created_at timestamptz NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
   decided_at timestamptz
 );
 CREATE UNIQUE INDEX crew_join_requests_one_pending_idx ON crew_join_requests (user_id) WHERE status = 'PENDING';
@@ -111,7 +111,7 @@ CREATE INDEX crew_join_requests_crew_status_idx ON crew_join_requests (crew_id, 
 CREATE TABLE follows (
   follower_id uuid        NOT NULL REFERENCES users (id),
   followee_id uuid        NOT NULL REFERENCES users (id),
-  created_at  timestamptz NOT NULL,
+  created_at  timestamptz NOT NULL DEFAULT now(),
   PRIMARY KEY (follower_id, followee_id),
   CHECK (follower_id <> followee_id)
 );
@@ -120,7 +120,7 @@ CREATE INDEX follows_followee_idx ON follows (followee_id);
 CREATE TABLE blocks (
   blocker_id uuid        NOT NULL REFERENCES users (id),
   blocked_id uuid        NOT NULL REFERENCES users (id),
-  created_at timestamptz NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
   PRIMARY KEY (blocker_id, blocked_id),
   CHECK (blocker_id <> blocked_id)
 );
@@ -144,7 +144,7 @@ CREATE TABLE activities (
   location_shared boolean     NOT NULL,
   item_count      int         NOT NULL DEFAULT 0 CHECK (item_count >= 0),
   by_category     jsonb       NOT NULL DEFAULT '{}',
-  created_at      timestamptz NOT NULL,
+  created_at      timestamptz NOT NULL DEFAULT now(),
   deleted_at      timestamptz,
   CHECK (status = 'IN_PROGRESS' OR ended_at IS NOT NULL),
   CHECK (status = 'IN_PROGRESS' OR (paused = false AND paused_at IS NULL)),
@@ -164,7 +164,7 @@ CREATE TABLE activity_photos (
   model_version    text,
   inference_ms     int,
   order_index      int         NOT NULL,
-  created_at       timestamptz NOT NULL
+  created_at       timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX activity_photos_activity_idx ON activity_photos (activity_id, order_index);
 
@@ -221,7 +221,7 @@ CREATE TABLE posts (
   author_id  uuid        NOT NULL REFERENCES users (id),
   text       text        NOT NULL DEFAULT '' CHECK (char_length(text) <= 1000),
   visibility text        NOT NULL CHECK (visibility IN ('CREW', 'PRIVATE')),
-  created_at timestamptz NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL,
   deleted_at timestamptz,
   deleted_by uuid        REFERENCES users (id)
@@ -240,7 +240,7 @@ CREATE TABLE post_media (
 CREATE TABLE post_likes (
   post_id    uuid        NOT NULL REFERENCES posts (id),
   user_id    uuid        NOT NULL REFERENCES users (id),
-  created_at timestamptz NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
   PRIMARY KEY (post_id, user_id)
 );
 
@@ -249,7 +249,7 @@ CREATE TABLE comments (
   post_id    uuid        NOT NULL REFERENCES posts (id),
   author_id  uuid        NOT NULL REFERENCES users (id),
   text       text        NOT NULL CHECK (char_length(text) BETWEEN 1 AND 500),
-  created_at timestamptz NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
   deleted_at timestamptz,
   deleted_by uuid        REFERENCES users (id)
 );
@@ -263,7 +263,7 @@ CREATE TABLE notices (
   author_id  uuid        NOT NULL REFERENCES users (id),
   title      text        NOT NULL CHECK (char_length(title) <= 100),
   body       text        NOT NULL CHECK (char_length(body) <= 3000),
-  created_at timestamptz NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL,
   deleted_at timestamptz
 );
@@ -274,7 +274,7 @@ CREATE TABLE notice_comments (
   notice_id  uuid        NOT NULL REFERENCES notices (id),
   author_id  uuid        NOT NULL REFERENCES users (id),
   text       text        NOT NULL CHECK (char_length(text) BETWEEN 1 AND 500),
-  created_at timestamptz NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
   deleted_at timestamptz,
   deleted_by uuid        REFERENCES users (id)
 );
@@ -286,7 +286,7 @@ CREATE TABLE chat_messages (
   seq        bigint      NOT NULL,
   author_id  uuid        NOT NULL REFERENCES users (id),
   text       text        NOT NULL CHECK (char_length(text) BETWEEN 1 AND 500),
-  created_at timestamptz NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
   deleted_at timestamptz,
   deleted_by uuid        REFERENCES users (id),
   UNIQUE (crew_id, seq)
@@ -312,7 +312,7 @@ CREATE TABLE reports (
   result      text        CHECK (result IN ('DELETE', 'DISMISS')),
   resolved_by uuid        REFERENCES users (id),
   resolved_at timestamptz,
-  created_at  timestamptz NOT NULL,
+  created_at  timestamptz NOT NULL DEFAULT now(),
   UNIQUE (reporter_id, target_type, target_id),
   CHECK (reason <> 'OTHER' OR btrim(coalesce(memo, '')) <> '')
 );
@@ -331,6 +331,6 @@ CREATE TABLE notifications (
   unread      boolean     NOT NULL DEFAULT true,
   target_type text        CHECK (target_type IN ('JOIN_REQUESTS', 'REPORTS', 'POST', 'NOTICE', 'CHAT', 'LIVE', 'CREW', 'NOTIFICATIONS')),
   target_id   text,
-  created_at  timestamptz NOT NULL
+  created_at  timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX notifications_user_unread_created_idx ON notifications (user_id, unread, created_at);
