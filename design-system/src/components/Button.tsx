@@ -121,6 +121,8 @@ export function Button({
   return (
     <Pressable
       accessibilityRole="button"
+      // 라벨 없이 busy 만 주면 RN Android 가 끝난 뒤에도 "처리 중" 설명을 지우지 않는다
+      accessibilityLabel={label}
       accessibilityState={{ disabled: !!off, busy: loading }}
       disabled={off}
       hitSlop={s.slop}

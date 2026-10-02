@@ -1,4 +1,3 @@
-import '../src/activity/tracking';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { ThemeProvider } from 'design-system/src';

@@ -1,4 +1,4 @@
-import { useState, useSyncExternalStore } from 'react';
+import { useState, useSyncExternalStore, type ReactNode } from 'react';
 import { View } from 'react-native';
 import { Appear, Banner, BottomSheet, Button, NumberStepper, Txt, space } from 'design-system/src';
 import { CATEGORIES, CATEGORY_LABEL, type Category } from '../category';
@@ -7,6 +7,25 @@ import { isPending, quickPickup, undoPickup, type LastPickup } from './actions';
 import { CategoryTile } from './CategoryTile';
 import type { Session } from './session';
 import { getStored, subscribe } from './store';
+
+const EMPTY_HINT = '아직 주운 게 없어요. 누를 때마다 하나씩, 길게 누르면 여러 개 담아요';
+
+/**
+ * 시트는 아래에 붙어 있어 아래쪽 높이가 바뀌면 카드가 통째로 밀린다. 연달아 누르던 손가락이 옆 카드를 누르게 된다.
+ * 가장 큰 내용으로 자리를 잡아 두고 실제 내용은 그 위에 겹쳐 그린다
+ */
+function Reserved({ space: room, children }: { space: ReactNode; children: ReactNode }) {
+  return (
+    <View>
+      <View style={{ opacity: 0 }} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" pointerEvents="none">
+        {room}
+      </View>
+      <View style={{ position: 'absolute', top: 0, left: 0, right: 0 }} pointerEvents="box-none">
+        {children}
+      </View>
+    </View>
+  );
+}
 
 type Failure = { kind: 'add'; category: Category; quantity: number } | { kind: 'undo' };
 
@@ -47,9 +66,11 @@ export function QuickPickupSheet({ visible, onClose, session }: { visible: boole
 
   return (
     <BottomSheet visible={visible} onClose={onClose} title={`이번 활동 줍기 ${total}개`}>
-      <Txt variant="caption" tone="muted">
-        {total === 0 ? '아직 주운 게 없어요. 누를 때마다 하나씩, 길게 누르면 여러 개 담아요' : '누를 때마다 하나씩, 길게 누르면 여러 개 담아요'}
-      </Txt>
+      <Reserved space={<Txt variant="caption">{EMPTY_HINT}</Txt>}>
+        <Txt variant="caption" tone="muted">
+          {total === 0 ? EMPTY_HINT : '누를 때마다 하나씩, 길게 누르면 여러 개 담아요'}
+        </Txt>
+      </Reserved>
 
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.sm }}>
         {CATEGORIES.map((c) => {
@@ -95,31 +116,33 @@ export function QuickPickupSheet({ visible, onClose, session }: { visible: boole
         })}
       </View>
 
-      <Appear visible={status != null} rise={0}>
-        {/* 안드로이드는 역할만으로 바뀐 문구를 읽지 않는다. 저장 상태가 바뀔 때 알린다 */}
-        <View accessibilityLiveRegion="polite">
-          {failed?.kind === 'add' ? (
-            <Banner tone="danger" action={{ label: '다시 시도', onPress: () => add(failed.category, failed.quantity) }}>
-              저장하지 못했어요
-            </Banner>
-          ) : failed?.kind === 'undo' ? (
-            <Banner tone="danger" action={{ label: '다시 시도', onPress: undo }}>
-              되돌리지 못했어요
-            </Banner>
-          ) : last ? (
-            <Banner
-              tone="neutral"
-              action={{
-                label: '되돌리기',
-                accessibilityLabel: `최근 ${CATEGORY_LABEL[last.category]} ${last.quantity}개 담기 되돌리기`,
-                onPress: undo,
-              }}
-            >
-              {`${CATEGORY_LABEL[last.category]} ${last.quantity}개 담았어요 · ${isPending(last.itemId) ? '동기화 대기' : '저장됨'}`}
-            </Banner>
-          ) : null}
-        </View>
-      </Appear>
+      <Reserved space={<Banner tone="neutral" action={{ label: '되돌리기', onPress: () => {} }}>플라스틱 99개 담았어요 · 동기화 대기</Banner>}>
+        <Appear visible={status != null} rise={0}>
+          {/* 안드로이드는 역할만으로 바뀐 문구를 읽지 않는다. 저장 상태가 바뀔 때 알린다 */}
+          <View accessibilityLiveRegion="polite">
+            {failed?.kind === 'add' ? (
+              <Banner tone="danger" action={{ label: '다시 시도', onPress: () => add(failed.category, failed.quantity) }}>
+                저장하지 못했어요
+              </Banner>
+            ) : failed?.kind === 'undo' ? (
+              <Banner tone="danger" action={{ label: '다시 시도', onPress: undo }}>
+                되돌리지 못했어요
+              </Banner>
+            ) : last ? (
+              <Banner
+                tone="neutral"
+                action={{
+                  label: '되돌리기',
+                  accessibilityLabel: `최근 ${CATEGORY_LABEL[last.category]} ${last.quantity}개 담기 되돌리기`,
+                  onPress: undo,
+                }}
+              >
+                {`${CATEGORY_LABEL[last.category]} ${last.quantity}개 담았어요 · ${isPending(last.itemId) ? '동기화 대기' : '저장됨'}`}
+              </Banner>
+            ) : null}
+          </View>
+        </Appear>
+      </Reserved>
 
       <Button label="닫기" size="lg" fullWidth onPress={onClose} />
     </BottomSheet>

@@ -1,7 +1,7 @@
 {
   "name": "mobile",
   "version": "1.0.0",
-  "main": "expo-router/entry",
+  "main": "index.js",
   "dependencies": {
     "@react-native-vector-icons/material-design-icons": "^13.1.4",
     "design-system": "*",

@@ -64,6 +64,29 @@ describe('2단계 속도', () => {
     const [, b] = run([fix(0, 5), fix(1, 5)]);
     expect(b.point).toBeNull();
   });
+
+  test('미래 시각 점을 한 번 받은 뒤 시계가 돌아와도 경로가 계속 멈추지 않는다', () => {
+    // 40분 앞선 점을 통과시킨 뒤 정상 시각으로 걷는다
+    const [, , w1, w2, w3] = run([fix(0, 0), fix(5, 2400), fix(6, 10), fix(9, 13), fix(12, 16)]);
+    expect(w1.point === null && w1.reason).toBe('speed');
+    expect(w2.point === null && w2.reason).toBe('reanchor');
+    expect(w3.point).not.toBeNull();
+  });
+
+  test('차를 타고 멀리 간 뒤 걷기 시작하면 두 점 만에 다시 경로를 잇는다', () => {
+    // 3분에 2km(초속 11m) 이동 후 걷는다
+    const r = run([fix(0, 0), fix(2000, 180), fix(2004, 183), fix(2008, 186)]);
+    expect(r[1].point === null && r[1].reason).toBe('speed');
+    expect(r[2].point === null && r[2].reason).toBe('reanchor');
+    expect(r[3].point).not.toBeNull();
+  });
+
+  test('튄 점 하나나 늦게 도착한 점 하나로는 기준을 옮기지 않는다', () => {
+    const [, , jump, late, next] = run([fix(0, 0), fix(3, 3), fix(500, 6), fix(2, 2), fix(9, 9)]);
+    expect(jump.point).toBeNull();
+    expect(late.point === null && late.reason).toBe('speed');
+    expect(next.point).not.toBeNull();
+  });
 });
 
 describe('3단계 평활화', () => {
