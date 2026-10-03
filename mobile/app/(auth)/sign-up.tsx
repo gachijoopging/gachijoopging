@@ -49,6 +49,8 @@ export default function SignUpScreen() {
       clearAgreementChoices('signup');
       clearAgreementChoices(me.data.id);
       router.replace(resolveDestination(me.data));
+      // 떠나는 화면은 다시 그리지 않는다. 전환 중 재렌더가 Fabric 을 죽인다
+      return;
     } catch (error) {
       const mapped = mapSignupError(error);
       setEmailError(mapped.email);
@@ -58,10 +60,9 @@ export default function SignUpScreen() {
         await agreements.reload();
         setBanner('약관이 변경됐어요. 새 항목을 확인해 주세요.');
       } else if (registered.current) setBanner('동의를 저장하지 못했어요. 다시 시도해 주세요.');
-    } finally {
-      setLoading(false);
-      busy.current = false;
     }
+    setLoading(false);
+    busy.current = false;
   }
 
   return (
