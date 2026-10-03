@@ -49,3 +49,9 @@ export function dragAfterSlop(dy: number, slop = DRAG_SLOP): number {
   if (Math.abs(dy) <= slop) return 0;
   return dy - Math.sign(dy) * slop;
 }
+
+/**
+ * 불러오기가 이보다 빨리 끝나면 로딩 표시를 보이지 않는다(ms).
+ * 화면을 옮길 때마다 스피너가 한 번씩 번쩍이면 앱이 느리게 읽힌다
+ */
+export const LOADING_SHOW_AFTER_MS = 400;
