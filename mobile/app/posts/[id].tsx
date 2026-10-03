@@ -293,9 +293,10 @@ export default function PostDetailScreen() {
             onScrollBeginDrag={() => { atEnd.current = false; }}
             onScrollEndDrag={markAtEnd}
             onMomentumScrollEnd={markAtEnd}
-            // 큰 글자에서 비운 입력란의 안내 문구가 두 줄이 되면 목록 높이만 줄어 마지막 댓글이 가려진다
+            // 큰 글자에서 비운 입력란의 안내 문구가 두 줄이 되면 목록 높이만 줄어 마지막 댓글이 가려진다.
+            // 댓글을 보낸 직후 내려가던 애니메이션이 줄기 전 높이를 목표로 끝나므로, 같은 애니메이션으로 목표를 바꿔 준다
             onLayout={() => {
-              if (atEnd.current) scroll.current?.scrollToEnd({ animated: false });
+              if (atEnd.current) scroll.current?.scrollToEnd({ animated: true });
             }}
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load('pull')} />}
           >
