@@ -2,7 +2,7 @@
 import * as Crypto from 'expo-crypto';
 import { router, useLocalSearchParams, useNavigation } from 'expo-router';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import { Pressable, RefreshControl, ScrollView, View, type TextInput } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, View, type NativeScrollEvent, type NativeSyntheticEvent, type TextInput } from 'react-native';
 import {
   AppHeader,
   Avatar,
@@ -63,6 +63,10 @@ export default function PostDetailScreen() {
   const scroll = useRef<ScrollView>(null);
   // 내가 단 댓글이 그려진 뒤에 내려가야 맨 끝이 새 댓글이다
   const toEnd = useRef(false);
+  const atEnd = useRef(false);
+  const markAtEnd = ({ nativeEvent: { contentOffset, layoutMeasurement, contentSize } }: NativeSyntheticEvent<NativeScrollEvent>) => {
+    atEnd.current = contentOffset.y + layoutMeasurement.height >= contentSize.height - space.md;
+  };
   const sending = useRef(false);
   const request = useRef(0);
   const olderPending = useRef(false);
@@ -281,7 +285,15 @@ export default function PostDetailScreen() {
             onContentSizeChange={() => {
               if (!toEnd.current) return;
               toEnd.current = false;
+              atEnd.current = true;
               scroll.current?.scrollToEnd({ animated: true });
+            }}
+            // 끝에 있는지는 손으로 스크롤을 마쳤을 때만 잰다. 내려가는 애니메이션 중간값으로 재면 끝이 아니라고 오판한다
+            onScrollEndDrag={markAtEnd}
+            onMomentumScrollEnd={markAtEnd}
+            // 큰 글자에서 비운 입력란의 안내 문구가 두 줄이 되면 목록 높이만 줄어 마지막 댓글이 가려진다
+            onLayout={() => {
+              if (atEnd.current) scroll.current?.scrollToEnd({ animated: false });
             }}
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load('pull')} />}
           >

@@ -178,3 +178,29 @@ test('새로고침 후 오래된 이전 댓글 응답이 복구된 목록에 섞
   await act(async () => finish({ data: { items: [{ ...recent, id: 'stale' }], nextCursor: null } }));
   expect(rendered.root.findAll((node: any) => node.props.comment).map((node: any) => node.props.comment.id)).toEqual(['recent']);
 });
+
+test('맨 아래를 보던 중 입력란이 커져 목록이 줄면 다시 맨 아래로 맞춘다', async () => {
+  const React = require('react');
+  const { act, create } = require('react-test-renderer');
+  const scrollToEnd = jest.fn();
+  const Component = require('../../app/posts/[id]').default;
+  await act(async () => { rendered = create(React.createElement(Component), { createNodeMock: () => ({ scrollToEnd }) }); });
+  const list = () => rendered.root.findByType('ScrollView');
+  const scrolled = (y: number) => ({ nativeEvent: { contentOffset: { y }, layoutMeasurement: { height: 600 }, contentSize: { height: 1000 } } });
+  // 큰 글자에서 비운 입력란의 안내 문구가 두 줄이 되면 목록 높이만 줄고 내용 높이는 그대로다
+  await act(async () => list().props.onMomentumScrollEnd(scrolled(400)));
+  await act(async () => list().props.onLayout({ nativeEvent: { layout: { height: 560 } } }));
+  expect(scrollToEnd).toHaveBeenCalledTimes(1);
+  // 댓글을 보내 맨 아래로 내려가는 애니메이션 도중이어도 끝을 보고 있는 것으로 친다
+  await act(async () => list().props.onScrollEndDrag(scrolled(100)));
+  await act(async () => rendered.root.findByType('Field').props.onChangeText('새 댓글'));
+  mockMutate.mockResolvedValueOnce({ data: { id: 'c9', author: { id: 'u1', nickname: '나', photoUrl: null, withdrawn: false }, text: '새 댓글', createdAt: '2026-10-01T00:00:00Z', seq: 9 } });
+  await act(async () => rendered.root.find((n: any) => n.type === 'Button' && n.props.label === '남기기').props.onPress());
+  await act(async () => list().props.onContentSizeChange());
+  await act(async () => list().props.onLayout({ nativeEvent: { layout: { height: 520 } } }));
+  expect(scrollToEnd).toHaveBeenCalledTimes(3);
+  // 위로 올려 읽는 중이면 끌어내리지 않는다
+  await act(async () => list().props.onScrollEndDrag(scrolled(100)));
+  await act(async () => list().props.onLayout({ nativeEvent: { layout: { height: 600 } } }));
+  expect(scrollToEnd).toHaveBeenCalledTimes(3);
+});
