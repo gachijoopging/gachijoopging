@@ -83,3 +83,11 @@ test('되돌리기 배너가 사라지는 중에는 다시 눌러도 같은 줍�
   act(() => mockSpringEnds.forEach((end) => end({ finished: true })));
   expect(undoBanner()).toBeUndefined();
 });
+
+test('다시 그려지기 전에 되돌리기를 두 번 눌러도 한 번만 되돌린다', () => {
+  act(() => tile('캔').props.onPress());
+  // 실기기에서 빠른 연타는 첫 탭의 상태 변경이 그려지기 전에 두 번째 탭이 같은 핸들러로 들어온다
+  const onUndo = undoBanner().props.action.onPress;
+  act(() => { onUndo(); onUndo(); });
+  expect(mockUndo).toHaveBeenCalledTimes(1);
+});
