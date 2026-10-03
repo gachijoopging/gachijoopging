@@ -203,4 +203,9 @@ test('맨 아래를 보던 중 입력란이 커져 목록이 줄면 다시 맨 �
   await act(async () => list().props.onScrollEndDrag(scrolled(100)));
   await act(async () => list().props.onLayout({ nativeEvent: { layout: { height: 600 } } }));
   expect(scrollToEnd).toHaveBeenCalledTimes(3);
+  // 끝에서 위로 끌기 시작하면, 손을 떼기 전에 키보드가 닫혀(on-drag) 목록이 커져도 되돌려 내리지 않는다
+  await act(async () => list().props.onMomentumScrollEnd(scrolled(400)));
+  await act(async () => list().props.onScrollBeginDrag());
+  await act(async () => list().props.onLayout({ nativeEvent: { layout: { height: 900 } } }));
+  expect(scrollToEnd).toHaveBeenCalledTimes(3);
 });

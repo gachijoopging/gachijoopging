@@ -288,7 +288,9 @@ export default function PostDetailScreen() {
               atEnd.current = true;
               scroll.current?.scrollToEnd({ animated: true });
             }}
-            // 끝에 있는지는 손으로 스크롤을 마쳤을 때만 잰다. 내려가는 애니메이션 중간값으로 재면 끝이 아니라고 오판한다
+            // 끝에 있는지는 손으로 스크롤을 마쳤을 때만 잰다. 내려가는 애니메이션 중간값으로 재면 끝이 아니라고 오판한다.
+            // 드래그가 시작되면 끝 추적을 푼다 — 끌어올리는 손 아래에서 키보드가 닫히며 높이가 바뀌어도 되돌려 내리지 않는다
+            onScrollBeginDrag={() => { atEnd.current = false; }}
             onScrollEndDrag={markAtEnd}
             onMomentumScrollEnd={markAtEnd}
             // 큰 글자에서 비운 입력란의 안내 문구가 두 줄이 되면 목록 높이만 줄어 마지막 댓글이 가려진다
