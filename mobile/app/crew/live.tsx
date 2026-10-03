@@ -2,7 +2,7 @@
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { View } from 'react-native';
+import { RefreshControl, View } from 'react-native';
 import {
   AppHeader,
   Avatar,
@@ -25,6 +25,7 @@ import {
 import { KakaoMapView } from '../../modules/kakao-map';
 import { createMockClient, type ApiClient } from '../../src/api/client';
 import { MOCKS } from '../../src/api/mocks.generated';
+import { spokenDistance } from '../../src/crew/records';
 import { formatDistance, formatElapsed } from '../../src/format';
 import { crewMarkers, locationShareLabel } from '../../src/live/live';
 import { useBlockedUsers } from '../../src/profile/blocked-users';
@@ -34,6 +35,8 @@ type Member = (typeof MOCKS)['GET /crew/live']['data'][number];
 const api: ApiClient = createMockClient({ delayMs: 300 });
 
 const progress = (m: Member) => `${formatDistance(m.distanceM)} · ${formatElapsed(m.elapsedSec)} · ${m.itemCount}개`;
+const spokenRow = (m: Member) =>
+  `${m.user.nickname}, ${m.paused ? '일시정지' : '활동 중'}, ${spokenDistance(m.distanceM)}, ${formatElapsed(m.elapsedSec)}, ${m.itemCount}개, ${locationShareLabel(m)}, 프로필 보기`;
 
 export default function ActiveCrewMembersScreen() {
   const appKey = Constants.expoConfig?.extra?.kakaoNativeAppKey ?? '';
@@ -64,12 +67,14 @@ export default function ActiveCrewMembersScreen() {
 
   const markers = members ? crewMarkers([...members]) : [];
   const selected = members?.find((m) => m.user.id === selectedId) ?? null;
+  const openProfile = (userId: string) =>
+    userId === meId ? router.push('/(tabs)/profile') : router.push({ pathname: '/users/[id]', params: { id: userId } });
 
   const header = (
     <AppHeader
       title="활동 중인 크루원"
       onBack={() => router.back()}
-      action={<IconButton icon="refresh" label="새로고침" disabled={!members || refreshing} onPress={load} />}
+      action={<IconButton icon="refresh" label="활동 중인 크루원 새로고침" disabled={!members || refreshing} onPress={load} />}
     />
   );
 
@@ -83,7 +88,7 @@ export default function ActiveCrewMembersScreen() {
   }
 
   return (
-    <Screen scroll>
+    <Screen scroll refreshControl={<RefreshControl refreshing={refreshing} onRefresh={load} />}>
       {header}
       {failed ? <Banner tone="warn">인터넷 연결을 확인해 주세요.</Banner> : null}
 
@@ -94,7 +99,7 @@ export default function ActiveCrewMembersScreen() {
         />
       ) : (
         <>
-          <Txt variant="subtitle">지금 {members.length}명이 활동 중이에요</Txt>
+          <Txt variant="subtitle" accessibilityLiveRegion="polite">지금 {members.length}명이 활동 중이에요</Txt>
 
           <View
             style={{ height: size.mapFrame, borderRadius: radius.card, overflow: 'hidden' }}
@@ -137,7 +142,7 @@ export default function ActiveCrewMembersScreen() {
                 label="프로필 보기"
                 variant="ghost"
                 size="sm"
-                onPress={() => router.push({ pathname: '/users/[id]', params: { id: selected.user.id } })}
+                onPress={() => openProfile(selected.user.id)}
               />
             </Card>
           ) : null}
@@ -162,7 +167,8 @@ export default function ActiveCrewMembersScreen() {
                     </View>
                   </View>
                 }
-                onPress={() => router.push({ pathname: '/users/[id]', params: { id: m.user.id } })}
+                accessibilityLabel={spokenRow(m)}
+                onPress={() => openProfile(m.user.id)}
               />
             ))}
           </View>

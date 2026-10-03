@@ -20,8 +20,10 @@ function ListRowBase({
   right,
   icon,
   onPress,
+  onLongPress,
   disabled,
   divider = true,
+  subtitleLines,
   chevron = !right,
   tone,
   emphasized,
@@ -35,8 +37,12 @@ function ListRowBase({
   right?: ReactNode;
   icon?: IconName;
   onPress?: () => void;
+  /** 길게 눌러 여는 메뉴. 스크린리더는 길게 누르기에 닿지 못하므로 accessibilityActions 로도 함께 노출한다 */
+  onLongPress?: () => void;
   disabled?: boolean;
   divider?: boolean;
+  /** 부제 줄 수 제한. 미리보기처럼 길어질 수 있는 부제에 준다 */
+  subtitleLines?: number;
   /** 누르는 행의 끝 chevron. right 를 줘도 이동하는 행이면 켠다 */
   chevron?: boolean;
   /**
@@ -73,7 +79,7 @@ function ListRowBase({
       <View style={{ flex: 1, gap: 1 }}>
         <Txt variant="bodyLg" bold={emphasized} tone={tone === 'danger' ? 'error' : 'ink'}>{title}</Txt>
         {subtitle ? (
-          <Txt variant="caption" tone="hint">
+          <Txt variant="caption" tone="hint" numberOfLines={subtitleLines}>
             {subtitle}
           </Txt>
         ) : null}
@@ -87,6 +93,7 @@ function ListRowBase({
   return (
     <PressableRow
       onPress={onPress}
+      onLongPress={onLongPress}
       disabled={disabled}
       accessibilityLabel={accessibilityLabel}
       accessibilityActions={accessibilityActions}
@@ -99,6 +106,7 @@ function ListRowBase({
 
 function PressableRow({
   onPress,
+  onLongPress,
   disabled,
   accessibilityLabel,
   accessibilityActions,
@@ -106,6 +114,7 @@ function PressableRow({
   children,
 }: {
   onPress: () => void;
+  onLongPress?: () => void;
   disabled?: boolean;
   accessibilityLabel?: string;
   accessibilityActions?: PressableProps['accessibilityActions'];
@@ -121,6 +130,7 @@ function PressableRow({
       accessibilityActions={accessibilityActions}
       onAccessibilityAction={onAccessibilityAction}
       onPress={onPress}
+      onLongPress={onLongPress}
       disabled={disabled}
       android_ripple={disabled ? undefined : ripple}
       style={({ pressed }) => ({ opacity: disabled ? disabledOpacity : pressedOpacity(pressed) })}

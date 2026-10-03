@@ -1,11 +1,14 @@
 import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Image, RefreshControl, View } from 'react-native';
-import { Banner, Button, Card, Chip, ErrorState, Loading, MetricSplit, Screen, Txt, size, space } from 'design-system/src';
+import { Banner, Button, Card, Chip, ErrorState, Loading, MetricSplit, Screen, Snackbar, Txt, size, space } from 'design-system/src';
+import { getStored, loadLastAccount, subscribe, type Stored } from '../../src/activity/store';
+import { syncOutbox } from '../../src/activity/tracking';
 import { createMockClient, type Activity, type ApiClient } from '../../src/api/client';
 import { usePloggingLauncher } from '../../src/plogging/PloggingLauncher';
 import { readyView } from '../../src/plogging/ready';
 import { activityMetrics, activitySummaryLabel } from '../../src/plogging/start';
+import { useFlash } from '../../src/ui/useFlash';
 
 const api: ApiClient = createMockClient({ delayMs: 300 });
 
@@ -18,6 +21,10 @@ export default function PloggingScreen() {
   const [failed, setFailed] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const plogging = usePloggingLauncher();
+  const [snackbar, setSnackbar] = useFlash();
+  const [stored, setStored] = useState<Stored>(() => loadLastAccount() ?? getStored());
+  useEffect(() => subscribe(setStored), []);
+  const pendingEndId = stored.ended && stored.session ? stored.session.activityId : null;
 
   const load = useCallback(async (pull = false) => {
     if (pull) setRefreshing(true);
@@ -34,7 +41,7 @@ export default function PloggingScreen() {
 
   useFocusEffect(useCallback(() => void load(), [load]));
 
-  const view = readyView({ last, failed });
+  const view = readyView({ last, failed, pendingEndId });
   const now = Date.now();
   const resume = (id: string) => router.push({ pathname: '/activity/[id]', params: { id } });
 
@@ -73,6 +80,22 @@ export default function PloggingScreen() {
           <Button label="활동 이어가기" size="lg" fullWidth onPress={() => resume(view.activity.id)} />
         </>
       ) : null}
+
+      {view.kind === 'syncing' ? (
+        <>
+          <Banner tone="warn">이전 기록 동기화 대기 중이에요. 저장이 끝나야 새 활동을 시작할 수 있어요.</Banner>
+          <View style={{ flexDirection: 'row', gap: space.sm }}>
+            <View style={{ flex: 1 }}>
+              <Button label="요약 보기" variant="ghost" fullWidth onPress={() => router.push({ pathname: '/activity/[id]/summary', params: { id: view.id } })} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Button label="다시 시도" fullWidth onPress={() => void syncOutbox()} />
+            </View>
+          </View>
+        </>
+      ) : null}
+
+      <Snackbar visible={snackbar != null} message={snackbar ?? ''} onDismiss={() => setSnackbar(null)} />
     </Screen>
   );
 }

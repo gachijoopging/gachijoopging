@@ -17,7 +17,8 @@ jest.mock('expo-linking', () => ({ openURL: jest.fn().mockResolvedValue(undefine
 jest.mock('expo-crypto', () => ({ randomUUID: () => `uuid-${++mockUuid}` }));
 jest.mock('../api/onboarding', () => ({ onboardingApi: { get: (...args: unknown[]) => mockGet(...args), mutate: (...args: unknown[]) => mockMutate(...args) } }));
 jest.mock('../api/client', () => ({ ApiError: class extends Error { code: string; fields: unknown; constructor(mockCode: string, mockFields?: unknown) { super(mockCode); this.code = mockCode; this.fields = mockFields; } }, createMockClient: () => ({ get: (...args: unknown[]) => mockGet(...args), mutate: (...args: unknown[]) => mockMutate(...args) }) }));
-jest.mock('expo-router', () => ({ router: { replace: jest.fn(), back: jest.fn(), dismissTo: jest.fn() }, useLocalSearchParams: () => ({}), useFocusEffect: (fn: () => void) => require('react').useEffect(fn, [fn]) }));
+const mockReset = jest.fn();
+jest.mock('expo-router', () => ({ router: { replace: jest.fn(), back: jest.fn(), dismissTo: jest.fn() }, useLocalSearchParams: () => ({}), useNavigation: () => ({ reset: (...a: unknown[]) => mockReset(...a) }), useFocusEffect: (fn: () => void) => require('react').useEffect(fn, [fn]) }));
 jest.mock('react-native', () => ({ View: 'View', TextInput: 'TextInput', Platform: { OS: 'android', select: (options: Record<string, unknown>) => options.android ?? options.default }, BackHandler: { addEventListener: () => ({ remove: () => {} }) } }));
 jest.mock('design-system/src', () => new Proxy({ space: { sm: 8 } }, { get: (target, key) => key in target ? target[key as keyof typeof target] : String(key) }));
 jest.mock('./account', () => ({ rememberAccount: jest.fn(), currentAccount: () => ({ id: mockUserId, hasCrew: true }) }));
@@ -41,6 +42,7 @@ beforeEach(() => {
   mockGet.mockReset().mockImplementation((key: string) => Promise.resolve({ data: key === 'GET /agreements' ? { items: definitions() } : key === 'GET /users/me/agreements' ? state() : me() }));
   mockMutate.mockReset().mockImplementation((key: string) => Promise.resolve(key === 'PUT /users/me/agreements' ? { data: { ...state(), complete: true } } : { data: { id: 'notice' } }));
   router.replace.mockClear();
+  mockReset.mockClear();
 });
 afterEach(() => { act(() => tree.unmount()); });
 async function mount(Component: () => React.JSX.Element) { await act(async () => { tree = create(React.createElement(Component)); }); }
@@ -53,13 +55,13 @@ test('signup loads public catalogue and retries agreement storage without recrea
   await mount(SignUp);
   await fill('이메일', 'user@example.test'); await fill('비밀번호', 'password'); await fill('닉네임', '새별명'); acceptRequired();
   await press('회원가입');
-  expect(router.replace).not.toHaveBeenCalled();
+  expect(mockReset).not.toHaveBeenCalled();
   await press('회원가입');
   expect(mockMutate.mock.calls.filter(([key]) => key === 'POST /auth/signup')).toHaveLength(1);
   const puts = mockMutate.mock.calls.filter(([key]) => key === 'PUT /users/me/agreements');
   expect(puts).toHaveLength(2);
   expect(puts[1][1].items).toEqual(expect.arrayContaining([{ type: 'MARKETING', version: 'v1', agreed: false }]));
-  expect(router.replace).toHaveBeenCalledWith('/(tabs)');
+  expect(mockReset).toHaveBeenCalledWith({ index: 0, routes: [{ name: '(tabs)' }] });
   expect(mockGet).toHaveBeenCalledWith('GET /agreements');
 });
 
@@ -68,7 +70,7 @@ test('reconsent prefills saved nickname and skips an unchanged nickname mutation
   expect(tree.root.findByType('Field' as never).props.value).toBe('기존별명');
   acceptRequired(); await press('다음');
   expect(mockMutate.mock.calls.map(([key]) => key)).toEqual(['PUT /users/me/agreements']);
-  expect(router.replace).toHaveBeenCalledWith('/(tabs)');
+  expect(mockReset).toHaveBeenCalledWith({ index: 0, routes: [{ name: '(tabs)' }] });
 });
 
 test('version refresh preserves nickname and unchanged-version choice but clears new-version consent', async () => {
@@ -79,7 +81,7 @@ test('version refresh preserves nickname and unchanged-version choice but clears
   expect(tree.root.findByType('Field' as never).props.value).toBe('바꾼별명');
   const boxes = tree.root.findAllByType('Checkbox' as never);
   expect(boxes[0].props.checked).toBe(false); expect(boxes[1].props.checked).toBe(true);
-  expect(router.replace).not.toHaveBeenCalled();
+  expect(mockReset).not.toHaveBeenCalled();
 });
 
 test('missing catalogue exposes retry and prevents signup', async () => {

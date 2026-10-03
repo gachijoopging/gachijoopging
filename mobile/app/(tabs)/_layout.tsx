@@ -3,6 +3,7 @@ import type { ComponentProps } from 'react';
 import { View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BottomNav, CONTENT_MAX_WIDTH, space, useReduceMotion, useTheme } from 'design-system/src';
+import { useActiveSession } from '../../src/activity/useActiveSession';
 import { PloggingLauncher, usePloggingLauncher } from '../../src/plogging/PloggingLauncher';
 import { TABS, tabValueOf, type TabValue } from '../../src/tabs';
 
@@ -14,6 +15,8 @@ function TabBar({ state, navigation }: TabBarProps) {
   // BottomNav 는 가운데 버튼을 누르면 onPress 전에 onChange('plogging') 도 부른다. 줍깅의 행선지는 enter 가 정한다
   const go = (v: TabValue) => v !== 'plogging' && navigation.navigate(v);
   const plogging = usePloggingLauncher();
+  // 활동 중에 뒤로 가기로 탭에 왔으면 돌아갈 곳이 있다는 점을 켠다
+  const active = useActiveSession();
   const { bottom } = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   // 넓은 화면에서 폰 막대가 끝까지 늘어나지 않게 본문과 같은 폭에 맞춘다
@@ -25,7 +28,7 @@ function TabBar({ state, navigation }: TabBarProps) {
         items={TABS}
         value={current}
         onChange={go}
-        startAction={{ label: '줍깅', icon: 'delete-outline', onPress: plogging.enter }}
+        startAction={{ label: active ? '줍깅, 활동 중' : '줍깅', icon: 'delete-outline', badge: active, onPress: plogging.enter }}
       />
     </View>
   );

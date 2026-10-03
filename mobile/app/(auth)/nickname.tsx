@@ -1,11 +1,13 @@
 // 화면 1-4 · docs/screens/1-4-nickname.md
 import { useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
-import { router } from 'expo-router';
+import { useNavigation } from 'expo-router';
 import { AppHeader, Banner, Button, Field, Screen, Txt, space } from 'design-system/src';
 import { onboardingApi as api } from '../../src/api/onboarding';
 import { AgreementFields } from '../../src/auth/AgreementFields';
 import { resolveDestination } from '../../src/auth/destination';
+import { finishOnboarding, type OnboardingNavigation } from '../../src/auth/navigation';
+import { usePreventBack } from '../../src/auth/usePreventBack';
 import { mapNicknameError } from '../../src/auth/errors';
 import { normalizeNickname, validateNickname } from '../../src/auth/validators';
 import { clearAgreementChoices, requiredAgreementsAccepted, useAgreementForm } from '../../src/auth/agreements';
@@ -22,6 +24,8 @@ export default function NicknameScreen() {
   const loadRequest = useRef(0);
   const [banner, setBanner] = useState<string>();
   const [loading, setLoading] = useState(false);
+  const navigation = useNavigation<OnboardingNavigation>('/');
+  usePreventBack(loading);
 
   const load = async () => {
     const request = ++loadRequest.current;
@@ -52,7 +56,7 @@ export default function NicknameScreen() {
       const { data } = await api.mutate('PUT /users/me/agreements', { items: agreements.items.map(({ type, version, agreed }) => ({ type, version, agreed })) });
       if (!data.complete) throw new Error('필수 동의가 완료되지 않았어요');
       clearAgreementChoices(me.id);
-      router.replace(resolveDestination({ ...me, profileComplete: true }));
+      finishOnboarding(navigation, resolveDestination({ ...me, profileComplete: true }));
       // 떠나는 화면은 다시 그리지 않는다. 전환 중 재렌더가 Fabric 을 죽인다
       return;
     } catch (error) {
@@ -80,6 +84,7 @@ export default function NicknameScreen() {
 
       <Field
         label="닉네임"
+        hint="2자에서 12자"
         placeholder="2~12자"
         value={nickname}
         onChangeText={(v) => {
