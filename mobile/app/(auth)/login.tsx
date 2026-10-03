@@ -27,8 +27,9 @@ export default function LoginScreen() {
   const navigation = useNavigation<OnboardingNavigation>('/');
   const emailRef = useRef<TextInput>(null);
   const passwordRef = useRef<TextInput>(null);
-  // 로그인은 됐는데 내 정보만 실패하면 토큰은 살아 있다 — 다시 누르면 로그인을 반복하지 않는다
-  const authenticated = useRef(false);
+  // 로그인은 됐는데 내 정보만 실패하면 토큰은 살아 있다 — 같은 계정으로 다시 누르면 로그인을 반복하지 않는다.
+  // 계정을 바꿔 적었으면 새로 인증한다
+  const authenticated = useRef<{ email: string; password: string } | null>(null);
   usePreventBack(loading);
 
   async function handleSubmit() {
@@ -42,9 +43,11 @@ export default function LoginScreen() {
     setBanner(undefined);
     setLoading(true);
     try {
-      if (!authenticated.current) {
-        await api.mutate('POST /auth/login', { email: email.trim(), password });
-        authenticated.current = true;
+      const credentials = { email: email.trim(), password };
+      if (authenticated.current?.email !== credentials.email || authenticated.current.password !== credentials.password) {
+        authenticated.current = null;
+        await api.mutate('POST /auth/login', credentials);
+        authenticated.current = credentials;
       }
       await completeSignIn(api, navigation);
       // 떠나는 화면은 다시 그리지 않는다. 전환 중 재렌더가 Fabric 을 죽인다

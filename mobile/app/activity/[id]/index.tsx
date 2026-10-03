@@ -134,8 +134,10 @@ export default function ActivityInProgressScreen() {
           : await api
               .get('GET /activities/current')
               .then(({ data }) => (data?.id === id ? { ...newSession(data, userId, t), distanceM: data.distanceM } : null))
-              .catch(() => null);
+              .catch(() => 'failed' as const);
         if (cancelled) return;
+        // 조회가 실패한 것은 끝난 것이 아니다. 4-1 이 다시 받아 이어가게 한다
+        if (fresh === 'failed') return router.replace({ pathname: '/(tabs)/plogging', params: { flash: '활동을 불러오지 못했어요. 다시 시도해 주세요' } });
         // 서버에 이 활동이 없다 — 다른 기기에서 끝냈다. 0 지표 화면에 남기지 않는다
         if (!fresh) return router.replace({ pathname: '/(tabs)/plogging', params: { flash: '활동이 이미 끝났어요' } });
         updateStored((st) => ({ ...st, session: fresh, ended: null }));

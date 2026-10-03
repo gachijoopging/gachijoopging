@@ -25,20 +25,22 @@ export default function StartScreen() {
   const busy = loadingProvider !== null;
   const [flash, setFlash] = useFlash();
   const navigation = useNavigation<OnboardingNavigation>('/');
-  // 인증이 끝난 뒤 내 정보만 실패하면 토큰은 살아 있다 — 다시 누르면 인증을 반복하지 않는다
-  const authenticated = useRef(false);
+  // 인증이 끝난 뒤 내 정보만 실패하면 토큰은 살아 있다 — 같은 제공자를 다시 누르면 인증을 반복하지 않는다.
+  // 다른 제공자를 고르면 새로 인증한다
+  const authenticated = useRef<Provider | null>(null);
   usePreventBack(busy);
 
   async function handleSocial(provider: Provider) {
     setSocialError(null);
     setLoadingProvider(provider);
     try {
-      if (!authenticated.current) {
+      if (authenticated.current !== provider) {
+        authenticated.current = null;
         // 제공자 SDK 연동은 별도 작업이다. 여기서는 토큰을 받아 온 뒤라고 가정하고 이어간다.
         await api.mutate(provider === 'kakao' ? 'POST /auth/kakao' : 'POST /auth/google', {
           token: 'mock-provider-token',
         });
-        authenticated.current = true;
+        authenticated.current = provider;
       }
       await completeSignIn(api, navigation);
       // 떠나는 화면은 다시 그리지 않는다. 전환 중 재렌더가 Fabric 을 죽인다

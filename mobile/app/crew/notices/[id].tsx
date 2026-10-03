@@ -26,7 +26,7 @@ import { ApiError, createMockClient, type ApiClient } from '../../../src/api/cli
 import type { MOCKS } from '../../../src/api/mocks.generated';
 import { clearDraft, draftFor, editDraft, requestIdFor } from '../../../src/crew/comment-draft';
 import { monthDay } from '../../../src/crew/crew';
-import { COMMENT_MAX, canSendComment, commentAction } from '../../../src/crew/notice';
+import { COMMENT_MAX, canSendComment, commentAction, visibleComments } from '../../../src/crew/notice';
 import { leaveForMembership } from '../../../src/feed/leave';
 import { useBlockedUsers } from '../../../src/profile/blocked-users';
 import { useFlash } from '../../../src/ui/useFlash';
@@ -42,9 +42,8 @@ export default function NoticeDetailScreen() {
   const [notice, setNotice] = useState<Detail | null>(null);
   const [allComments, setComments] = useState<Comment[]>([]);
   const [me, setMe] = useState<{ id: string; isLeader: boolean } | null>(null);
-  // 차단한 사람의 댓글은 내 화면에서만 바로 숨긴다 (feature-scope 차단 규칙)
   const blocked = useBlockedUsers(me?.id);
-  const comments = allComments.filter((c) => !blocked.has(c.author.id));
+  const comments = visibleComments(allComments, blocked, !!me?.isLeader);
   const [failed, setFailed] = useState(false);
   const [gone, setGone] = useState(false);
   const [refreshing, setRefreshing] = useState(false);

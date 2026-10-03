@@ -54,6 +54,11 @@ export function kstToday(now: Date = new Date()): string {
   return isoDate(now.getTime() + KST_OFFSET_MS);
 }
 
+/** 계약의 날짜(from·to 등)는 KST 기준이다. UTC 시각을 그 날짜로 바꾼다 */
+export function kstDate(iso: string): string {
+  return isoDate(new Date(iso).getTime() + KST_OFFSET_MS);
+}
+
 export function shiftMonth(month: string, delta: number): string {
   const d = monthStart(month);
   d.setUTCMonth(d.getUTCMonth() + delta);

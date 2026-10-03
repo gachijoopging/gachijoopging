@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { View, type TextInput } from 'react-native';
 import {
   AppHeader,
+  Banner,
   Button,
   ErrorState,
   Field,
@@ -136,6 +137,12 @@ export default function EditNoticeScreen() {
         )
       ) : (
         <>
+          {/* 작성 모드는 빈 폼이 먼저 보인다. 권한 조회가 실패하면 쓴 글은 두고 그것만 다시 받는다 */}
+          {failed && !key ? (
+            <Banner tone="danger" action={{ label: '다시 시도', onPress: () => void load() }}>
+              권한을 확인하지 못했어요
+            </Banner>
+          ) : null}
           <View style={{ gap: space.xs }}>
             <Field
               label="제목"

@@ -4,6 +4,7 @@ import type { JoinRequestStatus } from '../auth/pending-request';
 import type { EndBody } from '../activity/outbox';
 import type { AgreementDefinition, AgreementState } from '../auth/agreements';
 import { currentAccount } from '../auth/account';
+import { kstDate } from '../crew/calendar';
 
 type MeData = (typeof MOCKS)['GET /users/me']['data'];
 type JoinRequestData = (typeof MOCKS)['GET /crews/join-requests/mine']['data'];
@@ -101,7 +102,7 @@ function filterPosts({ scope = 'CREW', from, to }: PostsQuery = {}) {
   const me = MOCKS['GET /users/me'].data.id;
   const posts = MOCKS['GET /crew/posts'].data;
   const items = posts.items.filter((post) => {
-    const day = post.createdAt.slice(0, 10);
+    const day = kstDate(post.createdAt);
     if (scope === 'MINE' ? post.author.id !== me : post.visibility === 'PRIVATE') return false;
     return !(from && day < from) && !(to && day > to);
   });

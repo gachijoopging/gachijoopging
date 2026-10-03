@@ -1,5 +1,5 @@
 import { light, dark } from 'design-system/src';
-import { HEAT_OPACITY, canGoNextMonth, cellLabel, cellMark, daySummary, heatLevel, initialDate, isFutureDate, kstToday, monthGrid, shiftMonth } from './calendar';
+import { HEAT_OPACITY, canGoNextMonth, cellLabel, cellMark, daySummary, heatLevel, initialDate, isFutureDate, kstDate, kstToday, monthGrid, shiftMonth } from './calendar';
 
 const days = [
   { date: '2026-09-02', items: 12, activityCount: 1, activities: [] },
@@ -115,4 +115,9 @@ describe('날짜 칸 대비', () => {
       expect(ratio(rgb(c[cellMark(heat, false)]), cell)).toBeGreaterThanOrEqual(4.5);
     }
   });
+});
+
+test('UTC 시각을 KST 날짜로 바꾼다 — 자정 경계를 넘긴다', () => {
+  expect(kstDate('2026-09-05T16:00:00Z')).toBe('2026-09-06');
+  expect(kstDate('2026-09-05T14:59:59Z')).toBe('2026-09-05');
 });
