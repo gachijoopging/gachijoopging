@@ -2,7 +2,7 @@ import { Tabs } from 'expo-router';
 import type { ComponentProps } from 'react';
 import { View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { BottomNav, CONTENT_MAX_WIDTH, space, useTheme } from 'design-system/src';
+import { BottomNav, CONTENT_MAX_WIDTH, space, useReduceMotion, useTheme } from 'design-system/src';
 import { useActiveSession } from '../../src/activity/useActiveSession';
 import { PloggingLauncher, usePloggingLauncher } from '../../src/plogging/PloggingLauncher';
 import { TABS, tabValueOf, type TabValue } from '../../src/tabs';
@@ -35,9 +35,11 @@ function TabBar({ state, navigation }: TabBarProps) {
 }
 
 export default function TabsLayout() {
+  // 탭은 서로 같은 층이라 밀지 않고 짧게 겹쳐 바뀐다
+  const reduce = useReduceMotion();
   return (
     <PloggingLauncher>
-      <Tabs tabBar={(props) => <TabBar {...props} />} screenOptions={{ headerShown: false }}>
+      <Tabs tabBar={(props) => <TabBar {...props} />} screenOptions={{ headerShown: false, animation: reduce ? 'none' : 'fade' }}>
         {TABS.map((t) => (
           <Tabs.Screen key={t.value} name={t.value} options={{ title: t.label }} />
         ))}
