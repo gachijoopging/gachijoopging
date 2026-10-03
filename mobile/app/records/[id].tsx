@@ -131,9 +131,9 @@ export default function ActivityDetailScreen() {
       setConfirmDelete(false);
       deleteFinished.current = true;
       navigation.goBack();
+      // 떠나는 화면은 다시 그리지 않는다. 전환 중 재렌더가 Fabric 을 죽인다
     } catch {
       setSnackbar('삭제하지 못했어요. 다시 시도해 주세요.');
-    } finally {
       setDeleting(false);
     }
   };

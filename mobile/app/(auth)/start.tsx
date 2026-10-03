@@ -36,11 +36,12 @@ export default function StartScreen() {
       const me = await api.get('GET /users/me');
       rememberAccount(me.data);
       router.replace(await authenticatedDestination(api, me.data));
+      // 떠나는 화면은 다시 그리지 않는다. 전환 중 재렌더가 Fabric 을 죽인다
+      return;
     } catch {
       setSocialError(true);
-    } finally {
-      setLoadingProvider(null);
     }
+    setLoadingProvider(null);
   }
 
   return (

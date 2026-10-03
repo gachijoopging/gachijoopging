@@ -127,8 +127,11 @@ export default function EditProfileScreen() {
         } else setSnackbar('저장하지 못했어요. 다시 시도해 주세요.');
       }
     } finally {
-      busy.current = false;
-      setSaving(false);
+      // 떠나는 화면은 다시 그리지 않는다. 전환 중 재렌더가 Fabric 을 죽인다
+      if (!saved.current) {
+        busy.current = false;
+        setSaving(false);
+      }
     }
   };
 

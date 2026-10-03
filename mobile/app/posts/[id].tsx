@@ -223,9 +223,9 @@ export default function PostDetailScreen() {
       setConfirm(null);
       // 진입한 화면(5-1·5-4·5-5·2-3)이 어디든 그 화면이 안내를 띄우도록 flash 를 얹고 돌아간다
       router.dismissTo(returnTo(navigation.getState(), '게시물을 삭제했어요'));
+      // 떠나는 화면은 다시 그리지 않는다. 전환 중 재렌더가 Fabric 을 죽인다
     } catch {
       setSnackbar('삭제하지 못했어요. 다시 시도해 주세요.');
-    } finally {
       setDeleting(false);
     }
   };

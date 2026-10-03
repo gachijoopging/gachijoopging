@@ -53,6 +53,8 @@ export default function NicknameScreen() {
       if (!data.complete) throw new Error('필수 동의가 완료되지 않았어요');
       clearAgreementChoices(me.id);
       router.replace(resolveDestination({ ...me, profileComplete: true }));
+      // 떠나는 화면은 다시 그리지 않는다. 전환 중 재렌더가 Fabric 을 죽인다
+      return;
     } catch (error) {
       const mapped = mapNicknameError(error);
       setNicknameError(mapped.field);
@@ -61,10 +63,9 @@ export default function NicknameScreen() {
         await agreements.reload();
         setBanner('약관이 변경됐어요. 새 항목을 확인해 주세요.');
       }
-    } finally {
-      setLoading(false);
-      busy.current = false;
     }
+    setLoading(false);
+    busy.current = false;
   }
 
   return (
