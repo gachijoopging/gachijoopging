@@ -135,7 +135,9 @@ export default function ActivityInProgressScreen() {
               .get('GET /activities/current')
               .then(({ data }) => (data?.id === id ? { ...newSession(data, userId, t), distanceM: data.distanceM } : null))
               .catch(() => null);
-        if (cancelled || !fresh) return;
+        if (cancelled) return;
+        // 서버에 이 활동이 없다 — 다른 기기에서 끝냈다. 0 지표 화면에 남기지 않는다
+        if (!fresh) return router.replace({ pathname: '/(tabs)/plogging', params: { flash: '활동이 이미 끝났어요' } });
         updateStored((st) => ({ ...st, session: fresh, ended: null }));
       }
       setSession(getStored().session);

@@ -185,9 +185,11 @@ export default function PostDetailScreen() {
   };
 
 
+  const [textError, setTextError] = useState<string | null>(null);
   const changeText = (value: string) => {
     if (!draftKey) return;
     setText(value);
+    setTextError(null);
     editDraft(draftKey, value);
   };
 
@@ -208,6 +210,8 @@ export default function PostDetailScreen() {
       setText('');
     } catch (e) {
       if (e instanceof ApiError && e.code === 'NOT_FOUND') markGone();
+      // 값 오류는 입력칸 아래에 — 고쳐야 할 것은 연결이 아니라 글이다
+      else if (e instanceof ApiError && e.code === 'VALIDATION') setTextError('댓글 내용을 확인해 주세요.');
       // 같은 id 로 다시 보내면 서버가 중복을 흡수한다 — 초안의 id 는 그대로 둔다
       else setSnackbar('댓글을 남기지 못했어요. 다시 시도해 주세요.');
     } finally {
@@ -398,6 +402,7 @@ export default function PostDetailScreen() {
                 accessibilityLabel="댓글 입력"
                 value={text}
                 onChangeText={changeText}
+                error={textError ?? undefined}
                 maxLength={COMMENT_MAX}
                 multiline
                 maxLines={4}

@@ -26,3 +26,10 @@ describe('4-1 줍깅 대기 상태', () => {
     expect(readyView({ last: null, failed: true })).toEqual({ kind: 'idle', stale: true });
   });
 });
+
+describe('4-1 종료 동기화 대기', () => {
+  test('기기에 종료 기록이 남아 있으면 서버가 진행 중이라 해도 동기화 대기를 먼저 보인다', () => {
+    expect(readyView({ last: activity, failed: false, pendingEndId: 'a9' })).toEqual({ kind: 'syncing', id: 'a9' });
+    expect(readyView({ last: undefined, failed: true, pendingEndId: 'a9' })).toEqual({ kind: 'syncing', id: 'a9' });
+  });
+});

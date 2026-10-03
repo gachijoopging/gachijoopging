@@ -87,30 +87,27 @@ export default function ActivityDetailScreen() {
     if (editingBusy || (deleting && !deleteFinished.current)) event.preventDefault();
   }), [navigation, editingBusy, deleting]);
 
+  // 네트워크 판정으로 조회를 건너뛰지 않는다 — 요청이 실패했을 때만 캐시로 넘어간다
   const load = useCallback(async () => {
+    const account = await api.get('GET /users/me').then(({ data }) => rememberAccount(data)).catch(() => currentAccount());
+    setMe(account);
+    if (!account) { setActivity(null); setFailed(true); return; }
+    const cache = new File(Paths.document, `activity-detail-${account.id}-${id}.json`);
     try {
-      const account = offline ? currentAccount() : rememberAccount((await api.get('GET /users/me')).data);
-      setMe(account);
-      if (!account) { setActivity(null); setFailed(true); return; }
-      const cache = new File(Paths.document, `activity-detail-${account.id}-${id}.json`);
-      if (offline) {
-        if (cache.exists) {
-          const cached = JSON.parse(cache.textSync());
-          if (cached.id === id) setActivity(cached);
-        }
-        setFailed(true);
-        return;
-      }
       const { data } = await api.get('GET /activities/{id}', { id });
       setActivity(data as unknown as Detail);
       setFailed(false);
       try { cache.write(JSON.stringify(data)); } catch {}
     } catch (e) {
       const code = e instanceof ApiError ? e.code : null;
-      if (code === 'NOT_FOUND' || code === 'FORBIDDEN') setGone(true);
-      else setFailed(true);
+      if (code === 'NOT_FOUND' || code === 'FORBIDDEN') return setGone(true);
+      try {
+        const cached = cache.exists ? JSON.parse(cache.textSync()) : null;
+        if (cached?.id === id) setActivity(cached);
+      } catch {}
+      setFailed(true);
     }
-  }, [id, offline]);
+  }, [id]);
 
   // 재진입·수정 완료 때마다 합계를 다시 받는다 (당겨서 새로고침은 없다)
   useFocusEffect(useCallback(() => void load(), [load]));

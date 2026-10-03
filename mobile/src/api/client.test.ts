@@ -15,6 +15,15 @@ describe('목 클라이언트', () => {
     await expect(api.get('GET /crew/home')).resolves.toBe(MOCKS['GET /crew/home']);
   });
 
+  test('피드 목은 scope 와 기간으로 거른다 — 전체 탭엔 나만 보기가 없고 내 게시물 탭엔 내 글만', async () => {
+    const api = createMockClient();
+    const ids = async (query: unknown) => (await api.get('GET /crew/posts', query)).data.items.map((p) => p.id);
+    await expect(ids({ scope: 'CREW' })).resolves.toEqual(['po77']);
+    await expect(ids({ scope: 'MINE' })).resolves.toEqual(['po78']);
+    await expect(ids({ scope: 'CREW', from: '2026-09-01', to: '2026-09-05' })).resolves.toEqual([]);
+    await expect(ids({ scope: 'MINE', from: '2026-09-05', to: '2026-09-05' })).resolves.toEqual(['po78']);
+  });
+
   test('지정한 키는 실패시켜 오류 UI 를 확인할 수 있다', async () => {
     const api = createMockClient({ failing: ['GET /crew/home'] });
     await expect(api.get('GET /crew/home')).rejects.toBeInstanceOf(ApiError);

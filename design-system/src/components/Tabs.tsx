@@ -6,6 +6,7 @@ import { motion } from '../../tokens/motion.ts';
 import { useTheme, useRipple, useReduceMotion, pressedOpacity, disabledOpacity, depth } from '../theme.tsx';
 import { Txt } from './Text.tsx';
 import { Icon, type IconName } from './Icon.tsx';
+import { Dot } from './Badge.tsx';
 import { splitBottomNavItems } from './BottomNav.ts';
 
 export type BottomNavItem<T extends string> = { value: T; label: string; icon: IconName };
@@ -14,6 +15,8 @@ export type BottomNavStartAction = {
   icon: IconName;
   onPress: () => void;
   disabled?: boolean;
+  /** 진행 중인 활동처럼 돌아가야 할 것이 있을 때 버튼 모서리에 점을 띄운다. 라벨에도 그 뜻을 넣어 준다 */
+  badge?: boolean;
 };
 export type BottomNavProps<T extends string> = {
   items: ReadonlyArray<BottomNavItem<T>>;
@@ -230,6 +233,11 @@ export function BottomNav<T extends string>({
               }}
             >
               <Icon name={startAction.icon} size={24} color={colors.onLime} />
+              {startAction.badge ? (
+                <View style={{ position: 'absolute', top: space.xs, right: space.xs }} pointerEvents="none">
+                  <Dot tone="danger" size={10} />
+                </View>
+              ) : null}
             </View>
             <Txt variant="micro" bold style={{ color: colors.ink }}>
               {startAction.label}

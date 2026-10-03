@@ -14,6 +14,7 @@ import {
   Button,
   CaptureButton,
   EmptyState,
+  ErrorState,
   Loading,
   Icon,
   IconButton,
@@ -56,6 +57,7 @@ export default function TakePhotoScreen() {
   const camera = useRef<CameraView>(null);
   const leaving = useRef(false);
   const [ready, setReady] = useState(false);
+  const [cameraFailed, setCameraFailed] = useState(false);
   const [focused, setFocused] = useState(false);
   const [appActive, setAppActive] = useState(AppState.currentState === 'active');
   useEffect(() => {
@@ -75,17 +77,19 @@ export default function TakePhotoScreen() {
 
   const readPerm = useCallback(async (ask: boolean) => {
     const p = ask ? await Camera.requestCameraPermissionsAsync() : await Camera.getCameraPermissionsAsync();
-    setPerm(p.granted ? 'granted' : p.canAskAgain ? (ask ? 'denied' : 'unknown') : 'blocked');
+    setPerm(p.granted ? 'granted' : !p.canAskAgain ? 'blocked' : p.status === 'undetermined' ? 'unknown' : 'denied');
     return p;
   }, []);
 
+  // 설정 앱에서 허용하고 돌아오면(appActive) 다시 읽어야 권한 카드가 사라진다
   useFocusEffect(
     useCallback(() => {
+      if (!appActive) return;
       void (async () => {
         const p = await readPerm(false);
         if (!p.granted && p.canAskAgain && p.status === 'undetermined') await readPerm(true);
       })();
-    }, [readPerm]),
+    }, [readPerm, appActive]),
   );
 
   useEffect(
@@ -162,7 +166,7 @@ export default function TakePhotoScreen() {
         setSnackbar({ text: '이 사진은 올릴 수 없어요. 다시 찍어 주세요.' });
       } else if (code === 'NOT_FOUND') {
         leaving.current = true;
-        router.dismissTo({ pathname: '/activity/[id]', params: { id, flash: '이 활동을 찾지 못했어요' } });
+        router.dismissTo({ pathname: '/activity/[id]', params: { id, flash: '활동이 끝나 사진을 담을 수 없어요' } });
       } else {
         setSnackbar({ text: '사진을 올리지 못했어요', retry: true });
       }
@@ -189,6 +193,10 @@ export default function TakePhotoScreen() {
           onAction={() => (perm === 'blocked' ? void Linking.openSettings() : void readPerm(true))}
         />
       </View>
+    ) : cameraFailed ? (
+      <View style={{ flex: 1, justifyContent: 'center' }}>
+        <ErrorState title="카메라를 열 수 없어요" description="다른 앱이 카메라를 쓰고 있지 않은지 확인하고 다시 시도해 주세요." onRetry={() => setCameraFailed(false)} />
+      </View>
     ) : shot ? (
       <View style={{ flex: 1 }}>
         <Image source={{ uri: shot.uri }} style={{ flex: 1 }} resizeMode="cover" accessible accessibilityRole="image" accessibilityLabel="방금 찍은 사진" />
@@ -202,7 +210,7 @@ export default function TakePhotoScreen() {
     ) : (
       <View style={{ flex: 1 }} accessible accessibilityRole="image" accessibilityLabel="카메라 미리보기, 쓰레기를 화면 중앙에 놓아 주세요">
         {perm === 'granted' && focused && appActive ? (
-          <CameraView ref={camera} facing="back" style={{ flex: 1 }} onCameraReady={() => setReady(true)} />
+          <CameraView ref={camera} facing="back" style={{ flex: 1 }} onCameraReady={() => setReady(true)} onMountError={() => setCameraFailed(true)} />
         ) : null}
         {/* 찍힌 순간을 눈으로도 알린다. 미리보기 위에 얹는 막이라 사진에는 들어가지 않는다 */}
         {flashing ? (

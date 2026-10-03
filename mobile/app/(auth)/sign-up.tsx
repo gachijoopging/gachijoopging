@@ -1,11 +1,13 @@
 // 화면 1-3 · docs/screens/1-3-sign-up.md
 import { useRef, useState } from 'react';
-import { View } from 'react-native';
-import { router } from 'expo-router';
+import { View, type TextInput } from 'react-native';
+import { router, useNavigation } from 'expo-router';
 import { AppHeader, Banner, Button, Chip, Field, Screen, Txt } from 'design-system/src';
 import { onboardingApi as api } from '../../src/api/onboarding';
 import { AgreementFields } from '../../src/auth/AgreementFields';
 import { resolveDestination } from '../../src/auth/destination';
+import { finishOnboarding, type OnboardingNavigation } from '../../src/auth/navigation';
+import { usePreventBack } from '../../src/auth/usePreventBack';
 import { mapSignupError } from '../../src/auth/errors';
 import { normalizeNickname, validateEmail, validateNickname, validatePassword } from '../../src/auth/validators';
 import { clearAgreementChoices, rememberAgreementChoices, requiredAgreementsAccepted, useAgreementForm } from '../../src/auth/agreements';
@@ -23,9 +25,14 @@ export default function SignUpScreen() {
   const [created, setCreated] = useState(false);
   const registered = useRef(false);
   const busy = useRef(false);
+  const navigation = useNavigation<OnboardingNavigation>('/');
+  const passwordRef = useRef<TextInput>(null);
+  const nicknameRef = useRef<TextInput>(null);
   const [banner, setBanner] = useState<string>();
   const [secure, setSecure] = useState(true);
   const [loading, setLoading] = useState(false);
+  // 가입 요청 중 빠져나가면 계정은 생겼는데 동의가 빠진 채 남는다
+  usePreventBack(loading);
 
   const canSubmit =
     !validateEmail(email) && !validatePassword(password) && !validateNickname(nickname) && agreements.items != null && !agreements.failed && requiredAgreementsAccepted(agreements.items);
@@ -48,7 +55,7 @@ export default function SignUpScreen() {
       if (!data.complete) throw new Error('필수 동의가 완료되지 않았어요');
       clearAgreementChoices('signup');
       clearAgreementChoices(me.data.id);
-      router.replace(resolveDestination(me.data));
+      finishOnboarding(navigation, resolveDestination(me.data));
       // 떠나는 화면은 다시 그리지 않는다. 전환 중 재렌더가 Fabric 을 죽인다
       return;
     } catch (error) {
@@ -87,9 +94,12 @@ export default function SignUpScreen() {
         autoComplete="email"
         textContentType="emailAddress"
         returnKeyType="next"
+        blurOnSubmit={false}
+        onSubmitEditing={() => passwordRef.current?.focus()}
       />
 
       <Field
+        ref={passwordRef}
         label="비밀번호"
         placeholder="8자 이상"
         value={password}
@@ -101,10 +111,13 @@ export default function SignUpScreen() {
         autoComplete="new-password"
         textContentType="newPassword"
         returnKeyType="next"
-        endAdornment={<Chip label={secure ? '보기' : '숨기기'} tone="neutral" onPress={loading ? undefined : () => setSecure((v) => !v)} />}
+        blurOnSubmit={false}
+        onSubmitEditing={() => nicknameRef.current?.focus()}
+        endAdornment={<Chip label={secure ? '보기' : '숨기기'} accessibilityLabel={secure ? '비밀번호 보기' : '비밀번호 숨기기'} tone="neutral" onPress={loading ? undefined : () => setSecure((v) => !v)} />}
       />
 
       <Field
+        ref={nicknameRef}
         label="닉네임"
         placeholder="2~12자"
         value={nickname}

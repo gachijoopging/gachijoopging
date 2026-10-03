@@ -1,13 +1,14 @@
 // 화면 1-1 · docs/screens/1-1-start.md
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Image, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
+import { router, useNavigation } from 'expo-router';
 import { Banner, Button, LinkText, Screen, Snackbar, Txt, radius, space, useTheme, size, WORDMARK_RATIO } from 'design-system/src';
 import { useFlash } from '../../src/ui/useFlash';
 import { onboardingApi as api } from '../../src/api/onboarding';
-import { authenticatedDestination } from '../../src/auth/destination';
-import { forgetAccount, rememberAccount } from '../../src/auth/account';
+import { completeSignIn } from '../../src/auth/complete-sign-in';
+import type { OnboardingNavigation } from '../../src/auth/navigation';
+import { usePreventBack } from '../../src/auth/usePreventBack';
 
 const bg = require('../../../design-system/assets/legacy/start-bg.png');
 const wordmark = require('../../../design-system/assets/logo-wordmark.png');
@@ -20,26 +21,30 @@ type Provider = 'kakao' | 'google';
 export default function StartScreen() {
   const { colors } = useTheme();
   const [loadingProvider, setLoadingProvider] = useState<Provider | null>(null);
-  const [socialError, setSocialError] = useState(false);
+  const [socialError, setSocialError] = useState<'auth' | 'me' | null>(null);
   const busy = loadingProvider !== null;
   const [flash, setFlash] = useFlash();
+  const navigation = useNavigation<OnboardingNavigation>('/');
+  // 인증이 끝난 뒤 내 정보만 실패하면 토큰은 살아 있다 — 다시 누르면 인증을 반복하지 않는다
+  const authenticated = useRef(false);
+  usePreventBack(busy);
 
   async function handleSocial(provider: Provider) {
-    setSocialError(false);
+    setSocialError(null);
     setLoadingProvider(provider);
     try {
-      // 제공자 SDK 연동은 별도 작업이다. 여기서는 토큰을 받아 온 뒤라고 가정하고 이어간다.
-      await api.mutate(provider === 'kakao' ? 'POST /auth/kakao' : 'POST /auth/google', {
-        token: 'mock-provider-token',
-      });
-      forgetAccount();
-      const me = await api.get('GET /users/me');
-      rememberAccount(me.data);
-      router.replace(await authenticatedDestination(api, me.data));
+      if (!authenticated.current) {
+        // 제공자 SDK 연동은 별도 작업이다. 여기서는 토큰을 받아 온 뒤라고 가정하고 이어간다.
+        await api.mutate(provider === 'kakao' ? 'POST /auth/kakao' : 'POST /auth/google', {
+          token: 'mock-provider-token',
+        });
+        authenticated.current = true;
+      }
+      await completeSignIn(api, navigation);
       // 떠나는 화면은 다시 그리지 않는다. 전환 중 재렌더가 Fabric 을 죽인다
       return;
     } catch {
-      setSocialError(true);
+      setSocialError(authenticated.current ? 'me' : 'auth');
     }
     setLoadingProvider(null);
   }
@@ -78,7 +83,9 @@ export default function StartScreen() {
 
           <View style={{ gap: space.md }}>
             {socialError ? (
-              <Banner tone="danger">소셜 로그인에 실패했어요. 네트워크 상태를 확인하고 다시 시도해 주세요.</Banner>
+              <Banner tone="danger">
+                {socialError === 'me' ? '내 정보를 불러오지 못했어요. 다시 시도해 주세요.' : '소셜 로그인에 실패했어요. 네트워크 상태를 확인하고 다시 시도해 주세요.'}
+              </Banner>
             ) : null}
             <Button
               label="카카오로 시작하기"

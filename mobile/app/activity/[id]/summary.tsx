@@ -25,7 +25,8 @@ import { createMockClient, type ApiClient } from '../../../src/api/client';
 import { summaryMeta, summaryMetaSpoken } from '../../../src/activity/pickup';
 import { ActivityMetrics, CategoryChips, RouteMap } from '../../../src/activity/SummaryBlocks';
 import { getStored, loadLastAccount, subscribe, updateStored, type Stored } from '../../../src/activity/store';
-import { applyEndedActivity, syncOutbox } from '../../../src/activity/tracking';
+import { activityGoneCode, applyEndedActivity, syncOutbox } from '../../../src/activity/tracking';
+import { leaveForMembership } from '../../../src/feed/leave';
 import { ShareCard, useShareImage } from '../../../src/activity/ShareCard';
 
 const api: ApiClient = createMockClient({ delayMs: 300 });
@@ -41,6 +42,7 @@ export default function ActivitySummaryScreen() {
   const offline = network.isConnected === false || network.isInternetReachable === false;
   const [stored, setStored] = useState<Stored>(() => loadLastAccount() ?? getStored());
   const [failed, setFailed] = useState(false);
+  const [gone, setGone] = useState(activityGoneCode);
   const [syncing, setSyncing] = useState(false);
   const [includeRoute, setIncludeRoute] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -73,6 +75,7 @@ export default function ActivitySummaryScreen() {
     setSyncing(true);
     const ok = await syncOutbox();
     setFailed(!ok);
+    setGone(activityGoneCode());
     setSyncing(false);
   }, []);
 
@@ -83,6 +86,7 @@ export default function ActivitySummaryScreen() {
   const leave = () => {
     // 서버에 다 닿았을 때만 기기 기록을 비운다 — 아니면 다음 연결 때 큐가 다시 보낸다
     updateStored((st) => (st.outbox.length === 0 && st.session?.activityId === id ? { session: null, ended: null, outbox: [] } : st));
+    if (gone === 'NO_CREW') return void leaveForMembership();
     router.replace('/(tabs)');
   };
 
@@ -171,7 +175,9 @@ export default function ActivitySummaryScreen() {
               <Txt variant="section" bold tone={phase === 'error' ? 'error' : 'ink'} style={{ flex: 1 }}>{title}</Txt>
             </View>
           </Appear>
-          {phase === 'error' ? (
+          {phase === 'error' && gone ? (
+            <Txt variant="caption" bold>이 활동은 서버에서 찾을 수 없어요. 미동기화 기록은 기기에 보관하고 있어요.</Txt>
+          ) : phase === 'error' ? (
             <Txt variant="caption" bold>다시 시도하면 지금 보이는 기록을 그대로 올려요.</Txt>
           ) : phase !== 'saved' ? (
             <Txt variant="caption" bold>동기화가 끝나야 피드에 공유할 수 있어요.</Txt>
@@ -187,7 +193,7 @@ export default function ActivitySummaryScreen() {
             </View>
             <View style={{ flex: 1 }}>
               {phase === 'error' ? (
-                <Button label="다시 시도" size="md" fullWidth onPress={sync} />
+                <Button label={gone ? '상태 다시 확인' : '다시 시도'} size="md" fullWidth onPress={sync} />
               ) : (
                 <Button
                   label="공유하기"

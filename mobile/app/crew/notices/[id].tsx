@@ -27,6 +27,8 @@ import type { MOCKS } from '../../../src/api/mocks.generated';
 import { clearDraft, draftFor, editDraft, requestIdFor } from '../../../src/crew/comment-draft';
 import { monthDay } from '../../../src/crew/crew';
 import { COMMENT_MAX, canSendComment, commentAction } from '../../../src/crew/notice';
+import { leaveForMembership } from '../../../src/feed/leave';
+import { useBlockedUsers } from '../../../src/profile/blocked-users';
 import { useFlash } from '../../../src/ui/useFlash';
 
 type Detail = (typeof MOCKS)['GET /notices/{noticeId}']['data'];
@@ -38,8 +40,11 @@ export default function NoticeDetailScreen() {
   const { id, flash } = useLocalSearchParams<{ id: string; flash?: string }>();
   const navigation = useNavigation();
   const [notice, setNotice] = useState<Detail | null>(null);
-  const [comments, setComments] = useState<Comment[]>([]);
+  const [allComments, setComments] = useState<Comment[]>([]);
   const [me, setMe] = useState<{ id: string; isLeader: boolean } | null>(null);
+  // 차단한 사람의 댓글은 내 화면에서만 바로 숨긴다 (feature-scope 차단 규칙)
+  const blocked = useBlockedUsers(me?.id);
+  const comments = allComments.filter((c) => !blocked.has(c.author.id));
   const [failed, setFailed] = useState(false);
   const [gone, setGone] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -61,6 +66,7 @@ export default function NoticeDetailScreen() {
         setFailed(false);
       } catch (e) {
         if (e instanceof ApiError && e.code === 'NOT_FOUND') setGone(true);
+        else if (e instanceof ApiError && e.code === 'NO_CREW') void leaveForMembership();
         else setFailed(true);
       } finally {
         setRefreshing(false);
@@ -119,7 +125,7 @@ export default function NoticeDetailScreen() {
 
   const deleteComment = async (comment: Comment) => {
     setCommentMenuOpen(false);
-    const before = comments;
+    const before = allComments;
     setComments(before.filter((c) => c.id !== comment.id));
     try {
       await api.mutate('DELETE /notice-comments/{commentId}', { commentId: comment.id });
@@ -210,7 +216,16 @@ export default function NoticeDetailScreen() {
                       />
                     }
                     chevron={false}
-                    accessibilityLabel={`${c.author.nickname}, ${monthDay(c.createdAt)}, ${c.text}`}
+                    accessibilityLabel={`${c.author.nickname}, ${monthDay(c.createdAt)}, ${c.text}, 댓글 메뉴`}
+                    accessibilityActions={me ? [{ name: 'menu', label: '댓글 메뉴' }] : undefined}
+                    onAccessibilityAction={() => {
+                      setCommentTarget(c);
+                      setCommentMenuOpen(true);
+                    }}
+                    onLongPress={sending || !me ? undefined : () => {
+                      setCommentTarget(c);
+                      setCommentMenuOpen(true);
+                    }}
                     onPress={() => openAuthor(c.author.id)}
                   />
                 ))

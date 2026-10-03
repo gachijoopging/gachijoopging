@@ -35,7 +35,8 @@ export default function EditNoticeScreen() {
   const editing = !!id;
   const [key, setKey] = useState<NoticeDraftKey | null>(null);
   const [original, setOriginal] = useState<NoticeForm | null>(null);
-  const [form, setForm] = useState<NoticeForm | null>(null);
+  // 작성은 권한 확인을 기다리지 않고 빈 폼부터 보인다. 수정은 원문을 받아야 그린다
+  const [form, setForm] = useState<NoticeForm | null>(editing ? null : { title: '', body: '' });
   const [touched, setTouched] = useState<Partial<Record<keyof NoticeForm, boolean>>>({});
   const [denied, setDenied] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -60,7 +61,8 @@ export default function EditNoticeScreen() {
       }
       setKey(draftKey);
       setOriginal(base);
-      setForm(noticeDraft(draftKey) ?? base ?? { title: '', body: '' });
+      // 권한 확인 전에 이미 쓴 글이 있으면 그것이 우선이다
+      setForm((typed) => (typed?.title || typed?.body ? typed : noticeDraft(draftKey) ?? base ?? { title: '', body: '' }));
     } catch (e) {
       if (e instanceof ApiError && e.code === 'NOT_FOUND') return goneBack();
       setFailed(true);
@@ -74,10 +76,10 @@ export default function EditNoticeScreen() {
   const goneBack = () => router.dismissTo({ pathname: '/(tabs)/crew', params: { tab: 'notices', flash: '삭제된 공지예요.' } });
 
   const change = (next: Partial<NoticeForm>) => {
-    if (!form || !key) return;
+    if (!form) return;
     const value = { ...form, ...next };
     setForm(value);
-    saveNoticeDraft(key, value);
+    if (key) saveNoticeDraft(key, value);
   };
 
   const submit = form ? noticeSubmit(original, form) : null;
@@ -181,7 +183,7 @@ export default function EditNoticeScreen() {
             size="lg"
             fullWidth
             loading={saving}
-            disabled={!submit}
+            disabled={!submit || !key}
             onPress={save}
           />
         </>
