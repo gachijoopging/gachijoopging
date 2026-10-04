@@ -9,9 +9,6 @@ import java.time.Duration;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import site.gachijoopging.server.domain.media.infrastructure.client.AiClientConfig;
-import site.gachijoopging.server.domain.media.infrastructure.client.AiInferenceClient;
-import site.gachijoopging.server.domain.media.infrastructure.client.AiProperties;
 
 class AiInferenceTimeoutTest {
 

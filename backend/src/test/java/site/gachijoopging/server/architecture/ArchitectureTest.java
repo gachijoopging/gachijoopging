@@ -51,41 +51,39 @@ class ArchitectureTest {
 
   private static final Pattern QUERYDSL_GENERATED = Pattern.compile("Q[A-Z]\\w*");
 
-  // feature 안쪽 레이어는 바깥 `server.domain` 과 이름이 겹친다. `*` 로 feature 한 칸을 소비해
-  // `server.domain.<feature>.domain` 만 잡는다 — `..domain..` 은 feature 코드 전부를 삼킨다.
-  private static final String API = "..domain.*.api..";
-  private static final String APPLICATION = "..domain.*.application..";
-  private static final String CORE = "..domain.*.domain..";
-  private static final String INFRASTRUCTURE = "..domain.*.infrastructure..";
-  private static final String PERSISTENCE = "..domain.*.infrastructure.persistence..";
-  private static final String EXTERNAL_CLIENT = "..domain.*.infrastructure.client..";
-  private static final String ENTITY = "..domain.*.domain.entity..";
+  private static final String CONTROLLER = "..domain.*.controller..";
+  private static final String FACADE = "..domain.*.facade..";
+  private static final String SERVICE = "..domain.*.service..";
+  private static final String REPOSITORY = "..domain.*.repository..";
+  private static final String ENTITY = "..domain.*.entity..";
+  private static final String CLIENT = "..domain.*.client..";
+  private static final String EVENT = "..domain.*.event..";
 
   @Test
-  void L0_모든_도메인이_api_와_infrastructure_를_갖는다() {
-    Set<String> apiOwners = domainsHavingPackageSegment(".api.");
-    Set<String> infraOwners = domainsHavingPackageSegment(".infrastructure.");
+  void L0_repository_가_있는_도메인은_controller_도_있다() {
+    Set<String> controllerOwners = domainsHavingPackageSegment(".controller");
+    Set<String> repositoryOwners = domainsHavingPackageSegment(".repository");
 
-    assertThat(apiOwners).containsExactlyInAnyOrderElementsOf(실제_도메인());
-    assertThat(infraOwners).containsExactlyInAnyOrderElementsOf(실제_도메인());
+    assertThat(repositoryOwners).isNotEmpty();
+    assertThat(controllerOwners).containsAll(repositoryOwners);
   }
 
   @Test
-  void L1_api_는_영속을_직접_부르지_않는다() {
+  void L1_controller_는_repository_를_직접_부르지_않는다() {
     noClasses()
         .that()
-        .resideInAPackage(API)
+        .resideInAPackage(CONTROLLER)
         .should()
         .dependOnClassesThat()
-        .resideInAPackage(PERSISTENCE)
+        .resideInAPackage(REPOSITORY)
         .check(CLASSES);
   }
 
   @Test
-  void L1_api_는_엔티티를_노출하지_않는다() {
+  void L1_controller_는_엔티티를_노출하지_않는다() {
     noClasses()
         .that()
-        .resideInAPackage(API)
+        .resideInAPackage(CONTROLLER)
         .should()
         .dependOnClassesThat(
             JavaClass.Predicates.resideInAPackage(ENTITY)
@@ -94,21 +92,21 @@ class ArchitectureTest {
   }
 
   @Test
-  void L2_domain_은_api_와_application_을_모른다() {
+  void L2_service_와_entity_는_controller_와_facade_를_모른다() {
     noClasses()
         .that()
-        .resideInAPackage(CORE)
+        .resideInAnyPackage(SERVICE, ENTITY)
         .should()
         .dependOnClassesThat()
-        .resideInAnyPackage(API, APPLICATION)
+        .resideInAnyPackage(CONTROLLER, FACADE)
         .check(CLASSES);
   }
 
   @Test
-  void L2b_application_은_엔티티를_모른다() {
+  void L2b_facade_는_엔티티를_모른다() {
     noClasses()
         .that()
-        .resideInAPackage(APPLICATION)
+        .resideInAPackage(FACADE)
         .should()
         .dependOnClassesThat(
             JavaClass.Predicates.resideInAPackage(ENTITY)
@@ -117,44 +115,53 @@ class ArchitectureTest {
   }
 
   @Test
-  void L3b_policy_와_entity_는_infrastructure_전체를_모른다() {
-    noClasses()
+  void L3_client_는_facade_와_event_에서만_부른다() {
+    classes()
         .that()
-        .resideInAnyPackage("..domain.*.domain.policy..", ENTITY)
+        .resideInAPackage(CLIENT)
         .should()
-        .dependOnClassesThat()
-        .resideInAPackage(INFRASTRUCTURE)
+        .onlyHaveDependentClassesThat()
+        .resideInAnyPackage(FACADE, EVENT, CLIENT)
         .check(CLASSES);
   }
 
   @Test
-  void L3_domain_은_외부_시스템_어댑터를_모른다() {
+  void L3b_entity_는_repository_와_client_를_모른다() {
     noClasses()
         .that()
-        .resideInAPackage(CORE)
+        .resideInAPackage(ENTITY)
         .should()
         .dependOnClassesThat()
-        .resideInAPackage(EXTERNAL_CLIENT)
+        .resideInAnyPackage(REPOSITORY, CLIENT)
         .check(CLASSES);
   }
 
   @Test
-  void L4_infrastructure_는_api_를_모른다() {
+  void L4_repository_와_client_는_controller_를_모른다() {
     noClasses()
         .that()
-        .resideInAPackage(INFRASTRUCTURE)
+        .resideInAnyPackage(REPOSITORY, CLIENT)
         .should()
         .dependOnClassesThat()
-        .resideInAPackage(API)
+        .resideInAPackage(CONTROLLER)
         .check(CLASSES);
   }
 
   @Test
-  void R2_타_도메인_infrastructure_를_주입하지_않는다() {
+  void R2_타_도메인_repository_를_주입하지_않는다() {
     classes()
         .that()
         .resideInAPackage("..domain..")
-        .should(notReachIntoOtherDomain("infrastructure"))
+        .should(notReachIntoOtherDomain("repository"))
+        .check(CLASSES);
+  }
+
+  @Test
+  void R2_타_도메인_client_를_주입하지_않는다() {
+    classes()
+        .that()
+        .resideInAPackage("..domain..")
+        .should(notReachIntoOtherDomain("client"))
         .check(CLASSES);
   }
 
@@ -177,32 +184,32 @@ class ArchitectureTest {
   }
 
   @Test
-  void R4a_조립은_조립을_주입하지_않는다() {
+  void R4a_facade_는_facade_를_주입하지_않는다() {
     noClasses()
         .that()
-        .resideInAPackage(APPLICATION)
+        .resideInAPackage(FACADE)
         .should()
         .dependOnClassesThat()
-        .resideInAPackage(APPLICATION)
+        .resideInAPackage(FACADE)
         .check(CLASSES);
   }
 
   @Test
-  void R4b_조립에는_Transactional_이_없다() {
+  void R4b_facade_에는_Transactional_이_없다() {
     noClasses()
         .that()
-        .resideInAPackage(APPLICATION)
+        .resideInAPackage(FACADE)
         .should()
         .beAnnotatedWith(Transactional.class)
         .check(CLASSES);
   }
 
   @Test
-  void R4b_조립_메서드에도_Transactional_이_없다() {
+  void R4b_facade_메서드에도_Transactional_이_없다() {
     noMethods()
         .that()
         .areDeclaredInClassesThat()
-        .resideInAPackage(APPLICATION)
+        .resideInAPackage(FACADE)
         .should()
         .beAnnotatedWith(Transactional.class)
         .check(CLASSES);
@@ -223,7 +230,7 @@ class ArchitectureTest {
   }
 
   @Test
-  void R2_조건은_실제로_타_도메인_infrastructure_주입을_잡는다() {
+  void R2_조건은_실제로_타_도메인_repository_주입을_잡는다() {
     JavaClasses fixture =
         new ClassFileImporter()
             .importPackages("site.gachijoopging.server.architecture.fixture.violating");
@@ -232,7 +239,7 @@ class ArchitectureTest {
         classes()
             .that()
             .resideInAPackage("..domain..")
-            .should(notReachIntoOtherDomain("infrastructure"));
+            .should(notReachIntoOtherDomain("repository"));
 
     assertThatThrownBy(() -> rule.check(fixture))
         .isInstanceOf(AssertionError.class)
@@ -240,7 +247,7 @@ class ArchitectureTest {
   }
 
   @Test
-  void R2_조건은_같은_도메인_안의_infrastructure_참조는_허용한다() {
+  void R2_조건은_같은_도메인_안의_repository_참조는_허용한다() {
     JavaClasses fixture =
         new ClassFileImporter()
             .importPackages("site.gachijoopging.server.architecture.fixture.compliant");
@@ -248,7 +255,7 @@ class ArchitectureTest {
     classes()
         .that()
         .resideInAPackage("..domain..")
-        .should(notReachIntoOtherDomain("infrastructure"))
+        .should(notReachIntoOtherDomain("repository"))
         .check(fixture);
   }
 

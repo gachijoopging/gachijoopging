@@ -9,8 +9,8 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import java.io.UncheckedIOException;
 import java.util.List;
 import org.junit.jupiter.api.Test;
-import site.gachijoopging.server.domain.media.domain.service.MediaService;
-import site.gachijoopging.server.domain.media.infrastructure.client.MediaStorage;
+import site.gachijoopging.server.domain.media.client.MediaStorage;
+import site.gachijoopging.server.domain.media.service.MediaService;
 
 class MediaQuarantineListenerTest {
 
