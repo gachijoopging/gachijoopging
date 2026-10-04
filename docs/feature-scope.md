@@ -9,7 +9,7 @@
 
 1. API 계약 문서(OpenAPI) 작성
 2. 앱 프론트 완성 — 목 데이터 기반
-3. 백엔드 — 가져온 global·auth·media 를 잇고, ERD·계약대로 나머지 도메인을 새로 쓴다(`backend-migration.md`)
+3. 백엔드 — 가져온 global·auth·media 를 잇고, ERD·계약대로 나머지 도메인을 새로 쓴다(`backend/docs/01-구조.md`)
 4. 앱과 백엔드 연결, 테스트, 마무리
 
 ## 결정된 것

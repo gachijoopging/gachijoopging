@@ -339,3 +339,33 @@ meets · meet_members · meet_invites · meet_join_requests · friendships · ne
 - `chat_messages (crew_id, seq)` — 채팅 이어받기
 - `notifications (user_id, unread, created_at)`
 - `live_locations (crew_id)`
+
+## 설계 근거
+
+테이블 정의만으로는 보이지 않는 결정의 이유. 통계의 날짜 기준(KST·주간·월간)은 위 `crew_daily_stats` 설명이 정본이다.
+
+### 채팅 seq — 발급 순서와 커밋 순서를 맞춘다
+
+재연결 뒤 이어받기는 `afterSeq` 커서다(`realtime.md`). 그런데 seq 를 먼저 받은 메시지가 늦게 커밋될 수 있다 — seq 5 가 seq 4 보다 먼저 커밋되면, 이어받기가 5 까지 읽고 다음에 `afterSeq=5` 로 묻는 사이 4 는 영영 내려가지 않는다.
+
+그래서 **같은 크루의 메시지 저장을 직렬화**해 seq 순서와 커밋 순서를 같게 만든다. 저장 트랜잭션이 먼저 크루 단위 advisory lock(`pg_advisory_xact_lock`, 키는 `crew_id`)을 잡고 그 크루의 다음 seq 를 발급한다. 크루 하나의 동시 발화는 적어 경합은 무시할 수준이다. `UNIQUE (crew_id, seq)` 가 마지막 방어선이다.
+
+### 활동 중 위치 — 테이블로 시작한다
+
+`live_locations` 는 사람당 한 행(`user_id` PK)을 5초마다 덮어쓰고, 활동 종료 때 지운다. 옛 저장소는 반경 검색(GEO)과 자동 만료 때문에 위치를 Redis 에 두었지만, 지금은 **크루 범위로만 조회**하므로 반경 검색이 없고 `live_locations (crew_id)` 인덱스 하나로 끝난다. 행 수도 동시에 활동 중인 사람 수를 넘지 않는다.
+
+5초 덮어쓰기가 DB 쓰기 부하로 보이면 Redis 로 옮긴다. 옮기면 live 도메인의 `repository/` 에 Redis 어댑터를 두고, Postgres 결과와 섞는 조회는 트랜잭션 밖에서 한다(`backend/docs/02-conventions.md` §10).
+
+## 보존·정리
+
+스케줄 작업은 단일 인스턴스 전제로 `@Scheduled` 를 쓴다(`global/config/SchedulingConfig`). 서버를 여러 대로 늘리면 그때 분산 잠금을 붙인다.
+
+| 대상 | 언제 | 무엇을 | 상태 |
+|---|---|---|---|
+| `refresh_tokens` | 매일 04:00 KST | 만료 후 30일 지난 행 삭제 (`RefreshTokenCleanupJob`) | 있음 |
+| 삭제된 콘텐츠의 사진 | 삭제 커밋 뒤 | 스토리지에서 `deleted/` 경로로 옮긴다 (`MediaQuarantineListener`) | 리스너만 있음. 발행은 각 도메인이 삭제를 만들 때 |
+| `live_locations` | 활동 종료 때 | 그 사람의 행 삭제 | 구현 전 |
+| 종료 없이 끊긴 `live_locations` | — | 앱이 종료를 못 보낸 채 갱신이 끊긴 행 | **미정** |
+| `password_reset_tokens` | — | 만료·사용된 행 | **미정** — 지금은 쌓이기만 한다 |
+| `deleted_at` 이 찍힌 행 | — | 물리 삭제 여부와 기간 | **미정** — 지금은 소프트 삭제로 남는다 |
+| 줍기에 연결되지 않은 활동 사진 | — | — | **미결** (`feature-scope.md` §미결) |

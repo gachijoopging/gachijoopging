@@ -26,7 +26,7 @@ CONTEXT.md       용어집. 코드·문서·대화의 말은 여기 것을 쓴�
 | HTTP 계약 | [`docs/openapi.yaml`](docs/openapi.yaml) |
 | 실시간(채팅·위치) 계약 | [`docs/realtime.md`](docs/realtime.md) |
 | 커밋·브랜치·PR·이슈 | [`docs/conventions.md`](docs/conventions.md) |
-| 옛 백엔드 도메인별 유지·개명·끔 | [`docs/backend-migration.md`](docs/backend-migration.md) |
+| 백엔드 도메인 배치·소유 테이블·담당 경로 | [`backend/docs/01-구조.md`](backend/docs/01-구조.md) |
 | 배포·환경 변수·장애 | [`docs/operations.md`](docs/operations.md) |
 | 옛 앱 참고 자료 | docs/legacy/ |
 
