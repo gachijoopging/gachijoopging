@@ -22,6 +22,7 @@ import {
   useRipple,
   useTheme,
   WORDMARK_RATIO,
+  characterStages,
 } from 'design-system/src';
 import { createMockClient, type ApiClient } from '../../src/api/client';
 import { MOCKS } from '../../src/api/mocks.generated';
@@ -32,8 +33,6 @@ type Home = (typeof MOCKS)['GET /crew/home']['data'];
 const api: ApiClient = createMockClient({ delayMs: 300 });
 const wordmark = require('../../../design-system/assets/logo-wordmark.png');
 const wordmarkDark = require('../../../design-system/assets/logo-wordmark-dark.png');
-// ponytail: 단계별 그림이 정해지기 전까지 새싹 한 장에 단계 이름만 붙인다
-const sprout = require('../../../design-system/assets/character/sprout.png');
 const STAGE_NAME = ['축 처짐', '보통', '신남', '반짝', '파티'] as const;
 const BUBBLE_MS = 3000;
 
@@ -214,7 +213,7 @@ function CrewCharacter({ character }: { character: Home['character'] }) {
       accessibilityHint="목표 진행을 들으려면 두 번 탭"
       style={({ pressed }) => ({ alignItems: 'center', gap: space.sm, paddingVertical: space.lg, borderRadius: radius.card, overflow: 'hidden', opacity: pressedOpacity(pressed) })}
     >
-      <Image source={sprout} resizeMode="contain" style={{ width: size.character, height: size.character }} />
+      <Image source={characterStages[character.stage - 1] ?? characterStages[0]} resizeMode="contain" style={{ width: size.character, height: size.character }} />
       <Txt variant="caption" tone="muted">{stageName}</Txt>
       {/* 말풍선이 뜨고 질 때 아래 카드가 밀리지 않도록 캐릭터 위에 띄운다. 캐릭터 쪽(아래)에서 솟아 같은 길로 들어간다 */}
       <Appear visible={bubble} style={{ position: 'absolute', top: space.sm }}>

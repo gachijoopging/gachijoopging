@@ -1,7 +1,7 @@
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { Image, RefreshControl, View } from 'react-native';
-import { Banner, Button, Card, Chip, ErrorState, Loading, MetricSplit, Screen, Snackbar, Txt, size, space } from 'design-system/src';
+import { Banner, Button, Card, Chip, ErrorState, Loading, MetricSplit, Screen, Snackbar, Txt, characterEmpty, size, space } from 'design-system/src';
 import { getStored, loadLastAccount, subscribe, type Stored } from '../../src/activity/store';
 import { syncOutbox } from '../../src/activity/tracking';
 import { createMockClient, type Activity, type ApiClient } from '../../src/api/client';
@@ -12,8 +12,6 @@ import { useFlash } from '../../src/ui/useFlash';
 
 const api: ApiClient = createMockClient({ delayMs: 300 });
 
-// ponytail: 대기 그림이 정해지기 전까지 홈과 같은 새싹 한 장
-const sprout = require('../../../design-system/assets/character/sprout.png');
 
 /** 4-1. 줍깅 버튼은 이 화면을 거치지 않고 시트를 띄운다. 설정·빈 기록의 "줍깅 시작" 링크가 닿는 자리다 */
 export default function PloggingScreen() {
@@ -56,7 +54,7 @@ export default function PloggingScreen() {
       {view.kind === 'idle' ? (
         <>
           <View accessible accessibilityLabel="줍깅 대기, 지금 주운 것을 기록해 보세요" style={{ alignItems: 'center', gap: space.sm }}>
-            <Image source={sprout} resizeMode="contain" style={{ width: size.character, height: size.character }} />
+            <Image source={characterEmpty.activity} resizeMode="contain" style={{ width: size.character, height: size.character }} />
             <Txt variant="section" bold>지금 주운 것을 기록해 보세요.</Txt>
           </View>
           <Button label="줍깅 시작" size="lg" fullWidth onPress={plogging.start} />

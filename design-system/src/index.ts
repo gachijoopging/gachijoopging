@@ -76,3 +76,5 @@ export type { BarChartProps } from './components/BarChart.tsx';
 export { MetricSplit } from './components/MetricSplit.tsx';
 export type { MetricItem, MetricSplitProps } from './components/MetricSplit.tsx';
 export { Appear } from './components/Appear.tsx';
+
+export { characterStages, characterEmpty } from './character.ts';

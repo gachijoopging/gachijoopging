@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { ImageBackground, View } from 'react-native';
+import { Image, ImageBackground, View } from 'react-native';
 import { space, size as sizes } from '../tokens/spacing.ts';
 import { radius } from '../tokens/radius.ts';
 import { fontSize, lineHeight } from '../tokens/typography.ts';
@@ -28,6 +28,7 @@ import { Screen } from './components/Screen.tsx';
 import { Snackbar } from './components/Snackbar.tsx';
 import { LinkText } from './components/LinkText.tsx';
 import { IconCircle } from './components/IconCircle.tsx';
+import { characterStages, characterEmpty } from './character.ts';
 import { MetricSplit } from './components/MetricSplit.tsx';
 import { BarChart } from './components/BarChart.tsx';
 
@@ -50,6 +51,9 @@ function Section({ title, note, children }: { title: string; note?: string; chil
     </View>
   );
 }
+
+const STAGE_LABEL = ['축 처짐', '보통', '신남', '반짝', '파티'];
+const EMPTY_LABEL = { activity: '활동 없음', post: '게시물 없음', notification: '알림 없음' };
 
 function Row({ children }: { children: React.ReactNode }) {
   return (
@@ -405,6 +409,25 @@ export function Catalog({ scheme, onScheme }: { scheme: Scheme; onScheme: (s: Sc
           />
         </Section>
 
+        <Section title="캐릭터" note="홈 5단계는 최근 14일 크루 줍기 ÷ 목표. 빈 상태 3장은 EmptyState image 로 씁니다.">
+          <Row>
+            {characterStages.map((source, i) => (
+              <View key={i} style={{ alignItems: 'center', gap: space.xs }}>
+                <Image source={source} resizeMode="contain" style={{ width: sizes.iconCircleLg * 2, height: sizes.iconCircleLg * 2 }} />
+                <Txt variant="caption" tone="muted">{STAGE_LABEL[i]}</Txt>
+              </View>
+            ))}
+          </Row>
+          <Row>
+            {(Object.keys(characterEmpty) as (keyof typeof characterEmpty)[]).map((key) => (
+              <View key={key} style={{ alignItems: 'center', gap: space.xs }}>
+                <Image source={characterEmpty[key]} resizeMode="contain" style={{ width: sizes.iconCircleLg * 2, height: sizes.iconCircleLg * 2 }} />
+                <Txt variant="caption" tone="muted">{EMPTY_LABEL[key]}</Txt>
+              </View>
+            ))}
+          </Row>
+        </Section>
+
         <Section title="로딩 · 빈 상태 · 오류 상태" note="빈 상태와 오류는 다음에 할 일을 함께 말합니다.">
           <Card padded={false} style={{ padding: space.sm }}>
             <Loading />
@@ -414,7 +437,7 @@ export function Catalog({ scheme, onScheme }: { scheme: Scheme; onScheme: (s: Sc
             <Txt variant="section" bold>기록을 저장하고 있어요…</Txt>
           </Row>
           <EmptyState
-            icon="map-marker-off"
+            image={characterEmpty.activity}
             title="아직 기록이 없어요"
             description="첫 줍깅을 시작하면 여기에 쌓입니다."
             actionLabel="줍깅 시작"
