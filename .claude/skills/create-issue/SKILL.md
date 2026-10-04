@@ -21,7 +21,7 @@ Linear MCP 도구(`list_issues` · `list_teams` · `save_issue` · `list_issue_l
    - 계약 변경 → `docs/openapi.yaml`
    - 화면 → `docs/screens/<번호>-<이름>.md`
    - 테이블 → `docs/ERD.md` · 실시간 → `docs/realtime.md`
-   - 백엔드 도메인 → `docs/backend-migration.md` · `backend/docs/02-conventions.md`
+   - 백엔드 도메인 → `backend/docs/01-구조.md` · `backend/docs/02-conventions.md`
 4. **`docs/conventions.md`** — 브랜치·PR·커밋 형식
 
 ## 담당 (폴더 오너십)

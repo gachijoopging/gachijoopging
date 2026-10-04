@@ -216,7 +216,7 @@ class ArchitectureTest {
   }
 
   @Test
-  void 도메인은_backend_migration_문서의_12개_안에만_있다() {
+  void 도메인은_01_구조_문서의_12개_안에만_있다() {
     assertThat(DOMAINS).hasSize(12).doesNotHaveDuplicates();
 
     assertThat(DOMAINS).containsAll(실제_도메인());

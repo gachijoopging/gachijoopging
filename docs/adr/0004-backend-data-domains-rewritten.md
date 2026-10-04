@@ -13,4 +13,4 @@
 
 ## 결과
 
-이관 직후 백엔드는 컴파일되지 않는다. `auth`→`user`(UserService·UserAccount·MeResponse) 5곳, `media`→`activity.Category` 2곳. `user` 도메인과 `Category` 를 새로 쓴 뒤 잇는다. 목록은 `docs/backend-migration.md`.
+이관 직후 백엔드는 컴파일되지 않는다. `auth`→`user`(UserService·UserAccount·MeResponse) 5곳, `media`→`activity.Category` 2곳. `user` 도메인과 `Category` 를 새로 쓴 뒤 잇는다. 도메인 배치는 `backend/docs/01-구조.md`.

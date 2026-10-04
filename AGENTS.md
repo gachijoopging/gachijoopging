@@ -28,7 +28,7 @@
 | 처음 이 저장소를 만짐 | `docs/feature-scope.md` → `CONTEXT.md` |
 | 화면 구현 | `docs/screens/<번호>-<이름>.md` 1개 → `docs/openapi.yaml` 의 해당 경로 |
 | 계약 변경 | `docs/openapi.yaml` → 그 경로를 쓰는 화면 문서 1개 |
-| 백엔드 도메인 | `docs/ERD.md` → `docs/backend-migration.md` → `backend/docs/02-conventions.md` |
+| 백엔드 도메인 | `docs/ERD.md` → `backend/docs/01-구조.md` → `backend/docs/02-conventions.md` |
 | 실시간·소켓 | `docs/realtime.md` |
 | 배포·환경 변수 | `docs/operations.md` |
 | 이슈·브랜치·PR | `docs/conventions.md` |
@@ -39,7 +39,7 @@
 - 왜 만드나 → `intent.md` · 말 → `CONTEXT.md` (용어집. 코드·문서·대화의 이름은 여기 것을 쓴다)
 - 무엇을 만드나, 결정과 이유 → `docs/feature-scope.md` · 되돌리기 어려운 결정 → `docs/adr/`
 - 화면 → `docs/screens.md` · 테이블 → `docs/ERD.md` · HTTP 계약 → `docs/openapi.yaml` · 실시간 → `docs/realtime.md`
-- 옛 백엔드 도메인별 유지·개명·끔 → `docs/backend-migration.md`
+- 백엔드 도메인 배치·소유 테이블·담당 경로 → `backend/docs/01-구조.md`
 - 커밋·브랜치·PR·이슈 → `docs/conventions.md` · 배포·환경 변수·장애 → `docs/operations.md`
 
 결정은 `feature-scope.md` 표에, ADR 은 세 조건(되돌리기 어렵고·맥락 없이는 놀랍고·실제 트레이드오프)이 모두 맞을 때만. 셋째 장소를 만들지 않는다.
