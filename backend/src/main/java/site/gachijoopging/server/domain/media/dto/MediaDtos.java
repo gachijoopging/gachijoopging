@@ -2,7 +2,7 @@ package site.gachijoopging.server.domain.media.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
-import site.gachijoopging.server.domain.activity.domain.entity.Category;
+import site.gachijoopging.server.domain.activity.entity.Category;
 
 public final class MediaDtos {
 

@@ -5,8 +5,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
-import site.gachijoopging.server.domain.media.domain.service.MediaService;
-import site.gachijoopging.server.domain.media.infrastructure.client.MediaStorage;
+import site.gachijoopging.server.domain.media.client.MediaStorage;
+import site.gachijoopging.server.domain.media.service.MediaService;
 
 @Slf4j
 @Component

@@ -13,7 +13,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
-import site.gachijoopging.server.domain.auth.domain.policy.OpaqueToken;
+import site.gachijoopging.server.domain.auth.service.OpaqueToken;
 import site.gachijoopging.server.support.IntegrationTest;
 
 @AutoConfigureMockMvc
