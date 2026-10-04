@@ -1,6 +1,6 @@
 # 백엔드 코딩 컨벤션 — 모놀리스 v1
 
-> 우선순위: **openapi.yaml 계약 > 이 문서 > 개인 취향.**
+> 우선순위: **openapi.yaml 계약 > 이 문서 > 개인 취향.** 도메인 배치·소유 테이블·담당 경로는 `01-구조.md`.
 > 이 문서와 어긋나는 코드를 발견하면 고치는 쪽이 아니라 **먼저 PR 코멘트로 합의**한다.
 
 ## 1. 포맷과 주석
@@ -84,8 +84,8 @@ domain/<feature>/
 - **`service/XxxCleanupJob`** — `@Scheduled` 가 부르는 정리 작업. 자기 데이터의
   bulk 삭제라 트랜잭션을 열며, 그래서 `facade/` 가 아니라 서비스 옆이다.
 - **`service/`(`XxxService`)** — **트랜잭션 경계**, 비즈니스 규칙, 권한 검사
-  (소유자·크루장·크루원), 타 도메인 **서비스** 호출. 타 도메인 서비스 주입이
-  순환하면 기동이 실패한다(§12). **HttpServletRequest·ResponseEntity 등 웹 타입을 모른다.**
+  (소유자·크루장·크루원), 타 도메인 **서비스** 호출. 타 도메인 서비스 주입은
+  `01-구조.md` §4 의 관계만, 순환하면 기동이 실패한다(§12). **HttpServletRequest·ResponseEntity 등 웹 타입을 모른다.**
   `controller`·`facade`·`client` 도 모른다(ArchUnit L2·L3).
 - **정책·계산기** (`service/` 안) — 상태도 트랜잭션도 없는 규칙. 스프링 빈이어도 좋지만
   **아무것도 주입하지 않거나 설정값만 받는다.** 리포지토리를 주입하기 시작했으면 그건 서비스다.
@@ -459,7 +459,7 @@ noMethods().that().areDeclaredInClassesThat().resideInAPackage(FACADE)
   커밋이 시점에 따라 다른 트리로 빌드된다. 의존성을 바꿨으면
   `./gradlew dependencies --write-locks` 를 돌리고 **lockfile 을 diff 에 포함해 올린다** —
   전이 의존성이 무엇을 끌고 왔는지 리뷰에서 보이는 유일한 자리다.
-- `application.yml` + 프로필 `local`. 시크릿(DB 비밀번호·Redis 비밀번호·JWT 개인키·
+- `application.yml` + 프로필 `local` / `prod`(운영. yml 에 따로 절은 없고 `@Profile` 로 빈을 고른다 — 예: 메일 발송). 시크릿(DB 비밀번호·Redis 비밀번호·JWT 개인키·
   카카오·구글 키·FCM 키)은 전부 환경변수 — yml 에 값을 적지 않는다. 키 목록은 `docs/operations.md`.
 - Redis 는 로컬 개발에서도 필요하다 — Postgres 와 함께 띄운다(`local` 프로필이 가리키는 주소).
   Testcontainers 통합 테스트도 Redis 컨테이너를 함께 띄운다.

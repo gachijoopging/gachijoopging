@@ -41,5 +41,6 @@ repository·client 주입 금지·타 도메인 엔티티를 필드로 안 씀)�
 코드 스타일(Lombok·생성자 주입·Entity/DTO 분리·`/crew` 경로 규칙 등)은 루트 `CLAUDE.md` §backend
 를 본다. 여기는 그 위에 backend 안에서만 참인 것만 적는다.
 
+- 도메인 배치·소유 테이블·담당 경로·도메인 간 호출은 `backend/docs/01-구조.md`. 새 경로·테이블은 그 표에 먼저 적는다
 - 코드 규약 상세는 `backend/docs/02-conventions.md` — 이 레포의 정본이다. 레이어 규칙을 바꾸면 `ArchitectureTest` 와 같은 PR 에서 고친다
 - 이미 적용된 Flyway migration 은 주석도 checksum 에 들어간다. 손대지 않는다
