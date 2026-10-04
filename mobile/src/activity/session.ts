@@ -62,6 +62,12 @@ export function newSession(a: ActivityStart, userId: string, now: number): Sessi
 export function applyFix(s: Session, fix: Fix): Session {
   const result = filterFix(s.filter, fix);
   if (!result.point) {
+    // 기준을 옮겼으면 그 사이 경로를 모른다. 다음 점을 지난 구간과 잇지 않는다
+    if (result.reason === 'reanchor') {
+      const current = s.segments[s.segments.length - 1];
+      return { ...s, filter: result.state, segments: current.length ? [...s.segments, []] : s.segments };
+    }
+    if (result.reason === 'speed') return { ...s, filter: result.state };
     if (result.reason !== 'accuracy') return s;
     return { ...s, droppingSince: s.droppingSince ?? fix.timestamp };
   }

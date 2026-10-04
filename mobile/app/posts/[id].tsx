@@ -2,7 +2,7 @@
 import * as Crypto from 'expo-crypto';
 import { router, useLocalSearchParams, useNavigation } from 'expo-router';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-import { Pressable, RefreshControl, ScrollView, View, type TextInput } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, View, type NativeScrollEvent, type NativeSyntheticEvent, type TextInput } from 'react-native';
 import {
   AppHeader,
   Avatar,
@@ -23,6 +23,7 @@ import {
   size,
   space,
   useRipple,
+  characterEmpty,
 } from 'design-system/src';
 import { ApiError, createMockClient, type ApiClient } from '../../src/api/client';
 import { clearDraft, draftFor, editDraft, requestIdFor } from '../../src/crew/comment-draft';
@@ -63,6 +64,10 @@ export default function PostDetailScreen() {
   const scroll = useRef<ScrollView>(null);
   // 내가 단 댓글이 그려진 뒤에 내려가야 맨 끝이 새 댓글이다
   const toEnd = useRef(false);
+  const atEnd = useRef(false);
+  const markAtEnd = ({ nativeEvent: { contentOffset, layoutMeasurement, contentSize } }: NativeSyntheticEvent<NativeScrollEvent>) => {
+    atEnd.current = contentOffset.y + layoutMeasurement.height >= contentSize.height - space.md;
+  };
   const sending = useRef(false);
   const request = useRef(0);
   const olderPending = useRef(false);
@@ -181,9 +186,11 @@ export default function PostDetailScreen() {
   };
 
 
+  const [textError, setTextError] = useState<string | null>(null);
   const changeText = (value: string) => {
     if (!draftKey) return;
     setText(value);
+    setTextError(null);
     editDraft(draftKey, value);
   };
 
@@ -204,6 +211,8 @@ export default function PostDetailScreen() {
       setText('');
     } catch (e) {
       if (e instanceof ApiError && e.code === 'NOT_FOUND') markGone();
+      // 값 오류는 입력칸 아래에 — 고쳐야 할 것은 연결이 아니라 글이다
+      else if (e instanceof ApiError && e.code === 'VALIDATION') setTextError('댓글 내용을 확인해 주세요.');
       // 같은 id 로 다시 보내면 서버가 중복을 흡수한다 — 초안의 id 는 그대로 둔다
       else setSnackbar('댓글을 남기지 못했어요. 다시 시도해 주세요.');
     } finally {
@@ -219,9 +228,9 @@ export default function PostDetailScreen() {
       setConfirm(null);
       // 진입한 화면(5-1·5-4·5-5·2-3)이 어디든 그 화면이 안내를 띄우도록 flash 를 얹고 돌아간다
       router.dismissTo(returnTo(navigation.getState(), '게시물을 삭제했어요'));
+      // 떠나는 화면은 다시 그리지 않는다. 전환 중 재렌더가 Fabric 을 죽인다
     } catch {
       setSnackbar('삭제하지 못했어요. 다시 시도해 주세요.');
-    } finally {
       setDeleting(false);
     }
   };
@@ -257,7 +266,7 @@ export default function PostDetailScreen() {
 
       {gone || (post && blocked.has(post.author.id)) ? (
         <EmptyState
-          icon="sprout-outline"
+          image={characterEmpty.post}
           title="삭제된 게시물이에요"
           description="작성자가 삭제했거나 더 이상 볼 수 없는 게시물이에요."
           actionLabel="돌아가기"
@@ -281,7 +290,18 @@ export default function PostDetailScreen() {
             onContentSizeChange={() => {
               if (!toEnd.current) return;
               toEnd.current = false;
+              atEnd.current = true;
               scroll.current?.scrollToEnd({ animated: true });
+            }}
+            // 끝에 있는지는 손으로 스크롤을 마쳤을 때만 잰다. 내려가는 애니메이션 중간값으로 재면 끝이 아니라고 오판한다.
+            // 드래그가 시작되면 끝 추적을 푼다 — 끌어올리는 손 아래에서 키보드가 닫히며 높이가 바뀌어도 되돌려 내리지 않는다
+            onScrollBeginDrag={() => { atEnd.current = false; }}
+            onScrollEndDrag={markAtEnd}
+            onMomentumScrollEnd={markAtEnd}
+            // 큰 글자에서 비운 입력란의 안내 문구가 두 줄이 되면 목록 높이만 줄어 마지막 댓글이 가려진다.
+            // 댓글을 보낸 직후 내려가던 애니메이션이 줄기 전 높이를 목표로 끝나므로, 같은 애니메이션으로 목표를 바꿔 준다
+            onLayout={() => {
+              if (atEnd.current) scroll.current?.scrollToEnd({ animated: true });
             }}
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load('pull')} />}
           >
@@ -383,6 +403,7 @@ export default function PostDetailScreen() {
                 accessibilityLabel="댓글 입력"
                 value={text}
                 onChangeText={changeText}
+                error={textError ?? undefined}
                 maxLength={COMMENT_MAX}
                 multiline
                 maxLines={4}

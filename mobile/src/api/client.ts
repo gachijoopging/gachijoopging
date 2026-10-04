@@ -4,6 +4,7 @@ import type { JoinRequestStatus } from '../auth/pending-request';
 import type { EndBody } from '../activity/outbox';
 import type { AgreementDefinition, AgreementState } from '../auth/agreements';
 import { currentAccount } from '../auth/account';
+import { kstDate } from '../crew/calendar';
 
 type MeData = (typeof MOCKS)['GET /users/me']['data'];
 type JoinRequestData = (typeof MOCKS)['GET /crews/join-requests/mine']['data'];
@@ -94,6 +95,20 @@ function isMockKey(key: MutationKey): key is MockKey {
   return key in MOCKS;
 }
 
+type PostsQuery = { scope?: 'CREW' | 'MINE'; from?: string; to?: string };
+
+/** 서버처럼 scope·기간을 적용한다. 전체 탭에는 나만 보기 글이 오지 않고, 내 게시물 탭에는 내 글만 온다 */
+function filterPosts({ scope = 'CREW', from, to }: PostsQuery = {}) {
+  const me = MOCKS['GET /users/me'].data.id;
+  const posts = MOCKS['GET /crew/posts'].data;
+  const items = posts.items.filter((post) => {
+    const day = kstDate(post.createdAt);
+    if (scope === 'MINE' ? post.author.id !== me : post.visibility === 'PRIVATE') return false;
+    return !(from && day < from) && !(to && day > to);
+  });
+  return { data: { ...posts, items } };
+}
+
 /** 실 API 가 붙기 전까지 화면이 쓰는 구현. */
 export function createMockClient({ delayMs = 0, failing = [], activityTotals }: MockOptions = {}): ApiClient {
   let agreements: AgreementState | null = null;
@@ -103,13 +118,14 @@ export function createMockClient({ delayMs = 0, failing = [], activityTotals }: 
     if (agreementsOwner !== owner) { agreements = null; agreementsOwner = owner; }
   };
   return {
-    async get(key) {
+    async get(key, query) {
       if (delayMs > 0) await wait(delayMs);
       if (failing.includes(key)) throw new ApiError('MOCK_FAILURE');
       if (key === 'GET /users/me/agreements') {
         selectAgreementOwner();
         if (agreements) return { data: agreements } as ApiResponse<typeof key>;
       }
+      if (key === 'GET /crew/posts') return filterPosts(query as PostsQuery) as unknown as ApiResponse<typeof key>;
       return (MOCKS as unknown as Record<string, unknown>)[key] as ApiResponse<typeof key>;
     },
     async mutate(key, body) {

@@ -10,7 +10,7 @@ import {
   AppHeader,
   Banner,
   Button,
-  Chip,
+  Badge,
   Icon,
   IconButton,
   Progress,
@@ -176,6 +176,7 @@ export default function CreatePostScreen() {
     setPosting(true);
     setPostFailed(false);
     setSelected(null);
+    let left = false;
     try {
       const uploaded = new Map(photos.map((p) => [p.key, p.mediaId]));
       setDone(photos.length - photosToUpload(photos).length);
@@ -190,8 +191,11 @@ export default function CreatePostScreen() {
       commit({ ...draftRef.current, requestId });
       await api.mutate('POST /crew/posts', { id: requestId, text: text.trim(), visibility, mediaIds });
       const publishedPhotos = draftRef.current.photos;
-      commit(emptyDraft());
+      // 닫히는 전환 중에 이 화면을 다시 그리면 Fabric Android 가 addViewAt 에서 죽는다. 비운 초안은 파일에만 남긴다
+      saveDraft(scope, emptyDraft());
+      draftRef.current = emptyDraft();
       discardPhotos(publishedPhotos);
+      left = true;
       router.dismissTo({ pathname: '/(tabs)/feed', params: { flash: '게시물을 올렸어요' } });
     } catch (e) {
       if (e instanceof ApiError && e.code === 'NO_CREW') {
@@ -200,8 +204,10 @@ export default function CreatePostScreen() {
       }
       setPostFailed(true);
     } finally {
-      busy.current = false;
-      setPosting(false);
+      if (!left) {
+        busy.current = false;
+        setPosting(false);
+      }
     }
   };
 
@@ -254,6 +260,8 @@ export default function CreatePostScreen() {
                 style={({ pressed }) => ({
                   width: THUMB,
                   height: THUMB,
+                  // 옆 썸네일이 삭제 버튼 자리로 위에 둔 여백만큼 내려 윗선을 맞춘다
+                  marginTop: space.md,
                   borderRadius: radius.tile,
                   borderWidth: borderWidth.hairline,
                   borderColor: colors.borderDotted,
@@ -286,9 +294,7 @@ export default function CreatePostScreen() {
                 >
                   <Thumb uri={p.uri} size="md" />
                   {i === 0 ? (
-                    <View style={{ position: 'absolute', left: space.xs / 2, bottom: space.xs / 2 }}>
-                      <Chip label="대표" tone="deep" />
-                    </View>
+                    <Badge label="대표" tone="deep" style={{ position: 'absolute', left: space.xs, bottom: space.xs }} />
                   ) : null}
                   {posting && p.mediaId == null && !p.failed ? (
                     <View style={{ position: 'absolute', inset: 0, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface85 }}>
@@ -301,7 +307,7 @@ export default function CreatePostScreen() {
                     <IconButton icon="alert-circle" label="업로드 실패, 다시 시도하려면 두 번 탭" tone="surface" disabled={offline} onPress={() => retryPhoto(p)} />
                   </View>
                 ) : null}
-                <View style={{ position: 'absolute', top: 0, right: 0 }}>
+                <View style={{ position: 'absolute', top: 0, right: 0, zIndex: 1 }}>
                   <IconButton
                     icon="close"
                     label={`${i + 1}번째 사진 삭제`}

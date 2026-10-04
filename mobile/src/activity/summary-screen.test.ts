@@ -22,7 +22,8 @@ jest.mock('./store', () => ({
   subscribe: () => () => {},
   updateStored: jest.fn(),
 }));
-jest.mock('./tracking', () => ({ applyEndedActivity: jest.fn(), syncOutbox: jest.fn() }));
+jest.mock('./tracking', () => ({ applyEndedActivity: jest.fn(), syncOutbox: jest.fn(), activityGoneCode: () => null }));
+jest.mock('../feed/leave', () => ({ leaveForMembership: jest.fn() }));
 jest.mock('./ShareCard', () => ({ ShareCard: 'ShareCard', useShareImage: () => ({ capture: jest.fn() }) }));
 jest.mock('design-system/src', () => new Proxy(
   { space: {}, size: {}, radius: {}, useTheme: () => ({ colors: {} }), useReduceMotion: () => true },

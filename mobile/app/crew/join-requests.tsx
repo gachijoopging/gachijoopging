@@ -35,7 +35,9 @@ export default function ManageJoinRequestsScreen() {
   const [isLeader, setIsLeader] = useState<boolean | null>(null);
   const [failed, setFailed] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [busyId, setBusyId] = useState<string | null>(null);
+  // ponytail: 처리 중엔 모든 행을 잠근다. 행별 병렬 처리는 승인 순서가 중요해지면 그때
+  const [busy, setBusy] = useState<{ id: string; decision: JoinDecision } | null>(null);
+  const busyId = busy?.id ?? null;
   const [confirm, setConfirm] = useState<{ request: JoinRequest; decision: JoinDecision } | null>(null);
   const [snackbar, setSnackbar] = useState<string | null>(null);
 
@@ -107,7 +109,7 @@ export default function ManageJoinRequestsScreen() {
     setRefreshing(false);
     const { request, decision } = confirm;
     setConfirm(null);
-    setBusyId(request.id);
+    setBusy({ id: request.id, decision });
     let error: unknown = null;
     try {
       await api.mutate('POST /crew/join-requests/{requestId}', { requestId: request.id, decision });
@@ -121,7 +123,7 @@ export default function ManageJoinRequestsScreen() {
     }
     if (outcome.denied) setIsLeader(false);
     generation.current += 1;
-    setBusyId(null);
+    setBusy(null);
     if (outcome.message) setSnackbar(outcome.message);
     deciding.current = false;
   };
@@ -171,8 +173,8 @@ export default function ManageJoinRequestsScreen() {
           renderItem={({ item: r }) => (
             <RequestRow
               request={r}
-              busy={busyId === r.id}
-              locked={busyId != null}
+              busy={busy?.id === r.id ? busy.decision : null}
+              locked={busy != null}
               onDecide={(decision) => setConfirm({ request: r, decision })}
             />
           )}
@@ -210,7 +212,7 @@ function RequestRow({
   onDecide,
 }: {
   request: JoinRequest;
-  busy: boolean;
+  busy: JoinDecision | null;
   locked: boolean;
   onDecide: (decision: JoinDecision) => void;
 }) {
@@ -238,6 +240,7 @@ function RequestRow({
           label="거절"
           variant="ghost"
           size="sm"
+          loading={busy === 'REJECT'}
           disabled={locked}
           accessibilityLabel={`${user.nickname} 님 가입 거절`}
           onPress={() => onDecide('REJECT')}
@@ -245,7 +248,7 @@ function RequestRow({
         <Button
           label="승인"
           size="sm"
-          loading={busy}
+          loading={busy === 'APPROVE'}
           disabled={locked}
           accessibilityLabel={`${user.nickname} 님 가입 승인`}
           onPress={() => onDecide('APPROVE')}

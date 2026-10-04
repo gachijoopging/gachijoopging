@@ -14,6 +14,8 @@ export type CardProps = ViewProps & {
    * 겹친 터치 영역은 스크린리더가 하나로 읽어 안쪽 조작에 닿을 수 없습니다.
    */
   onPress?: () => void;
+  /** 길게 눌러 여는 동작. 스크린리더용으로는 accessibilityActions 를 함께 준다 */
+  onLongPress?: () => void;
   disabled?: boolean;
 };
 
@@ -22,10 +24,13 @@ export function Card({
   padded = true,
   level = 'card',
   onPress,
+  onLongPress,
   disabled,
   style,
   children,
   accessibilityLabel,
+  accessibilityActions,
+  onAccessibilityAction,
   ...rest
 }: CardProps) {
   const { colors, shadows } = useTheme();
@@ -56,7 +61,10 @@ export function Card({
         accessibilityRole="button"
         accessibilityLabel={accessibilityLabel}
         accessibilityState={{ disabled: !!disabled }}
+        accessibilityActions={accessibilityActions}
+        onAccessibilityAction={onAccessibilityAction}
         onPress={onPress}
+        onLongPress={onLongPress}
         disabled={disabled}
         android_ripple={disabled ? undefined : ripple}
         style={({ pressed }) => ({

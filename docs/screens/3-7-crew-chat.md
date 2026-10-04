@@ -46,7 +46,7 @@
 | ① | 제목·부제 | "크루 채팅" / 아래 작은 글자 "크루원 `memberCount`명" (`GET /crew`) 예: "크루원 18명" | `AppHeader` | — |
 | ② | 끊김 배너 | 평소 숨김. 소켓이 끊겨 재연결 중이면 헤더 아래에 "연결 중…". 다시 붙으면 사라진다 | `Banner` warn | — |
 | ③ | 날짜 구분선 | `createdAt` 의 날짜가 앞 메시지와 다를 때마다 가운데 작은 알약. 오늘 "오늘" · 어제 "어제" · 그 외 "2026년 9월 6일 토요일" | `Chip` neutral | — |
-| ③ | 상대 얼굴 | `author.photoUrl` (`GET /crew/chat/messages`) `Avatar` sm(30dp) 원. null 이면 `author.nickname` 첫 글자. 같은 사람이 연달아 보내면 첫 메시지에만 | `Avatar` sm | 5-4 타인 프로필 (`author.id`) |
+| ③ | 상대 얼굴 | `author.photoUrl` (`GET /crew/chat/messages`) sm(30dp) 원. null 이면 `author.nickname` 첫 글자. 같은 사람이 연달아 보내면 첫 메시지에만 | `Avatar` sm | 5-4 타인 프로필 (`author.id`) |
 | ③ | 상대 이름 | `author.nickname`. 말풍선 위 작은 굵은 글자. 탈퇴했으면 서버가 "탈퇴한 크루원" 으로 준다. 같은 사람이 연달아 보내면 첫 메시지에만 | `Txt` caption strong | 5-4 타인 프로필. "탈퇴한 크루원" 은 눌리지 않는다 |
 | ③ | 상대 말풍선 | `text`. 왼쪽 정렬, 왼쪽 위 모서리만 각진 흰 말풍선, 최대 너비 260dp, 줄바꿈 유지 | `신규` 말풍선 (옛 `bg_bubble_other`) + `Txt` body | — (길게 누르기 → 신고) |
 | ③ | 내 말풍선 | `text`. `author.id` 가 `GET /users/me` 의 `id` 와 같으면 오른쪽 정렬, 오른쪽 아래 모서리만 각진 라임→노랑 말풍선. 얼굴·이름 없음 | `신규` 말풍선 (옛 `bg_bubble_me`) + `Txt` body onLime | — |

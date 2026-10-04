@@ -101,7 +101,7 @@ export default function EnterInviteCodeScreen() {
       <AppHeader title="크루 가입하기" onBack={loading ? undefined : () => router.back()} backDisabled={loading} />
 
       <View style={{ alignItems: 'center', gap: space.sm }}>
-        <Txt variant="title" bold style={{ textAlign: 'center' }}>
+        <Txt variant="title" bold style={{ textAlign: 'center' }} accessibilityLiveRegion="polite">
           {title}
         </Txt>
       </View>

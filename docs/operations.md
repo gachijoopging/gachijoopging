@@ -20,7 +20,7 @@ EC2 한 대 + Supabase Postgres + 담당자 노트북의 AI 서버. 컨테이너
 | `KAKAO_REST_API_KEY` · `KAKAO_APP_ID` · `GOOGLE_CLIENT_ID` | 소셜 토큰 검증 |
 | `MEDIA_SECURE_LINK_SECRET` | 사진 서명 URL |
 | `MAIL_USERNAME` · `MAIL_PASSWORD` | 비밀번호 재설정 메일 |
-| `AGREEMENTS_VERSION` · `TERMS_URL` · `PRIVACY_URL` · `MARKETING_URL` | 현재 동의 버전과 공개 전문 URL. 모두 설정해야 동의 API가 제공된다 |
+| `AGREEMENTS_VERSION` · `TERMS_URL` · `PRIVACY_URL` · `MARKETING_URL` | 현재 동의 버전과 공개 전문 URL. 모두 설정해야 동의 API가 제공된다. 전문 정본은 `docs/legal/` 이고 버전은 각 문서 머리의 값(지금 `2026-10`). 정식 주소 `www.gachi-joopging.site/{terms,privacy,marketing}` 가 서빙되기 전까지는 `https://djm030.github.io/gachijoopging-legal/{terms,privacy,marketing}` 를 넣는다. 정식 주소 전환과 전문의 빈칸(문의 이메일·리전)은 GAC-80 |
 | `FCM_CREDENTIALS` | 푸시 |
 | `AI_BASE_URL` · `AI_SECRET` | AI 서버 |
 | `CERT_DOMAIN` · `CERT_EMAIL` | acme |

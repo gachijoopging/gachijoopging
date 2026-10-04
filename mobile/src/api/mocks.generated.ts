@@ -82,19 +82,19 @@ export const MOCKS = {
       "items": [
         {
           "type": "TERMS",
-          "version": "2026-09",
+          "version": "2026-10",
           "required": true,
           "url": "https://www.gachi-joopging.site/terms"
         },
         {
           "type": "PRIVACY",
-          "version": "2026-09",
+          "version": "2026-10",
           "required": true,
           "url": "https://www.gachi-joopging.site/privacy"
         },
         {
           "type": "MARKETING",
-          "version": "2026-09",
+          "version": "2026-10",
           "required": false,
           "url": "https://www.gachi-joopging.site/marketing"
         }
@@ -870,7 +870,7 @@ export const MOCKS = {
       "items": [
         {
           "type": "TERMS",
-          "version": "2026-09",
+          "version": "2026-10",
           "required": true,
           "url": "https://www.gachi-joopging.site/terms",
           "agreed": false,
@@ -878,7 +878,7 @@ export const MOCKS = {
         },
         {
           "type": "PRIVACY",
-          "version": "2026-09",
+          "version": "2026-10",
           "required": true,
           "url": "https://www.gachi-joopging.site/privacy",
           "agreed": false,
@@ -886,7 +886,7 @@ export const MOCKS = {
         },
         {
           "type": "MARKETING",
-          "version": "2026-09",
+          "version": "2026-10",
           "required": false,
           "url": "https://www.gachi-joopging.site/marketing",
           "agreed": false,
@@ -1229,23 +1229,23 @@ export const MOCKS = {
       "items": [
         {
           "type": "TERMS",
-          "version": "2026-09",
+          "version": "2026-10",
           "required": true,
           "url": "https://www.gachi-joopging.site/terms",
           "agreed": true,
-          "agreedAt": "2026-09-01T00:00:00Z"
+          "agreedAt": "2026-10-10T00:00:00Z"
         },
         {
           "type": "PRIVACY",
-          "version": "2026-09",
+          "version": "2026-10",
           "required": true,
           "url": "https://www.gachi-joopging.site/privacy",
           "agreed": true,
-          "agreedAt": "2026-09-01T00:00:00Z"
+          "agreedAt": "2026-10-10T00:00:00Z"
         },
         {
           "type": "MARKETING",
-          "version": "2026-09",
+          "version": "2026-10",
           "required": false,
           "url": "https://www.gachi-joopging.site/marketing",
           "agreed": false,

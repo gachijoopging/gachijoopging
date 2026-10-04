@@ -38,6 +38,7 @@ import {
   type HeatLevel,
 } from '../crew/calendar';
 import { formatDistance } from '../format';
+import { useBlockedUsers } from '../profile/blocked-users';
 
 type MockDay = (typeof MOCKS)['GET /crew/calendar']['data']['days'][number];
 /** 목의 example 은 리터럴 타입이라 수치를 number 로 넓힌다 */
@@ -60,6 +61,7 @@ export function CalendarPanel({ refreshKey }: { refreshKey: number }) {
   const [selected, setSelected] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
   const [meId, setMeId] = useState<string | null>(null);
+  const blocked = useBlockedUsers(meId);
   const latestMonth = useRef(month);
 
   const load = useCallback(
@@ -97,7 +99,9 @@ export function CalendarPanel({ refreshKey }: { refreshKey: number }) {
 
   const [year, monthNumber] = month.split('-').map(Number);
   const nextEnabled = canGoNextMonth(month, today);
-  const day: Day | undefined = calendar?.days.find((d) => d.date === selected);
+  const picked = calendar?.days.find((d) => d.date === selected);
+  // 차단한 사람의 활동 행만 숨긴다. 그 날의 합계는 그대로다
+  const day: Day | undefined = picked && { ...picked, activities: picked.activities.filter((a) => !blocked.has(a.user.id)) };
 
   const openUser = (id: string) =>
     id === meId ? router.push('/(tabs)/profile') : router.push({ pathname: '/users/[id]', params: { id } });

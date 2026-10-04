@@ -221,9 +221,9 @@ export default function UserProfileScreen() {
     } catch {
       setConfirm(null);
       setSnackbar(CONFIRM[action].fail);
-    } finally {
-      setBusy(false);
     }
+    // 내보내기는 위에서 떠났다. 떠나는 화면은 다시 그리지 않는다 — 전환 중 재렌더가 Fabric 을 죽인다
+    setBusy(false);
   };
 
   const pick = (row: SafetyRow) => {

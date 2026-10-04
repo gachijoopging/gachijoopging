@@ -15,7 +15,7 @@ export function AgreementFields({ items, onChange, failed, onRetry, disabled }: 
       {items?.map((item) => (
         <View key={item.type} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <View style={{ flex: 1 }}><Checkbox label={`${item.required ? '필수' : '선택'} ${labels[item.type]}`} checked={item.agreed} onChange={(agreed) => onChange(item.type, agreed)} disabled={disabled || failed} /></View>
-          <Button label="내용 보기" variant="ghost" size="sm" disabled={disabled} onPress={() => { setLinkFailed(false); void Linking.openURL(item.url).catch(() => setLinkFailed(true)); }} />
+          <Button label="내용 보기" accessibilityLabel={`${labels[item.type]} 전문 보기`} variant="ghost" size="sm" disabled={disabled} onPress={() => { setLinkFailed(false); void Linking.openURL(item.url).catch(() => setLinkFailed(true)); }} />
         </View>
       ))}
       {linkFailed ? <Txt variant="caption" tone="error">전문을 열지 못했어요. 다시 시도해 주세요.</Txt> : null}

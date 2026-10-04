@@ -1,8 +1,9 @@
-import type { ReactNode } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { useEffect, useState, type ReactNode } from 'react';
+import { ActivityIndicator, Image, View, type ImageSourcePropType } from 'react-native';
 import { radius } from '../../tokens/radius.ts';
-import { space } from '../../tokens/spacing.ts';
+import { size, space } from '../../tokens/spacing.ts';
 import { borderWidth } from '../../tokens/elevation.ts';
+import { LOADING_SHOW_AFTER_MS } from '../../tokens/motion.ts';
 import { useTheme } from '../theme.tsx';
 import { Txt } from './Text.tsx';
 import { Icon, type IconName } from './Icon.tsx';
@@ -45,11 +46,18 @@ export function Spinner() {
 /** 불러오는 중. 화면 전체를 덮지 말고 바뀌는 영역에만 두세요. */
 export function Loading({ label = '불러오는 중' }: { label?: string }) {
   const { colors } = useTheme();
+  const [shown, setShown] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setShown(true), LOADING_SHOW_AFTER_MS);
+    return () => clearTimeout(timer);
+  }, []);
+  // 짧은 불러오기에는 같은 높이의 빈 자리만 둔다. 나타날 때 아래 내용이 밀리지 않는다
   return (
     <View
-      accessibilityRole="progressbar"
-      accessibilityLabel={label}
-      style={{ alignItems: 'center', gap: space.md, paddingVertical: space['3xl'] }}
+      accessibilityRole={shown ? 'progressbar' : undefined}
+      accessibilityLabel={shown ? label : undefined}
+      importantForAccessibility={shown ? 'auto' : 'no-hide-descendants'}
+      style={{ alignItems: 'center', gap: space.md, paddingVertical: space['3xl'], opacity: shown ? 1 : 0 }}
     >
       <ActivityIndicator color={colors.deep} />
       <Txt variant="caption" tone="hint">
@@ -65,12 +73,15 @@ export function Loading({ label = '불러오는 중' }: { label?: string }) {
  */
 export function EmptyState({
   icon = 'inbox-outline',
+  image,
   title,
   description,
   actionLabel,
   onAction,
 }: {
   icon?: IconName;
+  /** 캐릭터 그림. 있으면 아이콘 대신 그린다 */
+  image?: ImageSourcePropType;
   title: string;
   description?: string;
   actionLabel?: string;
@@ -79,7 +90,11 @@ export function EmptyState({
   const { colors } = useTheme();
   return (
     <DashedBox>
-      <Icon name={icon} size={34} color={colors.inkHint} />
+      {image ? (
+        <Image source={image} accessible={false} resizeMode="contain" style={{ width: size.character, height: size.character }} />
+      ) : (
+        <Icon name={icon} size={34} color={colors.inkHint} />
+      )}
       <Txt variant="section" bold style={{ textAlign: 'center' }}>
         {title}
       </Txt>
