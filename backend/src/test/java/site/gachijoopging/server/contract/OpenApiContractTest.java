@@ -59,7 +59,7 @@ class OpenApiContractTest extends IntegrationTest {
 
     assertThat(산출물).isNotEmpty();
     assertThat(산출물)
-        .as("openapi.yaml 에 없는 경로를 서버가 서비스하고 있다 — 계약부터 고치고 앱 팀과 합의한다 (02-컨벤션 §15-11)")
+        .as("openapi.yaml 에 없는 경로를 서버가 서비스하고 있다 — 계약부터 고치고 앱 팀과 합의한다 (02-conventions §15-11)")
         .allSatisfy(경로 -> assertThat(계약).contains(경로));
   }
 
