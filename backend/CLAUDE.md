@@ -30,7 +30,7 @@ backend 를 바꿨으면 `./gradlew spotlessCheck test dockerTest` 를 다 돌�
 트랜잭션 밖에서 외부 호출·응답 조립(`@Transactional` 없음), `service` 는 트랜잭션 경계·규칙·정책,
 `client` 는 외부 연동이고 `facade` 와 `event` 리스너만 부른다. `facade`·`event`·`client`·`query` 는 필요한
 도메인만 둔다. `global/` 은 도메인에 안 속한 공통(보안·에러·설정). 각 자리의 책임은
-`docs/02-conventions.md` §3.
+`backend/docs/02-conventions.md` §3.
 
 `test/.../architecture/ArchitectureTest.java` 가 이 레이어링과 도메인 간 격리(타 도메인
 repository·client 주입 금지·타 도메인 엔티티를 필드로 안 씀)를 ArchUnit 으로 강제한다 — 위반하는
