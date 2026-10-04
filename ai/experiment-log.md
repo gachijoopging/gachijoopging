@@ -257,7 +257,7 @@ model.train(data="trash.yaml", imgsz=1024, batch=64,
 
 ## 5. 배포 이력 (`modelVersion`)
 
-서빙에 올라간 것만. **weights 변경 또는 보정 맵 변경 시 반드시 새 행을 추가한다** — `docs/백엔드/01-구조.md` 계약표에 명시된 계약이다.
+서빙에 올라간 것만. **weights 변경 또는 보정 맵 변경 시 반드시 새 행을 추가한다** — `docs/openapi.yaml` `POST /media` 와 `backend/docs/01-구조.md` §7 외부 연동에 명시된 계약이다.
 
 | `modelVersion` | run id | 보정 맵 | 배포일 | 비고 |
 |---|---|---|---|---|
