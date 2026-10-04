@@ -95,7 +95,7 @@ export default function PendingApprovalScreen() {
     setCancelDialog(false);
     try {
       await api.mutate('DELETE /crews/join-requests/mine');
-      finishOnboarding(navigation, '/crew-choice');
+      finishOnboarding(navigation, '/crew-choice', { flash: '가입 신청을 취소했어요.' });
     } catch {
       setBanner('신청을 취소하지 못했어요. 다시 시도해 주세요.');
     } finally {
@@ -108,8 +108,8 @@ export default function PendingApprovalScreen() {
 
   return (
     <Screen scroll refreshControl={<RefreshControl refreshing={refreshing} onRefresh={reload} />}>
-      <AppHeader title="가입 신청" action={<IconButton icon="cog-outline" label="설정" onPress={() => router.push('/settings')} />} />
-      <View style={{ alignItems: 'center' }}>
+      <AppHeader title="가입 신청" action={<IconButton icon="cog-outline" label="설정" disabled={cancelling} onPress={() => router.push('/settings')} />} />
+      <View style={{ alignItems: 'center' }} accessible accessibilityLabel="가입 신청 대기 중">
         <Icon name="timer-sand" />
         <Txt variant="title" bold>크루장 승인을 기다리고 있어요</Txt>
       </View>
@@ -122,7 +122,7 @@ export default function PendingApprovalScreen() {
             <Txt variant="title">{request.crew.name}</Txt>
             <Txt variant="caption" tone="muted">가입 신청을 보냈어요</Txt>
           </Card>
-          <Button label="신청 취소" variant="ghost" size="lg" fullWidth loading={cancelling} disabled={refreshing || cancelling} onPress={() => setCancelDialog(true)} />
+          <Button label="신청 취소" accessibilityLabel={`${request.crew.name} 가입 신청 취소`} variant="ghost" size="lg" fullWidth loading={cancelling} disabled={refreshing || cancelling} onPress={() => setCancelDialog(true)} />
           <Button label="다시 확인하기" variant="soft" size="lg" fullWidth loading={refreshing} disabled={cancelling} onPress={reload} />
         </>
       ) : null}

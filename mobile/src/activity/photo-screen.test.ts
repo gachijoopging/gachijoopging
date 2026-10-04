@@ -21,8 +21,8 @@ const mockPush = jest.fn();
 jest.mock('expo-router', () => ({ router: { push: (...a: unknown[]) => mockPush(...a), dismissTo: jest.fn(), back: jest.fn() }, useLocalSearchParams: () => ({ id: mockId }), useNavigation: () => ({ addListener: () => () => {} }), useFocusEffect: (fn: () => (() => void) | void) => require('react').useEffect(() => { const blur = fn(); if (blur) mockBlurs.push(blur); return blur; }, [fn]) }));
 jest.mock('../api/client', () => ({ ApiError: class extends Error {}, createMockClient: () => ({ mutate: (...a: unknown[]) => mockMutate(...a) }) }));
 jest.mock('./store', () => ({ getStored: () => ({ session: null }) }));
-jest.mock('react-native', () => ({ View: 'View', Image: 'Image', ScrollView: 'ScrollView', AppState: { currentState: 'active', addEventListener: () => ({ remove() {} }) } }));
-jest.mock('design-system/src', () => new Proxy({ space: {}, radius: {}, size: {}, borderWidth: {}, useTheme: () => ({ colors: { camera: {} } }), useReduceMotion: () => mockReduce }, { get: (target, key) => key in target ? target[key as keyof typeof target] : String(key) }));
+jest.mock('react-native', () => ({ View: 'View', Image: 'Image', ScrollView: 'ScrollView', Animated: { View: 'Animated.View', Value: class { setValue() {} }, spring: () => ({ start: (done: () => void) => setTimeout(done, 300) }) }, AppState: { currentState: 'active', addEventListener: () => ({ remove() {} }) } }));
+jest.mock('design-system/src', () => new Proxy({ motion: {}, space: {}, radius: {}, size: {}, borderWidth: {}, useTheme: () => ({ colors: { camera: {} } }), useReduceMotion: () => mockReduce }, { get: (target, key) => key in target ? target[key as keyof typeof target] : String(key) }));
 import Photo from '../../app/activity/[id]/photo';
 
 let tree: ReactTestRenderer;
@@ -77,8 +77,10 @@ test.each([[false, 1], [true, 0]])('셔터를 누른 순간 화면이 하얗게 
   await act(async () => { void tree.root.findByType('CaptureButton' as never).props.onPress(); });
   const flash = () => tree.root.findAll((n) => n.props.testID === 'shutter-flash');
   expect(flash()).toHaveLength(flashes);
-  await act(async () => finish({ uri: 'file://shot.jpg' }));
+  // 찍기가 아직 안 끝났어도 번쩍임은 걷힌다
+  await act(async () => { await new Promise((r) => setTimeout(r, 1000)); });
   expect(flash()).toHaveLength(0);
+  await act(async () => finish({ uri: 'file://shot.jpg' }));
   mockReduce = false;
 });
 

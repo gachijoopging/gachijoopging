@@ -42,7 +42,6 @@ jobs:
             HOURS=$(( (NOW - CREATED_TS) / 3600 ))
             [ "$HOURS" -lt 24 ] && continue
 
-            TEXT=":alarm_clock: **PR #${NUM} 리뷰 ${HOURS}시간째 무응답** — @${REVIEWERS}
-[${TITLE}](${URL})"
+            TEXT=":alarm_clock: **PR #${NUM} 리뷰 ${HOURS}시간째 무응답** — @${REVIEWERS}"$'\n'"[${TITLE}](${URL})"
             jq -nc --arg t "$TEXT" '{text:$t}' | curl -sS -f -X POST -H 'Content-Type: application/json' -d @- "$HOOK"
           done

@@ -73,6 +73,17 @@ describe('경로와 거리', () => {
     expect(s.segments[1]).toHaveLength(1);
   });
 
+  test('GPS 시각이 앞섰다가 돌아오면 경로를 이어 가되 멈춘 사이 떨어진 거리는 더하지 않는다', () => {
+    let s = walk(started(), 0, 5);
+    s = applyFix(s, fix(2400, 0.00006)); // 40분 앞선 시각
+    const before = s.distanceM;
+    // 시계가 돌아온 뒤 1km 떨어진 곳에서 다시 걷는다(초속 1.1m)
+    for (let sec = 10; sec <= 30; sec++) s = applyFix(s, fix(sec, 0.01 + sec * 0.00001));
+    expect(s.distanceM - before).toBeGreaterThan(5);
+    expect(s.distanceM - before).toBeLessThan(50);
+    expect(s.segments.length).toBeGreaterThan(1);
+  });
+
   test('걸음수 미측정(null)이면 GPS 거리를 그대로 쓴다', () => {
     const s = walk(started(), 0, 10);
     expect(s.steps).toBeNull();

@@ -54,7 +54,10 @@ export async function startTracking(): Promise<boolean> {
     const { title, body } = trackingNotice(session, Date.now());
     await Location.startLocationUpdatesAsync(TRACKING_TASK, {
       accuracy: Location.Accuracy.BestForNavigation,
-      timeInterval: 1_000,
+      // expo-location 은 앱이 앞에 있으면 위치마다 메인 스레드에서 JobScheduler 에 작업을 건다.
+      // 1초 간격이면 Android 16 에서 이 호출이 밀려 ANR(TaskJobService 20초 초과)이 났다.
+      // 소켓은 5초, GPS 상태 판단은 10초 기준이라 3초면 충분하다
+      timeInterval: 3_000,
       distanceInterval: 0,
       foregroundService: { notificationTitle: title, notificationBody: body, killServiceOnDestroy: false },
     });
@@ -108,8 +111,14 @@ export function applyEndedActivity(id: string, data: { id: string; status: strin
 
 let syncing: Promise<boolean> | null = null;
 let sending: Op | null = null;
+let lastError: string | null = null;
 
 export const isSendingItem = (id: string) => sending?.kind === 'items' && sending.items.some((item) => item.id === id);
+
+/** 활동이 서버에서 사라졌거나 내 것이 아니라는 응답. 재시도로는 풀리지 않으므로 화면이 이유를 보여야 한다 */
+export const GONE_CODES = ['NOT_FOUND', 'FORBIDDEN', 'NO_CREW'] as const;
+export const activityGoneCode = (): (typeof GONE_CODES)[number] | null =>
+  (GONE_CODES as readonly string[]).includes(lastError ?? '') ? (lastError as (typeof GONE_CODES)[number]) : null;
 
 /** 큐를 순서대로 비운다. 동시에 두 번 돌지 않는다 — 같은 줍기를 두 번 보내지 않게 */
 export function syncOutbox(client: ApiClient = api): Promise<boolean> {
@@ -122,6 +131,10 @@ export function syncOutbox(client: ApiClient = api): Promise<boolean> {
           sending = op;
           try {
             await send(client, op);
+            lastError = null;
+          } catch (error) {
+            lastError = error instanceof ApiError ? error.code : 'UNKNOWN';
+            throw error;
           } finally {
             sending = null;
           }

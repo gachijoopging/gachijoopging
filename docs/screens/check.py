@@ -8,11 +8,14 @@ INDEX = (ROOT / "design-system/src/index.ts").read_text(encoding="utf-8")
 EXPORTED = set(re.findall(r"export \{([^}]+)\}", INDEX.replace("\n", " ")))
 COMPONENTS = {n.strip().split(" as ")[-1] for grp in EXPORTED for n in grp.split(",") if n.strip()}
 PATHS = set(re.findall(r"^  (/[^:\s]+):", OPENAPI, re.M))
-FIELDS = set(re.findall(r"^\s+([a-zA-Z][a-zA-Z0-9]*):", OPENAPI, re.M))
+FIELDS = set(re.findall(r"^\s+([a-zA-Z][a-zA-Z0-9]*):", OPENAPI, re.M)) | set(re.findall(r"name: ([a-zA-Z][a-zA-Z0-9]*)", OPENAPI))
 
 
 def check(path: pathlib.Path) -> int:
     text = path.read_text(encoding="utf-8")
+    # 통합된 화면은 옮겨 간 화면 문서를 가리키는 안내만 남긴다
+    if path.name.startswith("_") or "(통합됨)" in text.splitlines()[0]:
+        print(f"{path}: skip"); return 0
     m = re.search(r"## 요소\n(.*?)\n## ", text, re.S)
     if not m:
         print(f"{path}: '## 요소' 표가 없다"); return 1

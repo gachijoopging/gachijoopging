@@ -67,6 +67,7 @@ export function NoticesPanel({ isLeader, refreshKey }: { isLeader: boolean; refr
               key={n.id}
               title={n.title}
               subtitle={`${n.preview}\n${meta(n)}`}
+              subtitleLines={3}
               chevron
               accessibilityLabel={`${n.title}, ${n.preview}, ${meta(n)}, 공지 상세 보기`}
               onPress={() => open(n.id)}

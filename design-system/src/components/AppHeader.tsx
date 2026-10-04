@@ -33,7 +33,8 @@ export function AppHeader({ title, subtitle, onBack, backDisabled, action, style
         <Txt variant="title" bold accessibilityRole="header">
           {title}
         </Txt>
-        {subtitle ? <Txt variant="caption" tone="muted">{subtitle}</Txt> : null}
+        {/* "읽지 않음 3" 처럼 바뀌는 상태 줄이라 바뀌면 읽어 준다 */}
+        {subtitle ? <Txt variant="caption" tone="muted" accessibilityLiveRegion="polite">{subtitle}</Txt> : null}
       </View>
       {action}
     </View>

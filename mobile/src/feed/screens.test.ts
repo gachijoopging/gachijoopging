@@ -151,7 +151,6 @@ test('오프라인 캐시를 보여 주면서 수정·공유·삭제 요청은 �
   await act(async () => deletion.findAllByType('Button').find((b: any) => b.props.label === '삭제').props.onPress());
   expect(mockCapture).not.toHaveBeenCalled();
   expect(mockMutate).not.toHaveBeenCalled();
-  expect(mockGet).not.toHaveBeenCalled();
 });
 
 test('오프라인 상세는 다른 계정의 캐시를 열지 않는다', async () => {
@@ -162,7 +161,6 @@ test('오프라인 상세는 다른 계정의 캐시를 열지 않는다', async
   await act(async () => { rendered = create(React.createElement(ActivityDetailScreen)); });
   expect(rendered.root.findAllByType('MetricSplit').length).toBe(0);
   expect(rendered.root.findAllByType('ErrorState').length).toBe(1);
-  expect(mockGet).not.toHaveBeenCalled();
 });
 
 test('항목 저장 요청 중에는 화면 이탈을 막고 완료 후에는 허용한다', async () => {

@@ -37,8 +37,10 @@ type Me = {
   isLeader: boolean;
   shareLocationDefault: boolean;
   notifyActivityStart: boolean;
+  /** 선택 동의. 서버 목록에 MARKETING 이 없으면 행을 그리지 않는다 */
+  marketing: { version: string; agreed: boolean } | null;
 };
-type SettingKey = 'shareLocationDefault' | 'notifyActivityStart';
+type SettingKey = 'shareLocationDefault' | 'notifyActivityStart' | 'marketing';
 type Kind = 'leave' | 'withdraw' | 'logout';
 type Modal =
   | { kind: 'blocked'; action: Kind }
@@ -96,6 +98,8 @@ export default function SettingsScreen() {
   const load = useCallback(async () => {
     try {
       const { data } = await api.get('GET /users/me');
+      // 동의 목록이 안 오면 마케팅 행만 숨긴다. 로그아웃·탈퇴까지 막을 이유는 없다
+      const marketing = await api.get('GET /users/me/agreements').then((r) => r.data.items.find((item) => item.type === 'MARKETING')).catch(() => undefined);
       rememberAccount(data);
       loadAccount(data.id);
       setMe({
@@ -105,6 +109,7 @@ export default function SettingsScreen() {
         isLeader: !!data.membership.crew?.isLeader,
         shareLocationDefault: data.settings.shareLocationDefault,
         notifyActivityStart: data.settings.notifyActivityStart,
+        marketing: marketing ? { version: marketing.version, agreed: marketing.agreed } : null,
       });
       setFailed(false);
     } catch {
@@ -119,14 +124,22 @@ export default function SettingsScreen() {
     if (!me || toggling.current.has(key)) return;
     toggling.current.add(key);
     setPendingSettings(new Set(toggling.current));
-    const before = me[key];
-    setMe((value) => value && { ...value, [key]: !before });
+    const before = key === 'marketing' ? !!me.marketing?.agreed : me[key];
+    const after = key === 'marketing' ? me.marketing && { ...me.marketing, agreed: !before } : !before;
+    setMe((value) => value && { ...value, [key]: after });
     try {
       if (offline) throw new ApiError('OFFLINE');
-      await api.mutate('PATCH /users/me', { [key]: !before });
-    } catch {
-      setMe((m) => (m ? { ...m, [key]: before } : m));
+      if (key === 'marketing') {
+        if (!me.marketing) return;
+        await api.mutate('PUT /users/me/agreements', { items: [{ type: 'MARKETING', version: me.marketing.version, agreed: !before }] });
+      } else {
+        await api.mutate('PATCH /users/me', { [key]: !before });
+      }
+    } catch (error) {
+      setMe((m) => (m ? { ...m, [key]: key === 'marketing' ? m.marketing && { ...m.marketing, agreed: before } : before } : m));
       setSnackbar('설정을 저장하지 못했어요.');
+      // 약관 버전이 올라 422 면 현재 버전 항목을 다시 받아 그린다 (openapi PUT /users/me/agreements)
+      if (key === 'marketing' && error instanceof ApiError && error.code === 'VALIDATION') void load();
     } finally {
       toggling.current.delete(key);
       setPendingSettings(new Set(toggling.current));
@@ -188,9 +201,9 @@ export default function SettingsScreen() {
       if (outcome === 'delegate') setModal({ kind: 'delegate' });
       else if (outcome === 'blocked') setModal({ kind: 'blocked', action });
       else setSnackbar(action === 'leave' ? '나가지 못했어요. 다시 시도해 주세요.' : '탈퇴하지 못했어요. 다시 시도해 주세요.');
-    } finally {
-      setBusy(false);
     }
+    // 성공하면 위에서 떠났다. 떠나는 화면은 다시 그리지 않는다 — 전환 중 재렌더가 Fabric 을 죽인다
+    setBusy(false);
   };
 
   const version = Constants.expoConfig?.version ?? '';
@@ -204,7 +217,7 @@ export default function SettingsScreen() {
       ) : (
         <>
           {failed || offline ? <Banner tone="warn">인터넷 연결을 확인해 주세요.</Banner> : null}
-          <Card padded={false}>
+          <Card style={{ paddingVertical: 0 }}>
             <ListRow title="프로필 수정" subtitle="닉네임과 사진을 바꿔요." onPress={() => router.push('/settings/profile')} />
             {me.member ? <>
             <ToggleRow
@@ -222,10 +235,19 @@ export default function SettingsScreen() {
               onToggle={() => toggle('notifyActivityStart')}
             />
             </> : null}
+            {me.marketing ? (
+              <ToggleRow
+                title="마케팅 정보 수신"
+                subtitle="새 기능과 이벤트 소식을 알려줘요."
+                value={me.marketing.agreed}
+                disabled={pendingSettings.has('marketing')}
+                onToggle={() => toggle('marketing')}
+              />
+            ) : null}
             <ListRow title="차단 관리" divider={false} onPress={() => router.push('/settings/blocks')} />
           </Card>
 
-          <Card padded={false}>
+          <Card style={{ paddingVertical: 0 }}>
             {me.member ? (
               <ListRow
                 title="크루 나가기"

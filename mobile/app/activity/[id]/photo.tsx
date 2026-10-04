@@ -8,12 +8,13 @@ import { useNetworkState } from 'expo-network';
 import { StatusBar } from 'expo-status-bar';
 import { router, useFocusEffect, useLocalSearchParams, useNavigation } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { AppState, Image, ScrollView, View } from 'react-native';
+import { Animated, AppState, Image, ScrollView, View } from 'react-native';
 import {
   Banner,
   Button,
   CaptureButton,
   EmptyState,
+  ErrorState,
   Loading,
   Icon,
   IconButton,
@@ -23,6 +24,7 @@ import {
   Tile,
   Txt,
   borderWidth,
+  motion,
   radius,
   size,
   space,
@@ -48,11 +50,14 @@ export default function TakePhotoScreen() {
   const [perm, setPerm] = useState<Perm>('unknown');
   const [shot, setShot] = useState<Shot | null>(() => shots.get(id) ?? null);
   const [shooting, setShooting] = useState(false);
+  const [flashing, setFlashing] = useState(false);
+  const flash = useRef(new Animated.Value(0)).current;
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const camera = useRef<CameraView>(null);
   const leaving = useRef(false);
   const [ready, setReady] = useState(false);
+  const [cameraFailed, setCameraFailed] = useState(false);
   const [focused, setFocused] = useState(false);
   const [appActive, setAppActive] = useState(AppState.currentState === 'active');
   useEffect(() => {
@@ -72,17 +77,19 @@ export default function TakePhotoScreen() {
 
   const readPerm = useCallback(async (ask: boolean) => {
     const p = ask ? await Camera.requestCameraPermissionsAsync() : await Camera.getCameraPermissionsAsync();
-    setPerm(p.granted ? 'granted' : p.canAskAgain ? (ask ? 'denied' : 'unknown') : 'blocked');
+    setPerm(p.granted ? 'granted' : !p.canAskAgain ? 'blocked' : p.status === 'undetermined' ? 'unknown' : 'denied');
     return p;
   }, []);
 
+  // 설정 앱에서 허용하고 돌아오면(appActive) 다시 읽어야 권한 카드가 사라진다
   useFocusEffect(
     useCallback(() => {
+      if (!appActive) return;
       void (async () => {
         const p = await readPerm(false);
         if (!p.granted && p.canAskAgain && p.status === 'undetermined') await readPerm(true);
       })();
-    }, [readPerm]),
+    }, [readPerm, appActive]),
   );
 
   useEffect(
@@ -104,6 +111,12 @@ export default function TakePhotoScreen() {
     setShooting(true);
     // 진동 끄기 설정을 따르는 시스템 햅틱이다. 지원하지 않는 기기에서는 조용히 넘어간다
     performAndroidHapticsAsync(AndroidHaptics.Context_Click).catch(() => {});
+    // 실기기는 찍는 데 1초 가까이 걸린다. 번쩍임은 찍기가 끝나길 기다리지 않고 바로 걷힌다
+    if (!reduceMotion) {
+      flash.setValue(1);
+      setFlashing(true);
+      Animated.spring(flash, { toValue: 0, ...motion.settle, useNativeDriver: true }).start(() => setFlashing(false));
+    }
     try {
       const here = getStored().session?.here;
       const takenAt = new Date().toISOString();
@@ -153,7 +166,7 @@ export default function TakePhotoScreen() {
         setSnackbar({ text: '이 사진은 올릴 수 없어요. 다시 찍어 주세요.' });
       } else if (code === 'NOT_FOUND') {
         leaving.current = true;
-        router.dismissTo({ pathname: '/activity/[id]', params: { id, flash: '이 활동을 찾지 못했어요' } });
+        router.dismissTo({ pathname: '/activity/[id]', params: { id, flash: '활동이 끝나 사진을 담을 수 없어요' } });
       } else {
         setSnackbar({ text: '사진을 올리지 못했어요', retry: true });
       }
@@ -180,6 +193,10 @@ export default function TakePhotoScreen() {
           onAction={() => (perm === 'blocked' ? void Linking.openSettings() : void readPerm(true))}
         />
       </View>
+    ) : cameraFailed ? (
+      <View style={{ flex: 1, justifyContent: 'center' }}>
+        <ErrorState title="카메라를 열 수 없어요" description="다른 앱이 카메라를 쓰고 있지 않은지 확인하고 다시 시도해 주세요." onRetry={() => setCameraFailed(false)} />
+      </View>
     ) : shot ? (
       <View style={{ flex: 1 }}>
         <Image source={{ uri: shot.uri }} style={{ flex: 1 }} resizeMode="cover" accessible accessibilityRole="image" accessibilityLabel="방금 찍은 사진" />
@@ -193,11 +210,11 @@ export default function TakePhotoScreen() {
     ) : (
       <View style={{ flex: 1 }} accessible accessibilityRole="image" accessibilityLabel="카메라 미리보기, 쓰레기를 화면 중앙에 놓아 주세요">
         {perm === 'granted' && focused && appActive ? (
-          <CameraView ref={camera} facing="back" style={{ flex: 1 }} onCameraReady={() => setReady(true)} />
+          <CameraView ref={camera} facing="back" style={{ flex: 1 }} onCameraReady={() => setReady(true)} onMountError={() => setCameraFailed(true)} />
         ) : null}
-        {/* 찍힌 순간을 눈으로도 알린다. 찍는 동안만 켜지므로 사진에는 들어가지 않는다 */}
-        {shooting && !reduceMotion ? (
-          <View testID="shutter-flash" pointerEvents="none" style={{ position: 'absolute', inset: 0, backgroundColor: colors.white }} />
+        {/* 찍힌 순간을 눈으로도 알린다. 미리보기 위에 얹는 막이라 사진에는 들어가지 않는다 */}
+        {flashing ? (
+          <Animated.View testID="shutter-flash" pointerEvents="none" style={{ position: 'absolute', inset: 0, backgroundColor: colors.white, opacity: flash }} />
         ) : null}
         {/* 프리뷰가 밝아도 안내가 읽히게 어두운 막을 얹는다. 사진에는 들어가지 않는다 */}
         <View

@@ -1,6 +1,7 @@
 jest.mock('../api/media', () => ({ mediaFile: async (uri: string) => ({ uri, name: 'photo.jpg', type: 'image/jpeg' }) }));
 import React from 'react';
 import SettingsScreen from '../../app/settings/index';
+import { ApiError } from '../api/client';
 import EditProfileScreen from '../../app/settings/profile';
 
 const { act, create } = require('react-test-renderer');
@@ -12,7 +13,7 @@ const mockDismiss = jest.fn();
 let mockUploadId = 0;
 let mockOffline = false;
 let mockStored = { session: null, ended: null, outbox: [] as unknown[] };
-jest.mock('../api/client', () => ({ ApiError: class extends Error {}, createMockClient: () => ({ get: (...args: unknown[]) => mockGet(...args), mutate: (...args: unknown[]) => mockMutate(...args) }) }));
+jest.mock('../api/client', () => ({ ApiError: class extends Error { code: string; constructor(code: string) { super(code); this.code = code; } }, createMockClient: () => ({ get: (...args: unknown[]) => mockGet(...args), mutate: (...args: unknown[]) => mockMutate(...args) }) }));
 jest.mock('expo-router', () => ({ router: { replace: jest.fn(), push: jest.fn(), back: jest.fn(), dismissTo: (...args: unknown[]) => mockDismiss(...args) }, useFocusEffect: (fn: () => void) => require('react').useEffect(fn, [fn]), useNavigation: () => ({ addListener: () => () => {}, dispatch: jest.fn() }) }));
 jest.mock('expo-crypto', () => ({ randomUUID: () => `upload-${++mockUploadId}` }));
 jest.mock('expo-image-picker', () => ({ launchImageLibraryAsync: async () => ({ canceled: false, assets: [{ uri: 'file:///profile.jpg' }] }) }));
@@ -25,11 +26,13 @@ jest.mock('design-system/src', () => new Proxy({ space: {}, size: {}, borderWidt
 
 let tree: ReturnType<typeof create>;
 const user = { id: 'u1', nickname: '테스터', intro: '', photoUrl: null, hasPassword: true, membership: { status: 'MEMBER', crew: { name: '크루', isLeader: false } }, settings: { shareLocationDefault: false, notifyActivityStart: false } };
+const agreements = { complete: true, items: [{ type: 'MARKETING', version: '2026-10', required: false, url: 'https://example.test/marketing', agreed: true, agreedAt: '2026-10-10T00:00:00Z' }] };
+
 beforeEach(() => {
   mockOffline = false;
   mockUploadId = 0;
   mockStored = { session: null, ended: null, outbox: [] };
-  mockGet.mockReset().mockImplementation((key: string) => Promise.resolve({ data: key === 'GET /users/me' ? user : null }));
+  mockGet.mockReset().mockImplementation((key: string) => Promise.resolve({ data: key === 'GET /users/me' ? user : key === 'GET /users/me/agreements' ? agreements : null }));
   mockMutate.mockReset().mockResolvedValue(undefined);
   mockForget.mockClear(); mockRemember.mockClear(); mockDismiss.mockClear();
 });
@@ -91,7 +94,7 @@ test('크루가 없거나 승인 대기여도 설정에 머물러 계정 행만 
   const { router } = require('expo-router');
   for (const status of ['NONE', 'PENDING']) {
     router.replace.mockClear();
-    mockGet.mockImplementation((key: string) => Promise.resolve({ data: key === 'GET /users/me' ? { ...user, membership: { status, crew: null } } : null }));
+    mockGet.mockImplementation((key: string) => Promise.resolve({ data: key === 'GET /users/me' ? { ...user, membership: { status, crew: null } } : key === 'GET /users/me/agreements' ? agreements : null }));
     await mount();
     expect(router.replace).not.toHaveBeenCalled();
     expect(row('크루 나가기')).toBeUndefined();
@@ -120,4 +123,44 @@ test('동기화가 남아 막혔을 때 줍깅 탭으로 바로 갈 수 있다',
   expect(mockDismiss).toHaveBeenCalledWith('/(tabs)/plogging');
   expect(router.replace).not.toHaveBeenCalled();
   expect(button('닫기')).toBeDefined();
+});
+
+test('크루 나가기가 실패하면 확인 버튼이 다시 눌린다', async () => {
+  mockMutate.mockImplementation((key: string) => key === 'POST /crew/leave' ? Promise.reject(new Error('network')) : Promise.resolve(undefined));
+  await mount();
+  await act(async () => row('크루 나가기').props.onPress());
+  await act(async () => button('나가기').props.onPress());
+  expect(mockDismiss).not.toHaveBeenCalled();
+  expect(button('나가기')?.props.loading).toBe(false);
+});
+
+test('마케팅 정보 수신을 끄면 MARKETING 한 항목만 PUT /users/me/agreements 로 보낸다', async () => {
+  await mount();
+  expect(row('마케팅 정보 수신').props.accessibilityState.checked).toBe(true);
+  await act(async () => { row('마케팅 정보 수신').props.onPress(); });
+  expect(row('마케팅 정보 수신').props.accessibilityState.checked).toBe(false);
+  expect(mockMutate).toHaveBeenCalledWith('PUT /users/me/agreements', { items: [{ type: 'MARKETING', version: '2026-10', agreed: false }] });
+});
+
+test('마케팅 저장이 실패하면 스위치를 되돌린다', async () => {
+  mockMutate.mockRejectedValue(new Error('500'));
+  await mount();
+  await act(async () => { row('마케팅 정보 수신').props.onPress(); });
+  expect(row('마케팅 정보 수신').props.accessibilityState.checked).toBe(true);
+});
+
+test('동의 목록 조회가 실패해도 설정 화면은 뜨고 마케팅 행만 숨긴다', async () => {
+  mockGet.mockImplementation((key: string) => key === 'GET /users/me/agreements' ? Promise.reject(new Error('500')) : Promise.resolve({ data: key === 'GET /users/me' ? user : null }));
+  await mount();
+  expect(row('마케팅 정보 수신')).toBeUndefined();
+  expect(row('로그아웃')).toBeDefined();
+});
+
+test('마케팅 저장이 422 면 되돌리고 동의 목록을 다시 받는다', async () => {
+  mockMutate.mockRejectedValue(new ApiError('VALIDATION'));
+  await mount();
+  mockGet.mockClear();
+  await act(async () => { row('마케팅 정보 수신').props.onPress(); });
+  expect(row('마케팅 정보 수신').props.accessibilityState.checked).toBe(true);
+  expect(mockGet).toHaveBeenCalledWith('GET /users/me/agreements');
 });

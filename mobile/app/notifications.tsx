@@ -19,6 +19,7 @@ import {
   Txt,
   space,
   type IconName,
+  characterEmpty,
 } from 'design-system/src';
 import { createMockClient, type ApiClient } from '../src/api/client';
 import { MOCKS } from '../src/api/mocks.generated';
@@ -71,8 +72,9 @@ export default function NotificationsScreen() {
     if (generation !== request.current) return;
     setRefreshing(false);
     if (list.status === 'rejected') {
-      setFailed(true);
+      // 당겨서 실패는 스낵바만 — 값은 그대로 두고 연결 배너까지 겹치지 않는다
       if (mode === 'pull') setSnackbar('새로고침에 실패했어요');
+      else setFailed(true);
       return;
     }
     setFailed(false);
@@ -126,7 +128,7 @@ export default function NotificationsScreen() {
 
   return (
     <Screen scroll refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load('pull')} />}>
-      <AppHeader title="알림" subtitle={subtitle} onBack={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)'))} />
+      <AppHeader title="알림" subtitle={subtitle} onBack={() => (router.canGoBack() ? router.back() : router.replace(membership === 'MEMBER' ? '/(tabs)' : '/crew-choice'))} />
 
       {notifyOff ? (
         <Banner
@@ -152,6 +154,7 @@ export default function NotificationsScreen() {
                   left={<IconCircle icon="account-plus-outline" tone="tint" size="sm" />}
                   right={<Badge label={pending.joinRequests} tone="deep" />}
                   chevron
+                  accessibilityLabel={`가입 신청 ${pending.joinRequests}건이 기다리고 있어요, 가입 신청 관리로 이동`}
                   onPress={() => router.push('/crew/join-requests')}
                 />
               ) : null}
@@ -161,6 +164,7 @@ export default function NotificationsScreen() {
                   left={<IconCircle icon="flag-outline" tone="tint" size="sm" />}
                   right={<Badge label={pending.reports} tone="danger" />}
                   chevron
+                  accessibilityLabel={`신고 ${pending.reports}건이 기다리고 있어요, 신고 처리로 이동`}
                   onPress={() => router.push('/crew/reports')}
                 />
               ) : null}
@@ -169,7 +173,7 @@ export default function NotificationsScreen() {
 
           {read.items.length === 0 ? (
             <EmptyState
-              icon="bell-outline"
+              image={characterEmpty.notification}
               title="알림이 없어요"
             />
           ) : (
@@ -195,7 +199,7 @@ export default function NotificationsScreen() {
                     right={item.unread ? <Dot tone="deep" size={7} /> : undefined}
                     emphasized={item.unread}
                     chevron
-                    accessibilityLabel={[item.title, item.detail, relativeTime(item.createdAt), item.unread ? '안 읽음' : '']
+                    accessibilityLabel={[item.unread ? '안 읽음' : '', item.title, item.detail, relativeTime(item.createdAt)]
                       .filter(Boolean)
                       .join(', ')}
                     onPress={() => open(item)}
