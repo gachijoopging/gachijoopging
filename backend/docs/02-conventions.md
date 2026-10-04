@@ -52,21 +52,8 @@ JSON 필드명은 openapi.yaml 이 정본이다 — camelCase, 철자 하나도 
 
 ## 3. 레이어 책임
 
-도메인 패키지는 역할 이름으로 평평하게 둔다. 의존 방향은 §12 의 ArchUnit 이 강제한다.
-여기는 각 자리가 **무엇을 하고 무엇을 하지 않는지**만 적는다.
-
-```
-domain/<feature>/
-├─ controller/
-├─ facade/       필요한 도메인만
-├─ service/
-├─ repository/
-├─ entity/
-├─ dto/
-├─ event/        필요한 도메인만
-├─ client/       필요한 도메인만
-└─ query/        필요한 도메인만
-```
+패키지 배치와 의존 방향은 `01-구조.md` §3·§5 가 정본이다. 여기는 각 자리가 **무엇을 하고
+무엇을 하지 않는지**만 적는다.
 
 - **`controller/`** — 경로·바인딩·Bean Validation·`@CurrentUser` 추출, 아래 계층 호출,
   `ApiResponse` 로 감싸 반환. **비즈니스 로직·조건 분기를 두지 않는다.**
@@ -369,7 +356,7 @@ Gradle 캐시는 `BUILD SUCCESSFUL` 을 아무것도 실행하지 않고 내준�
 > 클래스의 라이브 검사까지 스킵되고, 스킵된 테스트는 통과로 보인다.
 
 규칙은 **레이어(L)** 와 **경계(R)** 두 묶음이다. 레이어는 도메인 **안**의 의존 방향을,
-경계는 도메인 **사이**와 global 을 본다.
+경계는 도메인 **사이**와 global 을 본다. 규칙마다의 이유는 `01-구조.md` §5, 여기는 테스트 코드다.
 
 ```java
 String CONTROLLER = "..domain.*.controller..";
