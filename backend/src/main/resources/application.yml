@@ -11,7 +11,7 @@ spring:
     hibernate:
       # 스키마의 정본은 Flyway 마이그레이션이다 (02-컨벤션 §13)
       ddl-auto: validate
-    # 트랜잭션 경계는 코어 Service 다 (02-컨벤션 §10).
+    # 트랜잭션 경계는 서비스다 (02-컨벤션 §10).
     # 영속성 컨텍스트를 뷰 렌더링까지 열어두면 그 경계가 무의미해진다
     open-in-view: false
 

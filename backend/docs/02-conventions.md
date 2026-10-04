@@ -1,6 +1,6 @@
 # 백엔드 코딩 컨벤션 — 모놀리스 v1
 
-> 우선순위: **openapi.yaml 계약 > 01-구조.md 참조 규칙 > 이 문서 > 개인 취향.**
+> 우선순위: **openapi.yaml 계약 > 이 문서 > 개인 취향.**
 > 이 문서와 어긋나는 코드를 발견하면 고치는 쪽이 아니라 **먼저 MR 코멘트로 합의**한다.
 
 ## 1. 포맷과 주석
@@ -44,7 +44,7 @@ import 순서를 리뷰에서 언급하지 않는다.
 | 요청 DTO | `{동작}{대상}Request` | `SubmitActivityRequest`, `CreateMeetRequest` |
 | 응답 DTO | `{대상}Response` — openapi 스키마명과 최대한 일치 | `ActivitySummaryResponse`, `MeResponse` |
 | 외부 클라이언트 | `{대상}Client` | `KakaoLocalClient`, `FcmClient` |
-| DB | snake_case. 리소스 테이블은 복수형, 연결·불가산 명칭은 `03-데이터.md` 정본 사용 | `activity_items`, `meet_members`, `post_media`, `media` |
+| DB | snake_case. 리소스 테이블은 복수형, 연결·불가산 명칭은 `docs/ERD.md` 정본 사용 | `activity_items`, `meet_members`, `post_media`, `media` |
 | 테스트 메서드 | 한글 허용 — 시나리오가 읽히게 | `void 차단_상대의_글은_피드에서_빠진다()` |
 
 JSON 필드명은 openapi.yaml 이 정본이다 — camelCase, 철자 하나도 바꾸지 않는다
@@ -73,7 +73,7 @@ domain/<feature>/
   파사드가 있는 경로는 파사드를, 없으면 서비스를 부른다. **엔티티를 모른다** — 응답은 feature 루트 `dto/`. (entity 패키지의 enum 은 예외 — 쿼리 파라미터 바인딩에 쓴다)
 - **`dto/`** (feature 루트) — 요청·응답·도메인 간 전달 record. 엔티티 → dto 변환은 정적 팩토리
   `from(entity)`. 리포지토리 projection 과 타 도메인 읽기 계약이 여기 닿으므로 controller 아래에
-  두지 않는다 — 근거는 `01-구조.md` §3.
+  두지 않는다.
 - **`facade/`** — 여러 도메인의 서비스를 모아 응답 DTO 를 만들거나, 외부 HTTP 를 트랜잭션
   앞에 두른다. **`@Transactional` 을 붙이지 않는다**(§10) — 트랜잭션은 서비스가 연다.
   파사드는 파사드를 주입하지 않고 **엔티티도 모른다**(ArchUnit L2b) — 서비스가 dto 를 반환한다.
@@ -84,8 +84,8 @@ domain/<feature>/
 - **`service/XxxCleanupJob`** — `@Scheduled` 가 부르는 정리 작업. 자기 데이터의
   bulk 삭제라 트랜잭션을 열며, 그래서 `facade/` 가 아니라 서비스 옆이다.
 - **`service/`(`XxxService`)** — **트랜잭션 경계**, 비즈니스 규칙, 권한 검사
-  (소유자·호스트·멤버), 타 도메인 **서비스** 호출. 주입 가능한 타 도메인은 01-구조.md §4 의
-  DAG 표가 전부다. **HttpServletRequest·ResponseEntity 등 웹 타입을 모른다.**
+  (소유자·호스트·멤버), 타 도메인 **서비스** 호출. 타 도메인 서비스 주입이
+  순환하면 기동이 실패한다(§12). **HttpServletRequest·ResponseEntity 등 웹 타입을 모른다.**
   `controller`·`facade`·`client` 도 모른다(ArchUnit L2·L3).
 - **정책·계산기** (`service/` 안) — 상태도 트랜잭션도 없는 규칙. 스프링 빈이어도 좋지만
   **아무것도 주입하지 않거나 설정값만 받는다.** 리포지토리를 주입하기 시작했으면 그건 서비스다.
@@ -94,20 +94,20 @@ domain/<feature>/
 - **`repository/`** — 단순 조회는 Spring Data 파생 쿼리, 조건이 조합되거나
   도메인을 넘어 JOIN 하면 **QueryDSL `XxxQueryRepository`**, PostGIS 함수처럼 QueryDSL 로
   표현하기 번거로운 것은 native `@Query`, 관리자 동적 SQL·스트리밍은 `JdbcClient`.
-  타 도메인 테이블은 **읽기만**, 결과는 필요한 컬럼만 골라 내 dto 로 받는다(01-구조.md §5 R2).
+  타 도메인 테이블은 **읽기만**, 결과는 필요한 컬럼만 골라 내 dto 로 받는다(§12 R2).
   **비즈니스 판단을 두지 않는다** (쿼리 조건은 OK, "차단이면 어떻게" 는 서비스 몫).
 - **`client/`** — 외부 HTTP(RestClient)·스토리지·AI. 응답을 우리 dto 로 변환해서
   반환. 재시도·타임아웃은 클라이언트 안에서 끝낸다 — 호출부로 새 나가지 않게.
   **서비스는 이것을 모른다.** 부르는 것은 `facade/` 와 `event/` 의 커밋 후 리스너뿐이다 — 둘 다 트랜잭션 밖이다.
 - **`event/`** — 도메인 이벤트 record 와 `@TransactionalEventListener(AFTER_COMMIT)` 리스너(§10 나).
 - **`query/`** — 타 도메인이 재사용하는 QueryDSL `BooleanExpression` 만. 도메인이 밖에 공개하는
-  읽기 계약이라 안쪽으로 내리지 않는다(01-구조.md §3).
+  읽기 계약이라 안쪽으로 내리지 않는다.
 
 ## 4. DTO · 엔티티
 
 - DTO 는 전부 **record**. 변환은 정적 팩토리 `from(entity)` / `of(...)`.
 - **엔티티는 도메인 내부까지만.** service 의 public 메서드는 dto(또는 원시값)를 반환한다.
-  타 도메인에 넘길 때도 dto — entity 가 도메인 밖으로 나가는 순간 R2(01-구조.md §5)가 무너진다.
+  타 도메인에 넘길 때도 dto — entity 가 도메인 밖으로 나가는 순간 R2(§12)가 무너진다.
 - 엔티티 Lombok 기본은 `@Getter` + `@NoArgsConstructor(access = PROTECTED)`.
   **`@Setter`·`@Data`·`@ToString`·`@EqualsAndHashCode` 금지.** 상태 변경은 의도가 드러나는
   메서드로 (`meet.start()`, `item.reclassify(category)`).
@@ -232,7 +232,7 @@ native INSERT 는 영속성 컨텍스트를 우회하므로, 같은 트랜잭션
 
 - **활동 제출** — 멱등 단위가 활동이 아니라 **사진(photos[].id)** 이다. 사진마다 위 패턴을
   적용해 이미 있는 사진은 항목까지 통째로 스킵하고, 활동 행 자체는 upsert 한다.
-- **`POST /media`** — 응답의 `inference` 는 저장하지 않는 값이라(03-데이터.md §2 media)
+- **`POST /media`** — 응답의 `inference` 는 저장하지 않는 값이라(`docs/ERD.md` media)
   기존 행을 그대로 돌려주면 채울 원천이 없다. 재전송에도 **파일이 다시 실려 오므로**,
   media 행 INSERT 와 스토리지 업로드만 건너뛰고 **AI 추론은 매번 실행**해
   `MediaUploadResult.inference` 를 채운다. 멱등의 목적은 사진이 두 벌 생기지 않는 것이지
@@ -250,7 +250,7 @@ native INSERT 는 영속성 컨텍스트를 우회하므로, 같은 트랜잭션
   **모두** 탈락해(`< 기준` 도 `= 기준` 도 거짓) 페이지에서 조용히 사라진다. 예외가 나지 않아
   간헐적인 테스트 실패로만 드러난다 (S15P11A702-123).
 - 채팅(`/meets/{id}/messages`)만 의도적 예외 — int64 `after`/`nextAfter`
-  (설계는 `03-데이터.md` §5.5).
+  (`docs/realtime.md`).
 
 ## 10. 트랜잭션
 
@@ -289,7 +289,7 @@ public class ActivityFacade {
 같은 모양이 `POST /media`(업로드·추론 → 저장)와 소셜 로그인(토큰 검증 → 계정 생성)에 반복된다.
 
 **Redis 도 같은 규칙을 받는다.** presence 조회는 트랜잭션 밖에서 먼저 하고, 그 결과(후보 id
-목록)를 Postgres 쿼리에 넘긴다(03-데이터.md §5.3). 하트비트 저장은 Redis 만 건드리므로
+목록)를 Postgres 쿼리에 넘긴다(`docs/ERD.md` live_locations). 하트비트 저장은 Redis 만 건드리므로
 트랜잭션 자체가 없다 — `LiveService` 에 `@Transactional` 을 붙이지 않는다.
 
 **(나) 저장 → 커밋 후 발송** — 알림이 대표 사례다. notifications INSERT 는 본 트랜잭션,
@@ -448,7 +448,7 @@ noMethods().that().areDeclaredInClassesThat().resideInAPackage(FACADE)
 - Flyway `V{번호}__{설명}.sql` (번호는 정수 증가, 설명은 영문 소문자 스네이크).
   예: `V3__add_meet_invites.sql`.
 - **적용된 마이그레이션 파일은 수정 금지** — 고칠 게 있으면 다음 번호로.
-- JPA `ddl-auto: validate` 고정. 스키마의 정본은 마이그레이션이고 `03-데이터.md` 가 설명서다 —
+- JPA `ddl-auto: validate` 고정. 스키마의 정본은 마이그레이션이고 `docs/ERD.md` 가 설명서다 —
   테이블을 바꾸면 둘 다 바꾼다.
 
 ## 14. 설정
