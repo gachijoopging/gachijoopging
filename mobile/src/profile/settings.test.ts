@@ -25,11 +25,13 @@ jest.mock('design-system/src', () => new Proxy({ space: {}, size: {}, borderWidt
 
 let tree: ReturnType<typeof create>;
 const user = { id: 'u1', nickname: '테스터', intro: '', photoUrl: null, hasPassword: true, membership: { status: 'MEMBER', crew: { name: '크루', isLeader: false } }, settings: { shareLocationDefault: false, notifyActivityStart: false } };
+const agreements = { complete: true, items: [{ type: 'MARKETING', version: '2026-10', required: false, url: 'https://example.test/marketing', agreed: true, agreedAt: '2026-10-10T00:00:00Z' }] };
+
 beforeEach(() => {
   mockOffline = false;
   mockUploadId = 0;
   mockStored = { session: null, ended: null, outbox: [] };
-  mockGet.mockReset().mockImplementation((key: string) => Promise.resolve({ data: key === 'GET /users/me' ? user : null }));
+  mockGet.mockReset().mockImplementation((key: string) => Promise.resolve({ data: key === 'GET /users/me' ? user : key === 'GET /users/me/agreements' ? agreements : null }));
   mockMutate.mockReset().mockResolvedValue(undefined);
   mockForget.mockClear(); mockRemember.mockClear(); mockDismiss.mockClear();
 });
@@ -91,7 +93,7 @@ test('크루가 없거나 승인 대기여도 설정에 머물러 계정 행만 
   const { router } = require('expo-router');
   for (const status of ['NONE', 'PENDING']) {
     router.replace.mockClear();
-    mockGet.mockImplementation((key: string) => Promise.resolve({ data: key === 'GET /users/me' ? { ...user, membership: { status, crew: null } } : null }));
+    mockGet.mockImplementation((key: string) => Promise.resolve({ data: key === 'GET /users/me' ? { ...user, membership: { status, crew: null } } : key === 'GET /users/me/agreements' ? agreements : null }));
     await mount();
     expect(router.replace).not.toHaveBeenCalled();
     expect(row('크루 나가기')).toBeUndefined();
@@ -129,4 +131,19 @@ test('크루 나가기가 실패하면 확인 버튼이 다시 눌린다', async
   await act(async () => button('나가기').props.onPress());
   expect(mockDismiss).not.toHaveBeenCalled();
   expect(button('나가기')?.props.loading).toBe(false);
+});
+
+test('마케팅 정보 수신을 끄면 MARKETING 한 항목만 PUT /users/me/agreements 로 보낸다', async () => {
+  await mount();
+  expect(row('마케팅 정보 수신').props.accessibilityState.checked).toBe(true);
+  await act(async () => { row('마케팅 정보 수신').props.onPress(); });
+  expect(row('마케팅 정보 수신').props.accessibilityState.checked).toBe(false);
+  expect(mockMutate).toHaveBeenCalledWith('PUT /users/me/agreements', { items: [{ type: 'MARKETING', version: '2026-10', agreed: false }] });
+});
+
+test('마케팅 저장이 실패하면 스위치를 되돌린다', async () => {
+  mockMutate.mockRejectedValue(new Error('500'));
+  await mount();
+  await act(async () => { row('마케팅 정보 수신').props.onPress(); });
+  expect(row('마케팅 정보 수신').props.accessibilityState.checked).toBe(true);
 });
