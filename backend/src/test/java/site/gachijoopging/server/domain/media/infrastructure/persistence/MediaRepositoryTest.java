@@ -38,7 +38,9 @@ class MediaRepositoryTest extends IntegrationTest {
   }
 
   private UUID 사용자를_만든다() {
-    return jdbc.queryForObject("INSERT INTO users DEFAULT VALUES RETURNING id", UUID.class);
+    return jdbc.queryForObject(
+        "INSERT INTO users (id, updated_at) VALUES (gen_random_uuid(), now()) RETURNING id",
+        UUID.class);
   }
 
   private UUID 미디어를_만든다(UUID 주인) {

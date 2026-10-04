@@ -70,9 +70,8 @@ class RefreshTokenCleanupJobTest extends IntegrationTest {
 
   private UUID 사용자를_만든다(String 이메일) {
     return jdbcTemplate.queryForObject(
-        "INSERT INTO users (email, nickname) VALUES (?, ?) RETURNING id",
+        "INSERT INTO users (id, email, updated_at) VALUES (gen_random_uuid(), ?, now()) RETURNING id",
         UUID.class,
-        이메일,
-        이메일.substring(0, 이메일.indexOf('@')));
+        이메일);
   }
 }
