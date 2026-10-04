@@ -112,7 +112,21 @@ public class UserService implements AccountAuthorityLoader {
         me.getPasswordHash() != null,
         new MeResponse.Linked(me.getKakaoId() != null, me.getGoogleSub() != null),
         new MeResponse.Settings(me.isShareLocationDefault(), me.isNotifyActivityStart()),
-        new MeResponse.Membership(MeResponse.MembershipStatus.NONE, null));
+        membership(userId));
+  }
+
+  private MeResponse.Membership membership(UUID userId) {
+    return userRepository
+        .findMembership(userId)
+        .map(
+            row ->
+                new MeResponse.Membership(
+                    MeResponse.MembershipStatus.MEMBER,
+                    new MeResponse.MembershipCrew(
+                        row.getCrewId().toString(),
+                        row.getCrewName(),
+                        row.getLeaderId().equals(userId))))
+        .orElse(new MeResponse.Membership(MeResponse.MembershipStatus.NONE, null));
   }
 
   @Transactional
