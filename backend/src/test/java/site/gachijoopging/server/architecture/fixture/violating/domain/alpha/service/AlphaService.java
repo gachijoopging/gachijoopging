@@ -1,6 +1,6 @@
-package site.gachijoopging.server.architecture.fixture.violating.domain.alpha.domain.service;
+package site.gachijoopging.server.architecture.fixture.violating.domain.alpha.service;
 
-import site.gachijoopging.server.architecture.fixture.violating.domain.beta.infrastructure.persistence.BetaRepository;
+import site.gachijoopging.server.architecture.fixture.violating.domain.beta.repository.BetaRepository;
 
 class AlphaService {
 

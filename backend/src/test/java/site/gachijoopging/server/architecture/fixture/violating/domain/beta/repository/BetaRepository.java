@@ -1,3 +1,3 @@
-package site.gachijoopging.server.architecture.fixture.violating.domain.beta.infrastructure.persistence;
+package site.gachijoopging.server.architecture.fixture.violating.domain.beta.repository;
 
 public interface BetaRepository {}

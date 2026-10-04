@@ -1,3 +1,3 @@
-package site.gachijoopging.server.architecture.fixture.compliant.domain.alpha.infrastructure.persistence;
+package site.gachijoopging.server.architecture.fixture.compliant.domain.alpha.repository;
 
 public interface AlphaRepository {}
