@@ -30,12 +30,12 @@ import 순서를 리뷰에서 언급하지 않는다.
 |---|---|---|
 | 패키지 | 소문자 단수형 | `domain.activity`, `domain.post` |
 | 컨트롤러 | `{도메인}Controller` — 기본 도메인당 1개, 300줄 넘으면 리소스 단위 분리 | `ActivityController` |
-| 서비스(코어) | `{도메인}Service` — 자기 도메인 데이터·트랜잭션 경계 | `MeetService` |
-| 서비스(조립) | `{만드는 리소스}QueryService`(응답 조립) · `{리소스}CommandService`(외부 호출 → 저장). 필요한 곳만 만들고, **그 경로를 담당하는 도메인의 `application/`** 에 둔다 | `MeetQueryService`, `MediaCommandService`, `StatsQueryService`(neighborhood 패키지) |
-| 정리 작업 | `{대상}CleanupJob` — 스케줄러가 부르는 것. `domain/service/` | `PresenceCleanupJob`, `StaleMeetCleanupJob` |
-| 정책·계산기 | 상태도 트랜잭션도 없는 규칙. 접미사를 강제하지 않고 하는 일로 이름 짓는다. `domain/policy/` | `NicknamePolicy`, `PickupGrid`, `MediaSignedUrl` |
+| 서비스 | `{도메인}Service` — 자기 도메인 데이터·트랜잭션 경계 | `MeetService` |
+| 파사드 | `{도메인}Facade` — 응답 조립·외부 호출 → 저장. 명령·조회 구분은 메서드 이름으로 한다. 필요한 곳만 만들고, **그 경로를 담당하는 도메인의 `facade/`** 에 둔다 | `MediaFacade`, `AuthFacade` |
+| 정리 작업 | `{대상}CleanupJob` — 스케줄러가 부르는 것. `service/` | `PresenceCleanupJob`, `StaleMeetCleanupJob` |
+| 정책·계산기 | 상태도 트랜잭션도 없는 규칙. 접미사를 강제하지 않고 하는 일로 이름 짓는다. `service/` | `NicknamePolicy`, `PickupGrid`, `MediaSignedUrl` |
 | 도메인 이벤트 | `{사건}Event` + `{사건}Listener`. `event/` | `NotificationPushEvent`, `MediaQuarantineListener` |
-| 리포지토리 | `{엔티티}Repository` — Spring Data 인터페이스. `infrastructure/persistence/` | `ActivityPhotoRepository` |
+| 리포지토리 | `{엔티티}Repository` — Spring Data 인터페이스. `repository/` | `ActivityPhotoRepository` |
 | 조회 전용 리포지토리 | `{대상}QueryRepository` — QueryDSL·native·JdbcClient 로 짠 조회 전용. **이쪽이 기본이다** | `ActivityQueryRepository`, `AdminExportQueryRepository` |
 | Spring Data 확장 | `{엔티티}RepositoryCustom` + `{엔티티}RepositoryImpl` — **같은 인터페이스로 파생 쿼리와 QueryDSL 을 같이 노출해야 할 때만.** 현재 `Meet`·`Notification`·`Post` 셋뿐이다 | `PostRepositoryCustom` |
 | 조회 결과 row | `{대상}Row` — projection 전용 record. 리포지토리 옆 | `ChatMessageRow` |
@@ -52,42 +52,55 @@ JSON 필드명은 openapi.yaml 이 정본이다 — camelCase, 철자 하나도 
 
 ## 3. 레이어 책임
 
-패키지 배치와 의존 방향은 `01-구조.md` §3·§5 가 정본이다. 여기는 각 자리가 **무엇을 하고
-무엇을 하지 않는지**만 적는다.
+도메인 패키지는 역할 이름으로 평평하게 둔다. 의존 방향은 §12 의 ArchUnit 이 강제한다.
+여기는 각 자리가 **무엇을 하고 무엇을 하지 않는지**만 적는다.
 
-- **`api/controller`** — 경로·바인딩·Bean Validation·`@CurrentUser` 추출, 아래 계층 호출,
+```
+domain/<feature>/
+├─ controller/
+├─ facade/       필요한 도메인만
+├─ service/
+├─ repository/
+├─ entity/
+├─ dto/
+├─ event/        필요한 도메인만
+├─ client/       필요한 도메인만
+└─ query/        필요한 도메인만
+```
+
+- **`controller/`** — 경로·바인딩·Bean Validation·`@CurrentUser` 추출, 아래 계층 호출,
   `ApiResponse` 로 감싸 반환. **비즈니스 로직·조건 분기를 두지 않는다.**
-  조립이 있는 경로는 조립을, 없으면 코어를 부른다. **엔티티를 모른다** — 응답은 feature 루트 `dto/`. (entity 패키지의 enum 은 예외 — 쿼리 파라미터 바인딩에 쓴다)
+  파사드가 있는 경로는 파사드를, 없으면 서비스를 부른다. **엔티티를 모른다** — 응답은 feature 루트 `dto/`. (entity 패키지의 enum 은 예외 — 쿼리 파라미터 바인딩에 쓴다)
 - **`dto/`** (feature 루트) — 요청·응답·도메인 간 전달 record. 엔티티 → dto 변환은 정적 팩토리
-  `from(entity)`. 리포지토리 projection 과 타 도메인 읽기 계약이 여기 닿으므로 api 아래에
+  `from(entity)`. 리포지토리 projection 과 타 도메인 읽기 계약이 여기 닿으므로 controller 아래에
   두지 않는다 — 근거는 `01-구조.md` §3.
-- **`application/command`·`application/query`** — 여러 도메인의 코어를 모아 응답 DTO 를
-  만들거나(Query), 외부 HTTP 를 트랜잭션 앞에 두른다(Command).
-  **`@Transactional` 을 붙이지 않는다**(§10) — 트랜잭션은 코어가 연다.
-  조립은 조립을 주입하지 않고 **엔티티도 모른다**(ArchUnit L2b) — 코어가 dto 를 반환한다.
-  **쓰기 리포지토리는 직접 부르지 않는다** — 쓰기는 코어를
+- **`facade/`** — 여러 도메인의 서비스를 모아 응답 DTO 를 만들거나, 외부 HTTP 를 트랜잭션
+  앞에 두른다. **`@Transactional` 을 붙이지 않는다**(§10) — 트랜잭션은 서비스가 연다.
+  파사드는 파사드를 주입하지 않고 **엔티티도 모른다**(ArchUnit L2b) — 서비스가 dto 를 반환한다.
+  **쓰기 리포지토리는 직접 부르지 않는다** — 쓰기는 서비스를
   거친다. 단 **같은 도메인의 읽기 전용 `XxxQueryRepository` 는 직접 주입해도 된다**
-  (`MeetQueryService`·`StatsQueryService` 가 그렇다) — 조회 결과를 코어가 그대로 전달만
-  하는 메서드를 억지로 만드는 것보다 낫다. 읽기라 트랜잭션 없이도 안전하다.
-- **`domain/service/XxxCleanupJob`** — `@Scheduled` 가 부르는 정리 작업. 자기 데이터의
-  bulk 삭제라 트랜잭션을 열며, 그래서 조립(`application/`)이 아니라 코어 옆이다.
-- **`domain/service`(코어 `XxxService`)** — **트랜잭션 경계**, 비즈니스 규칙, 권한 검사
-  (소유자·호스트·멤버), 타 도메인 **코어** 호출. 주입 가능한 타 도메인은 01-구조.md §4 의
+  — 조회 결과를 서비스가 그대로 전달만 하는 메서드를 억지로 만드는 것보다 낫다.
+  읽기라 트랜잭션 없이도 안전하다.
+- **`service/XxxCleanupJob`** — `@Scheduled` 가 부르는 정리 작업. 자기 데이터의
+  bulk 삭제라 트랜잭션을 열며, 그래서 `facade/` 가 아니라 서비스 옆이다.
+- **`service/`(`XxxService`)** — **트랜잭션 경계**, 비즈니스 규칙, 권한 검사
+  (소유자·호스트·멤버), 타 도메인 **서비스** 호출. 주입 가능한 타 도메인은 01-구조.md §4 의
   DAG 표가 전부다. **HttpServletRequest·ResponseEntity 등 웹 타입을 모른다.**
-  `api`·`application`·`infrastructure/client` 도 모른다(01-구조.md §5 R1).
-- **`domain/policy`** — 상태도 트랜잭션도 없는 규칙·계산기. 스프링 빈이어도 좋지만 **아무것도
-  주입하지 않거나 설정값만 받는다.** 리포지토리를 주입하기 시작했으면 그건 코어다.
-- **`domain/entity`** — JPA 엔티티. 도메인 밖으로 나가지 않는다(§4).
-- **`infrastructure/persistence`** — 단순 조회는 Spring Data 파생 쿼리, 조건이 조합되거나
+  `controller`·`facade`·`client` 도 모른다(ArchUnit L2·L3).
+- **정책·계산기** (`service/` 안) — 상태도 트랜잭션도 없는 규칙. 스프링 빈이어도 좋지만
+  **아무것도 주입하지 않거나 설정값만 받는다.** 리포지토리를 주입하기 시작했으면 그건 서비스다.
+  폴더를 따로 두지 않는다 — 서비스와 같은 의존 규칙을 지키므로 나눌 이유가 없다.
+- **`entity/`** — JPA 엔티티. 도메인 밖으로 나가지 않는다(§4).
+- **`repository/`** — 단순 조회는 Spring Data 파생 쿼리, 조건이 조합되거나
   도메인을 넘어 JOIN 하면 **QueryDSL `XxxQueryRepository`**, PostGIS 함수처럼 QueryDSL 로
   표현하기 번거로운 것은 native `@Query`, 관리자 동적 SQL·스트리밍은 `JdbcClient`.
   타 도메인 테이블은 **읽기만**, 결과는 필요한 컬럼만 골라 내 dto 로 받는다(01-구조.md §5 R2).
-  **비즈니스 판단을 두지 않는다** (쿼리 조건은 OK, "차단이면 어떻게" 는 코어 몫).
-- **`infrastructure/client`** — 외부 HTTP(RestClient)·스토리지·AI. 응답을 우리 dto 로 변환해서
+  **비즈니스 판단을 두지 않는다** (쿼리 조건은 OK, "차단이면 어떻게" 는 서비스 몫).
+- **`client/`** — 외부 HTTP(RestClient)·스토리지·AI. 응답을 우리 dto 로 변환해서
   반환. 재시도·타임아웃은 클라이언트 안에서 끝낸다 — 호출부로 새 나가지 않게.
-  **코어는 이것을 모른다.** 부르는 것은 `application/command` 다.
-- **`event`** — 도메인 이벤트 record 와 `@TransactionalEventListener(AFTER_COMMIT)` 리스너(§10 나).
-- **`query`** — 타 도메인이 재사용하는 QueryDSL `BooleanExpression` 만. 도메인이 밖에 공개하는
+  **서비스는 이것을 모른다.** 부르는 것은 `facade/` 와 `event/` 의 커밋 후 리스너뿐이다 — 둘 다 트랜잭션 밖이다.
+- **`event/`** — 도메인 이벤트 record 와 `@TransactionalEventListener(AFTER_COMMIT)` 리스너(§10 나).
+- **`query/`** — 타 도메인이 재사용하는 QueryDSL `BooleanExpression` 만. 도메인이 밖에 공개하는
   읽기 계약이라 안쪽으로 내리지 않는다(01-구조.md §3).
 
 ## 4. DTO · 엔티티
@@ -157,10 +170,10 @@ JSON 필드명은 openapi.yaml 이 정본이다 — camelCase, 철자 하나도 
   | TOKEN_EXPIRED | 401 | 앱이 refresh 후 1회 재시도 |
   | INVALID_CREDENTIALS | 401 | 계정 존재 여부 비노출 — 없는 계정도 이 코드 |
   | FORBIDDEN | 403 | |
-  | ACCOUNT_SUSPENDED | 403 | **message 를 사용자에게 그대로 보여주는 유일한 코드** |
   | NOT_FOUND | 404 | |
   | METHOD_NOT_ALLOWED | 405 | 경로는 맞고 메서드만 틀린 요청 — 앱은 재시도 금지 |
   | CONFLICT | 409 | 중복 이메일 등 |
+  | NICKNAME_TAKEN | 409 | 닉네임 중복 |
   | MEET_FULL | 409 | 정원 초과 |
   | VALIDATION | 422 | 앱은 재시도 금지 |
   | RATE_LIMITED | 429 | Retry-After 헤더 필수 |
@@ -171,7 +184,7 @@ JSON 필드명은 openapi.yaml 이 정본이다 — camelCase, 철자 하나도 
 - 받는 쪽은 `GlobalExceptionHandler`(@RestControllerAdvice) 한 곳. Bean Validation 실패
   (MethodArgumentNotValid·ConstraintViolation)와 enum 바인딩 실패 → VALIDATION 422,
   나머지 미처리 예외 → INTERNAL 500 + error 로그.
-- message 는 개발자용 한 줄(한국어 OK) — 단 ACCOUNT_SUSPENDED 만 사용자에게 보일 문장으로.
+- message 는 개발자용 한 줄(한국어 OK).
 - requestId: `RequestIdFilter` 가 요청마다 UUID 생성 → MDC(`requestId`) → 모든 로그 라인과
   에러 봉투에 같은 값. 컨트롤러·서비스는 이 값을 만질 일이 없다.
 
@@ -213,7 +226,7 @@ SELECT 까지 거부하고, 스프링도 rollback-only 를 마킹해 커밋 시 
 개발 중에는 멀쩡해 보인다. `ON CONFLICT DO NOTHING` 은 애초에 예외를 만들지 않는다.
 
 native INSERT 는 영속성 컨텍스트를 우회하므로, 같은 트랜잭션에서 그 행을 엔티티로 다시
-읽어야 하면 `@Modifying(clearAutomatically = true)` 를 쓰거나 조회를 조립 계층으로 미룬다.
+읽어야 하면 `@Modifying(clearAutomatically = true)` 를 쓰거나 조회를 `facade/` 로 미룬다.
 
 **예외 2개:**
 
@@ -241,23 +254,23 @@ native INSERT 는 영속성 컨텍스트를 우회하므로, 같은 트랜잭션
 
 ## 10. 트랜잭션
 
-- 경계는 **코어 Service 의 public 메서드**. 조회는 `@Transactional(readOnly = true)`.
-  **조립 Service 에는 `@Transactional` 을 붙이지 않는다** — 조립이 트랜잭션을 열면 그 안에서
+- 경계는 **서비스의 public 메서드**. 조회는 `@Transactional(readOnly = true)`.
+  **파사드에는 `@Transactional` 을 붙이지 않는다** — 파사드가 트랜잭션을 열면 그 안에서
   외부 HTTP 를 부르게 되고, 아래 규칙이 무너진다.
-- 타 도메인 코어 호출은 기본 전파(REQUIRED)로 같은 트랜잭션에 합류한다 — 명세가 "같은
+- 타 도메인 서비스 호출은 기본 전파(REQUIRED)로 같은 트랜잭션에 합류한다 — 명세가 "같은
   트랜잭션에서" 라고 못 박은 것(모임 종료 시 대기 요청 만료 등)이 자연히 보장된다.
 - **트랜잭션 안에서 외부 HTTP 를 부르지 않는다** (AI 서버·FCM·카카오·LiveKit·스토리지).
   커넥션을 물고 수 초를 기다리게 되고, 실패해도 롤백해 줄 수 없다. 방향은 둘뿐이다:
 
-**(가) 외부 호출 → 저장** — 조립 `XxxCommandService` 가 외부를 부르고, 결과를 **파라미터로**
-코어에 넘긴다. 코어의 트랜잭션은 그때 처음 열린다:
+**(가) 외부 호출 → 저장** — 파사드 `XxxFacade` 가 외부를 부르고, 결과를 **파라미터로**
+서비스에 넘긴다. 서비스의 트랜잭션은 그때 처음 열린다:
 
 ```java
 @Service                                   // ← @Transactional 없음
 @RequiredArgsConstructor
-public class ActivityCommandService {
+public class ActivityFacade {
   private final KakaoLocalClient kakaoLocalClient;   // global/client
-  private final ActivityService activityService;     // 코어
+  private final ActivityService activityService;     // 서비스
 
   public ActivitySubmitResponse submit(UUID me, ActivitySubmitRequest request) {
     Map<UUID, String> 사진별_동네 = 역지오코딩한다(request);      // 트랜잭션 밖
@@ -267,11 +280,11 @@ public class ActivityCommandService {
 ```
 
 `ActivityService.submit()` 한 번이 `activities` 와 자식 행들을 **한 트랜잭션에서** 넣는다.
-원자성이 필요한 쓰기는 언제나 코어 메서드 **하나** 안에 있어야 한다.
+원자성이 필요한 쓰기는 언제나 서비스 메서드 **하나** 안에 있어야 한다.
 
 > ⚠️ **같은 클래스 안에서 자기 메서드를 부르며 `@Transactional` 을 붙이지 않는다.**
 > 프록시가 어노테이션을 무시해 저장이 문장 단위로 쪼개진다 — 컴파일도 되고 동작도 하므로
-> **조용히 원자성만 사라진다.** 트랜잭션을 나누려면 반드시 다른 빈(코어)으로 뺀다.
+> **조용히 원자성만 사라진다.** 트랜잭션을 나누려면 반드시 다른 빈(서비스)으로 뺀다.
 
 같은 모양이 `POST /media`(업로드·추론 → 저장)와 소셜 로그인(토큰 검증 → 계정 생성)에 반복된다.
 
@@ -300,7 +313,7 @@ FCM 발송은 `@TransactionalEventListener(phase = AFTER_COMMIT)`. 푸시가 유
 | 단위 | JUnit5 + Mockito, Spring 없이 | service 비즈니스 규칙 — 머지 게이트의 본체 | 항상 |
 | 리포지토리·통합 | `@SpringBootTest` + Testcontainers(PostGIS + Redis) | 쿼리·마이그레이션·멱등 동시성·presence 집계 | `@Tag("docker")` — `backend:test` 에서는 제외, `backend:dockerTest` 잡이 GitLab services 로 돌린다(S15P11A702-177) |
 | 계약 | SpringDoc 산출물 ↔ docs/openapi.yaml · docs/openapi-admin.yaml 대조 | 모바일·관리자 경로와 메서드 누락 | 항상 |
-| 구조 | ArchUnit | 01-구조.md §5 — 레이어 `L1~L4` · 경계 `R2~R4` | 항상 |
+| 구조 | ArchUnit | 아래 — 레이어 `L0~L4` · 경계 `R2~R4` | 항상 |
 | 커버리지 | JaCoCo | 목표 80% — 서비스·도메인 규칙 중심. 설정·DTO·생성 코드는 의미 없다 | `jacocoTestReport` |
 
 **커버리지는 `test` 와 `dockerTest` 를 합산해야 한다.** 둘이 나뉘어 있어(위) exec 파일도
@@ -353,44 +366,49 @@ Gradle 캐시는 `BUILD SUCCESSFUL` 을 아무것도 실행하지 않고 내준�
 경계는 도메인 **사이**와 global 을 본다.
 
 ```java
-// 레이어 패턴 — feature 안쪽 `domain` 은 바깥 `server.domain` 과 이름이 겹친다.
-// `*` 로 feature 한 칸을 소비해야 둘이 갈린다. `..domain..` 은 feature 코드 전부를 삼킨다.
-String API            = "..domain.*.api..";
-String APPLICATION    = "..domain.*.application..";
-String CORE           = "..domain.*.domain..";
-String INFRASTRUCTURE = "..domain.*.infrastructure..";
-String PERSISTENCE    = "..domain.*.infrastructure.persistence..";
-String CLIENT         = "..domain.*.infrastructure.client..";
-String ENTITY         = "..domain.*.domain.entity..";
+String CONTROLLER = "..domain.*.controller..";
+String FACADE     = "..domain.*.facade..";
+String SERVICE    = "..domain.*.service..";
+String REPOSITORY = "..domain.*.repository..";
+String ENTITY     = "..domain.*.entity..";
+String CLIENT     = "..domain.*.client..";
+String EVENT      = "..domain.*.event..";
 
-// L0 — 모든 도메인이 api 와 infrastructure 를 갖는다 (아래 주의 참고)
-// L1 — api 는 영속을 직접 부르지 않는다 / 엔티티를 노출하지 않는다
-noClasses().that().resideInAPackage(API).should().dependOnClassesThat().resideInAPackage(PERSISTENCE);
-noClasses().that().resideInAPackage(API).should().dependOnClassesThat().resideInAPackage(ENTITY);
-// L2 — 안쪽은 바깥을 모른다
-noClasses().that().resideInAPackage(CORE)
-    .should().dependOnClassesThat().resideInAnyPackage(API, APPLICATION);
-// L3 — 코어는 외부 시스템 어댑터를 모른다 (영속은 예외 — 01-구조.md §3)
-noClasses().that().resideInAPackage(CORE).should().dependOnClassesThat().resideInAPackage(CLIENT);
-// L4 — infrastructure 는 api 를 모른다
-noClasses().that().resideInAPackage(INFRASTRUCTURE).should().dependOnClassesThat().resideInAPackage(API);
+// L0 — repository 가 있는 도메인은 controller 도 있다 (아래 주의 참고)
+// L1 — controller 는 repository 를 직접 부르지 않는다 / 엔티티를 노출하지 않는다
+noClasses().that().resideInAPackage(CONTROLLER).should().dependOnClassesThat().resideInAPackage(REPOSITORY);
+noClasses().that().resideInAPackage(CONTROLLER).should().dependOnClassesThat().resideInAPackage(ENTITY);
+// L2 — 안쪽은 바깥을 모른다 / L2b — facade 는 엔티티를 모른다
+noClasses().that().resideInAnyPackage(SERVICE, ENTITY)
+    .should().dependOnClassesThat().resideInAnyPackage(CONTROLLER, FACADE);
+noClasses().that().resideInAPackage(FACADE).should().dependOnClassesThat().resideInAPackage(ENTITY);
+// L3 — client 는 트랜잭션 밖(facade·커밋 후 event 리스너)에서만 부른다 (§10)
+classes().that().resideInAPackage(CLIENT)
+    .should().onlyHaveDependentClassesThat().resideInAnyPackage(FACADE, EVENT, CLIENT);
+// L3b — entity 는 repository·client 를 모른다
+noClasses().that().resideInAPackage(ENTITY)
+    .should().dependOnClassesThat().resideInAnyPackage(REPOSITORY, CLIENT);
+// L4 — repository·client 는 controller 를 모른다
+noClasses().that().resideInAnyPackage(REPOSITORY, CLIENT)
+    .should().dependOnClassesThat().resideInAPackage(CONTROLLER);
 
-// R2 — 타 도메인의 infrastructure·entity 에 손대지 않는다.
+// R2 — 타 도메인의 repository·client·entity 에 손대지 않는다.
 //      필드뿐 아니라 지역변수·파라미터·반환 타입까지 본다 — 들고 다니기만 해도 경계가 무너진다.
 //      도메인 이름을 하드코딩하지 않고 domain.<X> 세그먼트를 뽑아 비교한다 (새 도메인이 생겨도 안 고친다).
 //      두 가지는 위반이 아니다: QueryDSL 이 엔티티 옆에 만드는 Q 클래스, 엔티티 패키지의 enum.
-classes().that().resideInAPackage("..domain..").should(notReachIntoOtherDomain("infrastructure"));
+classes().that().resideInAPackage("..domain..").should(notReachIntoOtherDomain("repository"));
+classes().that().resideInAPackage("..domain..").should(notReachIntoOtherDomain("client"));
 classes().that().resideInAPackage("..domain..").should(notReachIntoOtherDomain("entity"));
 // R3 — global 은 domain 을 모른다
 noClasses().that().resideInAPackage("..global..")
     .should().dependOnClassesThat().resideInAPackage("..domain..");
-// R4 — 조립은 조립을 주입하지 않고 트랜잭션도 열지 않는다 (§10).
+// R4 — facade 는 facade 를 주입하지 않고 트랜잭션도 열지 않는다 (§10).
 //      @Transactional 은 보통 **메서드**에 붙으므로 noMethods 로도 함께 검사한다 —
 //      noClasses().should().beAnnotatedWith() 는 클래스 레벨만 본다.
-noClasses().that().resideInAPackage(APPLICATION)
-    .should().dependOnClassesThat().resideInAPackage(APPLICATION);
-noClasses().that().resideInAPackage(APPLICATION).should().beAnnotatedWith(Transactional.class);
-noMethods().that().areDeclaredInClassesThat().resideInAPackage(APPLICATION)
+noClasses().that().resideInAPackage(FACADE)
+    .should().dependOnClassesThat().resideInAPackage(FACADE);
+noClasses().that().resideInAPackage(FACADE).should().beAnnotatedWith(Transactional.class);
+noMethods().that().areDeclaredInClassesThat().resideInAPackage(FACADE)
     .should().beAnnotatedWith(Transactional.class);
 ```
 
@@ -403,13 +421,13 @@ noMethods().that().areDeclaredInClassesThat().resideInAPackage(APPLICATION)
 > 패키지를 옮기면 매칭 0 건이 되고 이 옵션이 켜져 있으면 **실패 없이 초록으로 통과한다.**
 > 경계를 강화하려던 리팩터링이 경계 검사기를 껍데기로 만드는 경로가 이것이다. 붙이지 않으면
 > ArchUnit 이 "검사 대상이 없다" 로 실패해 준다. `L0` 은 같은 사고를 한 번 더 막는 장치다 —
-> 13 개 도메인이 각각 `api` 와 `infrastructure` 를 실제로 갖고 있는지 직접 센다.
+> `repository` 를 가진 도메인이 실제로 있는지, 그 도메인이 `controller` 도 갖는지 직접 센다.
 
 **R4 는 클래스 이름이 아니라 패키지로 판정한다.** 예전에는 `haveSimpleNameEndingWith(
 "QueryService")` 로 봤는데, 이름 규칙은 새 클래스가 규칙을 우회하기 쉽다 — `MeetAssembler`
-같은 이름을 지으면 그냥 빠져나간다. `application/` 에 두는 것이 곧 조립이라는 선언이다.
+같은 이름을 지으면 그냥 빠져나간다. `facade/` 에 두는 것이 곧 파사드라는 선언이다.
 
-**코어 Service 그래프의 순환은 ArchUnit 으로 검사하지 않는다** — 생성자 주입 순환은 Spring
+**서비스 그래프의 순환은 ArchUnit 으로 검사하지 않는다** — 생성자 주입 순환은 Spring
 기동 자체를 `BeanCurrentlyInCreationException` 으로 실패시키므로, 컨텍스트를 띄우는 통합
 테스트 하나가 이미 그 역할을 한다. 규칙이 아니라 증상으로 잡히는 쪽이 확실하다.
 
@@ -469,7 +487,7 @@ noMethods().that().areDeclaredInClassesThat().resideInAPackage(APPLICATION)
 - 인증·인가 (`global/security`, `AuthService`, `/admin/**` 권한)
 - 사용자 입력이 쿼리에 닿는 경로 — 특히 native SQL 과 `JdbcClient` 의 동적 SQL
 - 파일 경로·업로드 (`media` 도메인, `app.media.root` 아래 쓰기)
-- 외부 시스템 호출 (`infrastructure/client`, `global/client`)
+- 외부 시스템 호출 (`client/`, `global/client`)
 - 서명·해시·토큰 (`MediaSignedUrl`, `OpaqueToken`, `InviteTokens`, JWT)
 - 개인정보가 응답이나 로그에 실리는 곳
 
@@ -477,13 +495,13 @@ noMethods().that().areDeclaredInClassesThat().resideInAPackage(APPLICATION)
 
 ### 금지 목록 — 걸리면 HIGH 이상
 
-1. 엔티티에 `@Setter`·`@Data` / `api` 에서 `infrastructure/persistence` 직접 호출 (L1) /
-   코어가 `infrastructure/client` 참조 (L3) / **타 도메인 테이블에 쓰기·타 도메인
-   infrastructure 주입·타 도메인 엔티티를 필드나 반환 타입으로 사용** (R2 — 조회 JOIN 은 허용)
-2. 엔티티를 컨트롤러 응답으로 반환 (L1) — `api` 는 `domain/entity` 를 모른다
+1. 엔티티에 `@Setter`·`@Data` / `controller` 에서 `repository` 직접 호출 (L1) /
+   서비스가 `client` 참조 (L3) / **타 도메인 테이블에 쓰기·타 도메인
+   repository·client 주입·타 도메인 엔티티를 필드나 반환 타입으로 사용** (R2 — 조회 JOIN 은 허용)
+2. 엔티티를 컨트롤러 응답으로 반환 (L1) — `controller` 는 `entity` 를 모른다
 3. 전역 `@JsonInclude(NON_NULL)` (§5)
 4. OFFSET 페이지네이션 (§9)
-5. 트랜잭션 안 외부 HTTP / 조립 Service 에 `@Transactional` / **같은 클래스 자기호출에 붙인
+5. 트랜잭션 안 외부 HTTP / 파사드에 `@Transactional` / **같은 클래스 자기호출에 붙인
    `@Transactional`** (§10)
 6. 멱등을 `try { save } catch (DataIntegrityViolationException)` 으로 구현 (§8)
 7. `Instant.now()`·`LocalDate.now()` 직접 호출 — `Clock` 주입 (§12)
