@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import site.gachijoopging.server.domain.media.dto.MediaDtos.MediaUploadResponse;
-import site.gachijoopging.server.domain.media.facade.MediaCommandService;
+import site.gachijoopging.server.domain.media.facade.MediaFacade;
 import site.gachijoopging.server.global.error.BusinessException;
 import site.gachijoopging.server.global.error.ErrorCode;
 import site.gachijoopging.server.global.response.ApiResponse;
@@ -20,14 +20,14 @@ import site.gachijoopging.server.global.security.CurrentUser;
 @RequestMapping("/media")
 public class MediaController {
 
-  private final MediaCommandService mediaCommandService;
+  private final MediaFacade mediaFacade;
 
   @PostMapping
   public ApiResponse<MediaUploadResponse> upload(
       @CurrentUser UUID me,
       @RequestParam("mediaId") UUID mediaId,
       @RequestParam("file") MultipartFile file) {
-    return ApiResponse.of(mediaCommandService.upload(me, mediaId, toBytes(file)));
+    return ApiResponse.of(mediaFacade.upload(me, mediaId, toBytes(file)));
   }
 
   private static byte[] toBytes(MultipartFile file) {

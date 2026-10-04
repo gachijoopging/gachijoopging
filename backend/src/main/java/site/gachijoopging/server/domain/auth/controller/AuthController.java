@@ -19,7 +19,7 @@ import site.gachijoopging.server.domain.auth.dto.AuthDtos.PasswordResetRequest;
 import site.gachijoopging.server.domain.auth.dto.AuthDtos.RefreshRequest;
 import site.gachijoopging.server.domain.auth.dto.AuthDtos.SessionResponse;
 import site.gachijoopging.server.domain.auth.dto.AuthDtos.TokenPairResponse;
-import site.gachijoopging.server.domain.auth.facade.AuthCommandService;
+import site.gachijoopging.server.domain.auth.facade.AuthFacade;
 import site.gachijoopging.server.domain.auth.service.AuthService;
 import site.gachijoopging.server.domain.auth.service.PasswordResetService;
 import site.gachijoopging.server.global.response.ApiResponse;
@@ -30,7 +30,7 @@ import site.gachijoopging.server.global.response.ApiResponse;
 public class AuthController {
 
   private final AuthService authService;
-  private final AuthCommandService authCommandService;
+  private final AuthFacade authFacade;
   private final PasswordResetService passwordResetService;
 
   @PostMapping("/signup")
@@ -45,12 +45,12 @@ public class AuthController {
 
   @PostMapping("/kakao")
   public ApiResponse<SessionResponse> kakao(@Valid @RequestBody KakaoLoginRequest request) {
-    return ApiResponse.of(authCommandService.kakaoLogin(request.kakaoAccessToken()));
+    return ApiResponse.of(authFacade.kakaoLogin(request.kakaoAccessToken()));
   }
 
   @PostMapping("/google")
   public ApiResponse<SessionResponse> google(@Valid @RequestBody GoogleLoginRequest request) {
-    return ApiResponse.of(authCommandService.googleLogin(request.idToken()));
+    return ApiResponse.of(authFacade.googleLogin(request.idToken()));
   }
 
   @PostMapping("/refresh")

@@ -22,7 +22,7 @@ import site.gachijoopging.server.global.error.ErrorCode;
 
 @Service
 @RequiredArgsConstructor
-public class MediaCommandService {
+public class MediaFacade {
 
   private static final DateTimeFormatter monthFolder = DateTimeFormatter.ofPattern("yyyy/MM");
   private static final String EXTENSION = ".jpg";

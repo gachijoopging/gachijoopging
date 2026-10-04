@@ -38,7 +38,7 @@ import site.gachijoopging.server.global.error.ErrorCode;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
-class MediaCommandServiceTest {
+class MediaFacadeTest {
 
   private static final Instant NOW = Instant.parse("2026-08-04T05:00:00Z");
   private static final UUID 나 = UUID.fromString("11111111-1111-1111-1111-111111111111");
@@ -52,12 +52,12 @@ class MediaCommandServiceTest {
   @Mock private MediaSignedUrl signedUrl;
   @Mock private AiInferenceClient aiInferenceClient;
 
-  private MediaCommandService mediaCommandService;
+  private MediaFacade mediaFacade;
 
   @BeforeEach
   void setUp() {
-    mediaCommandService =
-        new MediaCommandService(
+    mediaFacade =
+        new MediaFacade(
             mediaService,
             validator,
             storage,
@@ -74,7 +74,7 @@ class MediaCommandServiceTest {
     when(mediaService.find(MEDIA_ID)).thenReturn(Optional.of(이미_있는_사진(나)));
     when(aiInferenceClient.infer(사진)).thenReturn(담배꽁초_하나());
 
-    MediaUploadResponse 응답 = mediaCommandService.upload(나, MEDIA_ID, 사진);
+    MediaUploadResponse 응답 = mediaFacade.upload(나, MEDIA_ID, 사진);
 
     verify(storage, never()).store(anyString(), any());
     verify(mediaService, never()).create(any(), any(), anyString(), anyString());
@@ -88,7 +88,7 @@ class MediaCommandServiceTest {
     when(mediaService.find(MEDIA_ID)).thenReturn(Optional.of(이미_있는_사진(나)));
     when(aiInferenceClient.infer(사진)).thenReturn(InferenceResponse.unavailable());
 
-    MediaUploadResponse 응답 = mediaCommandService.upload(나, MEDIA_ID, 사진);
+    MediaUploadResponse 응답 = mediaFacade.upload(나, MEDIA_ID, 사진);
 
     assertThat(응답.url()).contains("옛날/키.jpg");
     assertThat(응답.thumbUrl()).contains("옛날/키_thumb.jpg");
@@ -99,7 +99,7 @@ class MediaCommandServiceTest {
     when(mediaService.find(MEDIA_ID)).thenReturn(Optional.of(이미_있는_사진(나)));
     when(aiInferenceClient.infer(사진)).thenReturn(담배꽁초_하나());
 
-    MediaUploadResponse 응답 = mediaCommandService.upload(나, MEDIA_ID, 사진);
+    MediaUploadResponse 응답 = mediaFacade.upload(나, MEDIA_ID, 사진);
 
     assertThat(응답.inference().status()).isNotEqualTo("UNAVAILABLE");
   }
@@ -110,7 +110,7 @@ class MediaCommandServiceTest {
     when(aiInferenceClient.infer(사진)).thenReturn(담배꽁초_하나());
     when(mediaService.create(any(), any(), anyString(), anyString())).thenReturn(새로_만든_사진());
 
-    mediaCommandService.upload(나, MEDIA_ID, 사진);
+    mediaFacade.upload(나, MEDIA_ID, 사진);
 
     verify(storage).store("2026/08/" + MEDIA_ID + ".jpg", 사진);
     verify(storage).store("2026/08/" + MEDIA_ID + "_thumb.jpg", new byte[] {9});
@@ -124,7 +124,7 @@ class MediaCommandServiceTest {
     when(aiInferenceClient.infer(any())).thenReturn(담배꽁초_하나());
     when(mediaService.create(any(), any(), anyString(), anyString())).thenReturn(새로_만든_사진());
 
-    mediaCommandService.upload(나, MEDIA_ID, 사진);
+    mediaFacade.upload(나, MEDIA_ID, 사진);
 
     verify(aiInferenceClient).infer(사진);
   }
@@ -135,7 +135,7 @@ class MediaCommandServiceTest {
     when(aiInferenceClient.infer(사진)).thenReturn(InferenceResponse.unavailable());
     when(mediaService.create(any(), any(), anyString(), anyString())).thenReturn(새로_만든_사진());
 
-    MediaUploadResponse 응답 = mediaCommandService.upload(나, MEDIA_ID, 사진);
+    MediaUploadResponse 응답 = mediaFacade.upload(나, MEDIA_ID, 사진);
 
     verify(storage).store("2026/08/" + MEDIA_ID + ".jpg", 사진);
     assertThat(응답.url()).isNotBlank();
@@ -149,7 +149,7 @@ class MediaCommandServiceTest {
     UUID 남 = UUID.fromString("33333333-3333-3333-3333-333333333333");
     when(mediaService.find(MEDIA_ID)).thenReturn(Optional.of(이미_있는_사진(남)));
 
-    assertThatThrownBy(() -> mediaCommandService.upload(나, MEDIA_ID, 사진))
+    assertThatThrownBy(() -> mediaFacade.upload(나, MEDIA_ID, 사진))
         .isInstanceOf(BusinessException.class)
         .extracting(e -> ((BusinessException) e).errorCode())
         .isEqualTo(ErrorCode.FORBIDDEN);
@@ -161,7 +161,7 @@ class MediaCommandServiceTest {
     when(mediaService.find(MEDIA_ID)).thenReturn(Optional.of(이미_있는_사진(남)));
 
     try {
-      mediaCommandService.upload(나, MEDIA_ID, 사진);
+      mediaFacade.upload(나, MEDIA_ID, 사진);
     } catch (BusinessException expected) {
     }
 

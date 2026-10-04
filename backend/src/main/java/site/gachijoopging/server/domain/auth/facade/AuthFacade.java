@@ -12,7 +12,7 @@ import site.gachijoopging.server.domain.user.service.UserService;
 
 @Service
 @RequiredArgsConstructor
-public class AuthCommandService {
+public class AuthFacade {
 
   private final KakaoAuthClient kakaoAuthClient;
   private final GoogleAuthClient googleAuthClient;

@@ -9,18 +9,18 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import site.gachijoopging.server.domain.auth.dto.AuthDtos.SocialLinkRequest;
-import site.gachijoopging.server.domain.auth.facade.AuthCommandService;
+import site.gachijoopging.server.domain.auth.facade.AuthFacade;
 import site.gachijoopging.server.global.security.CurrentUser;
 
 @RestController
 @RequiredArgsConstructor
 public class SocialLinkController {
 
-  private final AuthCommandService authCommandService;
+  private final AuthFacade authFacade;
 
   @PutMapping("/users/me/social")
   @ResponseStatus(HttpStatus.NO_CONTENT)
   public void link(@CurrentUser UUID me, @Valid @RequestBody SocialLinkRequest request) {
-    authCommandService.linkSocial(me, request.provider(), request.token());
+    authFacade.linkSocial(me, request.provider(), request.token());
   }
 }
