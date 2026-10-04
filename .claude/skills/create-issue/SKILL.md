@@ -36,7 +36,7 @@ Linear MCP 도구(`list_issues` · `list_teams` · `save_issue` · `list_issue_l
 폴더가 둘로 갈리면 **이슈를 쪼갠다.** 한 사람에게 양쪽을 주지 않는다.
 예외: 계약(`docs/openapi.yaml`) 변경은 conventions.md 대로 앱·백엔드를 같은 PR 에서 고치므로 쪼개지 않는다.
 
-## 프로젝트 = 주 단위 4개
+## 프로젝트 = 주 단위 5개
 
 | Project | 기간 |
 |---|---|
@@ -44,6 +44,7 @@ Linear MCP 도구(`list_issues` · `list_teams` · `save_issue` · `list_issue_l
 | `W1 골격` | 9/27 ~ 10/4 |
 | `W2 도메인` | 10/5 ~ 10/11 |
 | `W3 통합·마무리` | 10/12 ~ 10/18 |
+| `W4 마무리` | 10/19 ~ 10/25 |
 
 이슈는 **할 주**의 Project 에 넣는다. 어느 주인지 모르겠으면 묻는다.
 
@@ -58,7 +59,7 @@ Linear MCP 도구(`list_issues` · `list_teams` · `save_issue` · `list_issue_l
 1 = 1시간 이내   2 = 3~4시간   3 = 하루   5 = 이틀   8 = 3일
 ```
 
-9/10~10/18 일정에서 **8점이 나오면 쪼개라는 신호다.**
+9/10~10/25 일정에서 **8점이 나오면 쪼개라는 신호다.**
 
 ## 설명 템플릿 (필수)
 
