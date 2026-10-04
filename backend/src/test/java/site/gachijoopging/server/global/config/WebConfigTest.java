@@ -18,16 +18,8 @@ import site.gachijoopging.server.global.security.jwt.JwtVerifier;
 import site.gachijoopging.server.global.web.HealthController;
 import site.gachijoopging.server.global.web.NoApiPrefix;
 
-@WebMvcTest(
-    controllers = {
-      HealthController.class,
-      WebConfigTest.접두사_없는_탐침_컨트롤러.class
-    })
-@Import({
-  WebConfig.class,
-  HealthController.class,
-  WebConfigTest.접두사_없는_탐침_컨트롤러.class
-})
+@WebMvcTest(controllers = {HealthController.class, WebConfigTest.접두사_없는_탐침_컨트롤러.class})
+@Import({WebConfig.class, HealthController.class, WebConfigTest.접두사_없는_탐침_컨트롤러.class})
 class WebConfigTest {
 
   @Autowired private RequestMappingHandlerMapping handlerMapping;

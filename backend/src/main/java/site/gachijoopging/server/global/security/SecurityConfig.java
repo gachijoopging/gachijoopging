@@ -16,9 +16,7 @@ import site.gachijoopging.server.global.config.WebConfig;
 public class SecurityConfig {
 
   static final String[] OPEN_PATHS = {
-    WebConfig.API_BASE_PATH + "/health",
-    WebConfig.API_BASE_PATH + "/auth/**",
-    "/actuator/**"
+    WebConfig.API_BASE_PATH + "/health", WebConfig.API_BASE_PATH + "/auth/**", "/actuator/**"
   };
 
   private static final String[] ADMIN_PATHS = {WebConfig.ADMIN_BASE_PATH + "/**"};
