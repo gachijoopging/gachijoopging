@@ -23,6 +23,7 @@ import {
   space,
   useRipple,
   useTheme,
+  characterEmpty,
 } from 'design-system/src';
 import { ApiError, createMockClient, type ApiClient } from '../../src/api/client';
 import { canGoNextMonth, isFutureDate, kstToday, monthGrid, shiftMonth } from '../../src/crew/calendar';
@@ -245,7 +246,7 @@ export default function FeedScreen() {
           )}
           ListEmptyComponent={
             <EmptyState
-              icon="sprout-outline"
+              image={characterEmpty.post}
               title={empty.title}
               description={empty.description}
               actionLabel={empty.write ? '게시물 쓰기' : undefined}

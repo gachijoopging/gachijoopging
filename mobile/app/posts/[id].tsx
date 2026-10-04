@@ -23,6 +23,7 @@ import {
   size,
   space,
   useRipple,
+  characterEmpty,
 } from 'design-system/src';
 import { ApiError, createMockClient, type ApiClient } from '../../src/api/client';
 import { clearDraft, draftFor, editDraft, requestIdFor } from '../../src/crew/comment-draft';
@@ -265,7 +266,7 @@ export default function PostDetailScreen() {
 
       {gone || (post && blocked.has(post.author.id)) ? (
         <EmptyState
-          icon="sprout-outline"
+          image={characterEmpty.post}
           title="삭제된 게시물이에요"
           description="작성자가 삭제했거나 더 이상 볼 수 없는 게시물이에요."
           actionLabel="돌아가기"

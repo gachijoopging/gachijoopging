@@ -19,6 +19,7 @@ import {
   Txt,
   space,
   type IconName,
+  characterEmpty,
 } from 'design-system/src';
 import { createMockClient, type ApiClient } from '../src/api/client';
 import { MOCKS } from '../src/api/mocks.generated';
@@ -172,7 +173,7 @@ export default function NotificationsScreen() {
 
           {read.items.length === 0 ? (
             <EmptyState
-              icon="bell-outline"
+              image={characterEmpty.notification}
               title="알림이 없어요"
             />
           ) : (

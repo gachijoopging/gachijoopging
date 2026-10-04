@@ -1,6 +1,6 @@
 import type { ReactElement } from 'react';
 import { View, type RefreshControlProps } from 'react-native';
-import { EmptyState, ErrorState, LinkText, List, Loading, space } from 'design-system/src';
+import { EmptyState, ErrorState, LinkText, List, Loading, characterEmpty, space } from 'design-system/src';
 import { ActivityCardView, PostTile, type ActivityCard, type Post } from './ProfileParts';
 
 type Page<T> = {
@@ -52,14 +52,14 @@ export function ProfileTabList({
       page.failed ? <ErrorState title={`${what}을 불러오지 못했어요`} onRetry={page.reload} /> : <Loading label={`${what}을 불러오고 있어요`} />
     ) : tab === 'records' ? (
       <EmptyState
-        icon="sprout"
+        image={characterEmpty.activity}
         title="아직 활동 기록이 없어요"
         description={recordsEmpty.description}
         actionLabel={recordsEmpty.onStart ? '줍깅 시작하러 가기' : undefined}
         onAction={recordsEmpty.onStart}
       />
     ) : (
-      <EmptyState icon="image-multiple-outline" title="아직 올린 게시물이 없어요" description={postsEmptyDescription} />
+      <EmptyState image={characterEmpty.post} title="아직 올린 게시물이 없어요" description={postsEmptyDescription} />
     )
   );
 
