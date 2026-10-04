@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.willThrow;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static site.gachijoopging.server.support.TestAccounts.가입한다;
 
@@ -38,7 +39,7 @@ class SocialLinkApiTest extends IntegrationTest {
     TestAccount 나 = 가입한다(mockMvc, "social-link-kakao@example.com");
     given(kakaoAuthClient.verify("카카오-토큰")).willReturn("kakao-연결됨");
 
-    mockMvc.perform(연결(나, "KAKAO", "카카오-토큰")).andExpect(status().isOk());
+    mockMvc.perform(연결(나, "KAKAO", "카카오-토큰")).andExpect(status().isNoContent());
 
     assertThat(사용자_id(카카오("카카오-토큰"))).isEqualTo(나.id().toString());
   }
@@ -48,7 +49,7 @@ class SocialLinkApiTest extends IntegrationTest {
     TestAccount 나 = 가입한다(mockMvc, "social-link-google@example.com");
     given(googleAuthClient.verify("구글-idToken")).willReturn("google-연결됨");
 
-    mockMvc.perform(연결(나, "GOOGLE", "구글-idToken")).andExpect(status().isOk());
+    mockMvc.perform(연결(나, "GOOGLE", "구글-idToken")).andExpect(status().isNoContent());
 
     assertThat(사용자_id(구글("구글-idToken"))).isEqualTo(나.id().toString());
   }
@@ -58,8 +59,8 @@ class SocialLinkApiTest extends IntegrationTest {
     TestAccount 나 = 가입한다(mockMvc, "social-link-idempotent@example.com");
     given(kakaoAuthClient.verify("카카오-토큰")).willReturn("kakao-멱등");
 
-    mockMvc.perform(연결(나, "KAKAO", "카카오-토큰")).andExpect(status().isOk());
-    mockMvc.perform(연결(나, "KAKAO", "카카오-토큰")).andExpect(status().isOk());
+    mockMvc.perform(연결(나, "KAKAO", "카카오-토큰")).andExpect(status().isNoContent());
+    mockMvc.perform(연결(나, "KAKAO", "카카오-토큰")).andExpect(status().isNoContent());
 
     assertThat(회원수("kakao_id", "kakao-멱등")).isEqualTo(1);
   }
@@ -70,7 +71,7 @@ class SocialLinkApiTest extends IntegrationTest {
     given(kakaoAuthClient.verify("먼저-토큰")).willReturn("kakao-먼저");
     given(kakaoAuthClient.verify("나중-토큰")).willReturn("kakao-나중");
 
-    mockMvc.perform(연결(나, "KAKAO", "먼저-토큰")).andExpect(status().isOk());
+    mockMvc.perform(연결(나, "KAKAO", "먼저-토큰")).andExpect(status().isNoContent());
     mockMvc.perform(연결(나, "KAKAO", "나중-토큰")).andExpect(status().isConflict());
 
     assertThat(회원수("kakao_id", "kakao-먼저")).isEqualTo(1);
@@ -102,7 +103,7 @@ class SocialLinkApiTest extends IntegrationTest {
   }
 
   private static MockHttpServletRequestBuilder 연결(TestAccount 계정, String provider, String token) {
-    return post("/api/v1/users/me/social")
+    return put("/api/v1/users/me/social")
         .header(HttpHeaders.AUTHORIZATION, 계정.bearer())
         .contentType(MediaType.APPLICATION_JSON)
         .content("{\"provider\":\"%s\",\"token\":\"%s\"}".formatted(provider, token));
