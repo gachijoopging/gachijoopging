@@ -1,6 +1,9 @@
 import type { ImageSourcePropType } from 'react-native';
 
-/** 홈 크루 캐릭터 5단계. 인덱스 = stage - 1 (축 처짐 · 보통 · 신남 · 반짝 · 파티) */
+/** 홈 크루 캐릭터 5단계 이름. 인덱스 = stage - 1 */
+export const characterStageNames = ['축 처짐', '보통', '신남', '반짝', '파티'] as const;
+
+/** 홈 크루 캐릭터 5단계 그림. 인덱스 = stage - 1 */
 export const characterStages: readonly ImageSourcePropType[] = [
   require('../assets/character/stage-1-droopy.png'),
   require('../assets/character/stage-2-normal.png'),

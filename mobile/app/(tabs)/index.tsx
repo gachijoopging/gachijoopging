@@ -22,6 +22,7 @@ import {
   useRipple,
   useTheme,
   WORDMARK_RATIO,
+  characterStageNames,
   characterStages,
 } from 'design-system/src';
 import { createMockClient, type ApiClient } from '../../src/api/client';
@@ -33,7 +34,6 @@ type Home = (typeof MOCKS)['GET /crew/home']['data'];
 const api: ApiClient = createMockClient({ delayMs: 300 });
 const wordmark = require('../../../design-system/assets/logo-wordmark.png');
 const wordmarkDark = require('../../../design-system/assets/logo-wordmark-dark.png');
-const STAGE_NAME = ['축 처짐', '보통', '신남', '반짝', '파티'] as const;
 const BUBBLE_MS = 3000;
 
 export default function HomeScreen() {
@@ -202,7 +202,7 @@ function CrewCharacter({ character }: { character: Home['character'] }) {
     setBubble(true);
     timer.current = setTimeout(() => setBubble(false), BUBBLE_MS);
   };
-  const stageName = STAGE_NAME[character.stage - 1] ?? STAGE_NAME[0];
+  const stageName = characterStageNames[character.stage - 1] ?? characterStageNames[0];
 
   return (
     <Pressable

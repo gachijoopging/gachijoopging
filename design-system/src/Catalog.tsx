@@ -28,7 +28,7 @@ import { Screen } from './components/Screen.tsx';
 import { Snackbar } from './components/Snackbar.tsx';
 import { LinkText } from './components/LinkText.tsx';
 import { IconCircle } from './components/IconCircle.tsx';
-import { characterStages, characterEmpty } from './character.ts';
+import { characterStages, characterStageNames, characterEmpty } from './character.ts';
 import { MetricSplit } from './components/MetricSplit.tsx';
 import { BarChart } from './components/BarChart.tsx';
 
@@ -52,7 +52,6 @@ function Section({ title, note, children }: { title: string; note?: string; chil
   );
 }
 
-const STAGE_LABEL = ['축 처짐', '보통', '신남', '반짝', '파티'];
 const EMPTY_LABEL = { activity: '활동 없음', post: '게시물 없음', notification: '알림 없음' };
 
 function Row({ children }: { children: React.ReactNode }) {
@@ -414,7 +413,7 @@ export function Catalog({ scheme, onScheme }: { scheme: Scheme; onScheme: (s: Sc
             {characterStages.map((source, i) => (
               <View key={i} style={{ alignItems: 'center', gap: space.xs }}>
                 <Image source={source} resizeMode="contain" style={{ width: sizes.iconCircleLg * 2, height: sizes.iconCircleLg * 2 }} />
-                <Txt variant="caption" tone="muted">{STAGE_LABEL[i]}</Txt>
+                <Txt variant="caption" tone="muted">{characterStageNames[i]}</Txt>
               </View>
             ))}
           </Row>

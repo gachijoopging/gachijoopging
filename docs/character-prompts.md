@@ -1,14 +1,14 @@
 # 캐릭터 7장 생성 프롬프트
 
 ChatGPT 이미지 생성에 **기존 `stage-2-normal.png`(옛 sprout.png)를 참조 이미지로 첨부**하고 아래를 붙여 넣는다.
-파일은 `design-system/assets/character/` 의 같은 이름 파일을 덮어쓴다 (지금은 전부 새싹 복사본이 임시로 들어 있다).
+다시 생성할 때는 `design-system/assets/character/` 의 같은 이름 파일을 덮어쓴다.
 
 ## 공통 (모든 프롬프트 앞에 붙임)
 
 ```
 Same character as the attached reference: a round lime-green sprout mascot with two leaves on top,
 thick dark-brown outline, simple dot eyes, pink-orange cheek blush, stubby arms and legs.
-Flat vector sticker style, no gradients, no background, transparent PNG, square 1024x1024,
+Flat vector sticker style, no gradients, no background, transparent PNG, square 1024x1024 (2단계 원본만 1254px),
 character centered and filling ~80% of the canvas. Keep exactly the same colors and line weight.
 ```
 
