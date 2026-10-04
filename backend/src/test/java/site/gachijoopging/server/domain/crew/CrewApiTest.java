@@ -170,6 +170,63 @@ class CrewApiTest extends IntegrationTest {
         .andExpect(jsonPath("$.code").value("VALIDATION"));
   }
 
+  @Test
+  void 사진을_보내지_않으면_크루_사진은_그대로다() throws Exception {
+    TestAccount 크루장 = 가입한다(mockMvc, "crew-photo-keep@test.io");
+    mockMvc.perform(만든다(크루장, "사진유지크루"));
+    UUID 사진 = 사진을_만든다(크루장.id());
+    mockMvc.perform(수정(크루장, "{\"photoMediaId\":\"" + 사진 + "\"}"));
+
+    mockMvc
+        .perform(수정(크루장, "{\"intro\":\"사진은 그대로\"}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.photoUrl").isNotEmpty());
+
+    mockMvc
+        .perform(수정(크루장, "{\"photoMediaId\":null}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.photoUrl").isEmpty());
+  }
+
+  @Test
+  void 남의_크루_이름으로_바꾸면_409_CREW_NAME_TAKEN_이다() throws Exception {
+    mockMvc.perform(만든다(가입한다(mockMvc, "crew-rename-a@test.io"), "먼저쓴이름"));
+    TestAccount 크루장 = 가입한다(mockMvc, "crew-rename-b@test.io");
+    mockMvc.perform(만든다(크루장, "나중이름"));
+
+    mockMvc
+        .perform(수정(크루장, "{\"name\":\" 먼저쓴이름 \"}"))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.code").value("CREW_NAME_TAKEN"));
+  }
+
+  @Test
+  void 크루장이_탈퇴했으면_미리보기의_크루장은_탈퇴한_크루원이다() throws Exception {
+    TestAccount 크루장 = 가입한다(mockMvc, "crew-withdrawn-leader@test.io");
+    String 코드 =
+        JsonPath.read(
+            mockMvc.perform(만든다(크루장, "탈퇴확인크루")).andReturn().getResponse().getContentAsString(),
+            "$.data.inviteCode");
+    jdbcTemplate.update("UPDATE users SET status = 'DELETED' WHERE id = ?", 크루장.id());
+
+    mockMvc
+        .perform(미리보기(가입한다(mockMvc, "crew-withdrawn-guest@test.io"), 코드))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.leader.withdrawn").value(true))
+        .andExpect(jsonPath("$.data.leader.nickname").value("탈퇴한 크루원"));
+  }
+
+  private UUID 사진을_만든다(UUID 주인) {
+    UUID id = UUID.randomUUID();
+    jdbcTemplate.update(
+        "INSERT INTO media (id, owner_id, object_key, thumb_key) VALUES (?, ?, ?, ?)",
+        id,
+        주인,
+        "o/" + id,
+        "t/" + id);
+    return id;
+  }
+
   private static MockHttpServletRequestBuilder 만든다(TestAccount 계정, String 이름) {
     return post("/api/v1/crews")
         .header(HttpHeaders.AUTHORIZATION, 계정.bearer())

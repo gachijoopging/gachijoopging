@@ -18,6 +18,7 @@ import site.gachijoopging.server.domain.user.dto.MeResponse;
 import site.gachijoopging.server.domain.user.dto.MeUpdateRequest;
 import site.gachijoopging.server.domain.user.dto.UserAccount;
 import site.gachijoopging.server.domain.user.entity.User;
+import site.gachijoopging.server.domain.user.repository.UserQueryRepository;
 import site.gachijoopging.server.domain.user.repository.UserRepository;
 import site.gachijoopging.server.global.error.BusinessException;
 import site.gachijoopging.server.global.error.ErrorCode;
@@ -31,6 +32,7 @@ public class UserService implements AccountAuthorityLoader {
       List.of(new SimpleGrantedAuthority("ROLE_USER"));
 
   private final UserRepository userRepository;
+  private final UserQueryRepository userQueryRepository;
   private final PasswordEncoder passwordEncoder;
   private final MediaService mediaService;
   private final MediaSignedUrl mediaSignedUrl;
@@ -116,7 +118,7 @@ public class UserService implements AccountAuthorityLoader {
   }
 
   private MeResponse.Membership membership(UUID userId) {
-    return userRepository
+    return userQueryRepository
         .findMembership(userId)
         .map(
             row ->

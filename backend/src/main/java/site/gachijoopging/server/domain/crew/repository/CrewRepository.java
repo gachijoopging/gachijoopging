@@ -66,29 +66,9 @@ public interface CrewRepository extends JpaRepository<Crew, UUID> {
       nativeQuery = true)
   int countPendingJoinRequests(@Param("crewId") UUID crewId);
 
-  @Query(
-      value =
-          """
-          SELECT u.id AS id, u.nickname AS nickname, u.photo_media_id AS photoMediaId,
-                 u.status AS status
-          FROM users u WHERE u.id = :userId
-          """,
-      nativeQuery = true)
-  UserBriefRow findUserBrief(@Param("userId") UUID userId);
-
   interface MembershipRow {
     UUID getCrewId();
 
     UUID getLeaderId();
-  }
-
-  interface UserBriefRow {
-    UUID getId();
-
-    String getNickname();
-
-    UUID getPhotoMediaId();
-
-    String getStatus();
   }
 }

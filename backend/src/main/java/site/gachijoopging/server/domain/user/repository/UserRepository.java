@@ -74,22 +74,4 @@ public interface UserRepository extends JpaRepository<User, UUID> {
       @Param("userId") UUID userId,
       @Param("platform") String platform,
       @Param("now") Instant now);
-
-  @Query(
-      value =
-          """
-          SELECT c.id AS crewId, c.name AS crewName, c.leader_id AS leaderId
-          FROM crew_members m JOIN crews c ON c.id = m.crew_id
-          WHERE m.user_id = :userId AND c.deleted_at IS NULL
-          """,
-      nativeQuery = true)
-  Optional<MembershipRow> findMembership(@Param("userId") UUID userId);
-
-  interface MembershipRow {
-    UUID getCrewId();
-
-    String getCrewName();
-
-    UUID getLeaderId();
-  }
 }

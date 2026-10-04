@@ -14,8 +14,9 @@ import site.gachijoopging.server.domain.crew.dto.CrewResponse;
 import site.gachijoopging.server.domain.crew.dto.UpdateCrewRequest;
 import site.gachijoopging.server.domain.crew.dto.UserBriefResponse;
 import site.gachijoopging.server.domain.crew.entity.Crew;
+import site.gachijoopging.server.domain.crew.repository.CrewQueryRepository;
+import site.gachijoopging.server.domain.crew.repository.CrewQueryRepository.UserBriefRow;
 import site.gachijoopging.server.domain.crew.repository.CrewRepository;
-import site.gachijoopging.server.domain.crew.repository.CrewRepository.UserBriefRow;
 import site.gachijoopging.server.domain.media.service.MediaService;
 import site.gachijoopging.server.domain.media.service.MediaSignedUrl;
 import site.gachijoopging.server.global.error.BusinessException;
@@ -32,6 +33,7 @@ public class CrewService implements CrewMembershipLoader {
   private static final String WITHDRAWN_NICKNAME = "탈퇴한 크루원";
 
   private final CrewRepository crewRepository;
+  private final CrewQueryRepository crewQueryRepository;
   private final MediaService mediaService;
   private final MediaSignedUrl mediaSignedUrl;
   private final Clock clock;
@@ -68,6 +70,9 @@ public class CrewService implements CrewMembershipLoader {
   public CrewResponse update(UUID me, CrewMembership membership, UpdateCrewRequest request) {
     membership.requireLeader();
     Crew crew = activeCrew(membership.crewId());
+    if (!crew.ledBy(me)) {
+      throw new BusinessException(ErrorCode.FORBIDDEN, "크루장만 할 수 있다");
+    }
     String name = request.name() == null ? null : trimmedName(request.name());
     if (name != null && crewRepository.existsByNameAndIdNot(name, crew.getId())) {
       throw new BusinessException(ErrorCode.CREW_NAME_TAKEN, "이미 쓰는 크루 이름이다");
@@ -131,7 +136,7 @@ public class CrewService implements CrewMembershipLoader {
   }
 
   private UserBriefResponse brief(UUID userId) {
-    UserBriefRow user = crewRepository.findUserBrief(userId);
+    UserBriefRow user = crewQueryRepository.findUserBrief(userId);
     if ("DELETED".equals(user.getStatus())) {
       return new UserBriefResponse(user.getId().toString(), WITHDRAWN_NICKNAME, null, true);
     }
