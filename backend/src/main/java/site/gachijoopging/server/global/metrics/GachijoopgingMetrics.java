@@ -10,18 +10,13 @@ public final class GachijoopgingMetrics {
 
   public static final String LOGIN_FAILURE = "gachijoopging.login.failure";
 
-  public static final String FCM_SEND = "gachijoopging.fcm.send";
-
-  public static final String FCM_SEND_FAILURE = "gachijoopging.fcm.send.failure";
-
   public static final String MEDIA_FILE = "gachijoopging.media.file";
 
   public static final String MEDIA_REFERENCED = "gachijoopging.media.referenced";
 
   public static final String MODULE = "module";
 
-  private static final Set<String> COUNTERS =
-      Set.of(LOGIN_ATTEMPT, LOGIN_FAILURE, FCM_SEND, FCM_SEND_FAILURE);
+  private static final Set<String> COUNTERS = Set.of(LOGIN_ATTEMPT, LOGIN_FAILURE);
 
   private static final Set<String> GAUGES = Set.of(MEDIA_FILE, MEDIA_REFERENCED);
 
