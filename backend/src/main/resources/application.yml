@@ -9,9 +9,9 @@ spring:
 
   jpa:
     hibernate:
-      # 스키마의 정본은 Flyway 마이그레이션이다 (02-컨벤션 §13)
+      # 스키마의 정본은 Flyway 마이그레이션이다 (02-conventions §13)
       ddl-auto: validate
-    # 트랜잭션 경계는 서비스다 (02-컨벤션 §10).
+    # 트랜잭션 경계는 서비스다 (02-conventions §10).
     # 영속성 컨텍스트를 뷰 렌더링까지 열어두면 그 경계가 무의미해진다
     open-in-view: false
 
@@ -50,7 +50,7 @@ spring:
 
 app:
   jwt:
-    # 키는 환경변수로만 들어온다 (02-컨벤션 §14). 이름은 infra/.env.example 을 따른다.
+    # 키는 환경변수로만 들어온다 (02-conventions §14). 이름은 infra/.env.example 을 따른다.
     # 값이 없으면 기동에서 바로 죽는 것이 맞다 — 기본값을 두면 아무 키로나 서명하는 서버가 뜬다.
     active-kid: ${JWT_ACTIVE_KID}
     private-key-pem: ${JWT_PRIVATE_KEY_PEM}
@@ -130,18 +130,18 @@ app:
   fcm:
     # ⚠️ 값이 비어 있는 것이 지금의 정상 상태다. Firebase 콘솔의 서비스 계정 키가 아직 팀에 없다
     # ( "선행 자격증명"). 비어 있으면 FirebaseFcmClient 가 초기화를 건너뛰고 발송만
-    # 생략한다 — 알림 행은 그대로 남으므로(02-컨벤션 §10-나) 여기서 기동을 막으면 알림과 무관한
+    # 생략한다 — 알림 행은 그대로 남으므로(02-conventions §10-나) 여기서 기동을 막으면 알림과 무관한
     # 경로까지 함께 죽는다. app.ai 가 같은 이유로 같은 모양이다.
     # 값은 서비스 계정 JSON 본문이다 (파일 경로가 아니다) — JWT 개인키를 PEM 본문으로 넣는 것과 같다.
     credentials: ${FCM_CREDENTIALS:}
 
   notification:
-    # THANKS 묶음 창 (03-데이터 §2). 기준은 묶음의 최초 created_at 이다 — 최신 갱신 시각으로 재면
+    # 좋아요(옛 THANKS) 묶음 창. 1차 알림 9종(feature-scope §알림)에 묶음이 없으면 notification 도메인 작성 때 지운다. 기준은 묶음의 최초 created_at 이다 — 최신 갱신 시각으로 재면
     # 고마워요가 들어오는 동안 묶음이 무한히 연장돼 한 행이 영원히 산다
     thanks-bundle-window: 1h
 
   nickname:
-    # 금지 닉네임은 테이블이 아니라 설정이다 (03-데이터 §2). 사칭·운영 혼동을 막는 최소한만 둔다
+    # 금지 닉네임은 테이블이 아니라 설정이다 (ERD 에 테이블 없음). 사칭·운영 혼동을 막는 최소한만 둔다
     banned:
       - 관리자
       - 운영자
@@ -150,7 +150,7 @@ app:
       - 가치줍깅
 
 live:
-  # presence 임계값 — 근거는 03-데이터 §2 live·§6·§7(확정). 30초는 앱의 발신 주기라 서버가 읽지 않는다
+  # presence 임계값 — 근거는 ERD §설계 근거 "활동 중 위치" · §보존·정리. 30초는 앱의 발신 주기라 서버가 읽지 않는다
   presence:
     freshness: 2m
     cleanup-threshold: 5m
@@ -181,7 +181,7 @@ management:
 ---
 # 로컬 개발 — infra/docker-compose.dev.yml 이 띄우는 Postgres·Redis 를 가리킨다.
 # 여기 적힌 값은 그 compose 파일에 이미 평문으로 들어 있는 개발 전용 값이다.
-# 운영 시크릿은 환경변수로만 들어오고 yml 에 적지 않는다 (02-컨벤션 §14).
+# 운영 시크릿은 환경변수로만 들어오고 yml 에 적지 않는다 (02-conventions §14).
 spring:
   config:
     activate:
