@@ -97,8 +97,9 @@ export default function SettingsScreen() {
 
   const load = useCallback(async () => {
     try {
-      const [{ data }, agreements] = await Promise.all([api.get('GET /users/me'), api.get('GET /users/me/agreements')]);
-      const marketing = agreements.data.items.find((item) => item.type === 'MARKETING');
+      const { data } = await api.get('GET /users/me');
+      // 동의 목록이 안 오면 마케팅 행만 숨긴다. 로그아웃·탈퇴까지 막을 이유는 없다
+      const marketing = await api.get('GET /users/me/agreements').then((r) => r.data.items.find((item) => item.type === 'MARKETING')).catch(() => undefined);
       rememberAccount(data);
       loadAccount(data.id);
       setMe({
@@ -134,9 +135,11 @@ export default function SettingsScreen() {
       } else {
         await api.mutate('PATCH /users/me', { [key]: !before });
       }
-    } catch {
+    } catch (error) {
       setMe((m) => (m ? { ...m, [key]: key === 'marketing' ? m.marketing && { ...m.marketing, agreed: before } : before } : m));
       setSnackbar('설정을 저장하지 못했어요.');
+      // 약관 버전이 올라 422 면 현재 버전 항목을 다시 받아 그린다 (openapi PUT /users/me/agreements)
+      if (key === 'marketing' && error instanceof ApiError && error.code === 'VALIDATION') void load();
     } finally {
       toggling.current.delete(key);
       setPendingSettings(new Set(toggling.current));

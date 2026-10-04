@@ -1,6 +1,7 @@
 jest.mock('../api/media', () => ({ mediaFile: async (uri: string) => ({ uri, name: 'photo.jpg', type: 'image/jpeg' }) }));
 import React from 'react';
 import SettingsScreen from '../../app/settings/index';
+import { ApiError } from '../api/client';
 import EditProfileScreen from '../../app/settings/profile';
 
 const { act, create } = require('react-test-renderer');
@@ -12,7 +13,7 @@ const mockDismiss = jest.fn();
 let mockUploadId = 0;
 let mockOffline = false;
 let mockStored = { session: null, ended: null, outbox: [] as unknown[] };
-jest.mock('../api/client', () => ({ ApiError: class extends Error {}, createMockClient: () => ({ get: (...args: unknown[]) => mockGet(...args), mutate: (...args: unknown[]) => mockMutate(...args) }) }));
+jest.mock('../api/client', () => ({ ApiError: class extends Error { code: string; constructor(code: string) { super(code); this.code = code; } }, createMockClient: () => ({ get: (...args: unknown[]) => mockGet(...args), mutate: (...args: unknown[]) => mockMutate(...args) }) }));
 jest.mock('expo-router', () => ({ router: { replace: jest.fn(), push: jest.fn(), back: jest.fn(), dismissTo: (...args: unknown[]) => mockDismiss(...args) }, useFocusEffect: (fn: () => void) => require('react').useEffect(fn, [fn]), useNavigation: () => ({ addListener: () => () => {}, dispatch: jest.fn() }) }));
 jest.mock('expo-crypto', () => ({ randomUUID: () => `upload-${++mockUploadId}` }));
 jest.mock('expo-image-picker', () => ({ launchImageLibraryAsync: async () => ({ canceled: false, assets: [{ uri: 'file:///profile.jpg' }] }) }));
@@ -146,4 +147,20 @@ test('마케팅 저장이 실패하면 스위치를 되돌린다', async () => {
   await mount();
   await act(async () => { row('마케팅 정보 수신').props.onPress(); });
   expect(row('마케팅 정보 수신').props.accessibilityState.checked).toBe(true);
+});
+
+test('동의 목록 조회가 실패해도 설정 화면은 뜨고 마케팅 행만 숨긴다', async () => {
+  mockGet.mockImplementation((key: string) => key === 'GET /users/me/agreements' ? Promise.reject(new Error('500')) : Promise.resolve({ data: key === 'GET /users/me' ? user : null }));
+  await mount();
+  expect(row('마케팅 정보 수신')).toBeUndefined();
+  expect(row('로그아웃')).toBeDefined();
+});
+
+test('마케팅 저장이 422 면 되돌리고 동의 목록을 다시 받는다', async () => {
+  mockMutate.mockRejectedValue(new ApiError('VALIDATION'));
+  await mount();
+  mockGet.mockClear();
+  await act(async () => { row('마케팅 정보 수신').props.onPress(); });
+  expect(row('마케팅 정보 수신').props.accessibilityState.checked).toBe(true);
+  expect(mockGet).toHaveBeenCalledWith('GET /users/me/agreements');
 });
