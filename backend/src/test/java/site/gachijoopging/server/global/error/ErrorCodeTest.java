@@ -12,7 +12,6 @@ class ErrorCodeTest {
     assertThat(ErrorCode.TOKEN_EXPIRED.status()).isEqualTo(HttpStatus.UNAUTHORIZED);
     assertThat(ErrorCode.INVALID_CREDENTIALS.status()).isEqualTo(HttpStatus.UNAUTHORIZED);
     assertThat(ErrorCode.FORBIDDEN.status()).isEqualTo(HttpStatus.FORBIDDEN);
-    assertThat(ErrorCode.ACCOUNT_SUSPENDED.status()).isEqualTo(HttpStatus.FORBIDDEN);
     assertThat(ErrorCode.NOT_FOUND.status()).isEqualTo(HttpStatus.NOT_FOUND);
     assertThat(ErrorCode.METHOD_NOT_ALLOWED.status()).isEqualTo(HttpStatus.METHOD_NOT_ALLOWED);
     assertThat(ErrorCode.CONFLICT.status()).isEqualTo(HttpStatus.CONFLICT);
@@ -24,7 +23,7 @@ class ErrorCodeTest {
   }
 
   @Test
-  void 코드는_열두_종뿐이다() {
-    assertThat(ErrorCode.values()).hasSize(12);
+  void 코드는_열한_종뿐이다() {
+    assertThat(ErrorCode.values()).hasSize(11);
   }
 }
