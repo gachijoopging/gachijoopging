@@ -17,7 +17,7 @@
 
 앱은 FastAPI를 직접 호출하지 않습니다. **추론 실패가 사진 업로드를 실패시키지 않고**, `inference.status = UNAVAILABLE` → 앱이 수동 입력으로 내려갑니다.
 
-**관련 문서** — 앱·백엔드 API 계약은 [`docs/openapi.yaml`](../docs/openapi.yaml), 백엔드 정리 지도는 [`docs/backend-migration.md`](../docs/backend-migration.md), 진행 상태는 [`progress.md`](progress.md), 학습 이력은 [`experiment-log.md`](experiment-log.md), 끝난 작업의 근거·과정은 [`development-log.md`](development-log.md).
+**관련 문서** — 앱·백엔드 API 계약은 [`docs/openapi.yaml`](../docs/openapi.yaml), 백엔드 도메인 지도는 [`backend/docs/01-구조.md`](../backend/docs/01-구조.md), 진행 상태는 [`progress.md`](progress.md), 학습 이력은 [`experiment-log.md`](experiment-log.md), 끝난 작업의 근거·과정은 [`development-log.md`](development-log.md).
 
 ---
 
