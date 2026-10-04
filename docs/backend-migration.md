@@ -8,19 +8,8 @@
 | 영역 | 내용 | 손볼 것 |
 |---|---|---|
 | `global/` | JWT 발급·검증·필터, `@CurrentUser`, 응답 봉투·오류 형식·요청 ID, 커서 페이지 | `/crew/...` 소속 크루 주입(`NO_CREW` 403)과 크루장 대조(`FORBIDDEN`)를 여기에 새로 넣는다 |
-| `domain/auth` | 카카오·구글 토큰 검증, refresh 회전(가족 폐기·재사용 감지·만료 정리), 비밀번호 재설정 메일 | `user` 를 새로 쓴 뒤 아래 5곳을 잇는다 |
-| `domain/media` | 업로드, 서명 URL, AI 호출(타임아웃·`UNAVAILABLE` 폴백) | `purpose` 추가, 주소 역지오코딩 제거, `Category` 를 새로 쓴 뒤 아래 2곳을 잇는다 |
-
-### 이관 직후 끊긴 참조 7곳 — 3단계 첫 작업
-
-| 파일 | 참조 |
-|---|---|
-| `auth/application/command/AuthCommandService` | `user.domain.service.UserService` |
-| `auth/domain/service/AuthService` | `user.domain.service.UserService`, `user.dto.UserAccount` |
-| `auth/domain/service/PasswordResetService` | `user.domain.service.UserService` |
-| `auth/dto/AuthDtos` | `user.dto.MeResponse` |
-| `media/dto/MediaDtos` | `activity.domain.entity.Category` |
-| `media/infrastructure/client/AiInferenceClient` | `activity.domain.entity.Category` |
+| `domain/auth` | 카카오·구글 토큰 검증, refresh 회전(가족 폐기·재사용 감지·만료 정리), 비밀번호 재설정 메일 | — |
+| `domain/media` | 업로드, 서명 URL, AI 호출(타임아웃·`UNAVAILABLE` 폴백) | `purpose` 추가, 주소 역지오코딩 제거 |
 
 ## 새로 쓰는 것
 
