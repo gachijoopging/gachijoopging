@@ -154,6 +154,23 @@ class MeApiTest extends IntegrationTest {
         .andExpect(status().isUnprocessableEntity());
   }
 
+  @Test
+  void 사진을_보내지_않으면_사진은_그대로고_null_을_보내면_지운다() throws Exception {
+    TestAccount 나 = 가입한다(mockMvc, "me-photo-keep@test.io");
+    UUID 사진 = 사진을_만든다(나.id());
+    mockMvc.perform(수정(나, "{\"photoMediaId\":\"" + 사진 + "\"}"));
+
+    mockMvc
+        .perform(수정(나, "{\"intro\":\"사진은 그대로\"}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.photoUrl").isNotEmpty());
+
+    mockMvc
+        .perform(수정(나, "{\"photoMediaId\":null}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.photoUrl").isEmpty());
+  }
+
   private MockHttpServletRequestBuilder 기기(TestAccount 나, String 토큰) {
     return put("/api/v1/users/me/devices")
         .header(HttpHeaders.AUTHORIZATION, 나.bearer())

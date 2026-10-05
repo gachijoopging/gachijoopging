@@ -18,6 +18,7 @@ import site.gachijoopging.server.domain.user.dto.MeResponse;
 import site.gachijoopging.server.domain.user.dto.MeUpdateRequest;
 import site.gachijoopging.server.domain.user.dto.UserAccount;
 import site.gachijoopging.server.domain.user.entity.User;
+import site.gachijoopging.server.domain.user.repository.UserQueryRepository;
 import site.gachijoopging.server.domain.user.repository.UserRepository;
 import site.gachijoopging.server.global.error.BusinessException;
 import site.gachijoopging.server.global.error.ErrorCode;
@@ -31,6 +32,7 @@ public class UserService implements AccountAuthorityLoader {
       List.of(new SimpleGrantedAuthority("ROLE_USER"));
 
   private final UserRepository userRepository;
+  private final UserQueryRepository userQueryRepository;
   private final PasswordEncoder passwordEncoder;
   private final MediaService mediaService;
   private final MediaSignedUrl mediaSignedUrl;
@@ -112,7 +114,21 @@ public class UserService implements AccountAuthorityLoader {
         me.getPasswordHash() != null,
         new MeResponse.Linked(me.getKakaoId() != null, me.getGoogleSub() != null),
         new MeResponse.Settings(me.isShareLocationDefault(), me.isNotifyActivityStart()),
-        new MeResponse.Membership(MeResponse.MembershipStatus.NONE, null));
+        membership(userId));
+  }
+
+  private MeResponse.Membership membership(UUID userId) {
+    return userQueryRepository
+        .findMembership(userId)
+        .map(
+            row ->
+                new MeResponse.Membership(
+                    MeResponse.MembershipStatus.MEMBER,
+                    new MeResponse.MembershipCrew(
+                        row.getCrewId().toString(),
+                        row.getCrewName(),
+                        row.getLeaderId().equals(userId))))
+        .orElse(new MeResponse.Membership(MeResponse.MembershipStatus.NONE, null));
   }
 
   @Transactional
