@@ -1,0 +1,53 @@
+# 백엔드 단위 테스트. Java 21 · Gradle Wrapper (정본은 backend/build.gradle 과
+# gradle-wrapper.properties 다 — 여기에 버전을 또 적지 않는다).
+#
+# dockerTest 는 돌리지 않는다. @Tag("docker") 통합 테스트는 build.gradle 이 이미 test 에서
+# 빼 두었고(Testcontainers 로 DB·Redis 를 띄운다), 1차에 회수가 안 된다. 넣을 때는 별도 잡이다.
+#
+# paths 필터를 쓰지 않는 이유는 contract.yml 과 같다.
+name: backend
+
+on:
+  pull_request:
+  push:
+    branches: [dev, main]
+
+permissions:
+  contents: read
+
+jobs:
+  backend-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - id: scope
+        name: backend 가 바뀌었나
+        env:
+          BASE: ${{ github.base_ref }}
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          git fetch --quiet origin "$BASE"
+          if git diff --name-only "$(git rev-parse FETCH_HEAD)...HEAD" | grep -q '^backend/'; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "backend 가 바뀌지 않았다 — 건너뛴다."
+          fi
+
+      - uses: actions/setup-java@v4
+        if: steps.scope.outputs.run == 'true'
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+
+      - name: gradlew test
+        if: steps.scope.outputs.run == 'true'
+        working-directory: backend
+        run: ./gradlew test --no-daemon

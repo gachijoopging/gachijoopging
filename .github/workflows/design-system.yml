@@ -1,0 +1,51 @@
+# design-system 의 단위 테스트. 색 대비 불변식이 여기서 지켜진다 — 색은 한 글자만 틀려도
+# 대비가 조용히 깨지고 실기기에서 보기 전까지 아무도 모른다.
+#
+# 설치 단계가 없다. 테스트가 node:test 와 타입 스트리핑만 쓰므로 node_modules 가 필요 없다.
+# 타입 스트리핑이 기본으로 켜진 Node 를 쓴다.
+#
+# paths 필터를 쓰지 않는 이유는 contract.yml 과 같다.
+name: design-system
+
+on:
+  pull_request:
+  push:
+    branches: [dev, main]
+
+permissions:
+  contents: read
+
+jobs:
+  design-system-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - id: scope
+        name: design-system 이 바뀌었나
+        env:
+          BASE: ${{ github.base_ref }}
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          git fetch --quiet origin "$BASE"
+          if git diff --name-only "$(git rev-parse FETCH_HEAD)...HEAD" | grep -q '^design-system/'; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "design-system 이 바뀌지 않았다 — 건너뛴다."
+          fi
+
+      - uses: actions/setup-node@v4
+        if: steps.scope.outputs.run == 'true'
+        with:
+          node-version: '24'
+
+      - name: npm test
+        if: steps.scope.outputs.run == 'true'
+        working-directory: design-system
+        run: npm test
