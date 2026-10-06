@@ -127,9 +127,16 @@ app:
     per-email: 10
     per-ip: 50
 
+  password-reset:
+    # openapi.yaml POST /auth/password-reset · /confirm — 코드 10분 유효, 같은 이메일 60초에 한 번, 한 코드 5회 오답이면 폐기
+    code-ttl: 10m
+    resend-interval: 60s
+    max-attempts: 5
+    # 계약에 수치가 없어 정한 값. 여러 이메일로 메일을 뿌리는 것을 막는다
+    per-ip-limit: 10
+    per-ip-window: 1h
+
   password-reset-mail:
-    # 앱의 딥링크 파서가 이 형식을 그대로 읽는다 (openapi.yaml) — 바꾸면 앱을 함께 고쳐야 한다
-    link-base: https://www.gachi-joopging.site/reset-password
     subject: 가치줍깅 비밀번호 재설정
     from: ${MAIL_USERNAME:no-reply@gachi-joopging.site}
 

@@ -1,7 +1,9 @@
 package site.gachijoopging.server.domain.auth.service;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.SecureRandom;
 import java.time.Clock;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
@@ -11,80 +13,71 @@ import org.springframework.transaction.annotation.Transactional;
 import site.gachijoopging.server.domain.auth.entity.PasswordResetToken;
 import site.gachijoopging.server.domain.auth.repository.PasswordResetTokenRepository;
 import site.gachijoopging.server.domain.user.service.UserService;
-import site.gachijoopging.server.global.error.BusinessException;
-import site.gachijoopging.server.global.error.ErrorCode;
-import site.gachijoopging.server.global.ratelimit.RateLimiter;
 
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class PasswordResetService {
 
-  private static final Duration TOKEN_TTL = Duration.ofMinutes(30);
-
-  private static final Duration PER_EMAIL_WINDOW = Duration.ofMinutes(10);
-  private static final int PER_EMAIL_LIMIT = 1;
-  private static final Duration PER_IP_WINDOW = Duration.ofHours(1);
-  private static final int PER_IP_LIMIT = 10;
+  private static final SecureRandom RANDOM = new SecureRandom();
 
   private final PasswordResetTokenRepository tokenRepository;
   private final UserService userService;
   private final AuthService authService;
-  private final PasswordResetMailSender mailSender;
-  private final RateLimiter rateLimiter;
+  private final PasswordResetProperties properties;
   private final Clock clock;
 
   @Transactional
-  public void request(String email, String clientIp) {
-    if (!withinLimits(email, clientIp)) {
-      return;
-    }
+  public Optional<String> issue(String email) {
+    return userService.findPasswordOwnerId(email).map(this::issueFor);
+  }
 
+  // 틀린 횟수는 실패 응답과 함께 남아야 한다 — 예외로 롤백되지 않게 결과를 돌려주고 호출자가 422 를 던진다
+  @Transactional
+  public boolean confirm(String email, String code, String newPassword) {
+    Instant now = clock.instant();
     Optional<UUID> owner = userService.findPasswordOwnerId(email);
     if (owner.isEmpty()) {
-      return;
+      return false;
     }
-
     UUID userId = owner.get();
+    Optional<PasswordResetToken> token =
+        tokenRepository.findFirstByUserIdAndUsedAtIsNullAndExpiresAtAfterOrderByIdDesc(userId, now);
+    if (token.isEmpty()) {
+      return false;
+    }
+    if (!matches(token.get().getTokenHash(), hash(userId, code))) {
+      tokenRepository.recordFailure(token.get().getId(), properties.maxAttempts(), now);
+      return false;
+    }
+    if (tokenRepository.consume(token.get().getId(), now) == 0) {
+      return false;
+    }
+    userService.changePassword(userId, newPassword);
+    authService.revokeAllSessions(userId);
+    return true;
+  }
+
+  private String issueFor(UUID userId) {
     Instant now = clock.instant();
     tokenRepository.expireUnusedByUserId(userId, now);
-
-    String rawToken = OpaqueToken.newToken();
+    String code = "%06d".formatted(RANDOM.nextInt(1_000_000));
     tokenRepository.save(
         PasswordResetToken.builder()
             .userId(userId)
-            .tokenHash(OpaqueToken.hash(rawToken))
-            .expiresAt(now.plus(TOKEN_TTL))
+            .tokenHash(hash(userId, code))
+            .expiresAt(now.plus(properties.codeTtl()))
             .now(now)
             .build());
-
-    mailSender.send(email, rawToken);
+    return code;
   }
 
-  @Transactional
-  public void confirm(String rawToken, String newPassword) {
-    Instant now = clock.instant();
-    String tokenHash = OpaqueToken.hash(rawToken);
-
-    if (tokenRepository.consume(tokenHash, now) == 0) {
-      throw new BusinessException(ErrorCode.VALIDATION, "쓸 수 없는 재설정 토큰이다");
-    }
-
-    UUID userId =
-        tokenRepository
-            .findByTokenHash(tokenHash)
-            .orElseThrow(() -> new BusinessException(ErrorCode.VALIDATION, "쓸 수 없는 재설정 토큰이다"))
-            .getUserId();
-
-    userService.changePassword(userId, newPassword);
-    authService.revokeAllSessions(userId);
+  private static String hash(UUID userId, String code) {
+    return OpaqueToken.hash(userId + ":" + code);
   }
 
-  private boolean withinLimits(String email, String clientIp) {
-    boolean emailOk =
-        rateLimiter.tryAcquire(
-            "pwreset:email:" + OpaqueToken.hash(email), PER_EMAIL_LIMIT, PER_EMAIL_WINDOW);
-    boolean ipOk = rateLimiter.tryAcquire("pwreset:ip:" + clientIp, PER_IP_LIMIT, PER_IP_WINDOW);
-    return emailOk && ipOk;
+  private static boolean matches(String stored, String candidate) {
+    return MessageDigest.isEqual(
+        stored.getBytes(StandardCharsets.UTF_8), candidate.getBytes(StandardCharsets.UTF_8));
   }
 }

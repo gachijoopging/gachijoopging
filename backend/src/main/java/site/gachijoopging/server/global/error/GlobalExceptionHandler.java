@@ -1,6 +1,7 @@
 package site.gachijoopging.server.global.error;
 
 import jakarta.validation.ConstraintViolationException;
+import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -27,7 +28,7 @@ public class GlobalExceptionHandler {
   @ExceptionHandler(BusinessException.class)
   public ResponseEntity<ErrorResponse> handleBusiness(BusinessException e) {
     log.warn("{} {}", e.errorCode(), e.getMessage());
-    return toResponse(e.errorCode(), e.getMessage(), e.retryAfterSeconds());
+    return toResponse(e.errorCode(), e.getMessage(), e.retryAfterSeconds(), e.fields());
   }
 
   @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -96,13 +97,13 @@ public class GlobalExceptionHandler {
   }
 
   private static ResponseEntity<ErrorResponse> toResponse(ErrorCode errorCode, String message) {
-    return toResponse(errorCode, message, null);
+    return toResponse(errorCode, message, null, null);
   }
 
   private static ResponseEntity<ErrorResponse> toResponse(
-      ErrorCode errorCode, String message, Long retryAfterSeconds) {
+      ErrorCode errorCode, String message, Long retryAfterSeconds, List<ErrorField> fields) {
     ErrorResponse body =
-        new ErrorResponse(errorCode.name(), message, MDC.get(RequestIdFilter.REQUEST_ID));
+        new ErrorResponse(errorCode.name(), message, MDC.get(RequestIdFilter.REQUEST_ID), fields);
     ResponseEntity.BodyBuilder builder = ResponseEntity.status(errorCode.status());
     if (retryAfterSeconds != null) {
       builder.header(HttpHeaders.RETRY_AFTER, String.valueOf(retryAfterSeconds));

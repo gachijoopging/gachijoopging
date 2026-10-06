@@ -2,7 +2,6 @@ package site.gachijoopging.server.domain.auth.controller;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
-import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -20,7 +19,6 @@ import site.gachijoopging.server.domain.auth.dto.AuthDtos.SocialTokenRequest;
 import site.gachijoopging.server.domain.auth.dto.AuthDtos.TokenPairResponse;
 import site.gachijoopging.server.domain.auth.facade.AuthFacade;
 import site.gachijoopging.server.domain.auth.service.AuthService;
-import site.gachijoopging.server.domain.auth.service.PasswordResetService;
 import site.gachijoopging.server.global.response.ApiResponse;
 
 @RestController
@@ -30,7 +28,6 @@ public class AuthController {
 
   private final AuthService authService;
   private final AuthFacade authFacade;
-  private final PasswordResetService passwordResetService;
 
   @PostMapping("/signup")
   @ResponseStatus(HttpStatus.CREATED)
@@ -68,17 +65,16 @@ public class AuthController {
   }
 
   @PostMapping("/password-reset")
-  @ResponseStatus(HttpStatus.ACCEPTED)
+  @ResponseStatus(HttpStatus.NO_CONTENT)
   public void passwordReset(
       @Valid @RequestBody PasswordResetRequest request, HttpServletRequest httpRequest) {
-    passwordResetService.request(request.email(), clientIp(httpRequest));
+    authFacade.requestPasswordReset(request.email(), clientIp(httpRequest));
   }
 
   @PostMapping("/password-reset/confirm")
-  public ApiResponse<Map<String, Object>> passwordResetConfirm(
-      @Valid @RequestBody PasswordResetConfirmRequest request) {
-    passwordResetService.confirm(request.token(), request.newPassword());
-    return ApiResponse.of(Map.of());
+  @ResponseStatus(HttpStatus.NO_CONTENT)
+  public void passwordResetConfirm(@Valid @RequestBody PasswordResetConfirmRequest request) {
+    authFacade.confirmPasswordReset(request.email(), request.code(), request.newPassword());
   }
 
   private static String clientIp(HttpServletRequest request) {

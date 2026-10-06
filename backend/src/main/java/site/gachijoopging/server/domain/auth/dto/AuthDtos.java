@@ -46,8 +46,9 @@ public final class AuthDtos {
 
   public record PasswordResetRequest(@NotBlank @Email String email) {}
 
+  // code 형식을 여기서 막으면 fields 없는 422 가 되어 앱이 코드 칸에 오류를 붙이지 못한다
   public record PasswordResetConfirmRequest(
-      @NotBlank String token, @NotBlank @Size(min = 8) String newPassword) {}
+      @NotNull String email, @NotNull String code, @NotBlank @Size(min = 8) String newPassword) {}
 
   private static String normalizeNickname(String nickname) {
     return nickname == null ? null : nickname.replace("\r", "").replace("\n", "").strip();

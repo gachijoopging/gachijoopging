@@ -73,7 +73,19 @@ erDiagram
 
 비밀번호 재설정 성공 시 모든 기기의 access/refresh 세션을 무효화하고 재로그인을 요구한다. 소셜 전용 계정에 새 비밀번호를 만드는 기능은 없다. 세션 무효화의 실제 저장/검증 방식은 구현에서 결정한다.
 
-**refresh_tokens** · **password_reset_tokens** — 이관한 `auth` Entity 그대로.
+**refresh_tokens** — 이관한 `auth` Entity 그대로.
+
+**password_reset_tokens** — 메일로 보낸 6자리 코드 한 장이 한 행이다. 새로 보내면 그 사용자의 쓰지 않은 행은 `used_at` 이 찍혀 무효가 된다(V2).
+
+| 컬럼 | 타입 | 제약 |
+|---|---|---|
+| id | bigint | PK, identity |
+| user_id | uuid | NOT NULL → users. 행은 이것으로 찾는다 |
+| token_hash | text | NOT NULL. `user_id` 를 섞은 코드의 해시. 6자리 코드는 겹칠 수 있어 유일하지 않다 |
+| expires_at | timestamptz | NOT NULL. 발급 + 10분 |
+| used_at | timestamptz | 사용·재발급·오답 한도 초과로 폐기된 시각 |
+| failed_attempts | integer | NOT NULL DEFAULT 0. 5에 닿으면 `used_at` 을 찍어 폐기 |
+| created_at | timestamptz | NOT NULL |
 
 **devices** — `PUT /users/me/devices`. 같은 기기에 다른 계정으로 로그인하면 토큰의 주인이 바뀐다.
 
