@@ -8,7 +8,6 @@ import java.time.Instant;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import site.gachijoopging.server.domain.auth.dto.AuthDtos.SessionResponse;
 import site.gachijoopging.server.domain.auth.dto.AuthDtos.TokenPairResponse;
 import site.gachijoopging.server.domain.auth.entity.RefreshToken;
 import site.gachijoopging.server.domain.auth.repository.RefreshTokenRepository;
@@ -52,13 +51,12 @@ public class AuthService {
   }
 
   @Transactional
-  public SessionResponse signup(String email, String password) {
-    UserAccount account = userService.create(email, password);
-    return session(account, issueRefreshToken(account.id(), UUID.randomUUID()));
+  public TokenPairResponse signup(String email, String password, String nickname) {
+    return newSession(userService.create(email, password, nickname));
   }
 
   @Transactional
-  public SessionResponse login(String email, String password) {
+  public TokenPairResponse login(String email, String password) {
     loginAttempt.increment();
     UserAccount account =
         userService
@@ -68,22 +66,17 @@ public class AuthService {
                   loginFailure.increment();
                   return new BusinessException(ErrorCode.INVALID_CREDENTIALS, "이메일 또는 비밀번호가 다르다");
                 });
-
-    return session(account, issueRefreshToken(account.id(), UUID.randomUUID()));
+    return newSession(account);
   }
 
   @Transactional
-  public SessionResponse kakaoSession(String kakaoId) {
-    return socialSession(userService.findOrCreateByKakaoId(kakaoId));
+  public TokenPairResponse kakaoSession(String kakaoId, String nickname) {
+    return newSession(userService.findOrCreateByKakaoId(kakaoId, nickname));
   }
 
   @Transactional
-  public SessionResponse googleSession(String googleSub) {
-    return socialSession(userService.findOrCreateByGoogleSub(googleSub));
-  }
-
-  private SessionResponse socialSession(UserAccount account) {
-    return session(account, issueRefreshToken(account.id(), UUID.randomUUID()));
+  public TokenPairResponse googleSession(String googleSub, String nickname) {
+    return newSession(userService.findOrCreateByGoogleSub(googleSub, nickname));
   }
 
   @Transactional
@@ -109,9 +102,10 @@ public class AuthService {
       throw reject("이미 회전 중인 refreshToken 이다 — 다른 요청이 먼저 가져갔다");
     }
 
-    String accessToken = jwtIssuer.issue(stored.getUserId());
-    String refreshToken = issueRefreshToken(stored.getUserId(), stored.getFamilyId());
-    return new TokenPairResponse(accessToken, refreshToken);
+    return new TokenPairResponse(
+        jwtIssuer.issue(stored.getUserId()),
+        issueRefreshToken(stored.getUserId(), stored.getFamilyId()),
+        false);
   }
 
   @Transactional
@@ -129,6 +123,13 @@ public class AuthService {
     refreshTokenRepository.revokeAllByUserId(userId, clock.instant());
   }
 
+  private TokenPairResponse newSession(UserAccount account) {
+    return new TokenPairResponse(
+        jwtIssuer.issue(account.id()),
+        issueRefreshToken(account.id(), UUID.randomUUID()),
+        account.isNew());
+  }
+
   private String issueRefreshToken(UUID userId, UUID familyId) {
     Instant now = clock.instant();
     String rawToken = OpaqueToken.newToken();
@@ -141,14 +142,6 @@ public class AuthService {
             .now(now)
             .build());
     return rawToken;
-  }
-
-  private SessionResponse session(UserAccount account, String refreshToken) {
-    return new SessionResponse(
-        jwtIssuer.issue(account.id()),
-        refreshToken,
-        account.onboardingRequired(),
-        userService.getMe(account.id()));
   }
 
   private static BusinessException reject(String reason) {

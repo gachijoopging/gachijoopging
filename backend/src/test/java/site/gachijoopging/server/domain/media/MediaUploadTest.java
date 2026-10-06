@@ -25,6 +25,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
 import site.gachijoopging.server.support.IntegrationTest;
+import site.gachijoopging.server.support.TestAccounts;
 
 @AutoConfigureMockMvc
 class MediaUploadTest extends IntegrationTest {
@@ -161,12 +162,8 @@ class MediaUploadTest extends IntegrationTest {
             .perform(
                 post("/api/v1/auth/signup")
                     .contentType(MediaType.APPLICATION_JSON)
-                    .content(
-                        """
-                        {"email":"%s","password":"password123"}
-                        """
-                            .formatted(이메일)))
-            .andExpect(status().isOk())
+                    .content(TestAccounts.가입_본문(이메일)))
+            .andExpect(status().isCreated())
             .andReturn()
             .getResponse()
             .getContentAsString();

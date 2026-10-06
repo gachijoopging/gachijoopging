@@ -27,15 +27,15 @@ class MeApiTest extends IntegrationTest {
   @Autowired private JdbcTemplate jdbcTemplate;
 
   @Test
-  void 가입_직후_내_정보는_닉네임_전이고_소속이_없다() throws Exception {
+  void 이메일_가입_직후_내_정보는_프로필이_완료되고_소속이_없다() throws Exception {
     TestAccount 나 = 가입한다(mockMvc, "me-fresh@test.io");
 
     mockMvc
         .perform(get("/api/v1/users/me").header(HttpHeaders.AUTHORIZATION, 나.bearer()))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.data.id").value(나.id().toString()))
-        .andExpect(jsonPath("$.data.profileComplete").value(false))
-        .andExpect(jsonPath("$.data.nickname").isEmpty())
+        .andExpect(jsonPath("$.data.profileComplete").value(true))
+        .andExpect(jsonPath("$.data.nickname").isNotEmpty())
         .andExpect(jsonPath("$.data.email").value("me-fresh@test.io"))
         .andExpect(jsonPath("$.data.hasPassword").value(true))
         .andExpect(jsonPath("$.data.linked.kakao").value(false))

@@ -15,6 +15,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 import site.gachijoopging.server.domain.auth.service.OpaqueToken;
 import site.gachijoopging.server.support.IntegrationTest;
+import site.gachijoopging.server.support.TestAccounts;
 
 @AutoConfigureMockMvc
 class PasswordResetTest extends IntegrationTest {
@@ -183,7 +184,7 @@ class PasswordResetTest extends IntegrationTest {
   }
 
   private void 가입한다(String 이메일) throws Exception {
-    mockMvc.perform(가입(이메일)).andExpect(status().isOk());
+    mockMvc.perform(가입(이메일)).andExpect(status().isCreated());
   }
 
   private String 토큰을_발급받는다(String 이메일) {
@@ -212,7 +213,7 @@ class PasswordResetTest extends IntegrationTest {
       String 이메일) {
     return post("/api/v1/auth/signup")
         .contentType(MediaType.APPLICATION_JSON)
-        .content("{\"email\":\"%s\",\"password\":\"password123\"}".formatted(이메일));
+        .content(TestAccounts.가입_본문(이메일));
   }
 
   private static org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder 로그인(
