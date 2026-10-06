@@ -121,6 +121,12 @@ app:
     # (ai/README.md §1 — 2~3초).
     timeout: 3s
 
+  login-rate-limit:
+    # 계약(POST /auth/login 429)에 수치가 없어 정한 값. 이메일 기준은 한 계정 대입, IP 기준은 여러 계정 대입을 막는다
+    window: 10m
+    per-email: 10
+    per-ip: 50
+
   password-reset-mail:
     # 앱의 딥링크 파서가 이 형식을 그대로 읽는다 (openapi.yaml) — 바꾸면 앱을 함께 고쳐야 한다
     link-base: https://www.gachi-joopging.site/reset-password

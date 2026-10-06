@@ -4,18 +4,32 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-import site.gachijoopging.server.domain.user.dto.MeResponse;
+import org.hibernate.validator.constraints.CodePointLength;
 
 public final class AuthDtos {
 
   private AuthDtos() {}
 
-  public record CredentialsRequest(
-      @NotBlank @Email String email, @NotBlank @Size(min = 8) String password) {}
+  public record SignupRequest(
+      @NotBlank @Email String email,
+      @NotBlank @Size(min = 8) String password,
+      @NotBlank @CodePointLength(min = 2, max = 12) String nickname) {
 
-  public record KakaoLoginRequest(@NotBlank String kakaoAccessToken) {}
+    public SignupRequest {
+      nickname = normalizeNickname(nickname);
+    }
+  }
 
-  public record GoogleLoginRequest(@NotBlank String idToken) {}
+  // 길이·형식을 검증하면 422 와 401 이 갈려 계정 상태가 드러난다 — 계약도 검증하지 않는다
+  public record LoginRequest(@NotNull String email, @NotNull String password) {}
+
+  public record SocialTokenRequest(
+      @NotBlank String token, @CodePointLength(min = 2, max = 12) String nickname) {
+
+    public SocialTokenRequest {
+      nickname = normalizeNickname(nickname);
+    }
+  }
 
   public enum SocialProvider {
     KAKAO,
@@ -24,10 +38,7 @@ public final class AuthDtos {
 
   public record SocialLinkRequest(@NotNull SocialProvider provider, @NotBlank String token) {}
 
-  public record TokenPairResponse(String accessToken, String refreshToken) {}
-
-  public record SessionResponse(
-      String accessToken, String refreshToken, boolean onboardingRequired, MeResponse user) {}
+  public record TokenPairResponse(String accessToken, String refreshToken, boolean isNew) {}
 
   public record RefreshRequest(@NotBlank String refreshToken) {}
 
@@ -37,4 +48,8 @@ public final class AuthDtos {
 
   public record PasswordResetConfirmRequest(
       @NotBlank String token, @NotBlank @Size(min = 8) String newPassword) {}
+
+  private static String normalizeNickname(String nickname) {
+    return nickname == null ? null : nickname.replace("\r", "").replace("\n", "").strip();
+  }
 }

@@ -17,46 +17,55 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
   Optional<User> findByGoogleSub(String googleSub);
 
+  boolean existsByEmail(String email);
+
   boolean existsByNicknameAndIdNot(String nickname, UUID id);
 
   @Modifying
   @Query(
       value =
           """
-          INSERT INTO users (id, email, password_hash, created_at, updated_at)
-          VALUES (:id, :email, :passwordHash, :now, :now)
-          ON CONFLICT (email) DO NOTHING
+          INSERT INTO users (id, email, password_hash, nickname, created_at, updated_at)
+          VALUES (:id, :email, :passwordHash, :nickname, :now, :now)
+          ON CONFLICT DO NOTHING
           """,
       nativeQuery = true)
   int insertEmailIfAbsent(
       @Param("id") UUID id,
       @Param("email") String email,
       @Param("passwordHash") String passwordHash,
+      @Param("nickname") String nickname,
       @Param("now") Instant now);
 
   @Modifying
   @Query(
       value =
           """
-          INSERT INTO users (id, kakao_id, created_at, updated_at)
-          VALUES (:id, :kakaoId, :now, :now)
-          ON CONFLICT (kakao_id) DO NOTHING
+          INSERT INTO users (id, kakao_id, nickname, created_at, updated_at)
+          VALUES (:id, :kakaoId, :nickname, :now, :now)
+          ON CONFLICT DO NOTHING
           """,
       nativeQuery = true)
   int insertKakaoIfAbsent(
-      @Param("id") UUID id, @Param("kakaoId") String kakaoId, @Param("now") Instant now);
+      @Param("id") UUID id,
+      @Param("kakaoId") String kakaoId,
+      @Param("nickname") String nickname,
+      @Param("now") Instant now);
 
   @Modifying
   @Query(
       value =
           """
-          INSERT INTO users (id, google_sub, created_at, updated_at)
-          VALUES (:id, :googleSub, :now, :now)
-          ON CONFLICT (google_sub) DO NOTHING
+          INSERT INTO users (id, google_sub, nickname, created_at, updated_at)
+          VALUES (:id, :googleSub, :nickname, :now, :now)
+          ON CONFLICT DO NOTHING
           """,
       nativeQuery = true)
   int insertGoogleIfAbsent(
-      @Param("id") UUID id, @Param("googleSub") String googleSub, @Param("now") Instant now);
+      @Param("id") UUID id,
+      @Param("googleSub") String googleSub,
+      @Param("nickname") String nickname,
+      @Param("now") Instant now);
 
   // 같은 기기에 다른 계정으로 로그인하면 토큰의 주인이 바뀐다
   @Modifying

@@ -73,7 +73,6 @@ class AuthLoginMetricsTest {
     when(userService.authenticate("a@b.c", "맞는비밀번호"))
         .thenReturn(Optional.of(new UserAccount(userId, false)));
     when(jwtIssuer.issue(userId)).thenReturn("access-token");
-    when(userService.getMe(userId)).thenReturn(null);
     when(refreshTokenRepository.save(any())).thenReturn(null);
 
     authService.login("a@b.c", "맞는비밀번호");

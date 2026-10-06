@@ -23,6 +23,7 @@ import site.gachijoopging.server.domain.auth.client.KakaoAuthClient;
 import site.gachijoopging.server.global.error.BusinessException;
 import site.gachijoopging.server.global.error.ErrorCode;
 import site.gachijoopging.server.support.IntegrationTest;
+import site.gachijoopging.server.support.TestAccounts;
 import site.gachijoopging.server.support.TestAccounts.TestAccount;
 
 @AutoConfigureMockMvc
@@ -112,13 +113,13 @@ class SocialLinkApiTest extends IntegrationTest {
   private static MockHttpServletRequestBuilder 카카오(String accessToken) {
     return post("/api/v1/auth/kakao")
         .contentType(MediaType.APPLICATION_JSON)
-        .content("{\"kakaoAccessToken\":\"%s\"}".formatted(accessToken));
+        .content("{\"token\":\"%s\"}".formatted(accessToken));
   }
 
   private static MockHttpServletRequestBuilder 구글(String idToken) {
     return post("/api/v1/auth/google")
         .contentType(MediaType.APPLICATION_JSON)
-        .content("{\"idToken\":\"%s\"}".formatted(idToken));
+        .content("{\"token\":\"%s\"}".formatted(idToken));
   }
 
   private Integer 회원수(String 컬럼, String 값) {
@@ -132,13 +133,15 @@ class SocialLinkApiTest extends IntegrationTest {
   }
 
   private String 사용자_id(MockHttpServletRequestBuilder 요청) throws Exception {
-    return JsonPath.read(
-        mockMvc
-            .perform(요청)
-            .andExpect(status().isOk())
-            .andReturn()
-            .getResponse()
-            .getContentAsString(),
-        "$.data.user.id");
+    String accessToken =
+        JsonPath.read(
+            mockMvc
+                .perform(요청)
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString(),
+            "$.data.accessToken");
+    return TestAccounts.내_id(mockMvc, accessToken);
   }
 }
