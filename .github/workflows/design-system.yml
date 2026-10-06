@@ -16,7 +16,7 @@ permissions:
   contents: read
 
 jobs:
-  test:
+  design-system-test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

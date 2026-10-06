@@ -16,7 +16,7 @@ permissions:
   contents: read
 
 jobs:
-  test:
+  backend-test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
