@@ -1,0 +1,45 @@
+# 계약(docs/openapi.yaml)이 구조적으로 깨지지 않았는지 본다. 규칙의 정본은 redocly.yaml 이고
+# 경고 0 을 유지한다 — 경고가 쌓이기 시작하면 새로 생긴 경고가 신호가 되지 못한다.
+# 버전을 고정하는 이유도 같다. @latest 로 두면 redocly 가 규칙을 추가하는 날 우리가 아무것도
+# 안 바꿔도 빨개진다.
+#
+# paths 필터 대신 잡 안에서 걸러낸다. 필수 체크로 건 워크플로가 paths 때문에 아예 안 돌면
+# 그 체크는 영원히 pending 이고 PR 이 머지되지 않는다.
+name: contract
+
+on:
+  pull_request:
+  push:
+    branches: [dev, main]
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - id: scope
+        name: 계약이 바뀌었나
+        env:
+          BASE: ${{ github.base_ref }}
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          git fetch --quiet --depth=0 origin "$BASE"
+          if git diff --name-only "origin/$BASE...HEAD" | grep -qE '^(docs/openapi\.yaml|redocly\.yaml)$'; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "계약 파일이 바뀌지 않았다 — 건너뛴다."
+          fi
+
+      - name: redocly lint
+        if: steps.scope.outputs.run == 'true'
+        run: npx --yes @redocly/cli@2.57.0 lint docs/openapi.yaml
