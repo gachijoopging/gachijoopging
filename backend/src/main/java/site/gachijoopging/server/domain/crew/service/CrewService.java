@@ -11,9 +11,11 @@ import org.springframework.transaction.annotation.Transactional;
 import site.gachijoopging.server.domain.crew.dto.CreateCrewRequest;
 import site.gachijoopging.server.domain.crew.dto.CrewPreviewResponse;
 import site.gachijoopging.server.domain.crew.dto.CrewResponse;
+import site.gachijoopging.server.domain.crew.dto.InviteCodeResponse;
 import site.gachijoopging.server.domain.crew.dto.UpdateCrewRequest;
 import site.gachijoopging.server.domain.crew.dto.UserBriefResponse;
 import site.gachijoopging.server.domain.crew.entity.Crew;
+import site.gachijoopging.server.domain.crew.repository.CrewJoinRequestRepository;
 import site.gachijoopging.server.domain.crew.repository.CrewQueryRepository;
 import site.gachijoopging.server.domain.crew.repository.CrewQueryRepository.UserBriefRow;
 import site.gachijoopging.server.domain.crew.repository.CrewRepository;
@@ -34,6 +36,7 @@ public class CrewService implements CrewMembershipLoader {
 
   private final CrewRepository crewRepository;
   private final CrewQueryRepository crewQueryRepository;
+  private final CrewJoinRequestRepository joinRequestRepository;
   private final MediaService mediaService;
   private final MediaSignedUrl mediaSignedUrl;
   private final Clock clock;
@@ -58,6 +61,8 @@ public class CrewService implements CrewMembershipLoader {
     if (crewRepository.insertMemberIfAbsent(crewId, me, now) == 0) {
       throw new BusinessException(ErrorCode.ALREADY_IN_CREW, "이미 크루에 소속돼 있다");
     }
+    // 내 크루가 생겼으니 다른 크루에 넣어 둔 신청은 승인될 수 없다 — 크루장 목록에 남기지 않는다
+    joinRequestRepository.cancelPending(me, now);
     return view(activeCrew(crewId), me);
   }
 
@@ -100,6 +105,19 @@ public class CrewService implements CrewMembershipLoader {
         brief(crew.getLeaderId()));
   }
 
+  @Transactional
+  public InviteCodeResponse reissueInviteCode(CrewMembership membership) {
+    membership.requireLeader();
+    Instant now = clock.instant();
+    for (int attempt = 0; attempt < INVITE_CODE_ATTEMPTS; attempt++) {
+      String code = InviteCodes.issue();
+      if (crewRepository.changeInviteCodeIfFree(membership.crewId(), code, now) == 1) {
+        return new InviteCodeResponse(code);
+      }
+    }
+    throw new IllegalStateException("초대 코드가 계속 겹친다 — 코드 공간을 늘릴 때다");
+  }
+
   private void insertCrew(UUID crewId, String name, UUID leaderId, Instant now) {
     for (int attempt = 0; attempt < INVITE_CODE_ATTEMPTS; attempt++) {
       if (crewRepository.existsByName(name)) {
@@ -135,7 +153,7 @@ public class CrewService implements CrewMembershipLoader {
         leader);
   }
 
-  private UserBriefResponse brief(UUID userId) {
+  public UserBriefResponse brief(UUID userId) {
     UserBriefRow user = crewQueryRepository.findUserBrief(userId);
     if ("DELETED".equals(user.getStatus())) {
       return new UserBriefResponse(user.getId().toString(), WITHDRAWN_NICKNAME, null, true);

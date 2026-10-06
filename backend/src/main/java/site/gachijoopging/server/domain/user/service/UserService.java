@@ -152,7 +152,19 @@ public class UserService implements AccountAuthorityLoader {
                         row.getCrewId().toString(),
                         row.getCrewName(),
                         row.getLeaderId().equals(userId))))
+        .or(() -> pendingMembership(userId))
         .orElse(new MeResponse.Membership(MeResponse.MembershipStatus.NONE, null));
+  }
+
+  private Optional<MeResponse.Membership> pendingMembership(UUID userId) {
+    return userQueryRepository
+        .findPendingCrew(userId)
+        .map(
+            row ->
+                new MeResponse.Membership(
+                    MeResponse.MembershipStatus.PENDING,
+                    new MeResponse.MembershipCrew(
+                        row.getCrewId().toString(), row.getCrewName(), false)));
   }
 
   @Transactional
