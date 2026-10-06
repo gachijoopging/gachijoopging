@@ -28,13 +28,16 @@ public class PasswordResetToken {
   @Column(nullable = false)
   private UUID userId;
 
-  @Column(nullable = false, unique = true)
+  @Column(nullable = false)
   private String tokenHash;
 
   @Column(nullable = false)
   private Instant expiresAt;
 
   private Instant usedAt;
+
+  @Column(nullable = false)
+  private int failedAttempts;
 
   @Column(nullable = false)
   private Instant createdAt;
@@ -45,13 +48,5 @@ public class PasswordResetToken {
     this.tokenHash = requireNonNull(tokenHash, "tokenHash");
     this.expiresAt = requireNonNull(expiresAt, "expiresAt");
     this.createdAt = requireNonNull(now, "now");
-  }
-
-  public boolean usable(Instant now) {
-    return usedAt == null && expiresAt.isAfter(now);
-  }
-
-  public void use(Instant now) {
-    this.usedAt = now;
   }
 }
