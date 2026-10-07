@@ -48,6 +48,18 @@ test('활동을 끝내 기록이 기기에 남으면 손끝으로 알리고 요�
   expect(mockReplace).toHaveBeenCalledWith({ pathname: '/activity/[id]/summary', params: { id: 'a1' } });
 });
 
+test('종료하면 기기에 남는 경로도 종료 기록과 같다 — 요약 지도가 닫힌 경로를 그린다', async () => {
+  const here = { latitude: 37.00009, longitude: 127, accuracy: 1 };
+  mockStored = { session: { ...mockSession, segments: [[{ latitude: 37, longitude: 127 }]], distanceM: 0, here }, ended: null, outbox: [] };
+  await act(async () => { tree = create(React.createElement(Activity)); });
+  const dialog = tree.root.find((n) => (n.type as unknown) === 'Dialog' && n.props.title === '활동을 종료할까요?');
+  const end = React.Children.toArray(dialog.props.actions.props.children).find((b) => (b as React.ReactElement<{ label: string }>).props.label === '종료하기') as React.ReactElement<{ onPress: () => Promise<void> }>;
+  await act(async () => end.props.onPress());
+  const { session, ended } = mockStored as { session: { segments: { latitude: number; longitude: number }[][] }; ended: { route: number[][] } };
+  expect(ended.route).toHaveLength(2);
+  expect(session.segments.flat().map((p) => [p.longitude, p.latitude])).toEqual(ended.route);
+});
+
 describe('기기에 없는 활동으로 들어왔을 때', () => {
   const enter = async (current: () => Promise<unknown>) => {
     mockStored = { session: null, ended: null, outbox: [] };

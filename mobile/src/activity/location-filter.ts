@@ -65,6 +65,15 @@ export function filterFix(state: FilterState, fix: Fix): FilterResult {
 }
 
 /**
+ * 서 있을 때 GPS 는 오차 반경 안에서 흔들린다. 그 흔들림을 이동으로 세면 정지 중에도 거리가 쌓이므로,
+ * 경로의 마지막 점에서 오차 반경을 벗어나야 움직였다고 본다. 반경에 하한을 두면 그 안을 오가는 실제 보행(좁은 구역 줍기)이 통째로 사라진다.
+ * ponytail: 기기가 오차를 실제 흔들림보다 작게 보고하면 정지 중에도 거리가 쌓인다. 야외 정지 실측 fixture 를 얻으면 확인한다
+ */
+export function moved(from: LatLng, to: LatLng, accuracy: number): boolean {
+  return distanceM(from, to) >= accuracy;
+}
+
+/**
  * 필터 4단계. 한 보행 구간의 GPS 거리를 걸음수와 대조한다.
  * 걸음수 null(미측정)과 0(쓸 수 없는 값)은 보정 근거가 아니다 — 거리를 0으로 만들지 않는다.
  */
