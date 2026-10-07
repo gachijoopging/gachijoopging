@@ -25,7 +25,7 @@ import {
   size,
   space,
 } from 'design-system/src';
-import { ApiError, createMockClient, type ApiClient } from '../../src/api/client';
+import { ApiError, createMockClient, forget, peek, type ApiClient } from '../../src/api/client';
 import { CATEGORY_LABEL, type Category } from '../../src/category';
 import {
   changedItems,
@@ -66,7 +66,7 @@ const CATEGORIES = Object.keys(CATEGORY_LABEL) as Category[];
 export default function ActivityDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const navigation = useNavigation();
-  const [activity, setActivity] = useState<Detail | null>(null);
+  const [activity, setActivity] = useState<Detail | null>(() => (peek('GET /activities/{id}', { id })?.data as unknown as Detail) ?? null);
   const [me, setMe] = useState<{ id: string; hasCrew: boolean } | null>(null);
   const [failed, setFailed] = useState(false);
   const [gone, setGone] = useState(false);
@@ -121,6 +121,7 @@ export default function ActivityDetailScreen() {
     setDeleting(true);
     try {
       await api.mutate('DELETE /activities/{id}', { id });
+      forget('GET /activities/{id}', { id });
       if (me) {
         const cache = new File(Paths.document, `activity-detail-${me.id}-${id}.json`);
         if (cache.exists) cache.delete();

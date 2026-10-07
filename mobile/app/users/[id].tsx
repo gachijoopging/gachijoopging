@@ -22,7 +22,7 @@ import {
   Txt,
   space,
 } from 'design-system/src';
-import { ApiError, createMockClient, type ApiClient } from '../../src/api/client';
+import { ApiError, createMockClient, forget, peek, type ApiClient } from '../../src/api/client';
 import type { MOCKS } from '../../src/api/mocks.generated';
 import { ActivityCalendar, StatsTile, usePaged, type ActivityCard, type Post } from '../../src/profile/ProfileParts';
 import { ProfileTabList } from '../../src/profile/ProfileTabList';
@@ -83,7 +83,7 @@ const CONFIRM: Record<Confirm, { title: (n: string) => string; body: string; act
 
 export default function UserProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(() => peek('GET /crew/members/{userId}', { userId: id })?.data ?? null);
   const [failed, setFailed] = useState(false);
   const [gone, setGone] = useState(false);
   const [viewerIsLeader, setViewerIsLeader] = useState(false);
@@ -94,13 +94,19 @@ export default function UserProfileScreen() {
   const [sheet, setSheet] = useState(false);
   const [confirm, setConfirm] = useState<Confirm | null>(null);
   const [busy, setBusy] = useState(false);
-  const [following, setFollowing] = useState(false);
+  const [following, setFollowing] = useState(() => peek('GET /crew/members/{userId}', { userId: id })?.data.following ?? false);
   const [snackbar, setSnackbar] = useState<string | null>(null);
   const memberId = useRef(id);
   memberId.current = id;
   const profileRequest = useRef(0);
+  const shownId = useRef(id);
   useEffect(() => {
-    setProfile(null);
+    // 처음 그릴 때는 기억한 프로필을 그대로 둔다. 다른 사람으로 바뀔 때만 앞사람 화면을 지운다
+    if (shownId.current === id) return;
+    shownId.current = id;
+    const cached = peek('GET /crew/members/{userId}', { userId: id })?.data ?? null;
+    setProfile(cached);
+    setFollowing(cached?.following ?? false);
     setGone(false);
     setFailed(false);
     setSheet(false);
@@ -188,6 +194,7 @@ export default function UserProfileScreen() {
     setBusy(true);
     try {
       await api.mutate('DELETE /users/{userId}/block', { userId: id });
+      forget('GET /crew/members/{userId}', { userId: id });
       setUserBlocked(viewerId, id, false);
       setProfile({ ...profile, blocked: false });
       setSnackbar('차단을 해제했어요');
@@ -205,6 +212,7 @@ export default function UserProfileScreen() {
       if (action === 'block') await api.mutate('PUT /users/{userId}/block', { userId: id });
       else if (action === 'kick') await api.mutate('DELETE /crew/members/{userId}', { userId: id });
       else await api.mutate('PUT /crew/leader', { userId: id });
+      forget('GET /crew/members/{userId}', { userId: id });
       setConfirm(null);
       setSheet(false);
       const message = CONFIRM[action].done(profile.nickname);

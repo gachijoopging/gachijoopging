@@ -10,7 +10,7 @@ jest.mock('expo-file-system', () => ({ Paths: { document: 'documents' }, File: c
   textSync() { return mockFiles.get(this.name); }
   write(value: string) { mockFiles.set(this.name, value); }
 } }));
-jest.mock('../api/client', () => ({ ApiError: class extends Error {}, createMockClient: () => ({ get: (...args: unknown[]) => mockGet(...args), mutate: jest.fn() }) }));
+jest.mock('../api/client', () => ({ peek: () => undefined, forget: () => {}, ApiError: class extends Error {}, createMockClient: () => ({ get: (...args: unknown[]) => mockGet(...args), mutate: jest.fn() }) }));
 jest.mock('expo-router', () => ({ router: { push: jest.fn(), back: jest.fn(), replace: jest.fn() }, useFocusEffect: (fn: () => void) => require('react').useEffect(fn, [fn]), useLocalSearchParams: () => ({ id: 'post' }), useNavigation: () => ({ addListener: () => () => {} }) }));
 jest.mock('react-native', () => new Proxy({ View: 'View', Pressable: 'Pressable', FlatList: 'FlatList', ScrollView: 'ScrollView', RefreshControl: 'RefreshControl', Image: 'Image', TextInput: 'TextInput' }, { get: (target, key) => key in target ? target[key as keyof typeof target] : jest.requireActual('react-native')[key] }));
 jest.mock('design-system/src', () => new Proxy({ space: { sm: 8, md: 16, xs: 4 }, size: { minTouch: 48 }, radius: {}, useRipple: () => undefined, useTheme: () => ({ colors: {} }), pressedOpacity: () => 1 }, { get: (target, key) => key in target ? target[key as keyof typeof target] : String(key) }));
