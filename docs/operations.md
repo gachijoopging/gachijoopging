@@ -13,7 +13,7 @@ VM 한 대에 docker compose 로 컨테이너 셋을 띄운다 — 백엔드(Spr
 | 대수 | **운영 한 대뿐이다. 스테이징을 두지 않는다**(ADR-0005). 첫 사용자를 받기 전에 `infra/` 스크립트로 한 번 새로 만들어 교체한다 |
 | 고정 IP | 번들에 포함. 붙여 두지 않으면 재시작마다 주소가 바뀐다 |
 | 스왑 | 2GB(`/swapfile`). 없으면 램이 찰 때 OOM Killer 가 가장 큰 프로세스 — 즉 백엔드 — 를 죽인다 |
-| 공개 주소 | `www.gachi-joopging.site`(apex 는 301 이라 쓰지 않는다) |
+| 공개 주소 | `www.gachijoopging.site`(apex 는 301 이라 쓰지 않는다) |
 | 입구 | Nginx 가 443 을 잡고 `/api/v1/...` 를 백엔드로, 사진을 디스크에서 직접 보낸다. 채팅·위치가 STOMP 소켓(`realtime.md`)이라 WebSocket 업그레이드를 통과시킨다 |
 | DB | Supabase Postgres(PostGIS) · 서울 (ADR-0001) |
 | AI | 담당자 GPU 노트북 + 터널. 서버에 올리지 않는다 (`ai/README.md` §8) |
