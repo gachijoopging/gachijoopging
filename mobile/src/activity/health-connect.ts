@@ -24,7 +24,8 @@ export const healthConnect: StepSource & { connect(): Promise<boolean>; openSett
   },
   async count(from, to) {
     const result = await aggregateRecord({ recordType: 'Steps', timeRangeFilter: { operator: 'between', startTime: from, endTime: to } });
-    return result.COUNT_TOTAL;
+    // 기록이 없는 구간도 COUNT_TOTAL 은 0 으로 온다(react-native-health-connect 4.1.3). 쓴 앱이 없으면 미측정이다
+    return result.dataOrigins.length ? result.COUNT_TOTAL : null;
   },
   async connect() {
     if (!(await initialize())) return false;

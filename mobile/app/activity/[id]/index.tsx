@@ -257,6 +257,8 @@ export default function ActivityInProgressScreen() {
     if (ending || !session) return;
     setEnding(true);
     setEndFailed(false);
+    // 마지막 읽기 뒤 걸음까지 담는다. Health Connect 가 늦거나 실패해도 종료는 기다리지 않는다
+    await Promise.race([refreshSteps(Date.now()), new Promise((r) => setTimeout(r, 1_500))]);
     try {
       updateStored((st) =>
         {

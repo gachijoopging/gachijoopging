@@ -70,6 +70,19 @@ describe('걸음수 읽기', () => {
     expect(await readSteps(started(), at(5), source)).toBe(0);
   });
 
+  test('걸음을 쓴 앱이 없는 구간은 미측정이다 — 0걸음으로 바꾸지 않는다', async () => {
+    const source: StepSource = { status: async () => 'granted', count: async () => null };
+    expect(await readSteps(started(), at(5), source)).toBeNull();
+  });
+
+  test('기록 없는 구간은 빼고 기록 있는 구간만 합친다', async () => {
+    let s = pause(started(), at(10));
+    s = resume(s, at(15));
+    const counts = [null, 300];
+    const source: StepSource = { status: async () => 'granted', count: async () => counts.shift()! };
+    expect(await readSteps(s, at(20), source)).toBe(300);
+  });
+
   test.each(['unavailable', 'not-installed', 'denied'] as const)('%s 이면 null 이다', async (status) => {
     const source = walked(status);
     expect(await readSteps(started(), at(5), source)).toBeNull();

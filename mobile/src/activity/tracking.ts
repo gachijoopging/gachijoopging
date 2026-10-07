@@ -58,11 +58,10 @@ let readingSteps = false;
 export async function refreshSteps(now: number, source: StepSource = healthConnect): Promise<void> {
   const before = getStored().session;
   if (!before || getStored().ended || readingSteps) return;
-  if (before.paused && before.steps != null) return;
   readingSteps = true;
   try {
+    // 못 읽으면 앞서 잰 값도 버린다. 권한을 거둔 뒤 낡은 걸음으로 거리를 계속 줄이면 안 된다
     const steps = await readSteps(before, now, source);
-    if (steps == null) return;
     updateStored((st) => (st.session?.activityId === before.activityId && !st.ended ? { ...st, session: { ...st.session, steps } } : st));
   } finally {
     readingSteps = false;

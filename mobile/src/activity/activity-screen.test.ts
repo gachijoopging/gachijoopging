@@ -48,6 +48,17 @@ test('활동을 끝내 기록이 기기에 남으면 손끝으로 알리고 요�
   expect(mockReplace).toHaveBeenCalledWith({ pathname: '/activity/[id]/summary', params: { id: 'a1' } });
 });
 
+test('종료 직전 걸음을 한 번 더 읽되, Health Connect 가 답하지 않아도 종료한다', async () => {
+  const { refreshSteps } = jest.requireMock('./tracking') as { refreshSteps: jest.Mock };
+  refreshSteps.mockClear().mockImplementationOnce(() => new Promise(() => {}));
+  await act(async () => { tree = create(React.createElement(Activity)); });
+  const dialog = tree.root.find((n) => (n.type as unknown) === 'Dialog' && n.props.title === '활동을 종료할까요?');
+  const end = React.Children.toArray(dialog.props.actions.props.children).find((b) => (b as React.ReactElement<{ label: string }>).props.label === '종료하기') as React.ReactElement<{ onPress: () => Promise<void> }>;
+  await act(async () => end.props.onPress());
+  expect(refreshSteps).toHaveBeenCalled();
+  expect(mockReplace).toHaveBeenCalledWith({ pathname: '/activity/[id]/summary', params: { id: 'a1' } });
+});
+
 describe('기기에 없는 활동으로 들어왔을 때', () => {
   const enter = async (current: () => Promise<unknown>) => {
     mockStored = { session: null, ended: null, outbox: [] };

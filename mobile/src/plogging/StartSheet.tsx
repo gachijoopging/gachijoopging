@@ -66,10 +66,15 @@ export function StartSheet({
   useEffect(() => {
     if (!visible) return;
     let live = true;
-    healthConnect.status()
+    const check = () => healthConnect.status()
       .then((st) => live && setSteps(st === 'granted' || st === 'denied' ? st : 'unavailable'))
       .catch(() => {});
-    return () => { live = false; };
+    void check();
+    // Health Connect 설정에서 허용하고 돌아오면 다시 본다
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') void check();
+    });
+    return () => { live = false; sub.remove(); };
   }, [visible]);
 
   // 두 번 거부하면 Health Connect 는 창 없이 거부를 돌려준다. 그 뒤로는 설정에서만 켤 수 있다
