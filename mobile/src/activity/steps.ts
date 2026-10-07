@@ -27,8 +27,10 @@ export async function readSteps(s: Session, now: number, source: StepSource): Pr
     if ((await source.status()) !== 'granted') return null;
     const spans = activeSpans(s, now);
     if (!spans) return null;
-    const counts = (await Promise.all(spans.map(([from, to]) => source.count(from, to)))).filter((n) => n != null);
-    return counts.length ? counts.reduce((a, b) => a + b, 0) : null;
+    const counts = await Promise.all(spans.map(([from, to]) => source.count(from, to)));
+    // 한 구간이라도 기록이 없으면 활동 전체 걸음을 모른다. 일부 구간 걸음으로 전체 GPS 거리를 보정하면 과하게 줄어든다
+    // ponytail: 막 재개한 짧은 구간처럼 실제로 안 걸어 기록이 없어도 미측정이 된다. 실기기에서 자주 보이면 짧은 구간을 예외로 둔다
+    return counts.some((n) => n == null) ? null : counts.reduce<number>((a, b) => a + (b ?? 0), 0);
   } catch {
     return null;
   }

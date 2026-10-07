@@ -75,12 +75,12 @@ describe('걸음수 읽기', () => {
     expect(await readSteps(started(), at(5), source)).toBeNull();
   });
 
-  test('기록 없는 구간은 빼고 기록 있는 구간만 합친다', async () => {
+  test('한 구간이라도 기록이 없으면 전체가 미측정이다 — 일부 구간 걸음으로 전체 거리를 보정하지 않는다', async () => {
     let s = pause(started(), at(10));
     s = resume(s, at(15));
     const counts = [null, 300];
     const source: StepSource = { status: async () => 'granted', count: async () => counts.shift()! };
-    expect(await readSteps(s, at(20), source)).toBe(300);
+    expect(await readSteps(s, at(20), source)).toBeNull();
   });
 
   test.each(['unavailable', 'not-installed', 'denied'] as const)('%s 이면 null 이다', async (status) => {

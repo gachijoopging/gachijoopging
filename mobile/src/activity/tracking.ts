@@ -49,7 +49,7 @@ export async function tick(now: number) {
   await api.mutate('POST /activities/{id}/live', { id: activityId, ...live }).catch(() => {});
 }
 
-let readingSteps = false;
+let readingSteps: Promise<void> | null = null;
 
 /**
  * Health Connect 는 앱이 앞에 있을 때만 읽힌다. 화면을 끈 동안의 걸음은 시각 구간으로 다음 읽기에 함께 잡힌다.
@@ -58,14 +58,22 @@ let readingSteps = false;
 export async function refreshSteps(now: number, source: StepSource = healthConnect): Promise<void> {
   const before = getStored().session;
   if (!before || getStored().ended || readingSteps) return;
-  readingSteps = true;
-  try {
+  readingSteps = (async () => {
     // 못 읽으면 앞서 잰 값도 버린다. 권한을 거둔 뒤 낡은 걸음으로 거리를 계속 줄이면 안 된다
     const steps = await readSteps(before, now, source);
     updateStored((st) => (st.session?.activityId === before.activityId && !st.ended ? { ...st, session: { ...st.session, steps } } : st));
+  })();
+  try {
+    await readingSteps;
   } finally {
-    readingSteps = false;
+    readingSteps = null;
   }
+}
+
+/** 종료 직전. 진행 중인 읽기를 기다린 뒤 지금까지 한 번 더 읽는다. 앞선 읽기가 지금 읽기를 건너뛰게 두면 마지막 걸음이 빠진다 */
+export async function finalSteps(source: StepSource = healthConnect): Promise<void> {
+  while (readingSteps) await readingSteps.catch(() => {});
+  await refreshSteps(Date.now(), source);
 }
 
 export async function startTracking(): Promise<boolean> {

@@ -53,7 +53,7 @@ import {
   type Session,
 } from '../../../src/activity/session';
 import { getStored, loadAccount, loadLastAccount, subscribe, updateStored } from '../../../src/activity/store';
-import { refreshSteps, startTracking, stopTracking, syncOutbox, tick } from '../../../src/activity/tracking';
+import { finalSteps, refreshSteps, startTracking, stopTracking, syncOutbox, tick } from '../../../src/activity/tracking';
 import { formatClock, formatDistance } from '../../../src/format';
 import { crewMarkers } from '../../../src/live/live';
 import { useBlockedUsers } from '../../../src/profile/blocked-users';
@@ -258,13 +258,18 @@ export default function ActivityInProgressScreen() {
     setEnding(true);
     setEndFailed(false);
     // 마지막 읽기 뒤 걸음까지 담는다. Health Connect 가 늦거나 실패해도 종료는 기다리지 않는다
-    await Promise.race([refreshSteps(Date.now()), new Promise((r) => setTimeout(r, 1_500))]);
+    const counted = await Promise.race([
+      finalSteps().then(() => true, () => false),
+      new Promise<boolean>((r) => setTimeout(() => r(false), 1_500)),
+    ]);
     try {
       updateStored((st) =>
         {
           if (!st.session) return st;
-          const body = endBody(st.session, Date.now());
-          return { ...st, ended: body, outbox: enqueue(st.outbox, { kind: 'end', activityId: st.session.activityId, body }) };
+          // 종료 시각까지 읽지 못한 걸음은 일부 구간 값이다. 그것으로 전체 거리를 줄이지 않는다
+          const session = counted ? st.session : { ...st.session, steps: null };
+          const body = endBody(session, Date.now());
+          return { ...st, session, ended: body, outbox: enqueue(st.outbox, { kind: 'end', activityId: st.session.activityId, body }) };
         },
       );
     } catch {

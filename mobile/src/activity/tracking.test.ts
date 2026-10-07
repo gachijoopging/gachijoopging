@@ -3,7 +3,7 @@ import { ApiError, createMockClient, type ApiClient } from '../api/client';
 import type { Op } from './outbox';
 import { undoItem } from './outbox';
 import { displayDistance, newSession } from './session';
-import { isSendingItem, refreshSteps, startTracking, syncOutbox, tick } from './tracking';
+import { finalSteps, isSendingItem, refreshSteps, startTracking, syncOutbox, tick } from './tracking';
 import type { StepSource } from './steps';
 
 let mockStored: ReturnType<typeof import('./store')['getStored']>;
@@ -175,6 +175,23 @@ describe('걸음수 갱신', () => {
     finish(100);
     await first;
     expect(mockStored.session?.steps).toBe(100);
+  });
+
+  test('종료 직전 읽기는 진행 중인 읽기를 기다린 뒤 한 번 더 읽는다', async () => {
+    mockStored = { session: { ...active(), steps: 100 }, ended: null, outbox: [] };
+    let finish!: (n: number) => void;
+    const slow: StepSource = { status: async () => 'granted', count: () => new Promise((r) => { finish = r; }) };
+    const running = refreshSteps(T0 + 60_000, slow);
+    const count = jest.fn(async () => 115);
+    jest.spyOn(Date, 'now').mockReturnValue(T0 + 70_000);
+    const final = finalSteps({ status: async () => 'granted', count });
+    await new Promise((r) => setImmediate(r));
+    expect(count).not.toHaveBeenCalled();
+    finish(100);
+    await Promise.all([running, final]);
+    expect(count).toHaveBeenCalledTimes(1);
+    expect(mockStored.session?.steps).toBe(115);
+    jest.restoreAllMocks();
   });
 
   test('일시정지 중에도 일시정지 시각까지만 다시 읽는다 — 늦게 쓰인 직전 걸음을 담고, 멈춘 뒤 걸음은 빠진다', async () => {
