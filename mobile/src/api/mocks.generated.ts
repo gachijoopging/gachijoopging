@@ -84,19 +84,19 @@ export const MOCKS = {
           "type": "TERMS",
           "version": "2026-10",
           "required": true,
-          "url": "https://www.gachi-joopging.site/terms"
+          "url": "https://www.gachijoopging.site/terms"
         },
         {
           "type": "PRIVACY",
           "version": "2026-10",
           "required": true,
-          "url": "https://www.gachi-joopging.site/privacy"
+          "url": "https://www.gachijoopging.site/privacy"
         },
         {
           "type": "MARKETING",
           "version": "2026-10",
           "required": false,
-          "url": "https://www.gachi-joopging.site/marketing"
+          "url": "https://www.gachijoopging.site/marketing"
         }
       ]
     }
@@ -872,7 +872,7 @@ export const MOCKS = {
           "type": "TERMS",
           "version": "2026-10",
           "required": true,
-          "url": "https://www.gachi-joopging.site/terms",
+          "url": "https://www.gachijoopging.site/terms",
           "agreed": false,
           "agreedAt": null
         },
@@ -880,7 +880,7 @@ export const MOCKS = {
           "type": "PRIVACY",
           "version": "2026-10",
           "required": true,
-          "url": "https://www.gachi-joopging.site/privacy",
+          "url": "https://www.gachijoopging.site/privacy",
           "agreed": false,
           "agreedAt": null
         },
@@ -888,7 +888,7 @@ export const MOCKS = {
           "type": "MARKETING",
           "version": "2026-10",
           "required": false,
-          "url": "https://www.gachi-joopging.site/marketing",
+          "url": "https://www.gachijoopging.site/marketing",
           "agreed": false,
           "agreedAt": null
         }
@@ -1231,7 +1231,7 @@ export const MOCKS = {
           "type": "TERMS",
           "version": "2026-10",
           "required": true,
-          "url": "https://www.gachi-joopging.site/terms",
+          "url": "https://www.gachijoopging.site/terms",
           "agreed": true,
           "agreedAt": "2026-10-10T00:00:00Z"
         },
@@ -1239,7 +1239,7 @@ export const MOCKS = {
           "type": "PRIVACY",
           "version": "2026-10",
           "required": true,
-          "url": "https://www.gachi-joopging.site/privacy",
+          "url": "https://www.gachijoopging.site/privacy",
           "agreed": true,
           "agreedAt": "2026-10-10T00:00:00Z"
         },
@@ -1247,7 +1247,7 @@ export const MOCKS = {
           "type": "MARKETING",
           "version": "2026-10",
           "required": false,
-          "url": "https://www.gachi-joopging.site/marketing",
+          "url": "https://www.gachijoopging.site/marketing",
           "agreed": false,
           "agreedAt": null
         }
