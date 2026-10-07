@@ -70,6 +70,16 @@ createMockClient({ delayMs: 300, failing: ['GET /crew/home'] })
 값은 `app.config.js` 의 `extra` 를 거쳐 `expo-constants` 로 읽는다 — `app.json` 에 넣지 않는다.
 그 파일은 커밋된다.
 
+## 실측 위치 로그
+
+걸으며 받은 GPS 원시 기록을 익명화해 `src/activity/__fixtures__/` 의 회귀 fixture 로 만든다.
+
+1. `EXPO_PUBLIC_FIX_LOG=1` 로 릴리스 빌드를 설치한다
+2. 앱이 외부 저장소에 파일을 새로 만들지 못하므로 먼저 만들어 둔다:
+   `adb shell "mkdir -p /sdcard/Android/data/site.gachijoopging.app/files && touch /sdcard/Android/data/site.gachijoopging.app/files/fixlog.txt"`
+3. 걷고 나서 `adb pull /sdcard/Android/data/site.gachijoopging.app/files/fixlog.txt walk.log`
+4. `node scripts/fixlog-to-fixture.mjs walk.log src/activity/__fixtures__/walk.json` (Node 22.18+)
+
 ## 카카오맵
 
 `modules/kakao-map/` 이 감싼다. **에뮬레이터에서는 확인할 수 없다** — SDK 가 arm 계열
