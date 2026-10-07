@@ -15,6 +15,7 @@ import {
   trackingNotice,
   type Session,
 } from './session';
+import type { Fix } from './location-filter';
 
 const T0 = Date.parse('2026-09-29T10:00:00Z');
 const at = (sec: number) => T0 + sec * 1000;
@@ -39,9 +40,15 @@ function walk(s: Session, from: number, to: number): Session {
   return s;
 }
 
+/** 6초마다 21m 씩 걷는다(초속 3.5m). 평활 창이 차기 전 첫 점들도 정지 판정 반경을 벗어나 경로에 쌓인다 */
+function stride(s: Session, from: number, to: number): Session {
+  for (let i = from; i <= to; i++) s = applyFix(s, fix(i * 6, i * 0.00019));
+  return s;
+}
+
 describe('경로와 거리', () => {
   test('필터를 통과한 점만 경로에 쌓고 거리를 더한다', () => {
-    const s = walk(started(), 0, 10);
+    const s = stride(started(), 0, 10);
     expect(s.segments).toHaveLength(1);
     expect(s.segments[0]).toHaveLength(11);
     expect(s.distanceM).toBeGreaterThan(5);
@@ -54,13 +61,30 @@ describe('경로와 거리', () => {
   });
 
   test('일시정지 중에는 현재 위치만 바뀌고 경로·거리는 멈춘다', () => {
-    let s = walk(started(), 0, 5);
+    let s = stride(started(), 0, 5);
     const before = s.distanceM;
-    s = pause(s, at(6));
-    s = walk(s, 7, 20);
+    s = pause(s, at(31));
+    s = stride(s, 7, 20);
     expect(s.distanceM).toBe(before);
     expect(s.segments[0]).toHaveLength(6);
-    expect(s.here?.latitude).toBeCloseTo(37.5 + 20 * 0.00001, 4);
+    expect(s.here?.latitude).toBeCloseTo(37.5 + 18.5 * 0.00019, 4);
+  });
+
+  test('일시정지·종료 때는 정지 판정 반경 안에서 마지막으로 움직인 만큼도 경로와 거리에 넣는다', () => {
+    let s = stride(started(), 0, 5);
+    // 마지막 자리에 멈춰 서면 평활점이 뒤따라오다 반경 안에서 경로 끝을 지나친다. 반경은 그때 오차(25m)다
+    for (const sec of [33, 36, 39, 42]) s = applyFix(s, fix(sec, 5 * 0.00019, 25));
+    const lastRoute = s.segments[0][s.segments[0].length - 1];
+    expect(s.here!.latitude).toBeGreaterThan(lastRoute.latitude);
+
+    const ended = endBody(s, at(43));
+    expect(ended.route).toHaveLength(s.segments[0].length + 1);
+    expect(ended.distanceM).toBeGreaterThan(Math.round(s.distanceM));
+
+    const paused = pause(s, at(43));
+    expect(paused.segments[0]).toHaveLength(s.segments[0].length + 1);
+    expect(paused.distanceM).toBeGreaterThan(s.distanceM);
+    expect(endBody(paused, at(40)).distanceM).toBe(Math.round(paused.distanceM));
   });
 
   test('재개하면 새 구간을 시작하고 정지 전 점과 잇지 않는다', () => {
@@ -85,9 +109,10 @@ describe('경로와 거리', () => {
   });
 
   test('걸음수 미측정(null)이면 GPS 거리를 그대로 쓴다', () => {
-    const s = walk(started(), 0, 10);
+    const s = pause(stride(started(), 0, 10), at(61));
     expect(s.steps).toBeNull();
-    expect(endBody(s, at(11)).distanceM).toBe(Math.round(s.distanceM));
+    expect(s.distanceM).toBeGreaterThan(100);
+    expect(endBody(s, at(62)).distanceM).toBe(Math.round(s.distanceM));
     expect(endBody(s, at(11)).steps).toBeNull();
   });
 });
@@ -109,11 +134,11 @@ describe('활동 시간', () => {
   });
 
   test('종료 경로는 구간을 이어 [lng, lat] 로 보낸다', () => {
-    let s = walk(started(), 0, 2);
-    s = resume(pause(s, at(3)), at(4));
-    s = walk(s, 5, 6);
-    expect(endBody(s, at(7)).route).toHaveLength(5);
-    expect(endBody(s, at(7)).route[0]).toEqual([127, expect.any(Number)]);
+    let s = stride(started(), 0, 2);
+    s = resume(pause(s, at(13)), at(14));
+    s = stride(s, 5, 6);
+    expect(endBody(s, at(37)).route).toHaveLength(5);
+    expect(endBody(s, at(37)).route[0]).toEqual([127, expect.any(Number)]);
   });
 });
 
@@ -215,5 +240,81 @@ describe('줍기 합계', () => {
     s = removeItem(s, { category: 'PAPER', quantity: 1 });
     expect(s.byCategory).toEqual({ CAN: 2 });
     expect(s.itemCount).toBe(2);
+  });
+});
+
+describe('정지 드리프트 억제', () => {
+  // 실기기(SM-S916N) 실내에서 11분간 움직이지 않고 기록한 원시 위치. 익명화돼 있다
+  const still: Fix[] = require('./__fixtures__/still-indoor.json');
+
+  const ORIGIN = { latitude: 37.5665, longitude: 126.978 };
+
+  function replay(fixes: Fix[]) {
+    const start = fixes[0].timestamp;
+    let s = newSession(
+      { id: 'a1', startedAt: new Date(start).toISOString(), pausedSec: 0, paused: false, pausedAt: null, itemCount: 0, locationShared: true },
+      'u1',
+      start,
+    );
+    for (const f of fixes) s = applyFix(s, f);
+    return s;
+  }
+
+  test('서 있는 동안 GPS 가 흔들려도 누적 거리는 5m 미만이다', () => {
+    expect(replay(still).distanceM).toBeLessThan(5);
+  });
+
+  test('서 있는 동안에도 GPS 상태는 정상이고 현재 위치는 갱신된다', () => {
+    const s = replay(still);
+    expect(s.here).not.toBeNull();
+    expect(s.searchingSince).toBeNull();
+    expect(s.lastPassAt).toBe(still[still.length - 1].timestamp);
+  });
+
+  test('야외처럼 오차 4m 안에서만 흔들려도 서 있는 동안은 거리에 넣지 않는다', () => {
+    let seed = 11;
+    // 축마다 ±2.83m — 어느 점이든 원점에서 4m 안이다
+    const noise = () => ((seed = (seed * 16807) % 2147483647) / 2147483647 - 0.5) * 4 * Math.SQRT2;
+    const outdoor: Fix[] = [];
+    for (let sec = 0; sec <= 300; sec += 3) {
+      outdoor.push({ latitude: ORIGIN.latitude + noise() / 111_195, longitude: ORIGIN.longitude + noise() / 88_200, accuracy: 4, timestamp: sec * 1000 });
+    }
+    expect(replay(outdoor).distanceM).toBeLessThan(5);
+  });
+
+  test('좁은 구역을 맴도는 보행도 거리에 넣는다 — 반경 4m 원 20바퀴', () => {
+    const laps: Fix[] = [];
+    for (let i = 0; i < 400; i++) {
+      const t = (2 * Math.PI * i) / 20;
+      laps.push({ latitude: ORIGIN.latitude + (4 * Math.sin(t)) / 111_195, longitude: ORIGIN.longitude + (4 * Math.cos(t)) / 88_200, accuracy: 1, timestamp: i * 3000 });
+    }
+    expect(replay(laps).distanceM / (20 * 2 * Math.PI * 4)).toBeGreaterThan(0.85);
+  });
+
+  test('10m 를 되돌아오며 왕복해도 거리에 넣는다', () => {
+    const shuttle: Fix[] = [];
+    for (let i = 0; i < 400; i++) {
+      const k = i % 20;
+      shuttle.push({ latitude: ORIGIN.latitude + (k < 10 ? k : 20 - k) / 111_195, longitude: ORIGIN.longitude, accuracy: 1, timestamp: i * 1000 });
+    }
+    // 평활화가 꺾이는 끝을 깎아 실제 400m 보다 짧다. 사라지지만 않으면 된다
+    expect(replay(shuttle).distanceM).toBeGreaterThan(250);
+  });
+
+  test('오차 12m 잡음이 낀 400m 직선 보행은 ±15% 안으로 잰다', () => {
+    // 결정적 의사난수. 같은 입력이면 같은 잡음
+    let seed = 7;
+    const noise = () => ((seed = (seed * 16807) % 2147483647) / 2147483647 - 0.5) * 12;
+    const walk: Fix[] = [];
+    for (let sec = 0; sec <= 300; sec += 3) {
+      const m = (400 * sec) / 300;
+      walk.push({
+        latitude: ORIGIN.latitude + (m + noise()) / 111_195,
+        longitude: ORIGIN.longitude + noise() / 88_200,
+        accuracy: 12,
+        timestamp: sec * 1000,
+      });
+    }
+    expect(Math.abs(replay(walk).distanceM - 400) / 400).toBeLessThan(0.15);
   });
 });

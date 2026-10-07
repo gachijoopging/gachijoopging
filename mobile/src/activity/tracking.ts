@@ -1,10 +1,13 @@
 import * as Location from 'expo-location';
 import * as Network from 'expo-network';
+import { File } from 'expo-file-system';
 import * as TaskManager from 'expo-task-manager';
 import { updateTrackingNotification } from '../../modules/tracking-notification';
 import { ApiError, createMockClient, type ApiClient } from '../api/client';
 import { healthConnect } from './health-connect';
 import { flush, type Op } from './outbox';
+import { fixLogLine } from './fix-log';
+import type { Fix } from './location-filter';
 import { applyFix, livePayload, trackingNotice } from './session';
 import { readSteps, type StepSource } from './steps';
 import { getStored, loadLastAccount, updateStored } from './store';
@@ -17,15 +20,22 @@ const api: ApiClient = createMockClient({ activityTotals: () => getStored().sess
 
 let lastLiveAt = 0;
 
+// 실측 보행 빌드에서만 켠다. 릴리스 빌드의 내부 저장소는 adb 로 꺼낼 수 없어 앱 전용 외부 저장소에 남긴다.
+// expo-file-system 은 외부 경로에 파일을 새로 만들지 못하므로 adb 로 미리 만들어 둔다(scripts/fixlog-to-fixture.mjs)
+const fixLog = process.env.EXPO_PUBLIC_FIX_LOG === '1'
+  ? new File('file:///storage/emulated/0/Android/data/site.gachijoopging.app/files/fixlog.txt')
+  : null;
+
 TaskManager.defineTask<{ locations: Location.LocationObject[] }>(TRACKING_TASK, async ({ data, error }) => {
   if (error || !data) return;
   if (!loadLastAccount()?.session) return;
   updateStored((st) => {
     if (!st.session || st.ended) return st;
-    const session = data.locations.reduce(
-      (s, l) => applyFix(s, { latitude: l.coords.latitude, longitude: l.coords.longitude, accuracy: l.coords.accuracy, timestamp: l.timestamp }),
-      st.session,
-    );
+    const fixes: Fix[] = data.locations.map((l) => ({ latitude: l.coords.latitude, longitude: l.coords.longitude, accuracy: l.coords.accuracy, timestamp: l.timestamp }));
+    if (fixLog) {
+      try { fixLog.write(fixes.map(fixLogLine).join(''), { append: true }); } catch (e) { console.warn('[tracking] fix log', e); }
+    }
+    const session = fixes.reduce(applyFix, st.session);
     return { ...st, session };
   });
   await tick(Date.now());

@@ -3,7 +3,7 @@ import type { Activity } from '../api/client';
 import { formatClock, formatDistance } from '../format';
 import type { Category } from '../category';
 import { applyPickup, undoPickup, type Counts } from './pickup';
-import { correctDistance, distanceM, filterFix, initialFilterState, type FilterState, type Fix } from './location-filter';
+import { correctDistance, distanceM, filterFix, initialFilterState, moved, type FilterState, type Fix } from './location-filter';
 
 const SEARCH_AFTER_MS = 10_000;
 const UNSTABLE_AFTER_MS = 15_000;
@@ -87,6 +87,7 @@ export function applyFix(s: Session, fix: Fix): Session {
   if (s.paused) return base;
   const current = s.segments[s.segments.length - 1];
   const prev = current[current.length - 1];
+  if (prev && !moved(prev, point, fix.accuracy!)) return base;
   return {
     ...base,
     segments: [...s.segments.slice(0, -1), [...current, point]],
@@ -94,9 +95,18 @@ export function applyFix(s: Session, fix: Fix): Session {
   };
 }
 
+/** 정지 판정 때문에 경로 끝이 실제 위치보다 최대 반경만큼 뒤처진다. 닫을 때 잇지 않으면 마지막 걸음이 기록에서 빠진다 */
+export function closeSegment(s: Session): Session {
+  const current = s.segments[s.segments.length - 1];
+  const prev = current?.[current.length - 1];
+  if (!prev || !s.here || (prev.latitude === s.here.latitude && prev.longitude === s.here.longitude)) return s;
+  const end = { latitude: s.here.latitude, longitude: s.here.longitude };
+  return { ...s, segments: [...s.segments.slice(0, -1), [...current, end]], distanceM: s.distanceM + distanceM(prev, end) };
+}
+
 export function pause(s: Session, now: number): Session {
   if (s.paused) return s;
-  return { ...s, paused: true, pausedAt: new Date(now).toISOString() };
+  return { ...closeSegment(s), paused: true, pausedAt: new Date(now).toISOString() };
 }
 
 export function knownPauses(s: Session): [string, string][] | null {
@@ -170,7 +180,8 @@ export function livePayload(s: Session, now: number) {
   };
 }
 
-export function endBody(s: Session, now: number) {
+export function endBody(active: Session, now: number) {
+  const s = active.paused ? active : closeSegment(active);
   const durationSec = elapsedSec(s, now);
   const totalSec = Math.max(0, Math.floor((now - Date.parse(s.startedAt)) / 1000));
   return {

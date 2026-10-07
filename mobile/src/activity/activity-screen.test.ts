@@ -75,6 +75,16 @@ test('종료 직전 걸음을 끝까지 읽었으면 그 값으로 기록한다'
   expect((mockStored.ended as { steps: number | null })).toMatchObject({ steps: 1_000 });
 });
 
+test('종료하면 기기에 남는 경로도 종료 기록과 같다 — 요약 지도가 닫힌 경로를 그린다', async () => {
+  const here = { latitude: 37.00009, longitude: 127, accuracy: 1 };
+  mockStored = { session: { ...mockSession, segments: [[{ latitude: 37, longitude: 127 }]], distanceM: 0, here }, ended: null, outbox: [] };
+  await act(async () => { tree = create(React.createElement(Activity)); });
+  await pressEnd();
+  const { session, ended } = mockStored as { session: { segments: { latitude: number; longitude: number }[][] }; ended: { route: number[][] } };
+  expect(ended.route).toHaveLength(2);
+  expect(session.segments.flat().map((p) => [p.longitude, p.latitude])).toEqual(ended.route);
+});
+
 describe('기기에 없는 활동으로 들어왔을 때', () => {
   const enter = async (current: () => Promise<unknown>) => {
     mockStored = { session: null, ended: null, outbox: [] };

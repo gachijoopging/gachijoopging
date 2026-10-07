@@ -6,7 +6,7 @@ HTTP 계약(`openapi.yaml`)이 다루지 않는 실시간 두 가지 — **크�
 ## 연결
 
 ```
-wss://www.gachi-joopging.site/api/v1/ws?token=<accessToken>
+wss://www.gachijoopging.site/api/v1/ws?token=<accessToken>
 ```
 
 - 프로토콜은 **STOMP over WebSocket**. Spring 의 기본이고 RN 은 `@stomp/stompjs` 를 쓴다

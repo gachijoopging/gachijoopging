@@ -42,6 +42,7 @@ import {
   bannerFor,
   displayDistance,
   elapsedSec,
+  closeSegment,
   endBody,
   gpsStatus,
   metricsLabel,
@@ -267,7 +268,9 @@ export default function ActivityInProgressScreen() {
         {
           if (!st.session) return st;
           // 종료 시각까지 읽지 못한 걸음은 일부 구간 값이다. 그것으로 전체 거리를 줄이지 않는다
-          const session = counted ? st.session : { ...st.session, steps: null };
+          const measured = counted ? st.session : { ...st.session, steps: null };
+          // 요약 지도·공유 카드도 종료 기록과 같은 경로를 그리도록 닫은 세션을 남긴다
+          const session = measured.paused ? measured : closeSegment(measured);
           const body = endBody(session, Date.now());
           return { ...st, session, ended: body, outbox: enqueue(st.outbox, { kind: 'end', activityId: st.session.activityId, body }) };
         },
