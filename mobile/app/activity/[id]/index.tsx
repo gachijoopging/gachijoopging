@@ -53,7 +53,7 @@ import {
   type Session,
 } from '../../../src/activity/session';
 import { getStored, loadAccount, loadLastAccount, subscribe, updateStored } from '../../../src/activity/store';
-import { startTracking, stopTracking, syncOutbox, tick } from '../../../src/activity/tracking';
+import { refreshSteps, startTracking, stopTracking, syncOutbox, tick } from '../../../src/activity/tracking';
 import { formatClock, formatDistance } from '../../../src/format';
 import { crewMarkers } from '../../../src/live/live';
 import { useBlockedUsers } from '../../../src/profile/blocked-users';
@@ -73,6 +73,8 @@ const BANNER_TEXT: Record<Exclude<BannerKind, 'locationOff'>, { text: string; de
   unstable: { text: 'GPS 불안정', detail: '경로 정확도가 낮을 수 있어요', tone: 'warn', icon: 'signal-off' },
   paused: { text: '일시정지 중', tone: 'surface', icon: 'pause' },
 };
+
+const STEPS_EVERY_MS = 15_000;
 
 export default function ActivityInProgressScreen() {
   const focused = useIsFocused();
@@ -160,10 +162,15 @@ export default function ActivityInProgressScreen() {
   );
 
   useEffect(() => {
+    let stepsAt = 0;
     const timer = setInterval(() => {
       const t = Date.now();
       setNow(t);
       tick(t);
+      if (t - stepsAt >= STEPS_EVERY_MS) {
+        stepsAt = t;
+        void refreshSteps(t);
+      }
     }, 1_000);
     return () => clearInterval(timer);
   }, []);

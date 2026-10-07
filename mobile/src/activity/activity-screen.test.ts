@@ -26,7 +26,7 @@ jest.mock('./store', () => ({
   subscribe: () => () => {},
   updateStored: (fn: (s: typeof mockStored) => typeof mockStored) => { mockStored = fn(mockStored); },
 }));
-jest.mock('./tracking', () => ({ startTracking: jest.fn(async () => {}), stopTracking: jest.fn(async () => {}), syncOutbox: jest.fn(async () => {}), tick: jest.fn() }));
+jest.mock('./tracking', () => ({ refreshSteps: jest.fn(async () => {}), startTracking: jest.fn(async () => {}), stopTracking: jest.fn(async () => {}), syncOutbox: jest.fn(async () => {}), tick: jest.fn() }));
 jest.mock('./QuickPickupSheet', () => ({ QuickPickupSheet: 'QuickPickupSheet' }));
 jest.mock('../profile/blocked-users', () => ({ useBlockedUsers: () => new Set() }));
 jest.mock('design-system/src', () => new Proxy(

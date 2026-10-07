@@ -3,7 +3,8 @@ import { ApiError, createMockClient, type ApiClient } from '../api/client';
 import type { Op } from './outbox';
 import { undoItem } from './outbox';
 import { newSession } from './session';
-import { isSendingItem, startTracking, syncOutbox, tick } from './tracking';
+import { isSendingItem, refreshSteps, startTracking, syncOutbox, tick } from './tracking';
+import type { StepSource } from './steps';
 
 let mockStored: ReturnType<typeof import('./store')['getStored']>;
 const mockMutate = jest.mocked(createMockClient().mutate);
@@ -132,3 +133,48 @@ test.each(['permission', 'services'])('위치 %s가 꺼지면 마지막 좌표�
   await tick(off === 'permission' ? 10_000 : 20_000);
   expect(mockMutate).toHaveBeenCalledWith('POST /activities/{id}/live', expect.objectContaining({ location: null }));
 });
+
+describe('걸음수 갱신', () => {
+  const T0 = Date.parse('2026-10-07T10:00:00Z');
+  const active = () => newSession({ id: 'a1', startedAt: new Date(T0).toISOString(), pausedSec: 0, paused: false, pausedAt: null, itemCount: 0, locationShared: true }, 'u1', T0);
+  const source = (n: number | Error): StepSource => ({ status: async () => 'granted', count: async () => { if (n instanceof Error) throw n; return n; } });
+
+  test('읽은 걸음수를 진행 중 활동에 남긴다', async () => {
+    mockStored = { session: active(), ended: null, outbox: [] };
+    await refreshSteps(T0 + 60_000, source(120));
+    expect(mockStored.session?.steps).toBe(120);
+  });
+
+  test('한 번 잰 뒤 읽기에 실패해도 잰 값을 지우지 않는다', async () => {
+    mockStored = { session: { ...active(), steps: 120 }, ended: null, outbox: [] };
+    await refreshSteps(T0 + 120_000, source(new Error('remote')));
+    expect(mockStored.session?.steps).toBe(120);
+  });
+
+  test('읽는 사이 활동이 끝났으면 건드리지 않는다', async () => {
+    mockStored = { session: active(), ended: null, outbox: [] };
+    const slow: StepSource = { status: async () => 'granted', count: async () => { mockStored = { ...mockStored, ended: true }; return 50; } };
+    await refreshSteps(T0 + 60_000, slow);
+    expect(mockStored.session?.steps).toBeNull();
+  });
+
+  test('앞선 읽기가 끝나기 전 다음 읽기는 건너뛴다 — 늦게 온 옛 값이 새 값을 덮지 않는다', async () => {
+    mockStored = { session: active(), ended: null, outbox: [] };
+    let finish!: (n: number) => void;
+    const slow: StepSource = { status: async () => 'granted', count: () => new Promise((r) => { finish = r; }) };
+    const first = refreshSteps(T0 + 60_000, slow);
+    await refreshSteps(T0 + 75_000, source(999));
+    expect(mockStored.session?.steps).toBeNull();
+    finish(100);
+    await first;
+    expect(mockStored.session?.steps).toBe(100);
+  });
+
+  test('일시정지 중에는 한 번 잰 뒤 다시 읽지 않는다 — 셀 구간이 늘지 않는다', async () => {
+    mockStored = { session: { ...active(), paused: true, pausedAt: new Date(T0 + 60_000).toISOString(), steps: 80 }, ended: null, outbox: [] };
+    const count = jest.fn(async () => 999);
+    await refreshSteps(T0 + 120_000, { status: async () => 'granted', count });
+    expect(count).not.toHaveBeenCalled();
+  });
+});
+

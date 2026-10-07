@@ -25,6 +25,8 @@ export type Session = {
   distanceM: number;
   /** Health Connect 걸음수. 미측정은 null — 0 과 다르다 */
   steps: number | null;
+  /** 끝난 일시정지 구간. 걸음수에서 뺀다. 서버에서 받아 모르면 null, 이 필드가 생기기 전 저장본은 undefined */
+  pauses?: [string, string][] | null;
   filter: FilterState;
   /** 마지막으로 필터를 통과한 점. 일시정지 중에도 갱신돼 공유된다 */
   here: (LatLng & { accuracy: number | null }) | null;
@@ -51,6 +53,8 @@ export function newSession(a: ActivityStart, userId: string, now: number): Sessi
     segments: [[]],
     distanceM: 0,
     steps: null,
+    // 서버는 멈춘 총 시간만 준다. 어느 구간인지 모르면 멈춘 동안 걸음이 섞이므로 걸음수를 세지 않는다
+    pauses: a.pausedSec > 0 ? null : [],
     filter: initialFilterState,
     here: null,
     lastPassAt: null,
@@ -95,6 +99,15 @@ export function pause(s: Session, now: number): Session {
   return { ...s, paused: true, pausedAt: new Date(now).toISOString() };
 }
 
+export function knownPauses(s: Session): [string, string][] | null {
+  return s.pauses === undefined ? (s.pausedSec > 0 ? null : []) : s.pauses;
+}
+
+function closePause(s: Session, now: number): [string, string][] | null {
+  const pauses = knownPauses(s);
+  return pauses && s.pausedAt ? [...pauses, [s.pausedAt, new Date(now).toISOString()]] : null;
+}
+
 export function resume(s: Session, now: number): Session {
   if (!s.paused) return s;
   const pausedFor = s.pausedAt ? Math.max(0, Math.floor((now - Date.parse(s.pausedAt)) / 1000)) : 0;
@@ -103,6 +116,7 @@ export function resume(s: Session, now: number): Session {
     paused: false,
     pausedAt: null,
     pausedSec: s.pausedSec + pausedFor,
+    pauses: closePause(s, now),
     // 정지 중에 걸어간 거리를 속도 필터가 순간 이동으로 오인하지 않게 필터도 새로 시작한다
     filter: initialFilterState,
     segments: [...s.segments, []],

@@ -22,6 +22,7 @@ import {
   useRipple,
   useTheme,
 } from 'design-system/src';
+import { healthConnect } from '../activity/health-connect';
 import type { ApiClient } from '../api/client';
 import { getPermissionMode, requestPreciseLocation, type PermissionMode } from '../auth/location-permission';
 import { askNotificationsOnce } from './notify-permission';
@@ -57,8 +58,27 @@ export function StartSheet({
   const permission = location.mode;
   const granted = permission === 'granted';
   const located = useFirstFix(visible && granted);
+  const [steps, setSteps] = useState<'unavailable' | 'denied' | 'granted'>('unavailable');
+  const [stepsAsked, setStepsAsked] = useState(false);
   // 응답만 잃고 다시 누른 경우 같은 UUID 라야 서버가 200 으로 같은 활동을 돌려준다
   const activityId = useRef('');
+
+  useEffect(() => {
+    if (!visible) return;
+    let live = true;
+    healthConnect.status()
+      .then((st) => live && setSteps(st === 'granted' || st === 'denied' ? st : 'unavailable'))
+      .catch(() => {});
+    return () => { live = false; };
+  }, [visible]);
+
+  // 두 번 거부하면 Health Connect 는 창 없이 거부를 돌려준다. 그 뒤로는 설정에서만 켤 수 있다
+  async function connectSteps() {
+    if (stepsAsked) return healthConnect.openSettings();
+    const ok = await healthConnect.connect().catch(() => false);
+    setSteps(ok ? 'granted' : 'denied');
+    setStepsAsked(!ok);
+  }
 
   // 닫힐 때 되돌린다. 열면서 되돌리면 첫 프레임에 지난 값이 보였다가 뒤집힌다
   useEffect(() => {
@@ -134,10 +154,21 @@ export function StartSheet({
             <Txt variant="caption" tone={located ? 'green' : 'hint'}>{located ? '위치 준비됨' : '위치를 잡고 있어요…'}</Txt>
           </Appear>
         </View>
-        {/* ponytail: Health Connect 연동 전이라 "지원 안 됨" 경로만 보인다. 연동은 걸음수 이슈에서 */}
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
-          <Icon name="walk" size={size.iconInline} color={colors.inkHint} />
-          <Txt variant="caption" tone="hint">걸음수 측정 안 됨</Txt>
+          <Icon name="walk" size={size.iconInline} color={steps === 'granted' ? colors.greenStrong : colors.inkHint} />
+          <Txt variant="caption" tone={steps === 'granted' ? 'green' : 'hint'} style={{ flex: 1 }}>
+            {steps === 'granted' ? '걸음수 연결됨' : '걸음수 측정 안 됨'}
+          </Txt>
+          {steps === 'denied' ? (
+            <Button
+              label={stepsAsked ? '설정에서 연결' : '연결 (선택)'}
+              variant="ghost"
+              size="sm"
+              accessibilityLabel={stepsAsked ? '걸음수 설정에서 연결, 선택 사항' : '걸음수 연결, 선택 사항'}
+              onPress={connectSteps}
+              disabled={starting}
+            />
+          ) : null}
         </View>
       </View>
 

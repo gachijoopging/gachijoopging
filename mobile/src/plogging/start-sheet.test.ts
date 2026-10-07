@@ -7,6 +7,10 @@ let mockPending: Promise<string> | null = null;
 const mockRequest = jest.fn();
 const mockStart = jest.fn();
 const mockOpenSettings = jest.fn();
+let mockSteps = 'unavailable';
+const mockConnect = jest.fn();
+const mockSettings = jest.fn();
+jest.mock('../activity/health-connect', () => ({ healthConnect: { status: async () => mockSteps, connect: () => mockConnect(), openSettings: () => mockSettings() } }));
 jest.mock('expo/src/winter/fetch', () => ({ fetch: jest.fn() }));
 jest.mock('../auth/location-permission', () => ({
   getPermissionMode: () => mockPending ?? Promise.resolve(mockMode),
@@ -38,6 +42,8 @@ beforeEach(() => {
   mockRequest.mockReset();
   mockStart.mockReset().mockResolvedValue({ kind: 'started', id: 'activity-1', startedAt: 't', locationShared: false });
   mockOpenSettings.mockReset();
+  mockSteps = 'unavailable';
+  mockConnect.mockReset();
 });
 
 let tree: ReturnType<typeof create>;
@@ -117,3 +123,44 @@ test('시트가 열린 사이 권한을 끄면 시작하지 않고 안내로 바
   expect(mockStart).not.toHaveBeenCalled();
   expect(sheetTitle()).toBe('위치 권한이 필요해요');
 });
+
+describe('걸음수 연결 (선택)', () => {
+  const texts = () => tree.root.findAll((n: any) => n.type === 'Txt').map((n: any) => n.props.children);
+
+  test.each(['unavailable', 'not-installed'])('%s 이면 "측정 안 됨"만 보이고 연결 버튼은 없다', async (status) => {
+    mockSteps = status;
+    await open();
+    expect(texts()).toContain('걸음수 측정 안 됨');
+    expect(button('연결 (선택)')).toBeUndefined();
+  });
+
+  test('권한이 없으면 연결 버튼을 주고, 허용하면 연결됨으로 바뀐다', async () => {
+    mockSteps = 'denied';
+    await open();
+    expect(button('연결 (선택)').props.accessibilityLabel).toBe('걸음수 연결, 선택 사항');
+    mockConnect.mockResolvedValue(true);
+    await act(async () => button('연결 (선택)').props.onPress());
+    expect(texts()).toContain('걸음수 연결됨');
+    expect(button('연결 (선택)')).toBeUndefined();
+  });
+
+  test('연결을 거부해도 시작할 수 있다', async () => {
+    mockSteps = 'denied';
+    await open();
+    mockConnect.mockResolvedValue(false);
+    await act(async () => button('연결 (선택)').props.onPress());
+    expect(texts()).toContain('걸음수 측정 안 됨');
+    await act(async () => button('줍깅 시작').props.onPress());
+    expect(mockStart).toHaveBeenCalled();
+  });
+
+  test('거부한 뒤에는 권한 창이 다시 뜨지 않으므로 Health Connect 설정으로 보낸다', async () => {
+    mockSteps = 'denied';
+    await open();
+    mockConnect.mockResolvedValue(false);
+    await act(async () => button('연결 (선택)').props.onPress());
+    await act(async () => button('설정에서 연결').props.onPress());
+    expect(mockSettings).toHaveBeenCalled();
+  });
+});
+

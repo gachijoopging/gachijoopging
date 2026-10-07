@@ -3,8 +3,10 @@ import * as Network from 'expo-network';
 import * as TaskManager from 'expo-task-manager';
 import { updateTrackingNotification } from '../../modules/tracking-notification';
 import { ApiError, createMockClient, type ApiClient } from '../api/client';
+import { healthConnect } from './health-connect';
 import { flush, type Op } from './outbox';
 import { applyFix, livePayload, trackingNotice } from './session';
+import { readSteps, type StepSource } from './steps';
 import { getStored, loadLastAccount, updateStored } from './store';
 
 export const TRACKING_TASK = 'gachi-activity-tracking';
@@ -45,6 +47,26 @@ export async function tick(now: number) {
   if (!permission?.granted || !enabled) live.location = null;
   // 위치 전송은 쌓아 두지 않는다 — 마지막 값만 의미가 있다
   await api.mutate('POST /activities/{id}/live', { id: activityId, ...live }).catch(() => {});
+}
+
+let readingSteps = false;
+
+/**
+ * Health Connect 는 앱이 앞에 있을 때만 읽힌다. 화면을 끈 동안의 걸음은 시각 구간으로 다음 읽기에 함께 잡힌다.
+ * ponytail: 삼성헬스가 Health Connect 에 늦게 쓰면 실제보다 적게 읽혀 거리 보정이 과하게 걸릴 수 있다. 실기기 지연을 재고 신뢰 조건을 둔다
+ */
+export async function refreshSteps(now: number, source: StepSource = healthConnect): Promise<void> {
+  const before = getStored().session;
+  if (!before || getStored().ended || readingSteps) return;
+  if (before.paused && before.steps != null) return;
+  readingSteps = true;
+  try {
+    const steps = await readSteps(before, now, source);
+    if (steps == null) return;
+    updateStored((st) => (st.session?.activityId === before.activityId && !st.ended ? { ...st, session: { ...st.session, steps } } : st));
+  } finally {
+    readingSteps = false;
+  }
 }
 
 export async function startTracking(): Promise<boolean> {
