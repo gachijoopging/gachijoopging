@@ -144,8 +144,24 @@ describe('마지막 응답 기억', () => {
   test('크루를 나갔다 다른 크루에 들어가도 앞 크루 응답이 보이지 않는다', async () => {
     await createMockClient().get('GET /crew/home');
     rememberAccount({ id: me, membership: { status: 'NONE' } });
-    expect(peek('GET /crew/home')).toBeUndefined();
     rememberAccount(member(me));
+    expect(peek('GET /crew/home')).toBeUndefined();
+  });
+
+  test('forget 전에 보낸 GET 이 늦게 와도 지운 응답을 되살리지 않는다', async () => {
+    await createMockClient().get('GET /activities/{id}', { id: 'a100' });
+    const late = createMockClient({ delayMs: 10 }).get('GET /activities/{id}', { id: 'a100' });
+    forget('GET /activities/{id}', { id: 'a100' });
+    await late;
+    expect(peek('GET /activities/{id}', { id: 'a100' })).toBeUndefined();
+  });
+
+  test('로그아웃 전 로그인에서 보낸 GET 은 같은 계정으로 다시 로그인한 뒤 와도 기억하지 않는다', async () => {
+    const late = createMockClient({ delayMs: 10 }).get('GET /crew/home');
+    forgetAccount();
+    await createMockClient().get('GET /users/me');
+    rememberAccount(member(me));
+    await late;
     expect(peek('GET /crew/home')).toBeUndefined();
   });
 

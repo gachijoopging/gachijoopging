@@ -2,7 +2,8 @@ import React from 'react';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 const mockGet = jest.fn();
 const mockMutate = jest.fn();
-jest.mock('../api/client', () => ({ createMockClient: () => ({ get: (...args: unknown[]) => mockGet(...args), mutate: (...args: unknown[]) => mockMutate(...args) }) }));
+const mockForget = jest.fn();
+jest.mock('../api/client', () => ({ forget: (...args: unknown[]) => mockForget(...args), createMockClient: () => ({ get: (...args: unknown[]) => mockGet(...args), mutate: (...args: unknown[]) => mockMutate(...args) }) }));
 jest.mock('expo/src/winter/fetch', () => ({ fetch: jest.fn() }));
 jest.mock('expo-router', () => ({ router: { back: jest.fn(), push: jest.fn() }, useFocusEffect: (fn: () => void) => require('react').useEffect(fn, [fn]) }));
 jest.mock('react-native', () => ({ View: 'View', ScrollView: 'ScrollView', RefreshControl: 'RefreshControl', Platform: { OS: 'android', select: (options: Record<string, unknown>) => options.android ?? options.default } }));
@@ -55,6 +56,8 @@ test('unblocking every loaded row leaves an accessible next-page button', async 
   await act(async () => { tree = create(React.createElement(Blocks)); });
   await act(async () => { await tree.root.findAllByType('Button' as never).find((node) => node.props.label === '차단 해제')!.props.onPress(); });
   expect(names()).toEqual([]);
+  // 해제한 사람의 프로필을 다시 열 때 기억한 "차단함" 응답으로 그리면 안 된다
+  expect(mockForget).toHaveBeenCalledWith('GET /crew/members/{userId}', { userId: users[0].id });
   await act(async () => { await tree.root.findAllByType('Button' as never).find((node) => node.props.label === '더 불러오기')!.props.onPress(); });
   expect(names()).toEqual(['b']);
 });

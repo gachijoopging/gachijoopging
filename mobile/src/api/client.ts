@@ -111,7 +111,7 @@ function filterPosts({ scope = 'CREW', from, to }: PostsQuery = {}) {
 
 /**
  * 다시 연 화면이 받아 오는 동안 로딩 대신 바로 그리려고, 키·질의별 마지막 응답을 기억한다.
- * 받은 계정·크루 소속과 지금이 다르면(로그아웃·계정 전환·크루 탈퇴) 비운다 — 다른 계정·크루 데이터가 보이면 안 된다
+ * 받은 계정·크루 소속·로그인과 지금이 다르면(로그아웃·재로그인·계정 전환·크루 탈퇴) 비운다 — 다른 계정·크루 데이터가 보이면 안 된다
  */
 const lastResponses = new Map<string, unknown>();
 let responsesOwner: string | null = null;
@@ -119,7 +119,7 @@ const responseKey = (key: QueryKey, query?: unknown) => `${key} ${JSON.stringify
 
 function currentOwner(): string | null {
   const account = currentAccount();
-  return account ? `${account.id}:${account.hasCrew}` : null;
+  return account ? `${account.id}:${account.hasCrew}:${account.since ?? ''}` : null;
 }
 
 export function peek<K extends QueryKey>(key: K, query?: unknown): ApiResponse<K> | undefined {
@@ -130,16 +130,20 @@ export function peek<K extends QueryKey>(key: K, query?: unknown): ApiResponse<K
   return lastResponses.get(responseKey(key, query)) as ApiResponse<K> | undefined;
 }
 
+/** forget 이전에 보낸 GET 의 응답은 지운 것을 되살리므로 기억하지 않는다 */
+let forgets = 0;
+
 /** 삭제·차단처럼 기억한 응답이 틀려지는 변경 뒤에 부른다. 다시 열 때 지운 것이 보이면 안 된다 */
 export function forget(key: QueryKey, query?: unknown): void {
   lastResponses.delete(responseKey(key, query));
+  forgets += 1;
 }
 
 const MAX_RESPONSES = 100;
 
-/** owner 는 요청을 보낸 계정. 받는 사이 계정이 바뀌었으면 앞 계정 데이터이므로 버린다 */
-function remember(owner: string | null, key: QueryKey, query: unknown, response: unknown) {
-  if (owner !== currentOwner()) return;
+/** owner·sentAt 은 요청을 보낼 때 값. 받는 사이 계정이 바뀌었거나 forget 이 있었으면 낡은 응답이므로 버린다 */
+function remember(owner: string | null, sentAt: number, key: QueryKey, query: unknown, response: unknown) {
+  if (owner !== currentOwner() || sentAt !== forgets) return;
   if (owner !== responsesOwner) {
     lastResponses.clear();
     responsesOwner = owner;
@@ -171,8 +175,9 @@ export function createMockClient({ delayMs = 0, failing = [], activityTotals }: 
   return {
     async get(key, query) {
       const owner = currentOwner();
+      const sentAt = forgets;
       const response = await load(key, query);
-      remember(owner, key, query, response);
+      remember(owner, sentAt, key, query, response);
       return response;
     },
     async mutate(key, body) {
