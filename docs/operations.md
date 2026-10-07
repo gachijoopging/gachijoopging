@@ -1,15 +1,54 @@
 # 운영
 
-EC2 한 대 + Supabase Postgres + 담당자 노트북의 AI 서버. 컨테이너 4개(`feature-scope.md` 인프라 행).
+Lightsail VM 한 대 + Supabase Postgres + 담당자 노트북의 AI 서버.
 
-## 구성 — 미결
+## 구성
 
-옛 EC2 구성(nginx·blue/green·acme·redis·Postgres 컨테이너·LiveKit·모니터링)은 가져오지 않았다. 서버는 새로 구성하며 플랫폼·배포·감시 방식은 아직 정하지 않았다(`feature-scope.md` 미결).
-정해진 것: DB 는 Supabase Postgres(ADR-0001), 공개 주소는 `www.gachi-joopging.site`(apex 는 301 이라 쓰지 않는다), 채팅·위치는 STOMP 소켓(`realtime.md`)이라 소켓을 통과시키는 입구가 필요하다.
+VM 한 대에 docker compose 로 컨테이너 셋을 띄운다 — 백엔드(Spring)·Redis·Nginx. 근거는 ADR-0005.
+옛 EC2 구성(blue/green·Postgres 컨테이너·LiveKit·모니터링)은 가져오지 않았다.
+
+| | |
+|---|---|
+| 호스트 | AWS Lightsail 서울 · 2GB 번들(2 vCPU · 60GB SSD · 전송량 3TB) · Ubuntu 24.04 LTS |
+| 지금 있는 것 | **스테이징 한 대뿐이다.** 운영은 첫 사용자를 받기 전에 새로 만든다(ADR-0005). 스테이징은 `staging.` 서브도메인과 별도 Supabase 프로젝트를 쓴다 |
+| 고정 IP | 번들에 포함. 붙여 두지 않으면 재시작마다 주소가 바뀐다 |
+| 스왑 | 2GB(`/swapfile`). 없으면 램이 찰 때 OOM Killer 가 가장 큰 프로세스 — 즉 백엔드 — 를 죽인다 |
+| 공개 주소 | `www.gachi-joopging.site`(apex 는 301 이라 쓰지 않는다) |
+| 입구 | Nginx 가 443 을 잡고 `/api/v1/...` 를 백엔드로, 사진을 디스크에서 직접 보낸다. 채팅·위치가 STOMP 소켓(`realtime.md`)이라 WebSocket 업그레이드를 통과시킨다 |
+| DB | Supabase Postgres(PostGIS) · 서울 (ADR-0001) |
+| AI | 담당자 GPU 노트북 + 터널. 서버에 올리지 않는다 (`ai/README.md` §8) |
+
+## 배포
+
+`dev` 머지가 스테이징, `main` 머지가 운영이다(`docs/conventions.md` §브랜치 전략).
+
+이미지는 한 번만 만든다. 스테이징에서 쓴 이미지의 **태그만 승격**하고 다시 빌드하지 않는다 — 다시 빌드하면
+그 사이 바뀐 의존성이 섞여, 검증한 것과 다른 물건이 운영에 올라간다. 롤백은 직전 `IMAGE_TAG` 로 되돌리는
+한 명령이다.
+
+그래서 **환경에 따라 달라지는 값은 이미지에 굽지 않는다.** 주소·자격증명은 전부 `infra/.env` 로 주입한다.
+`application.yml` 에서 `${PUBLIC_BASE_URL:...}` 처럼 쓰인 것이 그 모양이고, 콜론 뒤는 값이 없을 때의
+기본값일 뿐이다. 주소를 `${}` 없이 적으면 그 순간 태그 승격이 깨져 스테이징에서 보낸 메일이 운영을
+가리킨다. 키 1:1 대조는 GAC-99.
+
+## 감시
+
+헬스체크와 바깥에서 찌르는 것, 둘을 함께 쓴다. 서버가 통째로 꺼지면 자기 자신에게 묻는 헬스체크도 같이
+죽어서 아무도 모르기 때문이다.
+
+| 층 | 무엇 | 잡는 것 |
+|---|---|---|
+| 서버 안 | `/actuator/health`(readiness·liveness) | 백엔드 프로세스·DB 연결 |
+| 바깥 | 외부 모니터링이 공개 주소를 주기적으로 호출 | 전원·네트워크·인증서 만료 |
+| 알림 | `node infra/notify.mjs` 로 Mattermost | — |
+
+**Prometheus·Grafana 는 되살리지 않는다.** 옛 구성에 있었고 `application.yml` 에 아직
+`/actuator/prometheus` 노출이 남아 있지만, 3명이 쓰는 규모에서 그래프를 보는 사람이 없다. 수집기만
+나중에 붙이면 되도록 노출은 그대로 둔다.
 
 ## `.env` 키
 
-실물은 EC2 의 `/opt/gachijoopging/infra/.env` 한 곳. 저장소에는 `infra/.env.example` 만.
+실물은 서버의 `/opt/gachijoopging/infra/.env` 한 곳. 저장소에는 `infra/.env.example` 만.
 
 | 키 | 용도 |
 |---|---|
