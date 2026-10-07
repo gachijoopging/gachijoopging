@@ -24,6 +24,7 @@ preview.html
 .env.local
 *.jks
 *.keystore
+*.pem
 local.properties
 
 # OS
