@@ -2,8 +2,9 @@ const snapshot = { endedAt: '2026-09-30T00:01:00Z', durationSec: 60, pausedSec: 
 import { ApiError, createMockClient, type ApiClient } from '../api/client';
 import type { Op } from './outbox';
 import { undoItem } from './outbox';
-import { newSession } from './session';
-import { isSendingItem, startTracking, syncOutbox, tick } from './tracking';
+import { displayDistance, newSession } from './session';
+import { finalSteps, isSendingItem, refreshSteps, startTracking, syncOutbox, tick } from './tracking';
+import type { StepSource } from './steps';
 
 let mockStored: ReturnType<typeof import('./store')['getStored']>;
 const mockMutate = jest.mocked(createMockClient().mutate);
@@ -132,3 +133,74 @@ test.each(['permission', 'services'])('위치 %s가 꺼지면 마지막 좌표�
   await tick(off === 'permission' ? 10_000 : 20_000);
   expect(mockMutate).toHaveBeenCalledWith('POST /activities/{id}/live', expect.objectContaining({ location: null }));
 });
+
+describe('걸음수 갱신', () => {
+  const T0 = Date.parse('2026-10-07T10:00:00Z');
+  const active = () => newSession({ id: 'a1', startedAt: new Date(T0).toISOString(), pausedSec: 0, paused: false, pausedAt: null, itemCount: 0, locationShared: true }, 'u1', T0);
+  const source = (n: number | Error): StepSource => ({ status: async () => 'granted', count: async () => { if (n instanceof Error) throw n; return n; } });
+
+  test('읽은 걸음수를 진행 중 활동에 남긴다', async () => {
+    mockStored = { session: active(), ended: null, outbox: [] };
+    await refreshSteps(T0 + 60_000, source(120));
+    expect(mockStored.session?.steps).toBe(120);
+  });
+
+  test('못 읽으면 앞서 잰 값도 버린다 — 낡은 걸음이 지금 GPS 거리와 대조되지 않는다', async () => {
+    mockStored = { session: { ...active(), steps: 120 }, ended: null, outbox: [] };
+    await refreshSteps(T0 + 120_000, source(new Error('remote')));
+    expect(mockStored.session?.steps).toBeNull();
+  });
+
+  test('권한을 거두면 걸음수를 버리고 GPS 거리로 기록한다', async () => {
+    mockStored = { session: { ...active(), steps: 100, distanceM: 1_000 }, ended: null, outbox: [] };
+    await refreshSteps(T0 + 120_000, { status: async () => 'denied', count: async () => 999 });
+    expect(mockStored.session?.steps).toBeNull();
+    expect(displayDistance(mockStored.session!)).toBe(1_000);
+  });
+
+  test('읽는 사이 활동이 끝났으면 건드리지 않는다', async () => {
+    mockStored = { session: active(), ended: null, outbox: [] };
+    const slow: StepSource = { status: async () => 'granted', count: async () => { mockStored = { ...mockStored, ended: true }; return 50; } };
+    await refreshSteps(T0 + 60_000, slow);
+    expect(mockStored.session?.steps).toBeNull();
+  });
+
+  test('앞선 읽기가 끝나기 전 다음 읽기는 건너뛴다 — 늦게 온 옛 값이 새 값을 덮지 않는다', async () => {
+    mockStored = { session: active(), ended: null, outbox: [] };
+    let finish!: (n: number) => void;
+    const slow: StepSource = { status: async () => 'granted', count: () => new Promise((r) => { finish = r; }) };
+    const first = refreshSteps(T0 + 60_000, slow);
+    await refreshSteps(T0 + 75_000, source(999));
+    expect(mockStored.session?.steps).toBeNull();
+    finish(100);
+    await first;
+    expect(mockStored.session?.steps).toBe(100);
+  });
+
+  test('종료 직전 읽기는 진행 중인 읽기를 기다린 뒤 한 번 더 읽는다', async () => {
+    mockStored = { session: { ...active(), steps: 100 }, ended: null, outbox: [] };
+    let finish!: (n: number) => void;
+    const slow: StepSource = { status: async () => 'granted', count: () => new Promise((r) => { finish = r; }) };
+    const running = refreshSteps(T0 + 60_000, slow);
+    const count = jest.fn(async () => 115);
+    jest.spyOn(Date, 'now').mockReturnValue(T0 + 70_000);
+    const final = finalSteps({ status: async () => 'granted', count });
+    await new Promise((r) => setImmediate(r));
+    expect(count).not.toHaveBeenCalled();
+    finish(100);
+    await Promise.all([running, final]);
+    expect(count).toHaveBeenCalledTimes(1);
+    expect(mockStored.session?.steps).toBe(115);
+    jest.restoreAllMocks();
+  });
+
+  test('일시정지 중에도 일시정지 시각까지만 다시 읽는다 — 늦게 쓰인 직전 걸음을 담고, 멈춘 뒤 걸음은 빠진다', async () => {
+    const pausedAt = new Date(T0 + 69_000).toISOString();
+    mockStored = { session: { ...active(), paused: true, pausedAt, steps: 100 }, ended: null, outbox: [] };
+    const count = jest.fn(async () => 115);
+    await refreshSteps(T0 + 120_000, { status: async () => 'granted', count });
+    expect(count).toHaveBeenCalledWith(new Date(T0).toISOString(), pausedAt);
+    expect(mockStored.session?.steps).toBe(115);
+  });
+});
+
