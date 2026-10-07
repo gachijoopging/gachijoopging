@@ -53,21 +53,27 @@ VM 한 대에 docker compose 로 컨테이너 셋을 띄운다 — 백엔드(Spr
 
 실물은 서버의 `/opt/gachijoopging/infra/.env` 한 곳. 저장소에는 `infra/.env.example` 만.
 
-| 키 | 용도 |
-|---|---|
-| `DOCKERHUB_USER` · `IMAGE_TAG` | 이미지 좌표. `IMAGE_TAG` 는 deploy.sh 가 갱신 |
-| `PUBLIC_BASE_URL` | 서명 URL·메일 링크의 기준 |
-| `DATABASE_URL` · `DATABASE_USER` · `DATABASE_PASSWORD` | Supabase 접속. 옛 `POSTGRES_*` 는 컨테이너용이라 없어진다 |
-| `JWT_ACTIVE_KID` · `JWT_PRIVATE_KEY_PEM` · `JWT_PUBLIC_KEY_PEM` · `JWT_PREVIOUS_*` | 토큰 서명. kid 회전용 이전 키 |
-| `KAKAO_REST_API_KEY` · `KAKAO_APP_ID` · `GOOGLE_CLIENT_ID` | 소셜 토큰 검증 |
-| `MEDIA_SECURE_LINK_SECRET` | 사진 서명 URL |
-| `MAIL_USERNAME` · `MAIL_PASSWORD` | 비밀번호 재설정 메일 |
-| `AGREEMENTS_VERSION` · `TERMS_URL` · `PRIVACY_URL` · `MARKETING_URL` | 현재 동의 버전과 공개 전문 URL. 모두 설정해야 동의 API가 제공된다. 전문 정본은 `docs/legal/` 이고 버전은 각 문서 머리의 값(지금 `2026-10`). 정식 주소 `www.gachi-joopging.site/{terms,privacy,marketing}` 가 서빙되기 전까지는 `https://djm030.github.io/gachijoopging-legal/{terms,privacy,marketing}` 를 넣는다. 정식 주소 전환과 전문의 빈칸(문의 이메일·리전)은 GAC-80 |
-| `FCM_CREDENTIALS` | 푸시 |
-| `AI_BASE_URL` · `AI_SECRET` | AI 서버 |
-| `CERT_DOMAIN` · `CERT_EMAIL` | acme |
+**이 표 · `infra/.env.example` · 백엔드가 `${...}` 로 읽는 이름 셋이 1:1 이어야 한다.** 어긋나면 기동에서
+죽는다. 읽는 쪽(백엔드)에 없는 키를 표에 두지 않고, 표에 없는 키를 백엔드가 읽지 않게 한다.
 
-없어지는 키: `LIVEKIT_*` · `GRAFANA_ADMIN_PASSWORD` · `ADMIN_WEB_TAG` · `POSTGRES_*`.
+| 키 | 읽는 쪽 | 용도 |
+|---|---|---|
+| `DOCKERHUB_USER` · `IMAGE_TAG` | 배포 스크립트 | 이미지 좌표. `IMAGE_TAG` 는 deploy.sh 가 갱신 |
+| `PUBLIC_BASE_URL` | 백엔드 | 서명 URL·메일 링크의 기준 |
+| `INVITE_BASE_URL` | 백엔드 | 초대 링크 앞부분. 카카오톡으로 공유되는 주소다 |
+| `DATABASE_URL` · `DATABASE_USER` · `DATABASE_PASSWORD` | 백엔드 | Supabase 접속. 옛 `POSTGRES_*` 는 컨테이너용이라 없어진다 |
+| `REDIS_HOST` · `REDIS_PORT` | 백엔드 | STOMP 브로커 릴레이·채팅 pub/sub |
+| `JWT_ACTIVE_KID` · `JWT_PRIVATE_KEY_PEM` · `JWT_PUBLIC_KEY_PEM` · `JWT_PREVIOUS_*` | 백엔드 | 토큰 서명. kid 회전용 이전 키 |
+| `KAKAO_APP_ID` · `GOOGLE_CLIENT_ID` | 백엔드 | 소셜 토큰 검증 |
+| `MEDIA_ROOT` · `MEDIA_SECURE_LINK_SECRET` | 백엔드 · Nginx | 사진 보관 경로와 서명 URL. `MEDIA_ROOT` 는 컨테이너 안 경로이고 compose 가 볼륨으로 디스크에 잇는다 |
+| `MAIL_USERNAME` · `MAIL_PASSWORD` | 백엔드 | 비밀번호 재설정 메일 |
+| `FCM_CREDENTIALS` | 백엔드 | 푸시 |
+| `AI_BASE_URL` · `AI_SECRET` | 백엔드 | AI 서버. `ai/.env` 의 `NGROK_DOMAIN`·`AI_SECRET` 과 짝이다 — `AI_SECRET` 이 다르면 호출이 전부 401 인데 백엔드가 401 을 `UNAVAILABLE` 로 내려 "AI 서버 다운" 과 구별되지 않는다 |
+| `CERT_DOMAIN` · `CERT_EMAIL` | acme | 인증서 발급·갱신 |
+| `AGREEMENTS_VERSION` · `TERMS_URL` · `PRIVACY_URL` · `MARKETING_URL` | **아직 없음** | 현재 동의 버전과 공개 전문 URL. 계약(`openapi.yaml` `/agreements`)과 테이블(`user_agreements`)은 있지만 **백엔드가 아직 읽지 않는다** — 동의 API 를 구현할 때 들어온다. 전문 정본은 `docs/legal/`, 버전은 각 문서 머리의 값(지금 `2026-10`). 정식 주소가 서빙되기 전까지는 `https://djm030.github.io/gachijoopging-legal/{terms,privacy,marketing}` 를 넣는다. 정식 주소 전환과 전문의 빈칸(문의 이메일·리전)은 GAC-80 |
+
+없어지는 키: `LIVEKIT_*` · `GRAFANA_ADMIN_PASSWORD` · `ADMIN_WEB_TAG` · `POSTGRES_*` ·
+`KAKAO_REST_API_KEY`(auth 를 계약 기준으로 다시 쓰면서 카카오 좌표 조회가 빠졌다).
 
 푸시(FCM)는 Firebase 프로젝트 `gachi-joopging`, Android 패키지 `site.gachijoopging.app` 으로 등록돼 있다. `google-services.json` 은 Firebase 콘솔에서 내려받는다.
 
