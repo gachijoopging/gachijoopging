@@ -19,6 +19,16 @@ public interface UserQueryRepository extends Repository<User, UUID> {
       nativeQuery = true)
   Optional<MembershipRow> findMembership(@Param("userId") UUID userId);
 
+  @Query(
+      value =
+          """
+          SELECT c.id AS crewId, c.name AS crewName, c.leader_id AS leaderId
+          FROM crew_join_requests r JOIN crews c ON c.id = r.crew_id
+          WHERE r.user_id = :userId AND r.status = 'PENDING' AND c.deleted_at IS NULL
+          """,
+      nativeQuery = true)
+  Optional<MembershipRow> findPendingCrew(@Param("userId") UUID userId);
+
   interface MembershipRow {
     UUID getCrewId();
 

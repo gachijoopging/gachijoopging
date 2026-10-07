@@ -57,6 +57,18 @@ public interface CrewRepository extends JpaRepository<Crew, UUID> {
       nativeQuery = true)
   Optional<MembershipRow> findMembership(@Param("userId") UUID userId);
 
+  // 다른 크루가 이미 쓰는 코드면 0행이라 다시 뽑는다. 두 크루가 같은 순간 같은 코드를 뽑는 경우는 막지 못한다(409)
+  @Modifying
+  @Query(
+      value =
+          """
+          UPDATE crews SET invite_code = :inviteCode, updated_at = :now
+          WHERE id = :id AND NOT EXISTS (SELECT 1 FROM crews WHERE invite_code = :inviteCode)
+          """,
+      nativeQuery = true)
+  int changeInviteCodeIfFree(
+      @Param("id") UUID id, @Param("inviteCode") String inviteCode, @Param("now") Instant now);
+
   @Query(value = "SELECT count(*) FROM crew_members WHERE crew_id = :crewId", nativeQuery = true)
   int countMembers(@Param("crewId") UUID crewId);
 
