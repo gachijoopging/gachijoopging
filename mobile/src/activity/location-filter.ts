@@ -11,8 +11,6 @@ export const MAX_ACCURACY_M = 30;
 export const MAX_SPEED_MPS = 5;
 /** 평활화 창. 기능범위의 "최근 3~5점" 중 가운데 */
 export const SMOOTH_WINDOW = 4;
-// ponytail: 정지 판정 반경의 하한. 오차를 수 m 로 낮게 보고하는 야외 정지는 아직 실측하지 못한 가정이다. 야외 정지 fixture 를 얻으면 맞춘다
-export const MIN_MOVE_M = 10;
 export const STEP_LENGTH_M = 0.7;
 export const STEP_TOLERANCE = 0.3;
 
@@ -68,10 +66,11 @@ export function filterFix(state: FilterState, fix: Fix): FilterResult {
 
 /**
  * 서 있을 때 GPS 는 오차 반경 안에서 흔들린다. 그 흔들림을 이동으로 세면 정지 중에도 거리가 쌓이므로,
- * 경로의 마지막 점에서 오차 반경(하한 MIN_MOVE_M)을 벗어나야 움직였다고 본다
+ * 경로의 마지막 점에서 오차 반경을 벗어나야 움직였다고 본다. 반경에 하한을 두면 그 안을 오가는 실제 보행(좁은 구역 줍기)이 통째로 사라진다.
+ * ponytail: 기기가 오차를 실제 흔들림보다 작게 보고하면 정지 중에도 거리가 쌓인다. 야외 정지 실측 fixture 를 얻으면 확인한다
  */
 export function moved(from: LatLng, to: LatLng, accuracy: number): boolean {
-  return distanceM(from, to) >= Math.max(accuracy, MIN_MOVE_M);
+  return distanceM(from, to) >= accuracy;
 }
 
 /**

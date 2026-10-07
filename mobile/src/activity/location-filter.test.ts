@@ -128,8 +128,8 @@ describe('정지 판정', () => {
     expect(moved(northOf(0), northOf(20.1), 20)).toBe(true);
   });
 
-  test('오차가 작아도 하한 10m 안쪽은 움직였다고 보지 않는다', () => {
-    expect(moved(northOf(0), northOf(9.9), 4)).toBe(false);
-    expect(moved(northOf(0), northOf(10.1), 4)).toBe(true);
+  test('오차가 작으면 작은 이동도 움직인 것이다 — 반경에 하한을 두지 않는다', () => {
+    expect(moved(northOf(0), northOf(3.9), 4)).toBe(false);
+    expect(moved(northOf(0), northOf(4.1), 4)).toBe(true);
   });
 });

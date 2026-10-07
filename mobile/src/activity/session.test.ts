@@ -72,8 +72,8 @@ describe('경로와 거리', () => {
 
   test('일시정지·종료 때는 정지 판정 반경 안에서 마지막으로 움직인 만큼도 경로와 거리에 넣는다', () => {
     let s = stride(started(), 0, 5);
-    // 마지막 자리에 멈춰 서면 평활점이 뒤따라오다 반경 안에서 경로 끝을 지나친다
-    for (const sec of [33, 36, 39, 42]) s = applyFix(s, fix(sec, 5 * 0.00019));
+    // 마지막 자리에 멈춰 서면 평활점이 뒤따라오다 반경 안에서 경로 끝을 지나친다. 반경은 그때 오차(25m)다
+    for (const sec of [33, 36, 39, 42]) s = applyFix(s, fix(sec, 5 * 0.00019, 25));
     const lastRoute = s.segments[0][s.segments[0].length - 1];
     expect(s.here!.latitude).toBeGreaterThan(lastRoute.latitude);
 
@@ -273,12 +273,32 @@ describe('정지 드리프트 억제', () => {
 
   test('야외처럼 오차 4m 안에서만 흔들려도 서 있는 동안은 거리에 넣지 않는다', () => {
     let seed = 11;
-    const noise = () => ((seed = (seed * 16807) % 2147483647) / 2147483647 - 0.5) * 8;
+    // 축마다 ±2.83m — 어느 점이든 원점에서 4m 안이다
+    const noise = () => ((seed = (seed * 16807) % 2147483647) / 2147483647 - 0.5) * 4 * Math.SQRT2;
     const outdoor: Fix[] = [];
     for (let sec = 0; sec <= 300; sec += 3) {
       outdoor.push({ latitude: ORIGIN.latitude + noise() / 111_195, longitude: ORIGIN.longitude + noise() / 88_200, accuracy: 4, timestamp: sec * 1000 });
     }
     expect(replay(outdoor).distanceM).toBeLessThan(5);
+  });
+
+  test('좁은 구역을 맴도는 보행도 거리에 넣는다 — 반경 4m 원 20바퀴', () => {
+    const laps: Fix[] = [];
+    for (let i = 0; i < 400; i++) {
+      const t = (2 * Math.PI * i) / 20;
+      laps.push({ latitude: ORIGIN.latitude + (4 * Math.sin(t)) / 111_195, longitude: ORIGIN.longitude + (4 * Math.cos(t)) / 88_200, accuracy: 1, timestamp: i * 3000 });
+    }
+    expect(replay(laps).distanceM / (20 * 2 * Math.PI * 4)).toBeGreaterThan(0.85);
+  });
+
+  test('10m 를 되돌아오며 왕복해도 거리에 넣는다', () => {
+    const shuttle: Fix[] = [];
+    for (let i = 0; i < 400; i++) {
+      const k = i % 20;
+      shuttle.push({ latitude: ORIGIN.latitude + (k < 10 ? k : 20 - k) / 111_195, longitude: ORIGIN.longitude, accuracy: 1, timestamp: i * 1000 });
+    }
+    // 평활화가 꺾이는 끝을 깎아 실제 400m 보다 짧다. 사라지지만 않으면 된다
+    expect(replay(shuttle).distanceM).toBeGreaterThan(250);
   });
 
   test('오차 12m 잡음이 낀 400m 직선 보행은 ±15% 안으로 잰다', () => {

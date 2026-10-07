@@ -42,6 +42,7 @@ import {
   bannerFor,
   displayDistance,
   elapsedSec,
+  closeSegment,
   endBody,
   gpsStatus,
   metricsLabel,
@@ -254,8 +255,10 @@ export default function ActivityInProgressScreen() {
       updateStored((st) =>
         {
           if (!st.session) return st;
-          const body = endBody(st.session, Date.now());
-          return { ...st, ended: body, outbox: enqueue(st.outbox, { kind: 'end', activityId: st.session.activityId, body }) };
+          // 요약 지도·공유 카드도 종료 기록과 같은 경로를 그리도록 닫은 세션을 남긴다
+          const session = st.session.paused ? st.session : closeSegment(st.session);
+          const body = endBody(session, Date.now());
+          return { ...st, session, ended: body, outbox: enqueue(st.outbox, { kind: 'end', activityId: st.session.activityId, body }) };
         },
       );
     } catch {

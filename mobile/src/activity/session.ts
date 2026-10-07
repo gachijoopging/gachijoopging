@@ -91,11 +91,8 @@ export function applyFix(s: Session, fix: Fix): Session {
   };
 }
 
-/**
- * 정지 판정 때문에 경로 끝은 실제 위치보다 최대 반경만큼 뒤처져 있다. 구간을 닫을 때 마지막 위치까지 잇는다.
- * 서 있다가 닫아도 반경 하나만큼만 더해지므로 드리프트가 쌓이지 않는다
- */
-function closeSegment(s: Session): Session {
+/** 정지 판정 때문에 경로 끝이 실제 위치보다 최대 반경만큼 뒤처진다. 닫을 때 잇지 않으면 마지막 걸음이 기록에서 빠진다 */
+export function closeSegment(s: Session): Session {
   const current = s.segments[s.segments.length - 1];
   const prev = current?.[current.length - 1];
   if (!prev || !s.here || (prev.latitude === s.here.latitude && prev.longitude === s.here.longitude)) return s;
