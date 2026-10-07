@@ -22,7 +22,7 @@ import {
   Txt,
   space,
 } from 'design-system/src';
-import { ApiError, createMockClient, peek, type ApiClient } from '../../../src/api/client';
+import { ApiError, createMockClient, forget, peek, type ApiClient } from '../../../src/api/client';
 import type { MOCKS } from '../../../src/api/mocks.generated';
 import { clearDraft, draftFor, editDraft, requestIdFor } from '../../../src/crew/comment-draft';
 import { monthDay } from '../../../src/crew/crew';
@@ -115,6 +115,7 @@ export default function NoticeDetailScreen() {
     setConfirmDelete(false);
     try {
       await api.mutate('DELETE /notices/{noticeId}', { noticeId: id });
+      forget('GET /notices/{noticeId}', { noticeId: id });
       // 이 화면은 사라지므로 삭제 안내는 목록이 띄운다
       router.dismissTo({ pathname: '/(tabs)/crew', params: { tab: 'notices', flash: '공지를 삭제했어요.' } });
     } catch {

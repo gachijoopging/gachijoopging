@@ -25,7 +25,7 @@ import {
   size,
   space,
 } from 'design-system/src';
-import { ApiError, createMockClient, peek, type ApiClient } from '../../src/api/client';
+import { ApiError, createMockClient, forget, peek, type ApiClient } from '../../src/api/client';
 import { CATEGORY_LABEL, type Category } from '../../src/category';
 import {
   changedItems,
@@ -121,6 +121,7 @@ export default function ActivityDetailScreen() {
     setDeleting(true);
     try {
       await api.mutate('DELETE /activities/{id}', { id });
+      forget('GET /activities/{id}', { id });
       if (me) {
         const cache = new File(Paths.document, `activity-detail-${me.id}-${id}.json`);
         if (cache.exists) cache.delete();

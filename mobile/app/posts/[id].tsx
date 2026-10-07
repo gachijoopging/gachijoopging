@@ -25,7 +25,7 @@ import {
   useRipple,
   characterEmpty,
 } from 'design-system/src';
-import { ApiError, createMockClient, peek, type ApiClient, type ApiResponse } from '../../src/api/client';
+import { ApiError, createMockClient, forget, peek, type ApiClient, type ApiResponse } from '../../src/api/client';
 import { clearDraft, draftFor, editDraft, requestIdFor } from '../../src/crew/comment-draft';
 import { COMMENT_MAX, canSendComment } from '../../src/crew/notice';
 import { PhotoPager } from '../../src/feed/PhotoPager';
@@ -231,6 +231,7 @@ export default function PostDetailScreen() {
     setDeleting(true);
     try {
       await api.mutate('DELETE /posts/{postId}', { postId: id });
+      forget('GET /posts/{postId}', { postId: id });
       setConfirm(null);
       // 진입한 화면(5-1·5-4·5-5·2-3)이 어디든 그 화면이 안내를 띄우도록 flash 를 얹고 돌아간다
       router.dismissTo(returnTo(navigation.getState(), '게시물을 삭제했어요'));

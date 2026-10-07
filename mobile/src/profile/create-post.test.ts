@@ -29,7 +29,7 @@ jest.mock('expo-file-system', () => ({
     }
   },
 }));
-jest.mock('../api/client', () => ({ peek: () => undefined,
+jest.mock('../api/client', () => ({ peek: () => undefined, forget: () => {},
   ApiError: class extends Error {},
   createMockClient: () => ({ get: (...args: unknown[]) => mockGet(...args), mutate: (...args: unknown[]) => mockMutate(...args) }),
 }));

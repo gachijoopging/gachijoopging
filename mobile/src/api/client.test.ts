@@ -6,7 +6,7 @@ jest.mock('expo-file-system', () => ({ Paths: { document: 'documents' }, File: c
   write(value: string) { mockFiles.set(this.name, value); }
   delete() { mockFiles.delete(this.name); }
 } }));
-import { createMockClient, ApiError, peek } from './client';
+import { createMockClient, ApiError, forget, peek } from './client';
 import { forgetAccount, rememberAccount } from '../auth/account';
 import { MOCKS } from './mocks.generated';
 
@@ -131,13 +131,30 @@ describe('마지막 응답 기억', () => {
     expect(peek('GET /crew/home')).toBeUndefined();
   });
 
-  test('다른 계정으로 바뀌면 비우고, 같은 계정을 다시 기억하면 남긴다', async () => {
+  test('같은 계정을 다시 기억하면 남기고, 다른 계정을 거쳐 돌아오면 비어 있다', async () => {
     await createMockClient().get('GET /crew/home');
     rememberAccount(member(me));
     expect(peek('GET /crew/home')).toBeDefined();
     rememberAccount(member('someone-else'));
     expect(peek('GET /crew/home')).toBeUndefined();
     rememberAccount(member(me));
+    expect(peek('GET /crew/home')).toBeUndefined();
+  });
+
+  test('크루를 나갔다 다른 크루에 들어가도 앞 크루 응답이 보이지 않는다', async () => {
+    await createMockClient().get('GET /crew/home');
+    rememberAccount({ id: me, membership: { status: 'NONE' } });
+    expect(peek('GET /crew/home')).toBeUndefined();
+    rememberAccount(member(me));
+    expect(peek('GET /crew/home')).toBeUndefined();
+  });
+
+  test('forget 한 응답은 다시 꺼내지 않는다 — 삭제한 활동이 다시 보이면 안 된다', async () => {
+    const api = createMockClient();
+    await api.get('GET /activities/{id}', { id: 'a100' });
+    await api.get('GET /crew/home');
+    forget('GET /activities/{id}', { id: 'a100' });
+    expect(peek('GET /activities/{id}', { id: 'a100' })).toBeUndefined();
     expect(peek('GET /crew/home')).toBeDefined();
   });
 });
