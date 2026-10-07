@@ -3,6 +3,7 @@ import {
   distanceM,
   filterFix,
   initialFilterState,
+  moved,
   type Fix,
   type FilterState,
 } from './location-filter';
@@ -118,5 +119,17 @@ describe('4단계 걸음수 보정', () => {
 
   test('0걸음 때문에 거리를 0으로 만들지 않는다', () => {
     expect(correctDistance(120, 0)).toBe(120);
+  });
+});
+
+describe('정지 판정', () => {
+  test('오차 반경과 같은 거리부터 움직였다고 본다', () => {
+    expect(moved(northOf(0), northOf(19.9), 20)).toBe(false);
+    expect(moved(northOf(0), northOf(20.1), 20)).toBe(true);
+  });
+
+  test('오차가 작아도 하한 10m 안쪽은 움직였다고 보지 않는다', () => {
+    expect(moved(northOf(0), northOf(9.9), 4)).toBe(false);
+    expect(moved(northOf(0), northOf(10.1), 4)).toBe(true);
   });
 });
