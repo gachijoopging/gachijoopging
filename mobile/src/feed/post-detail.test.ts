@@ -8,8 +8,10 @@ const mockNavigation = {
     return () => { mockBeforeRemove = null; };
   },
 };
+let mockPeeked: unknown;
 jest.mock('../api/client', () => ({
   ApiError: class extends Error {},
+  peek: (key: string, query: unknown) => (key === 'GET /posts/{postId}' && (query as { postId: string }).postId === 'p1' ? mockPeeked : undefined),
   createMockClient: () => ({ get: (...args: unknown[]) => mockGet(...args), mutate: (...args: unknown[]) => mockMutate(...args) }),
 }));
 jest.mock('expo-router', () => ({
@@ -53,6 +55,7 @@ beforeEach(() => {
     ? { id: account, membership: { status: 'MEMBER', crew: { isLeader: false } } }
     : key === 'GET /crew/posts' ? { items: [post], nextCursor: null } : post }));
   mockMutate.mockReset();
+  mockPeeked = undefined;
 });
 afterEach(async () => { await unmount(); });
 
@@ -209,3 +212,26 @@ test('맨 아래를 보던 중 입력란이 커져 목록이 줄면 다시 맨 �
   await act(async () => list().props.onLayout({ nativeEvent: { layout: { height: 900 } } }));
   expect(scrollToEnd).toHaveBeenCalledTimes(3);
 });
+
+test('전에 받은 게시물이 있으면 첫 화면부터 로딩 없이 그리고 받아 온 값으로 바꾼다', async () => {
+  mockPeeked = { data: { ...post, text: '지난번 본문' } };
+  const React = require('react');
+  const { act, create } = require('react-test-renderer');
+  let finish!: (v: unknown) => void;
+  mockGet.mockImplementation((key: string) => key === 'GET /posts/{postId}' ? new Promise((r) => { finish = r; }) : Promise.resolve({ data: { id: 'u1', membership: { status: 'MEMBER', crew: { isLeader: false } } } }));
+  const Component = require('../../app/posts/[id]').default;
+  await act(async () => { rendered = create(React.createElement(Component)); });
+  expect(rendered.root.findAllByType('Loading')).toHaveLength(0);
+  const shown = () => rendered.root.findAll((n: any) => n.props.children === '지난번 본문' || n.props.children === '게시물').map((n: any) => n.props.children);
+  expect(shown()).toContain('지난번 본문');
+  await act(async () => finish({ data: post }));
+  expect(shown()).toContain('게시물');
+  expect(shown()).not.toContain('지난번 본문');
+});
+
+test('기억한 응답이 없으면 그대로 로딩부터 보인다', async () => {
+  mockGet.mockImplementation(() => new Promise(() => {}));
+  await mount();
+  expect(rendered.root.findAllByType('Loading')).toHaveLength(1);
+});
+

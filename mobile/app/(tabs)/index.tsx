@@ -25,7 +25,7 @@ import {
   characterStageNames,
   characterStages,
 } from 'design-system/src';
-import { createMockClient, type ApiClient } from '../../src/api/client';
+import { createMockClient, peek, type ApiClient } from '../../src/api/client';
 import { MOCKS } from '../../src/api/mocks.generated';
 import { characterBubble, myCategorySummary } from '../../src/home/home';
 
@@ -38,7 +38,7 @@ const BUBBLE_MS = 3000;
 
 export default function HomeScreen() {
   const { scheme } = useTheme();
-  const [home, setHome] = useState<Home | null>(null);
+  const [home, setHome] = useState<Home | null>(() => peek('GET /crew/home')?.data ?? null);
   const [failed, setFailed] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [refreshFailed, setRefreshFailed] = useState(false);

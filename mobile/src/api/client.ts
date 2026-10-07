@@ -109,6 +109,34 @@ function filterPosts({ scope = 'CREW', from, to }: PostsQuery = {}) {
   return { data: { ...posts, items } };
 }
 
+/**
+ * 다시 연 화면이 받아 오는 동안 로딩 대신 바로 그리려고, 키·질의별 마지막 응답을 기억한다.
+ * 받은 계정과 지금 계정이 다르면(로그아웃·계정 전환) 꺼내지 않는다 — 다른 계정 데이터가 보이면 안 된다
+ */
+const lastResponses = new Map<string, unknown>();
+let responsesOwner: string | null = null;
+const responseKey = (key: QueryKey, query?: unknown) => `${key} ${JSON.stringify(query ?? null)}`;
+
+export function peek<K extends QueryKey>(key: K, query?: unknown): ApiResponse<K> | undefined {
+  if ((currentAccount()?.id ?? null) !== responsesOwner) return undefined;
+  return lastResponses.get(responseKey(key, query)) as ApiResponse<K> | undefined;
+}
+
+const MAX_RESPONSES = 100;
+
+/** owner 는 요청을 보낸 계정. 받는 사이 계정이 바뀌었으면 앞 계정 데이터이므로 버린다 */
+function remember(owner: string | null, key: QueryKey, query: unknown, response: unknown) {
+  if (owner !== (currentAccount()?.id ?? null)) return;
+  if (owner !== responsesOwner) {
+    lastResponses.clear();
+    responsesOwner = owner;
+  }
+  const k = responseKey(key, query);
+  lastResponses.delete(k);
+  lastResponses.set(k, response);
+  if (lastResponses.size > MAX_RESPONSES) lastResponses.delete(lastResponses.keys().next().value!);
+}
+
 /** 실 API 가 붙기 전까지 화면이 쓰는 구현. */
 export function createMockClient({ delayMs = 0, failing = [], activityTotals }: MockOptions = {}): ApiClient {
   let agreements: AgreementState | null = null;
@@ -117,16 +145,22 @@ export function createMockClient({ delayMs = 0, failing = [], activityTotals }: 
     const owner = currentAccount()?.id ?? null;
     if (agreementsOwner !== owner) { agreements = null; agreementsOwner = owner; }
   };
+  async function load<K extends QueryKey>(key: K, query: unknown): Promise<ApiResponse<K>> {
+    if (delayMs > 0) await wait(delayMs);
+    if (failing.includes(key)) throw new ApiError('MOCK_FAILURE');
+    if (key === 'GET /users/me/agreements') {
+      selectAgreementOwner();
+      if (agreements) return { data: agreements } as ApiResponse<K>;
+    }
+    if (key === 'GET /crew/posts') return filterPosts(query as PostsQuery) as unknown as ApiResponse<K>;
+    return (MOCKS as unknown as Record<string, unknown>)[key] as ApiResponse<K>;
+  }
   return {
     async get(key, query) {
-      if (delayMs > 0) await wait(delayMs);
-      if (failing.includes(key)) throw new ApiError('MOCK_FAILURE');
-      if (key === 'GET /users/me/agreements') {
-        selectAgreementOwner();
-        if (agreements) return { data: agreements } as ApiResponse<typeof key>;
-      }
-      if (key === 'GET /crew/posts') return filterPosts(query as PostsQuery) as unknown as ApiResponse<typeof key>;
-      return (MOCKS as unknown as Record<string, unknown>)[key] as ApiResponse<typeof key>;
+      const owner = currentAccount()?.id ?? null;
+      const response = await load(key, query);
+      remember(owner, key, query, response);
+      return response;
     },
     async mutate(key, body) {
       if (delayMs > 0) await wait(delayMs);

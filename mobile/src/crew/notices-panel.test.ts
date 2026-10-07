@@ -4,7 +4,7 @@ import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 const mockGet = jest.fn();
 const mockPush = jest.fn();
 let mockParams: Record<string, string | undefined> = {};
-jest.mock('../api/client', () => ({ createMockClient: () => ({ get: (...args: unknown[]) => mockGet(...args) }) }));
+jest.mock('../api/client', () => ({ peek: () => undefined, createMockClient: () => ({ get: (...args: unknown[]) => mockGet(...args) }) }));
 jest.mock('expo/src/winter/fetch', () => ({ fetch: jest.fn() }));
 jest.mock('expo-router', () => ({
   router: { push: (...a: unknown[]) => mockPush(...a), setParams: (p: Record<string, undefined>) => { mockParams = { ...mockParams, ...p }; } },

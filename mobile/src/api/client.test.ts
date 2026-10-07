@@ -1,4 +1,13 @@
-import { createMockClient, ApiError } from './client';
+const mockFiles = new Map<string, string>();
+jest.mock('expo-file-system', () => ({ Paths: { document: 'documents' }, File: class {
+  name: string; constructor(_directory: string, name: string) { this.name = name; }
+  get exists() { return mockFiles.has(this.name); }
+  textSync() { return mockFiles.get(this.name); }
+  write(value: string) { mockFiles.set(this.name, value); }
+  delete() { mockFiles.delete(this.name); }
+} }));
+import { createMockClient, ApiError, peek } from './client';
+import { forgetAccount, rememberAccount } from '../auth/account';
 import { MOCKS } from './mocks.generated';
 
 describe('목 클라이언트', () => {
@@ -72,3 +81,64 @@ describe('목 클라이언트', () => {
     await expect(api.mutate('POST /auth/login', {})).rejects.toBeInstanceOf(ApiError);
   });
 });
+
+describe('마지막 응답 기억', () => {
+  const member = (id: string) => ({ id, membership: { status: 'MEMBER' } });
+  // 기억은 계정마다 따로다. 시험마다 새 계정으로 시작하면 앞 시험의 응답이 보이지 않는다
+  let n = 0;
+  let me = '';
+  beforeEach(() => { me = `u${++n}`; rememberAccount(member(me)); });
+
+  test('받은 응답을 같은 키·질의로 꺼낸다', async () => {
+    const api = createMockClient();
+    expect(peek('GET /crew/home')).toBeUndefined();
+    const fresh = await api.get('GET /crew/home');
+    expect(peek('GET /crew/home')).toEqual(fresh);
+  });
+
+  test('질의가 다르면 따로 기억한다', async () => {
+    const api = createMockClient();
+    const crew = await api.get('GET /crew/posts', { scope: 'CREW' });
+    expect(peek('GET /crew/posts', { scope: 'MINE' })).toBeUndefined();
+    const mine = await api.get('GET /crew/posts', { scope: 'MINE' });
+    expect(peek('GET /crew/posts', { scope: 'CREW' })).toEqual(crew);
+    expect(peek('GET /crew/posts', { scope: 'MINE' })).toEqual(mine);
+  });
+
+  test('받는 사이 계정이 바뀌면 그 응답은 새 계정 것으로 기억하지 않는다', async () => {
+    const pending = createMockClient({ delayMs: 10 }).get('GET /crew/home');
+    rememberAccount(member('next-account'));
+    await pending;
+    expect(peek('GET /crew/home')).toBeUndefined();
+  });
+
+  test('100개를 넘으면 가장 오래 안 본 응답부터 잊는다', async () => {
+    const api = createMockClient();
+    for (let i = 0; i <= 100; i++) await api.get('GET /posts/{postId}', { postId: `p${i}` });
+    expect(peek('GET /posts/{postId}', { postId: 'p0' })).toBeUndefined();
+    expect(peek('GET /posts/{postId}', { postId: 'p1' })).toBeDefined();
+    expect(peek('GET /posts/{postId}', { postId: 'p100' })).toBeDefined();
+  });
+
+  test('실패한 요청은 기억하지 않는다', async () => {
+    await createMockClient({ failing: ['GET /crew/home'] }).get('GET /crew/home').catch(() => {});
+    expect(peek('GET /crew/home')).toBeUndefined();
+  });
+
+  test('로그아웃하면 비운다 — 다음 계정에 앞 계정 데이터가 보이면 안 된다', async () => {
+    await createMockClient().get('GET /crew/home');
+    forgetAccount();
+    expect(peek('GET /crew/home')).toBeUndefined();
+  });
+
+  test('다른 계정으로 바뀌면 비우고, 같은 계정을 다시 기억하면 남긴다', async () => {
+    await createMockClient().get('GET /crew/home');
+    rememberAccount(member(me));
+    expect(peek('GET /crew/home')).toBeDefined();
+    rememberAccount(member('someone-else'));
+    expect(peek('GET /crew/home')).toBeUndefined();
+    rememberAccount(member(me));
+    expect(peek('GET /crew/home')).toBeDefined();
+  });
+});
+
