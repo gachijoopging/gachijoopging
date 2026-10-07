@@ -14,6 +14,7 @@ import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 import site.gachijoopging.server.support.IntegrationTest;
+import site.gachijoopging.server.support.TestAccounts;
 
 @AutoConfigureMockMvc
 class AuthRefreshLogoutTest extends IntegrationTest {
@@ -81,7 +82,7 @@ class AuthRefreshLogoutTest extends IntegrationTest {
     String 기기A = 가입한다("two-devices@test.io").get("refreshToken").asText();
     String 기기B = 로그인한다("two-devices@test.io").get("refreshToken").asText();
 
-    mockMvc.perform(logout(기기A)).andExpect(status().isOk());
+    mockMvc.perform(logout(기기A)).andExpect(status().isNoContent());
 
     mockMvc.perform(refresh(기기A)).andExpect(status().isUnauthorized());
     mockMvc.perform(refresh(기기B)).andExpect(status().isOk());
@@ -91,7 +92,7 @@ class AuthRefreshLogoutTest extends IntegrationTest {
   void logout_은_refreshToken_없이도_성공한다() throws Exception {
     mockMvc
         .perform(post("/api/v1/auth/logout").contentType(MediaType.APPLICATION_JSON).content("{}"))
-        .andExpect(status().isOk());
+        .andExpect(status().isNoContent());
   }
 
   private JsonNode 가입한다(String 이메일) throws Exception {
@@ -100,8 +101,8 @@ class AuthRefreshLogoutTest extends IntegrationTest {
             .perform(
                 post("/api/v1/auth/signup")
                     .contentType(MediaType.APPLICATION_JSON)
-                    .content("{\"email\":\"%s\",\"password\":\"password123\"}".formatted(이메일)))
-            .andExpect(status().isOk()));
+                    .content(TestAccounts.가입_본문(이메일)))
+            .andExpect(status().isCreated()));
   }
 
   private JsonNode 로그인한다(String 이메일) throws Exception {

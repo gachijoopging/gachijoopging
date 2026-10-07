@@ -5,6 +5,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.function.Supplier;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -39,13 +41,15 @@ public class UserService implements AccountAuthorityLoader {
   private final Clock clock;
 
   @Transactional
-  public UserAccount create(String email, String password) {
+  public UserAccount create(String email, String password, String nickname) {
     UUID id = UUID.randomUUID();
     int inserted =
         userRepository.insertEmailIfAbsent(
-            id, email, passwordEncoder.encode(password), clock.instant());
+            id, email, passwordEncoder.encode(password), nickname, clock.instant());
     if (inserted == 0) {
-      throw new BusinessException(ErrorCode.CONFLICT, "이미 가입된 이메일이다");
+      throw userRepository.existsByEmail(email)
+          ? new BusinessException(ErrorCode.EMAIL_TAKEN, "이미 가입된 이메일이다")
+          : nicknameTaken();
     }
     return new UserAccount(id, true);
   }
@@ -61,15 +65,35 @@ public class UserService implements AccountAuthorityLoader {
   }
 
   @Transactional
-  public UserAccount findOrCreateByKakaoId(String kakaoId) {
-    userRepository.insertKakaoIfAbsent(UUID.randomUUID(), kakaoId, clock.instant());
-    return usable(userRepository.findByKakaoId(kakaoId));
+  public UserAccount findOrCreateByKakaoId(String kakaoId, String nickname) {
+    return findOrCreateSocial(
+        nickname,
+        nick ->
+            userRepository.insertKakaoIfAbsent(UUID.randomUUID(), kakaoId, nick, clock.instant()),
+        () -> userRepository.findByKakaoId(kakaoId));
   }
 
   @Transactional
-  public UserAccount findOrCreateByGoogleSub(String googleSub) {
-    userRepository.insertGoogleIfAbsent(UUID.randomUUID(), googleSub, clock.instant());
-    return usable(userRepository.findByGoogleSub(googleSub));
+  public UserAccount findOrCreateByGoogleSub(String googleSub, String nickname) {
+    return findOrCreateSocial(
+        nickname,
+        nick ->
+            userRepository.insertGoogleIfAbsent(
+                UUID.randomUUID(), googleSub, nick, clock.instant()),
+        () -> userRepository.findByGoogleSub(googleSub));
+  }
+
+  // ON CONFLICT 에 대상이 없어 0행만으로는 어느 제약에 걸렸는지 모른다. 닉네임이 겹쳐도 가입은 막지 않고
+  // 계약대로 닉네임 없이 만들어 profileComplete=false 로 닉네임 화면에서 이어가게 한다
+  private UserAccount findOrCreateSocial(
+      String nickname, Function<String, Integer> insert, Supplier<Optional<User>> find) {
+    boolean created =
+        insert.apply(nickname) == 1
+            || (nickname != null && find.get().isEmpty() && insert.apply(null) == 1);
+    return find.get()
+        .filter(User::active)
+        .map(user -> new UserAccount(user.getId(), created))
+        .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_CREDENTIALS, "쓸 수 없는 계정이다"));
   }
 
   @Transactional
@@ -128,7 +152,19 @@ public class UserService implements AccountAuthorityLoader {
                         row.getCrewId().toString(),
                         row.getCrewName(),
                         row.getLeaderId().equals(userId))))
+        .or(() -> pendingMembership(userId))
         .orElse(new MeResponse.Membership(MeResponse.MembershipStatus.NONE, null));
+  }
+
+  private Optional<MeResponse.Membership> pendingMembership(UUID userId) {
+    return userQueryRepository
+        .findPendingCrew(userId)
+        .map(
+            row ->
+                new MeResponse.Membership(
+                    MeResponse.MembershipStatus.PENDING,
+                    new MeResponse.MembershipCrew(
+                        row.getCrewId().toString(), row.getCrewName(), false)));
   }
 
   @Transactional
@@ -186,14 +222,12 @@ public class UserService implements AccountAuthorityLoader {
         .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_CREDENTIALS, "쓸 수 없는 계정이다"));
   }
 
-  private static UserAccount usable(Optional<User> user) {
-    return user.filter(User::active)
-        .map(UserService::account)
-        .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_CREDENTIALS, "쓸 수 없는 계정이다"));
+  private static UserAccount account(User user) {
+    return new UserAccount(user.getId(), false);
   }
 
-  private static UserAccount account(User user) {
-    return new UserAccount(user.getId(), !user.profileComplete());
+  private static BusinessException nicknameTaken() {
+    return new BusinessException(ErrorCode.NICKNAME_TAKEN, "이미 쓰는 닉네임이다");
   }
 
   private String photoUrl(UUID photoMediaId) {
