@@ -12,6 +12,8 @@ erDiagram
   crews ||--o{ crew_members : ""
   crews ||--o{ crew_join_requests : ""
   users ||--o{ crew_join_requests : "신청"
+  crews ||--o{ crew_expulsions : ""
+  users ||--o{ crew_expulsions : "추방됨"
   users ||--o{ follows : "follower"
   users ||--o{ follows : "followee"
   users ||--o{ blocks : ""
@@ -106,10 +108,11 @@ erDiagram
 |---|---|---|
 | id | uuid | PK |
 | name | text | UNIQUE NOT NULL. 앞뒤 공백·줄바꿈 제거 뒤 저장. 중복은 API 409 CREW_NAME_TAKEN |
-| intro | text | NOT NULL DEFAULT '' |
+| intro | text | NOT NULL DEFAULT ''. 크루 설명 |
 | photo_media_id | uuid | → media |
 | leader_id | uuid | NOT NULL → users. 크루장은 한 명(Q21) |
-| invite_code | text | UNIQUE NOT NULL. 대문자·하이픈 포함 형식(`HG-7K2P`)으로 저장. 시간 만료 없음, 재발급하면 바뀐다 |
+| region | text | NOT NULL. 활동 지역 — 시·도 코드 17개(SEOUL · BUSAN · … · JEJU, 목록은 openapi `Region`). 크루의 설명이며 사람의 소속 단위가 아니다. 크루장이 바꿀 수 있다 |
+| join_policy | text | NOT NULL. OPEN(공개 — 바로 가입) · APPROVAL(비공개 — 크루장 승인). 검색 노출과 무관. 기본값 없음. 크루장이 바꿀 수 있다 |
 | goal_count | int | NOT NULL DEFAULT 200 — 최근 14일 목표(Q19·20). 창 길이 14 는 코드 상수 |
 | created_at · updated_at · deleted_at | timestamptz | |
 
@@ -122,9 +125,14 @@ erDiagram
 | joined_at | timestamptz | NOT NULL |
 | | | PK (crew_id, user_id) |
 
-혼자 남은 크루장은 해산 확인 후 크루 나가기·회원 탈퇴가 가능하며 크루를 소프트 삭제한다. 다른 크루원이 있으면 먼저 위임한다. 진행 중 활동이나 계정별 로컬 미동기화 활동이 있으면 나가기·회원 탈퇴·로그아웃을 막는다. 크루 탈퇴 후에도 본인의 이전 크루 활동은 소속 없이 조회 가능하다.
+혼자 남은 크루장은 해산 확인 후 크루 나가기·회원 탈퇴가 가능하며 크루를 소프트 삭제한다. 다른 크루원이 있으면 먼저 위임한다. 진행 중 활동이나 계정별 로컬 미동기화 활동이 있으면 나가기·회원 탈퇴·로그아웃을 막는다. 크루를 나간 뒤 이전 크루 활동은 지워지지 않으며, 본인은 소속이 없어도 이전 크루 것까지 본다(`/users/me/activities`·`/users/me/stats`).
 
-거절·추방된 사람도 현재 유효한 초대 코드로 다시 신청할 수 있다. 코드 재발급은 옛 코드의 신규 신청만 막고 기존 PENDING 신청은 보존한다.
+초대 코드는 없다. 크루 검색(`GET /crews`)에서 고른 크루로 가입한다. 공개 크루는 `crew_members` 행을 바로 넣고, 비공개 크루는 `crew_join_requests` 에 PENDING 행을 넣어 크루장 승인 때 `crew_members` 를 넣는다. PENDING 인 사람은 `crew_members` 에 없다 — 크루원이 아니다.
+
+- **정원** — `crew_members` 가 크루장 포함 50행이면 더 넣지 않는다(API 409 CREW_FULL). PENDING 은 세지 않는다. 검사는 공개 크루 가입·비공개 크루 가입 신청·가입 승인·공개 전환에서 한다. 공개 전환은 기존 크루원 + PENDING 이 50 을 넘으면 전환 자체를 거부한다(일부만 넣지 않는다). 정원이 찬 크루에 이미 있던 PENDING 은 자동 취소하지 않는다. 동시성은 아래 "크루 정원 — 크루별로 직렬화한다"
+- **개발 데이터** — 이 스키마를 넣는 migration 은 기존 개발 DB 의 크루 관련 행을 지우고 시드로 다시 만든다(운영 데이터 없음)
+- **추방** — `crew_expulsions` 에 남는 행이 있으면 그 크루의 공개 가입과 비공개 가입 신청을 모두 막는다(403 EXPELLED_FROM_CREW). 공개 전환 자동 가입도 같은 행을 확인해 추방자의 PENDING 은 넣지 않는다. 행을 지워 제한을 푸는 기능은 없다
+- **거절 뒤 재신청** — 막지 않는다. 기다림 없음
 
 **crew_join_requests**
 
@@ -133,9 +141,24 @@ erDiagram
 | id | uuid | PK |
 | crew_id · user_id | uuid | |
 | status | text | PENDING · APPROVED · REJECTED · CANCELED |
-| decided_by | uuid | → users(크루장) |
+| decided_by | uuid | → users(크루장). 공개 크루 가입은 null. 공개 전환 자동 가입은 전환한 크루장 |
 | created_at · decided_at | timestamptz | |
-| | | 부분 UNIQUE (user_id) WHERE status = 'PENDING' — 동시에 한 건만 |
+| rejection_read_at | timestamptz | REJECTED 의 거절 안내를 신청자가 확인한 시각. 그 사람의 **가장 최근** 신청이 REJECTED 이고 이 값이 null 일 때만 `GET /users/me` 의 `membership.rejection` 으로 내려간다 — 대기 취소와 거절이 엇갈려 남은 옛 미확인 거절은 다시 띄우지 않는다 |
+| | | 부분 UNIQUE (user_id) WHERE status = 'PENDING' — 승인 대기는 한 사람에 한 건 |
+
+공개 크루 가입도 이 테이블에 APPROVED 행(`decided_by` null, `decided_at` = `created_at`)으로 남긴다. `POST /crews/join-requests` 응답과 `GET /crews/join-requests/mine` 이 공개·비공개를 같은 `JoinRequest` 로 돌려주기 위해서다.
+
+PENDING 이 있는 사람의 크루 만들기·다른 크루 가입·신청은 409 JOIN_REQUEST_PENDING 이다. 신청을 CANCELED 로 바꾸는 것은 신청자의 직접 취소(`DELETE /crews/join-requests/mine`)와 회원 탈퇴(`DELETE /users/me`, 그 사람의 PENDING 전부)뿐이다. CANCELED 는 승인·공개 전환 자동 가입 대상이 아니다.
+
+**crew_expulsions** — 추방 이력. 크루원 추방(`DELETE /crew/members/{userId}`, 신고 처리의 추방 포함) 때 넣는다.
+
+| 컬럼 | 타입 | 제약 |
+|---|---|---|
+| crew_id | uuid | → crews |
+| user_id | uuid | → users |
+| expelled_by | uuid | → users(크루장) |
+| expelled_at | timestamptz | NOT NULL |
+| | | PK (crew_id, user_id) — 다시 추방되면 `expelled_at` 갱신 |
 
 ### 사람 사이
 
@@ -318,7 +341,7 @@ erDiagram
 |---|---|
 | id | PK |
 | user_id | 받는 사람 |
-| type | JOIN_REQUEST · JOIN_APPROVED · JOIN_REJECTED · NOTICE · COMMENT · CHAT · ACTIVITY_STARTED · REPORT · REPORT_RESOLVED · POST_REMOVED |
+| type | JOIN_REQUEST · CREW_JOINED · JOIN_APPROVED · JOIN_REJECTED · NOTICE · COMMENT · CHAT · ACTIVITY_STARTED · REPORT · REPORT_RESOLVED · POST_REMOVED |
 | title · detail | |
 | unread | |
 | target_type · target_id | 이동 대상(2-3 의 규칙) |
@@ -326,7 +349,7 @@ erDiagram
 
 ## 회원 탈퇴 때 (Q32)
 
-`users.status = DELETED`, 닉네임·이메일·소셜 식별자·사진을 지운다. `activities` 는 행을 지우되 크루 합산을 보존하기 위해 **크루별·일별 합산을 `crew_daily_stats` 에 적립**해 둔다.
+`users.status = DELETED`, 닉네임·이메일·소셜 식별자·사진을 지운다. 그 사람의 PENDING 가입 신청은 모두 CANCELED 로 바꾼다(크루장 3-8 목록·공개 전환 대상에서 빠진다). `activities` 는 행을 지우되 크루 합산을 보존하기 위해 **크루별·일별 합산을 `crew_daily_stats` 에 적립**해 둔다.
 
 | 컬럼 | 타입 | 제약 |
 |---|---|---|
@@ -361,6 +384,10 @@ meets · meet_members · meet_invites · meet_join_requests · friendships · ne
 재연결 뒤 이어받기는 `afterSeq` 커서다(`realtime.md`). 그런데 seq 를 먼저 받은 메시지가 늦게 커밋될 수 있다 — seq 5 가 seq 4 보다 먼저 커밋되면, 이어받기가 5 까지 읽고 다음에 `afterSeq=5` 로 묻는 사이 4 는 영영 내려가지 않는다.
 
 그래서 **같은 크루의 메시지 저장을 직렬화**해 seq 순서와 커밋 순서를 같게 만든다. 저장 트랜잭션이 먼저 크루 단위 advisory lock(`pg_advisory_xact_lock`, 키는 `crew_id`)을 잡고 그 크루의 다음 seq 를 발급한다. 크루 하나의 동시 발화는 적어 경합은 무시할 수준이다. `UNIQUE (crew_id, seq)` 가 마지막 방어선이다.
+
+### 크루 정원 — 크루별로 직렬화한다
+
+정원 50명은 "세고 넣는" 두 단계라, 같은 크루에 공개 가입·승인·공개 전환 자동 가입이 동시에 오면 둘 다 49명을 보고 51명이 된다. 그래서 크루원을 넣는 트랜잭션은 먼저 그 크루 행을 잠그고(`SELECT … FROM crews WHERE id = ? FOR UPDATE`) 센 뒤 넣는다. 채팅 seq 처럼 크루 단위 잠금이고, 크루 하나의 가입은 드물어 경합은 무시할 수준이다. 공개 전환은 같은 잠금 안에서 크루원 + 대기 신청 수를 세고, 50 이하일 때만 대기 신청 전부를 처리한다. 비공개 크루 가입 신청도 같은 잠금 안에서 센다.
 
 ### 활동 중 위치 — 테이블로 시작한다
 

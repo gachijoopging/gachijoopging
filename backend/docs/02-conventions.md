@@ -160,12 +160,15 @@ JSON 필드명은 openapi.yaml 이 정본이다 — camelCase, 철자 하나도 
   | FORBIDDEN | 403 | 크루장 전용 경로를 크루원이 부름 등 |
   | NO_CREW | 403 | `/crew/...` 를 소속 크루 없이 부름 |
   | LEADER_MUST_DELEGATE | 403 | 크루장이 위임 없이 나가려 함 |
+  | EXPELLED_FROM_CREW | 403 | 추방된 크루(공개)에 다시 가입하려 함 |
   | NOT_FOUND | 404 | |
   | CONFLICT | 409 | |
   | EMAIL_TAKEN | 409 | 이메일 중복 |
   | NICKNAME_TAKEN | 409 | 닉네임 중복 |
   | CREW_NAME_TAKEN | 409 | 크루 이름 중복 |
   | ALREADY_IN_CREW | 409 | 이미 다른 크루 소속 |
+  | JOIN_REQUEST_PENDING | 409 | 승인 대기 신청이 있는데 검색·만들기·다른 크루 가입을 함 |
+  | CREW_FULL | 409 | 크루원 50명(크루장 포함)에서 더 넣으려 함 |
   | VALIDATION | 422 | 앱은 재시도 금지 |
   | RATE_LIMITED | 429 | Retry-After 헤더 필수 |
   | INTERNAL | 500 | |
@@ -477,7 +480,7 @@ noMethods().that().areDeclaredInClassesThat().resideInAPackage(FACADE)
 - 사용자 입력이 쿼리에 닿는 경로 — 특히 native SQL 과 `JdbcClient` 의 동적 SQL
 - 파일 경로·업로드 (`media` 도메인, `app.media.root` 아래 쓰기)
 - 외부 시스템 호출 (`client/`)
-- 서명·해시·토큰 (`MediaSignedUrl`, `OpaqueToken`, 크루 초대 코드, JWT)
+- 서명·해시·토큰 (`MediaSignedUrl`, `OpaqueToken`, JWT)
 - 개인정보가 응답이나 로그에 실리는 곳
 
 점검 항목은 §14 의 시크릿 규칙, §11 의 로그 금지 항목, 그리고 파라미터 바인딩 사용 여부다.

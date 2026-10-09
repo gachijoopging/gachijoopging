@@ -11,9 +11,9 @@
 | 1-3 회원가입 | variant | AppHeader, Field, Checkbox, Banner, Button | Form | 없음 |
 | 1-4 닉네임 | variant | AppHeader, Field, Button | Form | 없음 |
 | 1-5 비밀번호 재설정 | variant | AppHeader, Field, Button, Banner | Form | 없음 |
-| 1-6 크루 만들기/가입 | screen-specific | Screen, Button, Card onPress, Banner neutral | List/detail | 없음 |
-| 1-7 크루 만들기 | variant | AppHeader, Field, Avatar, Button, Banner neutral | Form | 없음 |
-| 1-8 초대 코드 입력 | variant | AppHeader, Chip deep, Field, Button | Form | 없음 |
+| 1-6 크루 선택 | screen-specific | Screen, Card onPress, Banner neutral | List/detail | 없음 |
+| 1-7 크루 만들기 | variant | AppHeader, Field, SelectRow, BottomSheet, ListRow, Button, Banner | Form | 없음 |
+| 1-8 크루 검색 | variant | AppHeader, Field, Chip, ListRow, Avatar, Badge, BottomSheet, Button | List | 없음 |
 | 1-9 승인 대기 | screen-specific | Screen, Card, Button, Banner neutral | Overlay | 없음 |
 | 1-10 위치 권한 | screen-specific | Screen, Button, Banner | Overlay | 없음 |
 | 2-1 홈 | screen-specific | BottomNav, Card, Tile, Progress, Badge, IconCircle | Root tab | 없음 |
@@ -21,7 +21,7 @@
 | 2-3 알림 | feature shared | AppHeader, List, ListRow, Badge, EmptyState, IconCircle | List/detail | 없음 |
 | 3-1 크루 | screen-specific | BottomNav, Card, Tile, ListRow | Root tab | 없음 |
 | 3-2 크루 정보 | feature shared | AppHeader, Avatar, Card, Tabs, ListRow | List/detail | 크루 소개/사진 조합은 기능 UI |
-| 3-3 초대 코드 | feature shared | AppHeader, Card, Button, Snackbar | Overlay | QR 렌더링은 기능 UI |
+| 3-3 초대 코드 | 끔 | — | — | 초대 코드 끔(2026-10 회의) |
 | 3-4 크루 기록 | feature shared | AppHeader, Tabs, Card, Tile, EmptyState | Metrics | 막대 그래프는 기능 UI |
 | 3-5 공지 목록 | feature shared | AppHeader, List, ListRow, EmptyState, Badge | List/detail | 없음 |
 | 3-6 공지 상세 | feature shared | AppHeader, Card, ListRow, BottomSheet, Snackbar | List/detail | 댓글 렌더링은 기능 UI |
