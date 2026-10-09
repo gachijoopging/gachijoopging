@@ -112,5 +112,30 @@ apksigner verify --print-certs <apk> | grep SHA-1
 
 ## 스토어
 
-- Android: `release.jks` 와 비밀번호는 저장소 밖(`local.properties`). 잃으면 덮어설치가 불가능하다
+- Android: `release.jks` 와 비밀번호는 저장소 밖(`local.properties`). 잃으면 덮어설치가 불가능하다. 자세한 것은 아래 §앱 서명
 - iOS: 1차 범위 밖. 넣을 때 Apple 개발자 계정·서명·TestFlight 절차를 여기에 적는다
+
+## 앱 서명
+
+릴리스 APK 는 모두 같은 키(`release.jks`)로 서명한다. 카카오맵·Firebase 가 `site.gachijoopging.app` 과 이 키의 해시로
+앱을 대조하므로, 키가 다르면 지도가 `MapAuthException(401)` 로 안 뜨고 옛 APK 위에 덮어설치도 안 된다.
+
+- 키 파일과 비밀번호는 **팀 비밀 보관소**에서 받는다. 저장소에 넣지 않는다(`.gitignore` 의 `*.jks`·`*.keystore`)
+- `mobile/plugins/with-release-signing.js` 가 아래 순서로 읽는다. 둘 다 없으면 debug 키로 서명된다 — 빌드는 되지만 카카오맵이 안 뜬다
+
+| 환경 변수 (배포 채널·CI) | `mobile/local.properties` (로컬) | 값 |
+|---|---|---|
+| `ANDROID_KEYSTORE_PATH` | `RELEASE_STORE_FILE` | 키 파일 경로. 상대 경로는 `mobile/` 기준 (예 `release.jks`). 절대 경로는 `C:/keys/release.jks` 처럼 `/` 로 쓴다. `local.properties` 에서 `\` 는 이스케이프 문자다 |
+| `ANDROID_KEYSTORE_PASSWORD` | `RELEASE_STORE_PASSWORD` | 저장소 비밀번호 |
+| `ANDROID_KEY_ALIAS` | `RELEASE_KEY_ALIAS` | 키 별칭 |
+| `ANDROID_KEY_PASSWORD` | `RELEASE_KEY_PASSWORD` | 키 비밀번호. 없으면 저장소 비밀번호 |
+
+키 지문(공개값, 콘솔 등록용):
+
+```
+SHA-1   A3:57:14:98:05:50:8B:BF:62:87:67:52:C9:15:2A:C2:01:CD:4F:1E
+SHA-256 73:E7:E6:0D:7E:7B:AE:18:55:88:D1:E4:5A:25:F8:85:84:1A:01:58:66:37:25:B6:04:CB:9D:BF:FE:6C:0C:EA
+카카오 키 해시 o1cUmAVQi79ih2dSyRUqwgHNTx4=
+```
+
+새로 받은 APK 가 이 키로 서명됐는지는 `apksigner verify --print-certs <apk>` 의 SHA-1 로 확인한다.
