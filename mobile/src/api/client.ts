@@ -296,8 +296,10 @@ export function createHttpClient({ baseUrl, fetch: send = (...args) => globalThi
       if (!token || !(error instanceof ApiError) || error.code !== 'TOKEN_EXPIRED') throw error;
       // 다른 요청이 이미 바꿔 놓았으면 refresh 없이 지금 토큰으로 다시 보낸다
       if ((await getTokens())?.accessToken === token) await refresh();
+      const retry = await payload();
+      const next = (await getTokens())?.accessToken ?? null;
       if (started !== session) throw error;
-      return call(key, await payload(), (await getTokens())?.accessToken ?? null);
+      return call(key, retry, next);
     }
   }
 
@@ -314,16 +316,18 @@ export function createHttpClient({ baseUrl, fetch: send = (...args) => globalThi
         await refresh();
         return { data: await getTokens() } as never;
       }
+      // 응답을 기다리는 사이 다른 계정으로 로그인했으면 그 세션은 지우지 않는다
+      const started = session;
       if (key === 'POST /auth/logout') {
         try {
           return (await authed(key, async () => ({ ...(body as object), refreshToken: (await getTokens())?.refreshToken }))) as never;
         } finally {
-          await signOut();
+          if (started === session) await signOut();
         }
       }
       if (key === 'DELETE /users/me') {
         await authed(key, body);
-        await signOut();
+        if (started === session) await signOut();
         return undefined as never;
       }
       if (SIGN_IN_KEYS.includes(key)) {

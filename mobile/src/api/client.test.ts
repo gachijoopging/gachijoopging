@@ -357,6 +357,24 @@ describe('실 API 클라이언트', () => {
     expect(calls.filter(isRefresh)).toHaveLength(1);
   });
 
+  test('로그아웃·탈퇴 응답이 다음 로그인 뒤에 와도 새 세션을 지우지 않는다', async () => {
+    for (const key of ['POST /auth/logout', 'DELETE /users/me'] as const) {
+      await setTokens({ accessToken: 'old', refreshToken: 'r-old' });
+      let answer!: (r: Response) => void;
+      const { api } = server((c) => (c.url.endsWith('/auth/login')
+        ? json(200, { data: { accessToken: 'b', refreshToken: 'r-b' } })
+        : new Promise<Response>((r) => { answer = r; })));
+      const leaving = api.mutate(key);
+      await new Promise((r) => setTimeout(r, 0));
+      await api.mutate('POST /auth/login', { email: 'b@b.c', password: 'p' });
+      rememberAccount({ id: 'u2', membership: { status: 'MEMBER' } });
+      answer(json(204));
+      await leaving;
+      await expect(getTokens()).resolves.toEqual({ accessToken: 'b', refreshToken: 'r-b' });
+      expect(currentAccount()?.id).toBe('u2');
+    }
+  });
+
   test('탈퇴가 성공하면 로그아웃 상태가 되고, 실패하면 토큰을 그대로 둔다', async () => {
     const failing = server(() => json(409, { code: 'CONFLICT', message: 'x', requestId: 'r' }));
     await expect(failing.api.mutate('DELETE /users/me')).rejects.toMatchObject({ code: 'CONFLICT' });

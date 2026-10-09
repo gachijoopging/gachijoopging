@@ -8,10 +8,13 @@ let cached: TokenPair | null | undefined;
 
 export async function getTokens(): Promise<TokenPair | null> {
   if (cached === undefined) {
+    let read: TokenPair | null;
     try {
       const value = JSON.parse((await store().getItemAsync(KEY)) ?? 'null');
-      cached = typeof value?.accessToken === 'string' && typeof value.refreshToken === 'string' ? value : null;
-    } catch { cached = null; }
+      read = typeof value?.accessToken === 'string' && typeof value.refreshToken === 'string' ? value : null;
+    } catch { read = null; }
+    // 읽는 사이 로그인·로그아웃이 저장한 값이 더 새롭다
+    if (cached === undefined) cached = read;
   }
   return cached ?? null;
 }
