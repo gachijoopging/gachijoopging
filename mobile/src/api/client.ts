@@ -312,12 +312,14 @@ export function createHttpClient({ baseUrl, fetch: send = (...args) => globalThi
       return response;
     },
     async mutate(key, body) {
+      // 응답을 기다리는 사이 다른 계정으로 로그인했으면 그 세션은 건드리지도 돌려주지도 않는다
+      const started = session;
       if (key === 'POST /auth/refresh') {
         await refresh();
-        return { data: await getTokens() } as never;
+        const tokens = await getTokens();
+        if (started !== session) throw new ApiError('TOKEN_EXPIRED', undefined, 401);
+        return { data: tokens } as never;
       }
-      // 응답을 기다리는 사이 다른 계정으로 로그인했으면 그 세션은 지우지 않는다
-      const started = session;
       if (key === 'POST /auth/logout') {
         try {
           return (await authed(key, async () => ({ ...(body as object), refreshToken: (await getTokens())?.refreshToken }))) as never;

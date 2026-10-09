@@ -7,9 +7,11 @@ jest.mock('expo-file-system', () => ({ Paths: { document: 'documents' }, File: c
   delete() { mockFiles.delete(this.name); }
 } }));
 const mockSecure = new Map<string, string>();
+/** 걸어 두면 SecureStore 쓰기가 풀릴 때까지 끝나지 않는다 */
+let mockWriteGate: Promise<void> | null = null;
 jest.mock('expo-secure-store', () => ({
   getItemAsync: async (k: string) => mockSecure.get(k) ?? null,
-  setItemAsync: async (k: string, v: string) => { mockSecure.set(k, v); },
+  setItemAsync: async (k: string, v: string) => { await mockWriteGate; mockSecure.set(k, v); },
   deleteItemAsync: async (k: string) => { mockSecure.delete(k); },
 }));
 import { createMockClient, createHttpClient, ApiError, NetworkError, forget, peek } from './client';
@@ -373,6 +375,24 @@ describe('실 API 클라이언트', () => {
       await expect(getTokens()).resolves.toEqual({ accessToken: 'b', refreshToken: 'r-b' });
       expect(currentAccount()?.id).toBe('u2');
     }
+  });
+
+  test('refresh 를 요청한 사이 다른 계정으로 로그인했으면 그 계정 토큰을 돌려주지 않는다', async () => {
+    let release!: () => void;
+    const { api } = server((c) => {
+      if (isRefresh(c)) { mockWriteGate = new Promise((r) => { release = r; }); return renewed(); }
+      return json(200, { data: { accessToken: 'b', refreshToken: 'r-b' } });
+    });
+    const refreshed = api.mutate('POST /auth/refresh').catch((e) => e);
+    while (!mockWriteGate) await new Promise((r) => setTimeout(r, 0));
+    await new Promise((r) => setTimeout(r, 0));
+    const login = api.mutate('POST /auth/login', { email: 'b@b.c', password: 'p' });
+    await new Promise((r) => setTimeout(r, 0));
+    mockWriteGate = null;
+    release();
+    await login;
+    await expect(refreshed).resolves.toMatchObject({ code: 'TOKEN_EXPIRED' });
+    await expect(getTokens()).resolves.toEqual({ accessToken: 'b', refreshToken: 'r-b' });
   });
 
   test('탈퇴가 성공하면 로그아웃 상태가 되고, 실패하면 토큰을 그대로 둔다', async () => {

@@ -19,12 +19,20 @@ export async function getTokens(): Promise<TokenPair | null> {
   return cached ?? null;
 }
 
+/** 쓰기를 한 줄로 세운다. 로그아웃의 삭제가 다음 로그인의 저장보다 늦게 끝나 기기에 토큰이 없어지면 안 된다 */
+let writing: Promise<void> = Promise.resolve();
+function write(op: () => Promise<void>): Promise<void> {
+  writing = writing.catch(() => {}).then(op);
+  return writing;
+}
+
 export async function setTokens(pair: TokenPair): Promise<void> {
-  cached = { accessToken: pair.accessToken, refreshToken: pair.refreshToken };
-  await store().setItemAsync(KEY, JSON.stringify(cached));
+  const value = { accessToken: pair.accessToken, refreshToken: pair.refreshToken };
+  cached = value;
+  await write(() => store().setItemAsync(KEY, JSON.stringify(value)));
 }
 
 export async function clearTokens(): Promise<void> {
   cached = null;
-  await store().deleteItemAsync(KEY);
+  await write(() => store().deleteItemAsync(KEY));
 }
