@@ -65,6 +65,7 @@
         }
       ],
       "./plugins/with-kakao-maven",
+      "./plugins/with-release-signing",
       "react-native-health-connect",
       [
         "expo-build-properties",

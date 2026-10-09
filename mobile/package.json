@@ -4,6 +4,7 @@
   "main": "index.js",
   "dependencies": {
     "@react-native-vector-icons/material-design-icons": "^13.1.4",
+    "@stomp/stompjs": "^7.3.0",
     "design-system": "*",
     "expo": "~57.0.22",
     "expo-build-properties": "~57.0.22",
@@ -24,6 +25,7 @@
     "expo-network": "~57.0.2",
     "expo-notifications": "~57.0.19",
     "expo-router": "~57.0.21",
+    "expo-secure-store": "~57.0.4",
     "expo-sharing": "~57.0.22",
     "expo-splash-screen": "~57.0.9",
     "expo-status-bar": "~57.0.1",

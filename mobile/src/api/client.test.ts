@@ -6,8 +6,17 @@ jest.mock('expo-file-system', () => ({ Paths: { document: 'documents' }, File: c
   write(value: string) { mockFiles.set(this.name, value); }
   delete() { mockFiles.delete(this.name); }
 } }));
-import { createMockClient, ApiError, forget, peek } from './client';
-import { forgetAccount, rememberAccount } from '../auth/account';
+const mockSecure = new Map<string, string>();
+/** 걸어 두면 SecureStore 쓰기가 풀릴 때까지 끝나지 않는다 */
+let mockWriteGate: Promise<void> | null = null;
+jest.mock('expo-secure-store', () => ({
+  getItemAsync: async (k: string) => mockSecure.get(k) ?? null,
+  setItemAsync: async (k: string, v: string) => { await mockWriteGate; mockSecure.set(k, v); },
+  deleteItemAsync: async (k: string) => { mockSecure.delete(k); },
+}));
+import { createMockClient, createHttpClient, ApiError, NetworkError, forget, peek } from './client';
+import { currentAccount, forgetAccount, rememberAccount } from '../auth/account';
+import { getTokens, setTokens } from './tokens';
 import { MOCKS } from './mocks.generated';
 
 describe('목 클라이언트', () => {
@@ -172,6 +181,239 @@ describe('마지막 응답 기억', () => {
     forget('GET /activities/{id}', { id: 'a100' });
     expect(peek('GET /activities/{id}', { id: 'a100' })).toBeUndefined();
     expect(peek('GET /crew/home')).toBeDefined();
+  });
+});
+
+describe('실 API 클라이언트', () => {
+  const BASE = 'https://api.test/api/v1';
+  type Call = { url: string; method: string; headers: Record<string, string>; body?: unknown };
+  const json = (status: number, body?: unknown) =>
+    ({ ok: status < 400, status, text: async () => (body === undefined ? '' : JSON.stringify(body)) }) as Response;
+
+  /** handler 가 돌려준 응답을 그대로 준다. 보낸 요청은 calls 에 쌓인다 */
+  function server(handler: (call: Call) => Response | Promise<Response>) {
+    const calls: Call[] = [];
+    const fetch = (async (url: string, init: RequestInit) => {
+      const call = { url, method: init.method!, headers: init.headers as Record<string, string>, body: init.body };
+      calls.push(call);
+      return handler(call);
+    }) as unknown as typeof globalThis.fetch;
+    return { calls, api: createHttpClient({ baseUrl: BASE, fetch, timeoutMs: 50 }) };
+  }
+  const expired = () => json(401, { code: 'TOKEN_EXPIRED', message: 'expired', requestId: 'r1' });
+  const isRefresh = (c: Call) => c.url.endsWith('/auth/refresh');
+  const renewed = () => json(200, { data: { accessToken: 'new', refreshToken: 'r-new' } });
+
+  beforeEach(async () => {
+    mockSecure.clear();
+    await setTokens({ accessToken: 'old', refreshToken: 'r-old' });
+    rememberAccount({ id: 'u1', membership: { status: 'MEMBER' } });
+  });
+
+  test('경로 변수는 인자에서 채우고 GET 의 나머지는 쿼리, 그 밖은 JSON 본문으로 보낸다', async () => {
+    const { calls, api } = server(() => json(200, { data: {} }));
+    await api.get('GET /crew/members/{userId}/posts', { userId: 'u 9', cursor: 'c1', skip: undefined });
+    await api.mutate('PATCH /notices/{noticeId}', { noticeId: 'n1', title: 't' });
+    expect(calls[0].url).toBe(`${BASE}/crew/members/u%209/posts?cursor=c1`);
+    expect(calls[0].headers.Authorization).toBe('Bearer old');
+    expect(calls[1]).toEqual(expect.objectContaining({ url: `${BASE}/notices/n1`, method: 'PATCH', body: '{"title":"t"}' }));
+  });
+
+  test('204 는 값 없이 끝난다', async () => {
+    const { api } = server(() => json(204));
+    await expect(api.mutate('DELETE /posts/{postId}', { postId: 'p1' })).resolves.toBeUndefined();
+  });
+
+  test('401 이면 refresh 하고 원요청을 새 토큰으로 한 번 다시 보낸다', async () => {
+    const { calls, api } = server((c) => {
+      if (isRefresh(c)) return renewed();
+      return c.headers.Authorization === 'Bearer new' ? json(200, { data: { ok: 1 } }) : expired();
+    });
+    await expect(api.get('GET /crew/home')).resolves.toEqual({ data: { ok: 1 } });
+    expect(calls.map((c) => c.url.replace(BASE, ''))).toEqual(['/crew/home', '/auth/refresh', '/crew/home']);
+    expect(calls[1].body).toBe('{"refreshToken":"r-old"}');
+    await expect(getTokens()).resolves.toEqual({ accessToken: 'new', refreshToken: 'r-new' });
+  });
+
+  test('재시도도 401 이면 더 돌지 않고 실패한다', async () => {
+    const { calls, api } = server((c) => (isRefresh(c) ? renewed() : expired()));
+    await expect(api.get('GET /crew/home')).rejects.toMatchObject({ code: 'TOKEN_EXPIRED' });
+    expect(calls).toHaveLength(3);
+  });
+
+  test('refresh 가 거절되면 토큰·계정·기억한 응답을 지우고 로그아웃 상태가 된다', async () => {
+    const { api } = server((c) => {
+      if (isRefresh(c)) return expired();
+      return c.url.endsWith('/users/me') ? json(200, { data: { id: 'u1' } }) : expired();
+    });
+    await api.get('GET /users/me');
+    expect(peek('GET /users/me')).toBeDefined();
+    await expect(api.get('GET /crew/home')).rejects.toMatchObject({ code: 'TOKEN_EXPIRED' });
+    await expect(getTokens()).resolves.toBeNull();
+    expect(currentAccount()).toBeNull();
+    expect(peek('GET /users/me')).toBeUndefined();
+  });
+
+  test('refresh 중 연결이 끊기면 로그아웃하지 않는다', async () => {
+    const { api } = server((c) => (isRefresh(c) ? Promise.reject(new TypeError('Network request failed')) : expired()));
+    await expect(api.get('GET /crew/home')).rejects.toMatchObject({ code: 'OFFLINE' });
+    await expect(getTokens()).resolves.toEqual({ accessToken: 'old', refreshToken: 'r-old' });
+  });
+
+  test('동시에 3개가 401 이어도 refresh 는 한 번만 나간다', async () => {
+    let release!: () => void;
+    const gate = new Promise<void>((r) => { release = r; });
+    const { calls, api } = server(async (c) => {
+      if (isRefresh(c)) { await gate; return renewed(); }
+      return c.headers.Authorization === 'Bearer new' ? json(200, { data: c.url }) : expired();
+    });
+    const all = Promise.all((['GET /crew/home', 'GET /crew', 'GET /users/me'] as const).map((k) => api.get(k)));
+    await new Promise((r) => setTimeout(r, 0));
+    release();
+    await all;
+    expect(calls.filter(isRefresh)).toHaveLength(1);
+    expect(calls).toHaveLength(7);
+  });
+
+  test('오류 봉투는 code·fields·requestId 를 담은 ApiError 가 된다. 봉투가 아니면 INTERNAL', async () => {
+    const fields = [{ field: 'nickname', code: 'TAKEN' }];
+    const { api } = server((c) => (c.url.endsWith('/users/me')
+      ? json(422, { code: 'VALIDATION', message: 'bad', requestId: 'req-9', fields })
+      : json(502, '<html>bad gateway</html>')));
+    await expect(api.mutate('PATCH /users/me', { nickname: 'x' })).rejects.toEqual(
+      expect.objectContaining({ code: 'VALIDATION', fields, status: 422, requestId: 'req-9' }),
+    );
+    const error = await api.get('GET /crew').catch((e) => e);
+    expect(error).toBeInstanceOf(ApiError);
+    expect(error).toMatchObject({ code: 'INTERNAL', status: 502 });
+    expect(error).not.toBeInstanceOf(NetworkError);
+  });
+
+  test('서버에 닿지 못하면 OFFLINE, 시간이 지나면 TIMEOUT 인 NetworkError', async () => {
+    const offline = server(() => Promise.reject(new TypeError('Network request failed')));
+    const error = await offline.api.get('GET /crew').catch((e) => e);
+    expect(error).toBeInstanceOf(NetworkError);
+    expect(error.code).toBe('OFFLINE');
+
+    const hang = ((_url: string, init: RequestInit) => new Promise((_, reject) => {
+      init.signal!.addEventListener('abort', () => reject(new Error('aborted')));
+    })) as unknown as typeof fetch;
+    const slow = createHttpClient({ baseUrl: BASE, timeoutMs: 10, fetch: hang });
+    await expect(slow.get('GET /crew')).rejects.toMatchObject({ code: 'TIMEOUT' });
+  });
+
+  test('로그인은 받은 토큰을 저장하고, 로그아웃은 refreshToken 을 보낸 뒤 결과와 상관없이 비운다', async () => {
+    const { calls, api } = server((c) => (c.url.endsWith('/auth/login')
+      ? json(200, { data: { accessToken: 'a2', refreshToken: 'r2', isNew: false } })
+      : json(409, { code: 'CONFLICT', message: 'x', requestId: 'r' })));
+    await api.mutate('POST /auth/login', { email: 'a@b.c', password: 'p' });
+    expect(calls[0].headers.Authorization).toBeUndefined();
+    await expect(getTokens()).resolves.toEqual({ accessToken: 'a2', refreshToken: 'r2' });
+    await expect(api.mutate('POST /auth/logout')).rejects.toMatchObject({ code: 'CONFLICT' });
+    expect(calls[1].body).toBe('{"refreshToken":"r2"}');
+    await expect(getTokens()).resolves.toBeNull();
+  });
+
+  test('refresh 를 기다리는 사이 로그아웃·재로그인했으면 늦게 온 결과가 새 세션을 건드리지 않는다', async () => {
+    let answer!: (r: Response) => void;
+    const { calls, api } = server((c) => {
+      if (isRefresh(c)) return new Promise<Response>((r) => { answer = r; });
+      if (c.url.endsWith('/auth/logout')) return json(204);
+      if (c.url.endsWith('/auth/login')) return json(200, { data: { accessToken: 'b', refreshToken: 'r-b' } });
+      return c.headers.Authorization === 'Bearer b' ? json(200, { data: {} }) : expired();
+    });
+    const stale = api.get('GET /crew/home').catch((e) => e);
+    await new Promise((r) => setTimeout(r, 0));
+    await api.mutate('POST /auth/logout');
+    await api.mutate('POST /auth/login', { email: 'b@b.c', password: 'p' });
+    answer(renewed());
+    await expect(stale).resolves.toMatchObject({ code: 'TOKEN_EXPIRED' });
+    await expect(getTokens()).resolves.toEqual({ accessToken: 'b', refreshToken: 'r-b' });
+    expect(calls.filter((c) => c.url.endsWith('/crew/home'))).toHaveLength(1);
+
+    const rejected = server((c) => {
+      if (isRefresh(c)) return new Promise<Response>((r) => { answer = r; });
+      return c.url.endsWith('/auth/login') ? json(200, { data: { accessToken: 'b', refreshToken: 'r-b' } }) : expired();
+    });
+    await setTokens({ accessToken: 'old', refreshToken: 'r-old' });
+    const late = rejected.api.get('GET /crew/home').catch((e) => e);
+    await new Promise((r) => setTimeout(r, 0));
+    await rejected.api.mutate('POST /auth/login', { email: 'b@b.c', password: 'p' });
+    answer(expired());
+    await late;
+    await expect(getTokens()).resolves.toEqual({ accessToken: 'b', refreshToken: 'r-b' });
+  });
+
+  test('refresh 가 끝난 뒤 옛 토큰의 401 이 늦게 와도 refresh 는 다시 나가지 않는다', async () => {
+    let lateAnswer!: (r: Response) => void;
+    const { calls, api } = server((c) => {
+      if (isRefresh(c)) return renewed();
+      if (c.headers.Authorization === 'Bearer new') return json(200, { data: c.url });
+      if (c.url.endsWith('/crew')) return new Promise<Response>((r) => { lateAnswer = r; });
+      return expired();
+    });
+    const late = api.get('GET /crew');
+    await api.get('GET /crew/home');
+    lateAnswer(expired());
+    await expect(late).resolves.toEqual({ data: `${BASE}/crew` });
+    expect(calls.filter(isRefresh)).toHaveLength(1);
+  });
+
+  test('로그아웃·탈퇴 응답이 다음 로그인 뒤에 와도 새 세션을 지우지 않는다', async () => {
+    for (const key of ['POST /auth/logout', 'DELETE /users/me'] as const) {
+      await setTokens({ accessToken: 'old', refreshToken: 'r-old' });
+      let answer!: (r: Response) => void;
+      const { api } = server((c) => (c.url.endsWith('/auth/login')
+        ? json(200, { data: { accessToken: 'b', refreshToken: 'r-b' } })
+        : new Promise<Response>((r) => { answer = r; })));
+      const leaving = api.mutate(key);
+      await new Promise((r) => setTimeout(r, 0));
+      await api.mutate('POST /auth/login', { email: 'b@b.c', password: 'p' });
+      rememberAccount({ id: 'u2', membership: { status: 'MEMBER' } });
+      answer(json(204));
+      await leaving;
+      await expect(getTokens()).resolves.toEqual({ accessToken: 'b', refreshToken: 'r-b' });
+      expect(currentAccount()?.id).toBe('u2');
+    }
+  });
+
+  test('refresh 를 요청한 사이 다른 계정으로 로그인했으면 그 계정 토큰을 돌려주지 않는다', async () => {
+    let release!: () => void;
+    const { api } = server((c) => {
+      if (isRefresh(c)) { mockWriteGate = new Promise((r) => { release = r; }); return renewed(); }
+      return json(200, { data: { accessToken: 'b', refreshToken: 'r-b' } });
+    });
+    const refreshed = api.mutate('POST /auth/refresh').catch((e) => e);
+    while (!mockWriteGate) await new Promise((r) => setTimeout(r, 0));
+    await new Promise((r) => setTimeout(r, 0));
+    const login = api.mutate('POST /auth/login', { email: 'b@b.c', password: 'p' });
+    await new Promise((r) => setTimeout(r, 0));
+    mockWriteGate = null;
+    release();
+    await login;
+    await expect(refreshed).resolves.toMatchObject({ code: 'TOKEN_EXPIRED' });
+    await expect(getTokens()).resolves.toEqual({ accessToken: 'b', refreshToken: 'r-b' });
+  });
+
+  test('탈퇴가 성공하면 로그아웃 상태가 되고, 실패하면 토큰을 그대로 둔다', async () => {
+    const failing = server(() => json(409, { code: 'CONFLICT', message: 'x', requestId: 'r' }));
+    await expect(failing.api.mutate('DELETE /users/me')).rejects.toMatchObject({ code: 'CONFLICT' });
+    await expect(getTokens()).resolves.toEqual({ accessToken: 'old', refreshToken: 'r-old' });
+
+    const ok = server(() => json(204));
+    await ok.api.mutate('DELETE /users/me');
+    await expect(getTokens()).resolves.toBeNull();
+    expect(currentAccount()).toBeNull();
+  });
+
+  test('access 가 만료된 로그아웃은 refresh 로 바뀐 refreshToken 을 보낸다', async () => {
+    const { calls, api } = server((c) => {
+      if (isRefresh(c)) return renewed();
+      return c.headers.Authorization === 'Bearer new' ? json(204) : expired();
+    });
+    await api.mutate('POST /auth/logout');
+    expect(calls.map((c) => c.body)).toEqual(['{"refreshToken":"r-old"}', '{"refreshToken":"r-old"}', '{"refreshToken":"r-new"}']);
+    await expect(getTokens()).resolves.toBeNull();
   });
 });
 
