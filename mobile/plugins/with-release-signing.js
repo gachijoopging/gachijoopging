@@ -9,7 +9,7 @@ const RELEASE_CONFIG = `
         release { ${MARKER}
             def localProps = new Properties()
             def localFile = rootProject.file('../local.properties')
-            if (localFile.exists()) localFile.withInputStream { localProps.load(it) }
+            if (localFile.exists()) localFile.withReader('UTF-8') { localProps.load(it) }
             def pick = { String env, String key -> System.getenv(env) ?: localProps.getProperty(key) }
             def store = pick('ANDROID_KEYSTORE_PATH', 'RELEASE_STORE_FILE')
             if (store) {

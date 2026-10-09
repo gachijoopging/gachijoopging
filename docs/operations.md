@@ -122,7 +122,7 @@ apksigner verify --print-certs <apk> | grep SHA-1
 
 | 환경 변수 (배포 채널·CI) | `mobile/local.properties` (로컬) | 값 |
 |---|---|---|
-| `ANDROID_KEYSTORE_PATH` | `RELEASE_STORE_FILE` | 키 파일 경로. 상대 경로는 `mobile/` 기준 (예 `release.jks`) |
+| `ANDROID_KEYSTORE_PATH` | `RELEASE_STORE_FILE` | 키 파일 경로. 상대 경로는 `mobile/` 기준 (예 `release.jks`). 절대 경로는 `C:/keys/release.jks` 처럼 `/` 로 쓴다. `local.properties` 에서 `\` 는 이스케이프 문자다 |
 | `ANDROID_KEYSTORE_PASSWORD` | `RELEASE_STORE_PASSWORD` | 저장소 비밀번호 |
 | `ANDROID_KEY_ALIAS` | `RELEASE_KEY_ALIAS` | 키 별칭 |
 | `ANDROID_KEY_PASSWORD` | `RELEASE_KEY_PASSWORD` | 키 비밀번호. 없으면 저장소 비밀번호 |
