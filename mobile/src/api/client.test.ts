@@ -357,6 +357,17 @@ describe('실 API 클라이언트', () => {
     expect(calls.filter(isRefresh)).toHaveLength(1);
   });
 
+  test('탈퇴가 성공하면 로그아웃 상태가 되고, 실패하면 토큰을 그대로 둔다', async () => {
+    const failing = server(() => json(409, { code: 'CONFLICT', message: 'x', requestId: 'r' }));
+    await expect(failing.api.mutate('DELETE /users/me')).rejects.toMatchObject({ code: 'CONFLICT' });
+    await expect(getTokens()).resolves.toEqual({ accessToken: 'old', refreshToken: 'r-old' });
+
+    const ok = server(() => json(204));
+    await ok.api.mutate('DELETE /users/me');
+    await expect(getTokens()).resolves.toBeNull();
+    expect(currentAccount()).toBeNull();
+  });
+
   test('access 가 만료된 로그아웃은 refresh 로 바뀐 refreshToken 을 보낸다', async () => {
     const { calls, api } = server((c) => {
       if (isRefresh(c)) return renewed();

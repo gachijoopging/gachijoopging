@@ -321,6 +321,11 @@ export function createHttpClient({ baseUrl, fetch: send = (...args) => globalThi
           await signOut();
         }
       }
+      if (key === 'DELETE /users/me') {
+        await authed(key, body);
+        await signOut();
+        return undefined as never;
+      }
       if (SIGN_IN_KEYS.includes(key)) {
         const response = (await call(key, body, null)) as { data: TokenPair };
         session += 1;
