@@ -49,11 +49,11 @@
 | ③ | 지역 선택 | "지역: 전체" 또는 "지역: 서울특별시". 고르면 `region` 으로 바로 다시 부른다. 검색어와 함께 쓰면 둘 다 맞는 크루 | `Chip` | 지역 시트(맨 위 "전체" + 시·도 17개, `BottomSheet` + `ListRow`) |
 | ④ | 결과 행 | `items` (`GET /crews`, 크루 이름 오름차순). `photoUrl`(null 이면 `name` 첫 글자) · `name` · `joinPolicy` 배지 · `region` 이름 · "크루원 `memberCount`/50명" · `intro` 1줄(빈 문자열이면 줄을 그리지 않는다) | `ListRow` + `Avatar` md + `Txt` + `Badge` | ⑤ 가입 확인 시트 |
 | ④ | 가입 방식 배지 | `joinPolicy` OPEN → "공개", APPROVAL → "비공개". 승인 필요 여부일 뿐 두 유형 모두 결과에 나온다 | `Badge` | — |
-| ④ | 정원 표시 | `memberCount` 가 50 이면 "정원이 찼어요" 를 `intro` 줄 대신 보인다 | `Txt` caption muted | — |
-| ⑤ | 가입 확인 시트 | 고른 행의 값을 그대로 보인다(다시 부르지 않는다). `leader.nickname` "크루장 관열" · "크루원 `memberCount`/50명" · `region` · `intro` 전문. 안내 문구는 OPEN "바로 크루원이 돼요." · APPROVAL "크루장이 승인하면 크루원이 돼요." · 정원이 찬 공개 크루 "정원(50명)이 차서 지금은 가입할 수 없어요." | `BottomSheet` + `Avatar` lg + `Txt` + `Badge` | 스크림·뒤로·끌기 → 닫기(요청 중에는 닫히지 않는다) |
-| ⑥ | 가입 버튼 | OPEN "가입하기" · APPROVAL "가입 신청하기". 공개 크루가 50명이면 비활성 | `Button` primary lg | `POST /crews/join-requests` (`crewId` = 고른 행의 `id`) |
+| ④ | 정원 표시 | `memberCount` 가 50 이면 "정원이 찼어요" 를 `intro` 줄 대신 보인다. 공개·비공개 모두 가입·신청이 안 된다 | `Txt` caption muted | — |
+| ⑤ | 가입 확인 시트 | 고른 행의 값을 그대로 보인다(다시 부르지 않는다). `leader.nickname` "크루장 관열" · "크루원 `memberCount`/50명" · `region` · `intro` 전문. 안내 문구는 OPEN "바로 크루원이 돼요." · APPROVAL "크루장이 승인하면 크루원이 돼요." · 정원이 찬 크루(공개·비공개 모두) "정원(50명)이 차서 지금은 가입할 수 없어요. 자리가 생기면 다시 신청할 수 있어요." | `BottomSheet` + `Avatar` lg + `Txt` + `Badge` | 스크림·뒤로·끌기 → 닫기(요청 중에는 닫히지 않는다) |
+| ⑥ | 가입 버튼 | OPEN "가입하기" · APPROVAL "가입 신청하기". 50명이면 공개·비공개 모두 비활성 | `Button` primary lg | `POST /crews/join-requests` (`crewId` = 고른 행의 `id`) |
 
-정원이 찬 비공개 크루에도 신청은 할 수 있다(정원은 승인 때 검사한다). 이때 시트 안내에 "정원이 차 있어 크루장이 바로 승인하지 못할 수 있어요." 를 덧붙인다.
+정원이 찬 비공개 크루에는 새 신청을 할 수 없다(자리가 생기면 다시 신청). 추방된 적이 있는 크루에는 공개·비공개 모두 가입·신청할 수 없다. 앱은 추방 이력을 미리 알 수 없으므로 서버 403 으로 안내한다.
 
 서버 응답. 오류 봉투의 `code` 로 갈린다. `message` 는 화면에 쓰지 않는다.
 
@@ -65,7 +65,7 @@
 | 둘 다 | 409 JOIN_REQUEST_PENDING | `Snackbar` "승인 대기 중인 가입 요청이 있어요." 뒤 1-9 (다른 기기에서 신청한 경우) |
 | `POST /crews/join-requests` | 201 `status` APPROVED | 공개 크루 가입 완료. `Snackbar` "{crew.name}에 가입했어요." 뒤 온보딩 스택을 지우고 2-1 |
 | `POST /crews/join-requests` | 201·200 `status` PENDING | 비공개 크루 신청 완료(200 은 같은 크루에 이미 대기 중이던 신청). 온보딩 스택을 지우고 1-9 |
-| `POST /crews/join-requests` | 409 CREW_FULL | 시트 안 `Banner` "정원(50명)이 차서 가입할 수 없어요." 결과를 다시 부른다 |
+| `POST /crews/join-requests` | 409 CREW_FULL | 시트 안 `Banner` "정원(50명)이 차서 가입할 수 없어요. 자리가 생기면 다시 신청할 수 있어요." ⑥ 비활성. 결과를 다시 부른다 |
 | `POST /crews/join-requests` | 403 EXPELLED_FROM_CREW | 시트 안 `Banner` "이 크루에서 내보내져 다시 가입할 수 없어요." ⑥ 비활성 |
 | `POST /crews/join-requests` | 404 NOT_FOUND | 시트를 닫고 `Snackbar` "크루를 찾을 수 없어요. 다시 검색해 주세요." 결과를 다시 부른다(크루가 해산됐다) |
 | 둘 다 | 그 외 4xx·5xx·네트워크 실패 | 검색은 `ErrorState`, 가입은 시트 안 `Banner` "가입하지 못했어요. 네트워크 상태를 확인하고 다시 시도해 주세요." 시트와 고른 크루는 남긴다 |
@@ -114,4 +114,4 @@
 
 ## 미결
 
-- 정원이 찬 비공개 크루에 신청을 받는 것, 추방된 사람의 같은 비공개 크루 신청, 검색어와 지역을 한 입력으로 찾을지 — `feature-scope.md` 미결 "2026-10 정책 반영 중 새로 나온 것"
+- 없음(정원 찬 비공개 크루 신청 차단·추방자 재신청 차단·검색어와 지역 AND 는 2026-10 확정)

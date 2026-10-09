@@ -23,7 +23,7 @@ info:
     - 이메일은 앞뒤 공백만 제거하고 대소문자를 구분해 저장·비교한다(가입·로그인·재설정 공통)
     - 카테고리 7종: CIGARETTE·CAN·PLASTIC·PAPER·GLASS·VINYL·GENERAL
     - 입력 상한: 게시물 1000자 · 댓글 500자 · 채팅 500자 · 소개 200자 · 공지 제목 100자·본문 3000자 · 크루 이름 2~20자 · 닉네임 2~12자. 초과는 422
-    - 크루 정원: 크루장 포함 50명. 승인 대기 신청자는 세지 않는다. 공개 크루 가입·가입 승인 때 넘으면 409 CREW_FULL
+    - 크루 정원: 크루장 포함 50명. 승인 대기 신청자는 세지 않는다. 공개 크루 가입·비공개 크루 가입 신청·가입 승인·공개 전환 때 넘으면 409 CREW_FULL
     - 모든 `example` 은 앱 목 데이터의 원본이다. 진행 순서 2단계는 이 예시로 화면을 완성한다
 
     ### 권한
@@ -31,7 +31,7 @@ info:
     - 크루 범위 경로(`/crew/...`)는 **호출자의 소속 크루** 를 대상으로 한다. 크루 id 를 경로에 넣지 않는다 — 한 사람 한 크루(Q22)
     - 크루장 전용은 summary 에 `[크루장]`. 크루원이 부르면 403 FORBIDDEN
     - 소속 크루가 없는 사용자가 `/crew/...` 를 부르면 403 NO_CREW → 앱은 `GET /users/me` 로 분기(1-6·1-9)
-    - 앱은 크루에 소속돼야 쓴다. 미가입자(소속 없음·승인 대기)가 쓰는 경로는 `/auth/*` · `/agreements` · `/users/me`(GET·PATCH·DELETE) · `/users/me/agreements` · `/users/me/devices` · `/crews` · `/crews/join-requests*` 이다
+    - 앱은 크루에 소속돼야 쓴다. 미가입자(소속 없음·승인 대기)가 쓰는 경로는 `/auth/*` · `/agreements` · `/users/me`(GET·PATCH·DELETE) · `/users/me/agreements` · `/users/me/devices` · `/users/me/activities` · `/users/me/stats` · `GET /activities/{id}`(본인 활동만, 5-3) · `/crews` · `/crews/join-requests*` 이다. 활동·통계는 본인 데이터만 소속 여부와 무관하게 돌려준다
 
     ### 토큰
     - accessToken 1시간 · refreshToken 30일 · refresh 회전. 옛 계약과 같다
@@ -253,7 +253,7 @@ paths:
     delete:
       tags: [me]
       summary: 회원 탈퇴 — 다른 크루원이 있으면 크루장은 먼저 위임
-      description: 혼자 남은 크루장은 해산 확인 뒤 탈퇴 가능. 진행 중 활동은 409 CONFLICT. 로컬 미동기화 활동은 앱이 차단한다
+      description: 혼자 남은 크루장은 해산 확인 뒤 탈퇴 가능. 진행 중 활동은 409 CONFLICT. 로컬 미동기화 활동은 앱이 차단한다. 승인 대기 중인 가입 신청은 모두 CANCELED 로 바꾼다(이후 승인·공개 전환 자동 가입 대상에서 빠진다). 미가입자도 탈퇴할 수 있다
       responses:
         '204': { description: 완료 }
         '403': { $ref: '#/components/responses/Error' }
@@ -338,6 +338,7 @@ paths:
     get:
       tags: [me, activities]
       summary: 내 전체 활동 기록 — 이전 크루 포함, 소속 없어도 조회
+      description: 크루 미가입자(소속 없음·승인 대기)도 부를 수 있다. 본인 활동만 돌려준다. NO_CREW 를 돌려주지 않는다
       parameters:
         - { $ref: '#/components/parameters/Cursor' }
         - { $ref: '#/components/parameters/Limit' }
@@ -347,6 +348,7 @@ paths:
     get:
       tags: [me, stats]
       summary: 내 누적 기록·달력 — 이전 크루 포함, 소속 없어도 조회
+      description: 크루 미가입자(소속 없음·승인 대기)도 부를 수 있다. 본인 기록만 집계한다. NO_CREW 를 돌려주지 않는다
       responses:
         '200':
           description: OK
@@ -520,8 +522,9 @@ paths:
       description: |
         응답 `data.status` 로 결과를 가른다. APPROVED 면 이미 크루원이다(`membership.status` MEMBER). PENDING 이면 크루장 승인 대기이며 크루원이 아니다.
         같은 비공개 크루에 이미 대기 중인 신청이 있으면 그 신청을 200 으로 돌려준다(재전송 흡수). 다른 크루에 대기 중인 신청이 있으면 409 JOIN_REQUEST_PENDING — 자동 취소하지 않는다.
-        공개 크루: 그 크루에서 추방된 적이 있으면 403 EXPELLED_FROM_CREW, 크루원이 이미 50명이면 409 CREW_FULL. 가입되면 크루장에게 CREW_JOINED 알림.
-        비공개 크루: 거절된 적이 있어도 기다림 없이 다시 신청할 수 있다. 신청은 정원과 무관하게 받는다(정원은 승인 때 검사). 신청되면 크루장에게 JOIN_REQUEST 알림.
+        공개·비공개 공통: 그 크루에서 추방된 적이 있으면 403 EXPELLED_FROM_CREW(제한을 푸는 기능은 없다), 크루원이 이미 50명이면 409 CREW_FULL.
+        공개 크루: 가입되면 크루장에게 CREW_JOINED 알림.
+        비공개 크루: 거절된 적이 있어도 기다림 없이 다시 신청할 수 있다. 정원이 찬 크루에는 새 신청을 받지 않는다(자리가 생기면 다시 신청). 이미 들어와 있던 대기 신청은 자동 취소하지 않는다. 신청되면 크루장에게 JOIN_REQUEST 알림.
         없거나 삭제된 크루는 404 NOT_FOUND, 이미 소속이면 409 ALREADY_IN_CREW
       requestBody:
         required: true
@@ -608,8 +611,9 @@ paths:
       summary: "[크루장] 이름·소개·사진·활동 지역·가입 방식·목표 수정 (3-10)"
       description: |
         이름이 다른 크루와 같으면 409 CREW_NAME_TAKEN.
-        joinPolicy 를 APPROVAL → OPEN 으로 바꾸면 같은 요청 안에서 승인 대기 신청을 모두 APPROVED 로 바꿔 크루원으로 넣고 신청자마다 JOIN_APPROVED 알림을 보낸다(추방 이력이 있는 신청자 처리는 feature-scope 미결).
-        확인 필요(feature-scope 미결): 그렇게 넣으면 50명을 넘는 경우. 정해지기 전에는 이 경우의 응답을 정하지 않는다.
+        joinPolicy 를 APPROVAL → OPEN 으로 바꾸면 같은 요청 안에서 승인 대기 신청을 모두 APPROVED 로 바꿔 크루원으로 넣고 신청자마다 JOIN_APPROVED 알림을 보낸다.
+        기존 크루원 + 대기 신청이 50명을 넘으면 409 CREW_FULL 로 전환 전체를 거부한다(아무것도 바꾸지 않는다. 일부만 가입시키지 않는다). 크루장은 3-8 에서 신청을 정리한 뒤 다시 바꾼다.
+        추방 이력이 있는 사람의 신청과 CANCELED 신청은 자동 가입하지 않는다.
         OPEN → APPROVAL 은 이후 가입만 바뀐다
       requestBody:
         content:
@@ -702,7 +706,7 @@ paths:
     delete:
       tags: [members]
       summary: "[크루장] 추방"
-      description: 대상의 현재 크루 내 PENDING USER 신고를 함께 RESOLVED 처리하고 각 신고자에게 REPORT_RESOLVED 결과 알림을 보낸다. 추방 이력을 남겨 그 크루가 공개일 때 다시 가입하지 못하게 한다(`POST /crews/join-requests` 403 EXPELLED_FROM_CREW)
+      description: 대상의 현재 크루 내 PENDING USER 신고를 함께 RESOLVED 처리하고 각 신고자에게 REPORT_RESOLVED 결과 알림을 보낸다. 추방 이력을 남겨 그 크루에 다시 가입·신청하지 못하게 한다(`POST /crews/join-requests` 403 EXPELLED_FROM_CREW)
       parameters: [{ $ref: '#/components/parameters/UserId' }]
       responses: { '204': { description: 완료 } }
   /crew/members/{userId}/activities:
