@@ -23,13 +23,15 @@ info:
     - 이메일은 앞뒤 공백만 제거하고 대소문자를 구분해 저장·비교한다(가입·로그인·재설정 공통)
     - 카테고리 7종: CIGARETTE·CAN·PLASTIC·PAPER·GLASS·VINYL·GENERAL
     - 입력 상한: 게시물 1000자 · 댓글 500자 · 채팅 500자 · 소개 200자 · 공지 제목 100자·본문 3000자 · 크루 이름 2~20자 · 닉네임 2~12자. 초과는 422
+    - 크루 정원: 크루장 포함 50명. 승인 대기 신청자는 세지 않는다. 공개 크루 가입·가입 승인 때 넘으면 409 CREW_FULL
     - 모든 `example` 은 앱 목 데이터의 원본이다. 진행 순서 2단계는 이 예시로 화면을 완성한다
 
     ### 권한
     - `bearerAuth` 필수. 예외는 `/auth/*` 일부
     - 크루 범위 경로(`/crew/...`)는 **호출자의 소속 크루** 를 대상으로 한다. 크루 id 를 경로에 넣지 않는다 — 한 사람 한 크루(Q22)
     - 크루장 전용은 summary 에 `[크루장]`. 크루원이 부르면 403 FORBIDDEN
-    - 소속 크루가 없는 사용자가 `/crew/...` 를 부르면 403 NO_CREW → 앱은 크루 만들기/가입하기(1-6)로
+    - 소속 크루가 없는 사용자가 `/crew/...` 를 부르면 403 NO_CREW → 앱은 `GET /users/me` 로 분기(1-6·1-9)
+    - 앱은 크루에 소속돼야 쓴다. 미가입자(소속 없음·승인 대기)가 쓰는 경로는 `/auth/*` · `/agreements` · `/users/me`(GET·PATCH·DELETE) · `/users/me/agreements` · `/users/me/devices` · `/crews` · `/crews/join-requests*` 이다
 
     ### 토큰
     - accessToken 1시간 · refreshToken 30일 · refresh 회전. 옛 계약과 같다
@@ -210,6 +212,7 @@ paths:
                   membership:
                     status: MEMBER
                     crew: { id: c001, name: 한강줍깅크루, isLeader: true }
+                    rejection: null
     patch:
       tags: [me]
       summary: 프로필·설정 수정
@@ -245,6 +248,7 @@ paths:
                   membership:
                     status: NONE
                     crew: null
+                    rejection: null
         '409': { $ref: '#/components/responses/Error' }
     delete:
       tags: [me]
@@ -441,35 +445,25 @@ paths:
 
   # ───────────────────────── crew (소속) ─────────────────────────
   /crews:
-    post:
-      tags: [crew]
-      summary: 크루 만들기 — 이름만. 호출자가 크루장. 이미 소속이면 409
-      description: 이름이 다른 크루와 같으면(앞뒤 공백·줄바꿈 제거 뒤 비교) 409 CREW_NAME_TAKEN. 이미 소속이면 409 ALREADY_IN_CREW
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [name]
-              properties: { name: { type: string, minLength: 2, maxLength: 20 } }
-      responses:
-        '201':
-          description: 생성
-          content:
-            application/json:
-              schema: { type: object, properties: { data: { $ref: '#/components/schemas/Crew' } } }
-              example: { data: { id: c001, name: 한강줍깅크루, intro: '', photoUrl: null, leader: { id: u001, nickname: 관열, photoUrl: null, withdrawn: false }, memberCount: 1, goalCount: 300, inviteCode: HG-7K2P, pendingJoinRequests: 0, pinnedNotice: null, unreadChat: 0, isLeader: true } }
-        '409': { $ref: '#/components/responses/Error' }
-  /crews/preview:
     get:
       tags: [crew]
-      summary: 초대 코드로 크루 이름 미리 보기 (1-8)
+      summary: 크루 검색 (1-8) — 미가입자만. 공개·비공개 모두, 크루 이름 오름차순
+      description: |
+        삭제된 크루는 빼고 공개(OPEN)·비공개(APPROVAL)를 모두 돌려준다. joinPolicy 는 노출이 아니라 가입 승인 필요 여부다.
+        query 는 크루 이름 부분 일치(대소문자 무시), region 은 활동 지역 일치. 둘 다 주면 둘 다 맞는 크루, 둘 다 없으면 전체 크루. 정렬은 name 오름차순.
+        정원이 찬 크루(memberCount 50)도 나온다.
+        이미 소속이면 409 ALREADY_IN_CREW, 승인 대기 중인 신청이 있으면 409 JOIN_REQUEST_PENDING — 검색은 미가입자만 쓴다
       parameters:
         - in: query
-          name: inviteCode
-          required: true
-          schema: { $ref: '#/components/schemas/InviteCodeInput' }
+          name: query
+          required: false
+          schema: { type: string, minLength: 1, maxLength: 20 }
+        - in: query
+          name: region
+          required: false
+          schema: { $ref: '#/components/schemas/Region' }
+        - { $ref: '#/components/parameters/Cursor' }
+        - { $ref: '#/components/parameters/Limit' }
       responses:
         '200':
           description: OK
@@ -481,37 +475,80 @@ paths:
                   data:
                     type: object
                     properties:
-                      id: { type: string }
-                      name: { type: string }
-                      memberCount: { type: integer }
-                      photoUrl: { type: string, nullable: true }
-                      intro: { type: string }
-                      leader: { $ref: '#/components/schemas/UserBrief' }
-              example: { data: { id: c001, name: 한강줍깅크루, memberCount: 18, photoUrl: null, intro: 매주 토요일 아침 여의도, leader: { id: u001, nickname: 관열, photoUrl: null, withdrawn: false } } }
-        '404': { $ref: '#/components/responses/Error' }
-  /crews/join-requests:
+                      items: { type: array, items: { $ref: '#/components/schemas/CrewSummary' } }
+                      nextCursor: { type: string, nullable: true }
+              example:
+                data:
+                  items:
+                    - { id: c001, name: 한강줍깅크루, intro: 매주 토요일 아침 여의도, photoUrl: null, region: SEOUL, joinPolicy: APPROVAL, memberCount: 18, leader: { id: u001, nickname: 관열, photoUrl: null, withdrawn: false } }
+                    - { id: c002, name: 한강망원줍깅, intro: '', photoUrl: null, region: SEOUL, joinPolicy: OPEN, memberCount: 50, leader: { id: u002, nickname: 상혁, photoUrl: null, withdrawn: false } }
+                  nextCursor: null
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
     post:
       tags: [crew]
-      summary: 초대 코드로 가입 신청 — 같은 크루에 대기 중이면 200 으로 흡수
-      description: 거절·추방 뒤에도 현재 유효 코드로 재신청할 수 있다. 다른 크루에 대기 중인 신청이 있으면 그 신청을 CANCELED 로 바꾸고 새로 신청한다(201). 크루 정원은 없다
+      summary: 크루 만들기 (1-7) — 이름·활동 지역·가입 방식 필수, 설명 선택. 호출자가 크루장
+      description: |
+        이름이 다른 크루와 같으면(앞뒤 공백·줄바꿈 제거 뒤 비교) 409 CREW_NAME_TAKEN. 이미 소속이면 409 ALREADY_IN_CREW.
+        승인 대기 중인 신청이 있으면 409 JOIN_REQUEST_PENDING — 신청을 자동 취소하지 않는다. 사용자가 1-9 에서 직접 취소한 뒤 만든다.
+        joinPolicy 는 기본값이 없다 — 앱이 사용자 선택 없이 보내지 않는다
       requestBody:
         required: true
         content:
           application/json:
-            schema: { type: object, required: [inviteCode], properties: { inviteCode: { $ref: '#/components/schemas/InviteCodeInput' } } }
+            schema:
+              type: object
+              required: [name, region, joinPolicy]
+              properties:
+                name: { type: string, minLength: 2, maxLength: 20 }
+                intro: { type: string, maxLength: 200, description: 크루 설명(선택). 생략하면 빈 문자열 }
+                region: { $ref: '#/components/schemas/Region' }
+                joinPolicy: { $ref: '#/components/schemas/JoinPolicy' }
       responses:
         '201':
-          description: 신청됨
+          description: 생성
+          content:
+            application/json:
+              schema: { type: object, properties: { data: { $ref: '#/components/schemas/Crew' } } }
+              example: { data: { id: c001, name: 한강줍깅크루, intro: 매주 토요일 아침 여의도, photoUrl: null, region: SEOUL, joinPolicy: APPROVAL, leader: { id: u001, nickname: 관열, photoUrl: null, withdrawn: false }, memberCount: 1, goalCount: 300, pendingJoinRequests: 0, pinnedNotice: null, unreadChat: 0, isLeader: true } }
+        '409': { $ref: '#/components/responses/Error' }
+        '422': { $ref: '#/components/responses/Error' }
+  /crews/join-requests:
+    post:
+      tags: [crew]
+      summary: 크루 가입 — 공개 크루는 바로 가입(APPROVED), 비공개 크루는 가입 신청(PENDING)
+      description: |
+        응답 `data.status` 로 결과를 가른다. APPROVED 면 이미 크루원이다(`membership.status` MEMBER). PENDING 이면 크루장 승인 대기이며 크루원이 아니다.
+        같은 비공개 크루에 이미 대기 중인 신청이 있으면 그 신청을 200 으로 돌려준다(재전송 흡수). 다른 크루에 대기 중인 신청이 있으면 409 JOIN_REQUEST_PENDING — 자동 취소하지 않는다.
+        공개 크루: 그 크루에서 추방된 적이 있으면 403 EXPELLED_FROM_CREW, 크루원이 이미 50명이면 409 CREW_FULL. 가입되면 크루장에게 CREW_JOINED 알림.
+        비공개 크루: 거절된 적이 있어도 기다림 없이 다시 신청할 수 있다. 신청은 정원과 무관하게 받는다(정원은 승인 때 검사). 신청되면 크루장에게 JOIN_REQUEST 알림.
+        없거나 삭제된 크루는 404 NOT_FOUND, 이미 소속이면 409 ALREADY_IN_CREW
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [crewId], properties: { crewId: { type: string } } }
+      responses:
+        '200':
+          description: 같은 비공개 크루에 대기 중인 신청을 그대로 돌려줌
           content:
             application/json:
               schema: { type: object, properties: { data: { $ref: '#/components/schemas/JoinRequest' } } }
-              example: { data: { id: jr001, crew: { id: c001, name: 한강줍깅크루 }, user: { id: u001, nickname: 관열, photoUrl: null, withdrawn: false }, status: PENDING, createdAt: 2026-09-15T10:00:00Z } }
+              example: { data: { id: jr001, crew: { id: c001, name: 한강줍깅크루 }, user: { id: u009, nickname: 지수, photoUrl: null, withdrawn: false }, status: PENDING, createdAt: 2026-09-15T10:00:00Z } }
+        '201':
+          description: 처리됨 — 공개 크루면 APPROVED(예 `crew` c002 한강망원줍깅, `status` APPROVED), 비공개 크루면 PENDING(아래 예시)
+          content:
+            application/json:
+              schema: { type: object, properties: { data: { $ref: '#/components/schemas/JoinRequest' } } }
+              example: { data: { id: jr001, crew: { id: c001, name: 한강줍깅크루 }, user: { id: u009, nickname: 지수, photoUrl: null, withdrawn: false }, status: PENDING, createdAt: 2026-09-15T10:00:00Z } }
+        '403': { $ref: '#/components/responses/Error' }
         '404': { $ref: '#/components/responses/Error' }
         '409': { $ref: '#/components/responses/Error' }
   /crews/join-requests/mine:
     get:
       tags: [crew]
-      summary: 내 신청 상태 (1-9 승인 대기)
+      summary: 내 최근 가입 신청 상태 (1-9 승인 대기)
+      description: 로그인 뒤 분기는 `GET /users/me` 의 `membership`(status·rejection)으로 하고, 1-9 는 이 경로로 신청 상태(PENDING·APPROVED·REJECTED·CANCELED)를 다시 확인한다. 신청이 없으면 data null
       responses:
         '200':
           description: OK
@@ -521,8 +558,25 @@ paths:
               example: { data: { id: jr001, crew: { id: c001, name: 한강줍깅크루 }, user: { id: u001, nickname: 관열, photoUrl: null, withdrawn: false }, status: PENDING, createdAt: 2026-09-15T10:00:00Z } }
     delete:
       tags: [crew]
-      summary: 신청 취소
+      summary: 대기 중인 내 가입 신청 취소 (1-9 요청 취소) — 대기 중인 신청이 없어도 204
+      description: 다른 크루를 찾거나 만들려면 이것으로 먼저 취소한다. 취소된 신청은 CANCELED
       responses: { '204': { description: 완료 } }
+  /crews/join-requests/{requestId}/read:
+    post:
+      tags: [crew]
+      summary: 거절 안내 확인 (1-9 거절 상태의 [확인])
+      description: |
+        내 REJECTED 신청의 거절 안내를 확인 처리한다. 이후 `GET /users/me` 의 `membership.rejection` 에 다시 나오지 않는다.
+        이미 확인했으면 그대로 204(멱등). 내 신청이 아니거나 REJECTED 가 아니면 404 NOT_FOUND.
+        id 로 하나씩 확인한다 — 안내를 보여 준 뒤 새로 생긴 거절을 함께 지우지 않기 위해서다
+      parameters:
+        - in: path
+          name: requestId
+          required: true
+          schema: { type: string }
+      responses:
+        '204': { description: 완료 }
+        '404': { $ref: '#/components/responses/Error' }
 
   /crew:
     get:
@@ -542,16 +596,21 @@ paths:
                   photoUrl: null
                   leader: { id: 6f1c…, nickname: 관열, photoUrl: null, withdrawn: false }
                   memberCount: 18
+                  region: SEOUL
+                  joinPolicy: APPROVAL
                   goalCount: 300
-                  inviteCode: HG-7K2P
                   pendingJoinRequests: 2
                   pinnedNotice: { id: n01, title: 9월 정기 활동 안내, createdAt: 2026-09-01T09:00:00Z }
                   unreadChat: 5
                   isLeader: true
     patch:
       tags: [crew]
-      summary: "[크루장] 이름·소개·사진·목표 수정 (3-10)"
-      description: 이름이 다른 크루와 같으면 409 CREW_NAME_TAKEN
+      summary: "[크루장] 이름·소개·사진·활동 지역·가입 방식·목표 수정 (3-10)"
+      description: |
+        이름이 다른 크루와 같으면 409 CREW_NAME_TAKEN.
+        joinPolicy 를 APPROVAL → OPEN 으로 바꾸면 같은 요청 안에서 승인 대기 신청을 모두 APPROVED 로 바꿔 크루원으로 넣고 신청자마다 JOIN_APPROVED 알림을 보낸다(추방 이력이 있는 신청자 처리는 feature-scope 미결).
+        확인 필요(feature-scope 미결): 그렇게 넣으면 50명을 넘는 경우. 정해지기 전에는 이 경우의 응답을 정하지 않는다.
+        OPEN → APPROVAL 은 이후 가입만 바뀐다
       requestBody:
         content:
           application/json:
@@ -561,6 +620,8 @@ paths:
                 name: { type: string, minLength: 2, maxLength: 20 }
                 intro: { type: string, maxLength: 200 }
                 photoMediaId: { type: string, format: uuid, nullable: true }
+                region: { $ref: '#/components/schemas/Region' }
+                joinPolicy: { $ref: '#/components/schemas/JoinPolicy' }
                 goalCount: { type: integer, minimum: 1 }
       responses:
         '200':
@@ -576,25 +637,14 @@ paths:
                   photoUrl: null
                   leader: { id: 6f1c…, nickname: 관열, photoUrl: null, withdrawn: false }
                   memberCount: 18
+                  region: SEOUL
+                  joinPolicy: APPROVAL
                   goalCount: 300
-                  inviteCode: HG-7K2P
                   pendingJoinRequests: 2
                   pinnedNotice: { id: n01, title: 9월 정기 활동 안내, createdAt: 2026-09-01T09:00:00Z }
                   unreadChat: 5
                   isLeader: true
-  /crew/invite-code:
-    post:
-      tags: [crew]
-      summary: "[크루장] 초대 코드 재발급 — 옛 코드의 신규 신청만 무효"
-      description: 기존 대기 신청은 보존한다
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema: { type: object, properties: { data: { type: object, properties: { inviteCode: { type: string } } } } }
-              example:
-                data: { inviteCode: HG-9QX4 }
+        '409': { $ref: '#/components/responses/Error' }
   /crew/leave:
     post:
       tags: [crew]
@@ -652,7 +702,7 @@ paths:
     delete:
       tags: [members]
       summary: "[크루장] 추방"
-      description: 대상의 현재 크루 내 PENDING USER 신고를 함께 RESOLVED 처리하고 각 신고자에게 REPORT_RESOLVED 결과 알림을 보낸다
+      description: 대상의 현재 크루 내 PENDING USER 신고를 함께 RESOLVED 처리하고 각 신고자에게 REPORT_RESOLVED 결과 알림을 보낸다. 추방 이력을 남겨 그 크루가 공개일 때 다시 가입하지 못하게 한다(`POST /crews/join-requests` 403 EXPELLED_FROM_CREW)
       parameters: [{ $ref: '#/components/parameters/UserId' }]
       responses: { '204': { description: 완료 } }
   /crew/members/{userId}/activities:
@@ -717,6 +767,9 @@ paths:
     post:
       tags: [members]
       summary: "[크루장] 승인·거절"
+      description: |
+        승인하면 신청자를 크루원으로 넣고 JOIN_APPROVED, 거절하면 JOIN_REJECTED 알림을 보낸다. 거절된 신청은 신청자가 확인할 때까지 `membership.rejection` 으로 남는다.
+        승인 때 크루원이 이미 50명이면 409 CREW_FULL 이고 신청은 PENDING 그대로다. 이미 처리된 신청은 409 CONFLICT, 없는 신청은 404
       parameters:
         - in: path
           name: requestId
@@ -727,7 +780,10 @@ paths:
         content:
           application/json:
             schema: { type: object, required: [decision], properties: { decision: { type: string, enum: [APPROVE, REJECT] } } }
-      responses: { '204': { description: 완료 } }
+      responses:
+        '204': { description: 완료 }
+        '404': { $ref: '#/components/responses/Error' }
+        '409': { $ref: '#/components/responses/Error' }
 
   # ───────────────────────── activities ─────────────────────────
   /activities:
@@ -1704,7 +1760,8 @@ components:
     Error:
       description: |
         공통 오류. TOKEN_EXPIRED 401 · INVALID_CREDENTIALS 401 · FORBIDDEN 403 · NO_CREW 403 ·
-        LEADER_MUST_DELEGATE 403 · NOT_FOUND 404 · CONFLICT 409 · EMAIL_TAKEN 409 · NICKNAME_TAKEN 409 · CREW_NAME_TAKEN 409 · ALREADY_IN_CREW 409 ·
+        LEADER_MUST_DELEGATE 403 · EXPELLED_FROM_CREW 403 · NOT_FOUND 404 · CONFLICT 409 · EMAIL_TAKEN 409 · NICKNAME_TAKEN 409 · CREW_NAME_TAKEN 409 · ALREADY_IN_CREW 409 ·
+        JOIN_REQUEST_PENDING 409 · CREW_FULL 409 ·
         VALIDATION 422 · RATE_LIMITED 429 · INTERNAL 500. message 는 개발자용
       content:
         application/json:
@@ -1813,13 +1870,33 @@ components:
           description: |
             탈퇴 여부. 닉네임 문자열로 판별하지 않는다 — 같은 닉네임의 살아 있는 계정과
             구별되지 않는다. true 면 프로필 열기·팔로우·차단 등 그 사람을 향한 행동을 감춘다
-    InviteCodeInput:
+    JoinPolicy:
       type: string
-      pattern: '^[A-Za-z0-9]{2}-?[A-Za-z0-9]{4}$'
+      enum: [OPEN, APPROVAL]
       description: |
-        발급 형식은 영문 대문자·숫자 2자 + '-' + 4자(예 HG-7K2P). 헷갈리는 0·O·1·I 는 발급하지 않는다.
-        서버는 대소문자와 하이픈 유무를 무시하고 비교한다. 형식이 틀리면 422, 맞지만 없는 코드는 404.
-        시간 만료는 없고 재발급 때만 옛 코드가 무효가 된다
+        가입 방식. OPEN = 공개 크루(승인 없이 바로 가입) · APPROVAL = 비공개 크루(크루장 승인 필요).
+        검색 노출과 무관하다 — 두 값 모두 `GET /crews` 에 나온다
+    Region:
+      type: string
+      enum: [SEOUL, BUSAN, DAEGU, INCHEON, GWANGJU, DAEJEON, ULSAN, SEJONG, GYEONGGI, GANGWON, CHUNGBUK, CHUNGNAM, JEONBUK, JEONNAM, GYEONGBUK, GYEONGNAM, JEJU]
+      description: |
+        활동 지역 — 시·도 17개. 화면 표기는 앱이 정한다:
+        SEOUL 서울특별시 · BUSAN 부산광역시 · DAEGU 대구광역시 · INCHEON 인천광역시 · GWANGJU 광주광역시 · DAEJEON 대전광역시 · ULSAN 울산광역시 ·
+        SEJONG 세종특별자치시 · GYEONGGI 경기도 · GANGWON 강원특별자치도 · CHUNGBUK 충청북도 · CHUNGNAM 충청남도 · JEONBUK 전북특별자치도 ·
+        JEONNAM 전라남도 · GYEONGBUK 경상북도 · GYEONGNAM 경상남도 · JEJU 제주특별자치도
+    CrewSummary:
+      type: object
+      required: [id, name, intro, region, joinPolicy, memberCount, leader]
+      description: 크루 검색 결과 한 건. 가입 전 사람이 보는 정보만 담는다
+      properties:
+        id: { type: string }
+        name: { type: string }
+        intro: { type: string, description: 크루 설명 }
+        photoUrl: { type: string, nullable: true }
+        region: { $ref: '#/components/schemas/Region' }
+        joinPolicy: { $ref: '#/components/schemas/JoinPolicy' }
+        memberCount: { type: integer, description: 크루장 포함. 50 이면 정원이 찼다 }
+        leader: { $ref: '#/components/schemas/UserBrief' }
     AgreementCatalog:
       type: object
       required: [items]
@@ -1873,7 +1950,7 @@ components:
         membership:
           type: object
           properties:
-            status: { type: string, enum: [NONE, PENDING, MEMBER], description: NONE→1-6 · PENDING→1-9 · MEMBER→탭 }
+            status: { type: string, enum: [NONE, PENDING, MEMBER], description: "NONE→1-6(rejection 이 있으면 1-9 거절 안내 먼저) · PENDING→1-9(비공개 크루 승인 대기, 크루원 아님. crew 는 신청한 크루) · MEMBER→탭. 승인 대기 중 승인됐으면 MEMBER 가 먼저다" }
             crew:
               type: object
               nullable: true
@@ -1881,6 +1958,14 @@ components:
                 id: { type: string }
                 name: { type: string }
                 isLeader: { type: boolean }
+            rejection:
+              type: object
+              nullable: true
+              description: 내 가장 최근 가입 신청이 REJECTED 이고 아직 확인하지 않았을 때만 온다(그보다 오래된 미확인 거절은 다시 띄우지 않는다). status 가 NONE 일 때만. `POST /crews/join-requests/{requestId}/read` 로 확인하면 null
+              properties:
+                requestId: { type: string }
+                crew: { type: object, properties: { id: { type: string }, name: { type: string } } }
+                decidedAt: { type: string, format: date-time }
     Crew:
       type: object
       properties:
@@ -1889,9 +1974,10 @@ components:
         intro: { type: string }
         photoUrl: { type: string, nullable: true }
         leader: { $ref: '#/components/schemas/UserBrief' }
-        memberCount: { type: integer }
+        region: { $ref: '#/components/schemas/Region' }
+        joinPolicy: { $ref: '#/components/schemas/JoinPolicy' }
+        memberCount: { type: integer, description: 크루장 포함. 정원 50 }
         goalCount: { type: integer }
-        inviteCode: { type: string }
         pendingJoinRequests: { type: integer, description: "크루장만 값. 크루원은 0" }
         pinnedNotice:
           description: 삭제되지 않은 최신 공지 한 건 자동 선택. 없으면 null
@@ -1909,7 +1995,10 @@ components:
         id: { type: string }
         crew: { type: object, properties: { id: { type: string }, name: { type: string } } }
         user: { $ref: '#/components/schemas/UserBrief' }
-        status: { type: string, enum: [PENDING, APPROVED, REJECTED, CANCELED] }
+        status:
+          type: string
+          enum: [PENDING, APPROVED, REJECTED, CANCELED]
+          description: PENDING 은 승인 대기이며 크루원이 아니다. 공개 크루 가입은 처음부터 APPROVED, 비공개 → 공개 전환으로 자동 가입된 신청도 APPROVED. CANCELED 는 신청자가 직접 취소한 것
         createdAt: { type: string, format: date-time }
     Member:
       allOf:
@@ -2102,15 +2191,15 @@ components:
         id: { type: integer }
         type:
           type: string
-          enum: [JOIN_REQUEST, JOIN_APPROVED, JOIN_REJECTED, NOTICE, COMMENT, CHAT, ACTIVITY_STARTED, REPORT, REPORT_RESOLVED, POST_REMOVED]
+          enum: [JOIN_REQUEST, CREW_JOINED, JOIN_APPROVED, JOIN_REJECTED, NOTICE, COMMENT, CHAT, ACTIVITY_STARTED, REPORT, REPORT_RESOLVED, POST_REMOVED]
         title: { type: string }
         detail: { type: string }
         unread: { type: boolean }
         target:
           type: object
-          description: 이동 대상. JOIN_REQUESTS→3-8 · REPORTS→6-2 · POST→5-2 · NOTICE→3-6 · CHAT→3-7 · LIVE→2-2 · CREW→1-6/탭 · NOTIFICATIONS→2-3 (신고 결과는 title/detail, 크루장 처리 화면으로 보내지 않음)
+          description: 이동 대상. JOIN_REQUESTS→3-8 · MEMBERS→3-11 · REPORTS→6-2 · POST→5-2 · NOTICE→3-6 · CHAT→3-7 · LIVE→2-2 · CREW→1-6/탭 · NOTIFICATIONS→2-3 (신고 결과는 title/detail, 크루장 처리 화면으로 보내지 않음)
           properties:
-            type: { type: string, enum: [JOIN_REQUESTS, REPORTS, POST, NOTICE, CHAT, LIVE, CREW, NOTIFICATIONS] }
+            type: { type: string, enum: [JOIN_REQUESTS, MEMBERS, REPORTS, POST, NOTICE, CHAT, LIVE, CREW, NOTIFICATIONS] }
             id: { type: string, nullable: true }
         createdAt: { type: string, format: date-time }
     Report:
