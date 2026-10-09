@@ -1,9 +1,10 @@
 import { CONNECT_TIMEOUT_MS, createStompSocket, type LiveBody, type StompLike } from './stomp';
 import type { ChatSocketStatus } from '../crew/chat-socket';
+import { ApiError, NetworkError } from '../api/errors';
 
 type FakeClient = StompLike & { url: string; deliver?: (m: { body: string }) => void };
 
-function setup({ refreshFails = false, getToken }: { refreshFails?: boolean; getToken?: () => Promise<string | null> } = {}) {
+function setup({ refreshFails = false, refreshErrors = [], getToken }: { refreshFails?: boolean; refreshErrors?: Error[]; getToken?: () => Promise<string | null> } = {}) {
   const clients: FakeClient[] = [];
   const createClient = (url: string) => {
     const c: FakeClient = {
@@ -20,7 +21,9 @@ function setup({ refreshFails = false, getToken }: { refreshFails?: boolean; get
   };
   let token = 't1';
   const refresh = jest.fn(async () => {
-    if (refreshFails) throw new Error('refresh rejected');
+    const queued = refreshErrors.shift();
+    if (queued) throw queued;
+    if (refreshFails) throw new ApiError('TOKEN_EXPIRED', undefined, 401);
     token = 't2';
   });
   const postLive = jest.fn(async () => {});
@@ -170,13 +173,45 @@ test('handshake 가 멈추면 제한 시간 뒤 그 Client 를 닫고 백오프�
   expect(statuses[statuses.length - 1]).toBe('open');
 });
 
-test('refresh 가 실패하면 닫힘 4401 을 알린다 — 화면이 로그인으로 보낸다', async () => {
-  const { last, statuses, clients } = setup({ refreshFails: true });
+test('서버가 refresh 를 거절하면 로그아웃 뒤 닫힘 4401 을 알린다 — 화면이 로그인으로 보낸다', async () => {
+  const { last, statuses, clients, refresh, signOut } = setup({ refreshFails: true });
+  await flush();
+  last().onWebSocketClose({ code: 4401 });
+  await jest.advanceTimersByTimeAsync(60_000);
+  expect(statuses[statuses.length - 1]).toEqual({ closed: 4401 });
+  expect(signOut).toHaveBeenCalledTimes(1);
+  expect(refresh).toHaveBeenCalledTimes(1);
+  expect(clients).toHaveLength(1);
+});
+
+test('refresh 가 통신 실패면 connecting 을 유지하고 백오프로 refresh 부터 다시 한다', async () => {
+  const { last, statuses, clients, refresh, signOut } = setup({ refreshErrors: [new NetworkError('OFFLINE'), new NetworkError('TIMEOUT')] });
   await flush();
   last().onWebSocketClose({ code: 4401 });
   await flush();
-  expect(statuses[statuses.length - 1]).toEqual({ closed: 4401 });
-  expect(clients).toHaveLength(1);
+  expect(refresh).toHaveBeenCalledTimes(1);
+  expect(statuses[statuses.length - 1]).toBe('connecting');
+  await jest.advanceTimersByTimeAsync(1000);
+  expect(refresh).toHaveBeenCalledTimes(2);
+  await jest.advanceTimersByTimeAsync(2000);
+  expect(refresh).toHaveBeenCalledTimes(3);
+  expect(clients).toHaveLength(2);
+  expect(last().url).toBe('wss://x/api/v1/ws?token=t2');
+  last().onConnect();
+  expect(statuses[statuses.length - 1]).toBe('open');
+  expect(statuses).not.toContainEqual({ closed: 4401 });
+  expect(signOut).not.toHaveBeenCalled();
+});
+
+test('refresh 백오프 중 close 하면 refresh 를 더 하지 않는다', async () => {
+  const { socket, last, refresh } = setup({ refreshErrors: [new NetworkError('OFFLINE')] });
+  await flush();
+  last().onWebSocketClose({ code: 4401 });
+  await flush();
+  socket.close();
+  await jest.advanceTimersByTimeAsync(60_000);
+  expect(refresh).toHaveBeenCalledTimes(1);
+  expect(jest.getTimerCount()).toBe(0);
 });
 
 test('4403 이면 다시 붙지 않고 닫힘 4403 을 알린다 — 화면이 소속 상태를 다시 본다', async () => {

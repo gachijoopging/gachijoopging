@@ -1,4 +1,5 @@
 import { Client } from '@stomp/stompjs';
+import { NetworkError } from '../api/errors';
 import { reconnectWithBackoff, type ChatSocket, type ChatSocketEvent, type ChatSocketStatus } from '../crew/chat-socket';
 
 /** `/app/crew/live` 와 `POST /activities/{id}/live` 가 같은 body 를 쓴다 (docs/realtime.md) */
@@ -84,17 +85,35 @@ export function createStompSocket({ url, getToken, refresh, signOut, postLive, c
     else if (LIVE_TYPES.has(message.type ?? '')) liveHandlers.forEach((h) => h(message as LiveEvent));
   };
 
+  const signOutAndClose = () => {
+    void signOut().catch(() => {}).then(() => !closed && setStatus({ closed: 4401 }));
+  };
+
+  /** 끝나면 true. 통신 실패는 토큰이 아직 유효할 수 있어 false 로 백오프에 맡기고, 서버 거절만 로그아웃이다 */
+  const refreshThenConnect = async (): Promise<boolean> => {
+    const mine = generation;
+    try {
+      await refresh();
+    } catch (error) {
+      if (closed || mine !== generation) return true;
+      if (error instanceof NetworkError) return false;
+      signOutAndClose();
+      return true;
+    }
+    if (!closed && mine === generation) connectNow();
+    return true;
+  };
+
   const onAuthClosed = (code: 4401 | 4403) => {
     if (code === 4401 && !refreshed) {
       refreshed = true;
       setStatus('connecting');
-      refresh().then(() => !closed && connectNow(), () => !closed && setStatus({ closed: 4401 }));
+      void refreshThenConnect().then((ok) => {
+        if (!ok && !closed) stopBackoff = reconnectWithBackoff(refreshThenConnect);
+      });
       return;
     }
-    if (code === 4401) {
-      void signOut().catch(() => {}).then(() => !closed && setStatus({ closed: 4401 }));
-      return;
-    }
+    if (code === 4401) return signOutAndClose();
     setStatus({ closed: code });
   };
 
