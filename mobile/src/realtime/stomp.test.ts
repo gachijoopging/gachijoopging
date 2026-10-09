@@ -1,9 +1,9 @@
-import { createStompSocket, type LiveBody, type StompLike } from './stomp';
+import { CONNECT_TIMEOUT_MS, createStompSocket, type LiveBody, type StompLike } from './stomp';
 import type { ChatSocketStatus } from '../crew/chat-socket';
 
 type FakeClient = StompLike & { url: string; deliver?: (m: { body: string }) => void };
 
-function setup({ refreshFails = false } = {}) {
+function setup({ refreshFails = false, getToken }: { refreshFails?: boolean; getToken?: () => Promise<string | null> } = {}) {
   const clients: FakeClient[] = [];
   const createClient = (url: string) => {
     const c: FakeClient = {
@@ -24,11 +24,13 @@ function setup({ refreshFails = false } = {}) {
     token = 't2';
   });
   const postLive = jest.fn(async () => {});
-  const socket = createStompSocket({ url: 'wss://x/api/v1/ws', getToken: async () => token, refresh, postLive, createClient });
+  const signedOutAt: number[] = [];
   const statuses: ChatSocketStatus[] = [];
+  const signOut = jest.fn(async () => { signedOutAt.push(statuses.length); });
+  const socket = createStompSocket({ url: 'wss://x/api/v1/ws', getToken: getToken ?? (async () => token), refresh, signOut, postLive, createClient });
   socket.onStatus((s) => statuses.push(s));
   const last = () => clients[clients.length - 1];
-  return { socket, clients, last, refresh, postLive, statuses };
+  return { socket, clients, last, refresh, signOut, signedOutAt, postLive, statuses };
 }
 
 const flush = () => jest.advanceTimersByTimeAsync(0);
@@ -99,15 +101,73 @@ test('4401 이면 refresh 뒤 새 토큰으로 바로 다시 붙는다', async (
   expect(statuses[statuses.length - 1]).toBe('open');
 });
 
-test('refresh 뒤에도 4401 이면 다시 refresh 하지 않고 닫힘 4401 을 알린다', async () => {
-  const { last, refresh, statuses } = setup();
+test('refresh 뒤에도 4401 이면 로그아웃 상태로 만든 뒤 닫힘 4401 을 알린다', async () => {
+  const { last, refresh, signOut, signedOutAt, statuses } = setup();
   await flush();
   last().onWebSocketClose({ code: 4401 });
   await flush();
   last().onWebSocketClose({ code: 4401 });
   await flush();
   expect(refresh).toHaveBeenCalledTimes(1);
-  expect(statuses[statuses.length - 1]).toEqual({ closed: 4401 });
+  expect(signOut).toHaveBeenCalledTimes(1);
+  // 채팅 화면은 closed 4401 을 받으면 refresh 를 다시 한다. 그 전에 토큰이 지워져 있어야 로그인으로 간다
+  expect(statuses[signedOutAt[0]]).toEqual({ closed: 4401 });
+});
+
+test('4401 을 refresh 로 풀면 로그아웃하지 않는다', async () => {
+  const { last, signOut } = setup();
+  await flush();
+  last().onWebSocketClose({ code: 4401 });
+  await flush();
+  last().onConnect();
+  expect(signOut).not.toHaveBeenCalled();
+});
+
+test('토큰을 기다리는 사이 reconnect 하면 늦게 끝난 옛 시도는 버린다', async () => {
+  const pending: ((token: string) => void)[] = [];
+  const { socket, clients, statuses } = setup({ getToken: () => new Promise((r) => pending.push(r)) });
+  await flush();
+  socket.reconnect();
+  await flush();
+  pending[1]('t-new');
+  await flush();
+  clients[0].onConnect();
+  pending[0]('t-old');
+  await flush();
+  expect(clients).toHaveLength(1);
+  expect(clients[0].url).toBe('wss://x/api/v1/ws?token=t-new');
+  socket.send({ id: 'm1', text: 'x' });
+  expect(clients[0].publish).toHaveBeenCalledTimes(1);
+  expect(statuses[statuses.length - 1]).toBe('open');
+});
+
+test('밀려난 옛 Client 의 onConnect·close 는 상태를 바꾸지 않는다', async () => {
+  const { socket, clients, statuses } = setup();
+  await flush();
+  socket.reconnect();
+  await flush();
+  clients[1].onConnect();
+  clients[0].onConnect();
+  clients[0].onWebSocketClose({ code: 1006 });
+  await jest.advanceTimersByTimeAsync(60_000);
+  expect(clients[0].deactivate).toHaveBeenCalled();
+  expect(clients).toHaveLength(2);
+  expect(statuses[statuses.length - 1]).toBe('open');
+});
+
+test('handshake 가 멈추면 제한 시간 뒤 그 Client 를 닫고 백오프로 다시 붙는다', async () => {
+  const { clients, statuses } = setup();
+  await flush();
+  await jest.advanceTimersByTimeAsync(CONNECT_TIMEOUT_MS - 1);
+  expect(clients).toHaveLength(1);
+  await jest.advanceTimersByTimeAsync(1);
+  expect(clients[0].deactivate).toHaveBeenCalled();
+  await jest.advanceTimersByTimeAsync(1000);
+  expect(clients).toHaveLength(2);
+  clients[1].onConnect();
+  // 밀려난 첫 Client 가 늦게 닫혀도 지금 연결을 흔들지 않는다
+  clients[0].onWebSocketClose({ code: 1006 });
+  expect(statuses[statuses.length - 1]).toBe('open');
 });
 
 test('refresh 가 실패하면 닫힘 4401 을 알린다 — 화면이 로그인으로 보낸다', async () => {

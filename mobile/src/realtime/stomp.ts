@@ -34,6 +34,11 @@ export type StompSocketOptions = {
   getToken: () => Promise<string | null>;
   /** 공유 refresh (api/client 의 POST /auth/refresh). 실패하면 reject */
   refresh: () => Promise<unknown>;
+  /**
+   * 로그아웃 상태로. refresh 뒤에도 4401 이면 부른 다음 closed 4401 을 알린다.
+   * 채팅 화면은 closed 4401 에 refresh 를 다시 해 보는데, 토큰이 없으니 실패해 로그인으로 간다
+   */
+  signOut: () => Promise<unknown>;
   /** 소켓이 닫혀 있을 때 위치를 올리는 길. OS 가 배경에서 소켓을 끊어도 위치는 끊기지 않아야 한다 */
   postLive: (body: LiveBody) => Promise<unknown>;
   createClient?: (url: string) => StompLike;
@@ -45,13 +50,16 @@ export type StompSocket = ChatSocket & {
 };
 
 // 재연결은 reconnectWithBackoff 가 맡는다. stompjs 자체 재연결이 겹치면 백오프 간격이 깨진다
+/** CONNECTED 가 오지 않는 handshake 를 실패로 치는 시간. stompjs 기본값은 무한정 기다린다 */
+export const CONNECT_TIMEOUT_MS = 10_000;
+
 const defaultClient = (url: string): StompLike =>
   new Client({ brokerURL: url, reconnectDelay: 0, forceBinaryWSFrames: true, appendMissingNULLonIncoming: true }) as unknown as StompLike;
 
 const CHAT_TYPES = new Set(['CHAT', 'CHAT_DELETED']);
 const LIVE_TYPES = new Set(['LIVE_STARTED', 'LIVE_UPDATE', 'LIVE_ENDED']);
 
-export function createStompSocket({ url, getToken, refresh, postLive, createClient = defaultClient }: StompSocketOptions): StompSocket {
+export function createStompSocket({ url, getToken, refresh, signOut, postLive, createClient = defaultClient }: StompSocketOptions): StompSocket {
   const chatHandlers = new Set<(event: ChatSocketEvent) => void>();
   const liveHandlers = new Set<(event: LiveEvent) => void>();
   const listeners = new Set<(status: ChatSocketStatus) => void>();
@@ -60,6 +68,9 @@ export function createStompSocket({ url, getToken, refresh, postLive, createClie
   let stopBackoff: (() => void) | null = null;
   let refreshed = false;
   let closed = false;
+  /** 연결 시도 번호. 늦게 끝난 옛 시도는 자기 번호가 아니면 아무것도 바꾸지 않는다 */
+  let generation = 0;
+  let connectTimer: ReturnType<typeof setTimeout> | null = null;
 
   const setStatus = (next: ChatSocketStatus) => {
     status = next;
@@ -80,18 +91,36 @@ export function createStompSocket({ url, getToken, refresh, postLive, createClie
       refresh().then(() => !closed && connectNow(), () => !closed && setStatus({ closed: 4401 }));
       return;
     }
+    if (code === 4401) {
+      void signOut().catch(() => {}).then(() => !closed && setStatus({ closed: 4401 }));
+      return;
+    }
     setStatus({ closed: code });
   };
 
   /** 한 번 붙어 본다. 붙으면 true, 백오프를 이어야 하면 false. 4401·4403 은 백오프를 멈추고 따로 처리한다 */
   const attempt = async (): Promise<boolean> => {
+    const mine = ++generation;
+    const stale = () => closed || mine !== generation;
     const token = await getToken().catch(() => null);
-    if (closed) return true;
+    if (stale()) return true;
     const c = createClient(`${url}?token=${encodeURIComponent(token ?? '')}`);
     client = c;
     return new Promise<boolean>((resolve) => {
       let opened = false;
+      connectTimer = setTimeout(() => {
+        if (stale()) return;
+        generation++;
+        client = null;
+        c.deactivate();
+        resolve(false);
+      }, CONNECT_TIMEOUT_MS);
       c.onConnect = () => {
+        if (stale()) {
+          c.deactivate();
+          return resolve(true);
+        }
+        clearTimeout(connectTimer!);
         opened = true;
         refreshed = false;
         c.subscribe('/user/queue/crew', (m) => dispatch(m.body));
@@ -99,7 +128,8 @@ export function createStompSocket({ url, getToken, refresh, postLive, createClie
         resolve(true);
       };
       c.onWebSocketClose = ({ code }) => {
-        if (client !== c || closed) return resolve(true);
+        if (stale()) return resolve(true);
+        clearTimeout(connectTimer!);
         client = null;
         if (code === 4401 || code === 4403) {
           onAuthClosed(code);
@@ -159,6 +189,7 @@ export function createStompSocket({ url, getToken, refresh, postLive, createClie
     close() {
       closed = true;
       stopBackoff?.();
+      if (connectTimer) clearTimeout(connectTimer);
       client?.deactivate();
       client = null;
       chatHandlers.clear();
