@@ -25,7 +25,7 @@ import {
   useRipple,
   characterEmpty,
 } from 'design-system/src';
-import { ApiError, createMockClient, type ApiClient } from '../../src/api/client';
+import { ApiError, createMockClient, forget, peek, type ApiClient, type ApiResponse } from '../../src/api/client';
 import { clearDraft, draftFor, editDraft, requestIdFor } from '../../src/crew/comment-draft';
 import { COMMENT_MAX, canSendComment } from '../../src/crew/notice';
 import { PhotoPager } from '../../src/feed/PhotoPager';
@@ -42,9 +42,15 @@ const api: ApiClient = createMockClient({ delayMs: 300 });
 /** 남은 글자는 이 수를 넘긴 뒤부터 보인다 (5-2 입력) */
 const COUNT_FROM = 400;
 
+const toDetail = (data: ApiResponse<'GET /posts/{postId}'>['data']): Detail =>
+  ({ ...(data as unknown as Detail), comments: [...(data.comments as readonly Comment[])] });
+
 export default function PostDetailScreen() {
   const { id, focus } = useLocalSearchParams<{ id: string; focus?: string }>();
-  const [post, setPost] = useState<Detail | null>(null);
+  const [post, setPost] = useState<Detail | null>(() => {
+    const cached = peek('GET /posts/{postId}', { postId: id });
+    return cached ? toDetail(cached.data) : null;
+  });
   const [me, setMe] = useState<{ id: string; isLeader: boolean } | null>(null);
   const blocked = useBlockedUsers(me?.id);
   const draftKey = me ? `post:${me.id}:${id}` : null;
@@ -94,7 +100,7 @@ export default function PostDetailScreen() {
       try {
         const { data } = await api.get('GET /posts/{postId}', { postId: id });
         if (generation !== request.current) return;
-        setPost({ ...(data as unknown as Detail), comments: [...(data.comments as readonly Comment[])] });
+        setPost(toDetail(data));
         olderCursor.current = data.commentsNextCursor ?? null;
         setHasOlder(olderCursor.current != null);
         setGone(false);
@@ -225,6 +231,7 @@ export default function PostDetailScreen() {
     setDeleting(true);
     try {
       await api.mutate('DELETE /posts/{postId}', { postId: id });
+      forget('GET /posts/{postId}', { postId: id });
       setConfirm(null);
       // 진입한 화면(5-1·5-4·5-5·2-3)이 어디든 그 화면이 안내를 띄우도록 flash 를 얹고 돌아간다
       router.dismissTo(returnTo(navigation.getState(), '게시물을 삭제했어요'));

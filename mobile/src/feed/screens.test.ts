@@ -32,7 +32,7 @@ jest.mock('expo-file-system', () => ({
 jest.mock('../activity/ShareCard', () => ({
   ShareCard: 'ShareCard', useShareImage: () => ({ ref: null, capture: () => mockCapture() }),
 }));
-jest.mock('../api/client', () => ({
+jest.mock('../api/client', () => ({ peek: () => undefined, forget: () => {},
   ApiError: class extends Error {},
   createMockClient: () => ({ get: (...args: unknown[]) => mockGet(...args), mutate: (...args: unknown[]) => mockMutate(...args) }),
 }));

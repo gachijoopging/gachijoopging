@@ -21,7 +21,7 @@ import {
   space,
   useTheme,
 } from 'design-system/src';
-import { createMockClient, type ApiClient } from '../../src/api/client';
+import { createMockClient, peek, type ApiClient } from '../../src/api/client';
 import type { MOCKS } from '../../src/api/mocks.generated';
 import { CalendarPanel } from '../../src/crew/CalendarPanel';
 import { NoticesPanel } from '../../src/crew/NoticesPanel';
@@ -43,8 +43,8 @@ const PANELS: ReadonlyArray<{ value: Panel; label: string }> = [
 
 export default function CrewScreen() {
   const { colors } = useTheme();
-  const [crew, setCrew] = useState<Crew | null>(null);
-  const [unread, setUnread] = useState(0);
+  const [crew, setCrew] = useState<Crew | null>(() => peek('GET /crew')?.data ?? null);
+  const [unread, setUnread] = useState(() => peek('GET /crew/home')?.data.unreadNotifications ?? 0);
   const [failed, setFailed] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const { tab } = useLocalSearchParams<{ tab?: string }>();

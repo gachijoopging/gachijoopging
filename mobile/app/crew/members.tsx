@@ -21,7 +21,7 @@ import {
   space,
   useTheme,
 } from 'design-system/src';
-import { createMockClient, type ApiClient } from '../../src/api/client';
+import { createMockClient, peek, type ApiClient } from '../../src/api/client';
 import type { MOCKS } from '../../src/api/mocks.generated';
 import { ExportSheet } from '../../src/crew/ExportSheet';
 import { InviteCodeSheet } from '../../src/crew/InviteCodeSheet';
@@ -40,9 +40,9 @@ function joinedLabel(iso: string): string {
 
 export default function ManageCrewMembersScreen() {
   const { colors } = useTheme();
-  const [members, setMembers] = useState<readonly Member[] | null>(null);
+  const [members, setMembers] = useState<readonly Member[] | null>(() => peek('GET /crew/members')?.data ?? null);
   const [me, setMe] = useState<{ id: string; isLeader: boolean } | null>(null);
-  const [crew, setCrew] = useState<Crew | null>(null);
+  const [crew, setCrew] = useState<Crew | null>(() => peek('GET /crew')?.data ?? null);
   const [failed, setFailed] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [menuTarget, setMenuTarget] = useState<Member | null>(null);

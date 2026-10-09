@@ -109,6 +109,51 @@ function filterPosts({ scope = 'CREW', from, to }: PostsQuery = {}) {
   return { data: { ...posts, items } };
 }
 
+/**
+ * 다시 연 화면이 받아 오는 동안 로딩 대신 바로 그리려고, 키·질의별 마지막 응답을 기억한다.
+ * 받은 계정·크루 소속·로그인과 지금이 다르면(로그아웃·재로그인·계정 전환·크루 탈퇴) 비운다 — 다른 계정·크루 데이터가 보이면 안 된다
+ */
+const lastResponses = new Map<string, unknown>();
+let responsesOwner: string | null = null;
+const responseKey = (key: QueryKey, query?: unknown) => `${key} ${JSON.stringify(query ?? null)}`;
+
+function currentOwner(): string | null {
+  const account = currentAccount();
+  return account ? `${account.id}:${account.hasCrew}:${account.since ?? ''}` : null;
+}
+
+export function peek<K extends QueryKey>(key: K, query?: unknown): ApiResponse<K> | undefined {
+  if (currentOwner() !== responsesOwner) {
+    lastResponses.clear();
+    return undefined;
+  }
+  return lastResponses.get(responseKey(key, query)) as ApiResponse<K> | undefined;
+}
+
+/** forget 이전에 보낸 GET 의 응답은 지운 것을 되살리므로 기억하지 않는다 */
+let forgets = 0;
+
+/** 삭제·차단처럼 기억한 응답이 틀려지는 변경 뒤에 부른다. 다시 열 때 지운 것이 보이면 안 된다 */
+export function forget(key: QueryKey, query?: unknown): void {
+  lastResponses.delete(responseKey(key, query));
+  forgets += 1;
+}
+
+const MAX_RESPONSES = 100;
+
+/** owner·sentAt 은 요청을 보낼 때 값. 받는 사이 계정이 바뀌었거나 forget 이 있었으면 낡은 응답이므로 버린다 */
+function remember(owner: string | null, sentAt: number, key: QueryKey, query: unknown, response: unknown) {
+  if (owner !== currentOwner() || sentAt !== forgets) return;
+  if (owner !== responsesOwner) {
+    lastResponses.clear();
+    responsesOwner = owner;
+  }
+  const k = responseKey(key, query);
+  lastResponses.delete(k);
+  lastResponses.set(k, response);
+  if (lastResponses.size > MAX_RESPONSES) lastResponses.delete(lastResponses.keys().next().value!);
+}
+
 /** 실 API 가 붙기 전까지 화면이 쓰는 구현. */
 export function createMockClient({ delayMs = 0, failing = [], activityTotals }: MockOptions = {}): ApiClient {
   let agreements: AgreementState | null = null;
@@ -117,16 +162,23 @@ export function createMockClient({ delayMs = 0, failing = [], activityTotals }: 
     const owner = currentAccount()?.id ?? null;
     if (agreementsOwner !== owner) { agreements = null; agreementsOwner = owner; }
   };
+  async function load<K extends QueryKey>(key: K, query: unknown): Promise<ApiResponse<K>> {
+    if (delayMs > 0) await wait(delayMs);
+    if (failing.includes(key)) throw new ApiError('MOCK_FAILURE');
+    if (key === 'GET /users/me/agreements') {
+      selectAgreementOwner();
+      if (agreements) return { data: agreements } as ApiResponse<K>;
+    }
+    if (key === 'GET /crew/posts') return filterPosts(query as PostsQuery) as unknown as ApiResponse<K>;
+    return (MOCKS as unknown as Record<string, unknown>)[key] as ApiResponse<K>;
+  }
   return {
     async get(key, query) {
-      if (delayMs > 0) await wait(delayMs);
-      if (failing.includes(key)) throw new ApiError('MOCK_FAILURE');
-      if (key === 'GET /users/me/agreements') {
-        selectAgreementOwner();
-        if (agreements) return { data: agreements } as ApiResponse<typeof key>;
-      }
-      if (key === 'GET /crew/posts') return filterPosts(query as PostsQuery) as unknown as ApiResponse<typeof key>;
-      return (MOCKS as unknown as Record<string, unknown>)[key] as ApiResponse<typeof key>;
+      const owner = currentOwner();
+      const sentAt = forgets;
+      const response = await load(key, query);
+      remember(owner, sentAt, key, query, response);
+      return response;
     },
     async mutate(key, body) {
       if (delayMs > 0) await wait(delayMs);

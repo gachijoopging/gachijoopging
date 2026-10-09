@@ -26,7 +26,7 @@ jest.mock('./store', () => ({
   subscribe: () => () => {},
   updateStored: (fn: (s: typeof mockStored) => typeof mockStored) => { mockStored = fn(mockStored); },
 }));
-jest.mock('./tracking', () => ({ startTracking: jest.fn(async () => {}), stopTracking: jest.fn(async () => {}), syncOutbox: jest.fn(async () => {}), tick: jest.fn() }));
+jest.mock('./tracking', () => ({ finalSteps: jest.fn(async () => {}), refreshSteps: jest.fn(async () => {}), startTracking: jest.fn(async () => {}), stopTracking: jest.fn(async () => {}), syncOutbox: jest.fn(async () => {}), tick: jest.fn() }));
 jest.mock('./QuickPickupSheet', () => ({ QuickPickupSheet: 'QuickPickupSheet' }));
 jest.mock('../profile/blocked-users', () => ({ useBlockedUsers: () => new Set() }));
 jest.mock('design-system/src', () => new Proxy(
@@ -46,6 +46,43 @@ test('활동을 끝내 기록이 기기에 남으면 손끝으로 알리고 요�
   await act(async () => end.props.onPress());
   expect(mockHaptic).toHaveBeenCalledWith('confirm');
   expect(mockReplace).toHaveBeenCalledWith({ pathname: '/activity/[id]/summary', params: { id: 'a1' } });
+});
+
+const pressEnd = async () => {
+  const dialog = tree.root.find((n) => (n.type as unknown) === 'Dialog' && n.props.title === '활동을 종료할까요?');
+  const end = React.Children.toArray(dialog.props.actions.props.children).find((b) => (b as React.ReactElement<{ label: string }>).props.label === '종료하기') as React.ReactElement<{ onPress: () => Promise<void> }>;
+  await act(async () => end.props.onPress());
+};
+
+test.each([
+  ['답하지 않아도', () => new Promise<void>(() => {})],
+  ['저장에 실패해도', () => Promise.reject(new Error('disk'))],
+])('종료 직전 걸음 읽기가 %s 종료하고, 끝까지 읽지 못한 걸음으로 거리를 줄이지 않는다', async (_label, read) => {
+  const { finalSteps } = jest.requireMock('./tracking') as { finalSteps: jest.Mock };
+  finalSteps.mockClear().mockImplementationOnce(read);
+  mockStored = { session: { ...mockSession, steps: 100, distanceM: 1_000 }, ended: null, outbox: [] };
+  await act(async () => { tree = create(React.createElement(Activity)); });
+  await pressEnd();
+  expect(finalSteps).toHaveBeenCalled();
+  expect((mockStored.ended as { steps: number | null; distanceM: number })).toMatchObject({ steps: null, distanceM: 1_000 });
+  expect(mockReplace).toHaveBeenCalledWith({ pathname: '/activity/[id]/summary', params: { id: 'a1' } });
+});
+
+test('종료 직전 걸음을 끝까지 읽었으면 그 값으로 기록한다', async () => {
+  mockStored = { session: { ...mockSession, steps: 1_000, distanceM: 1_000 }, ended: null, outbox: [] };
+  await act(async () => { tree = create(React.createElement(Activity)); });
+  await pressEnd();
+  expect((mockStored.ended as { steps: number | null })).toMatchObject({ steps: 1_000 });
+});
+
+test('종료하면 기기에 남는 경로도 종료 기록과 같다 — 요약 지도가 닫힌 경로를 그린다', async () => {
+  const here = { latitude: 37.00009, longitude: 127, accuracy: 1 };
+  mockStored = { session: { ...mockSession, segments: [[{ latitude: 37, longitude: 127 }]], distanceM: 0, here }, ended: null, outbox: [] };
+  await act(async () => { tree = create(React.createElement(Activity)); });
+  await pressEnd();
+  const { session, ended } = mockStored as { session: { segments: { latitude: number; longitude: number }[][] }; ended: { route: number[][] } };
+  expect(ended.route).toHaveLength(2);
+  expect(session.segments.flat().map((p) => [p.longitude, p.latitude])).toEqual(ended.route);
 });
 
 describe('기기에 없는 활동으로 들어왔을 때', () => {

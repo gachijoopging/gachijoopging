@@ -3,7 +3,7 @@ import type { Activity } from '../api/client';
 import { formatClock, formatDistance } from '../format';
 import type { Category } from '../category';
 import { applyPickup, undoPickup, type Counts } from './pickup';
-import { correctDistance, distanceM, filterFix, initialFilterState, type FilterState, type Fix } from './location-filter';
+import { correctDistance, distanceM, filterFix, initialFilterState, moved, type FilterState, type Fix } from './location-filter';
 
 const SEARCH_AFTER_MS = 10_000;
 const UNSTABLE_AFTER_MS = 15_000;
@@ -25,6 +25,8 @@ export type Session = {
   distanceM: number;
   /** Health Connect 걸음수. 미측정은 null — 0 과 다르다 */
   steps: number | null;
+  /** 끝난 일시정지 구간. 걸음수에서 뺀다. 서버에서 받아 모르면 null, 이 필드가 생기기 전 저장본은 undefined */
+  pauses?: [string, string][] | null;
   filter: FilterState;
   /** 마지막으로 필터를 통과한 점. 일시정지 중에도 갱신돼 공유된다 */
   here: (LatLng & { accuracy: number | null }) | null;
@@ -51,6 +53,8 @@ export function newSession(a: ActivityStart, userId: string, now: number): Sessi
     segments: [[]],
     distanceM: 0,
     steps: null,
+    // 서버는 멈춘 총 시간만 준다. 어느 구간인지 모르면 멈춘 동안 걸음이 섞이므로 걸음수를 세지 않는다
+    pauses: a.pausedSec > 0 ? null : [],
     filter: initialFilterState,
     here: null,
     lastPassAt: null,
@@ -83,6 +87,7 @@ export function applyFix(s: Session, fix: Fix): Session {
   if (s.paused) return base;
   const current = s.segments[s.segments.length - 1];
   const prev = current[current.length - 1];
+  if (prev && !moved(prev, point, fix.accuracy!)) return base;
   return {
     ...base,
     segments: [...s.segments.slice(0, -1), [...current, point]],
@@ -90,9 +95,27 @@ export function applyFix(s: Session, fix: Fix): Session {
   };
 }
 
+/** 정지 판정 때문에 경로 끝이 실제 위치보다 최대 반경만큼 뒤처진다. 닫을 때 잇지 않으면 마지막 걸음이 기록에서 빠진다 */
+export function closeSegment(s: Session): Session {
+  const current = s.segments[s.segments.length - 1];
+  const prev = current?.[current.length - 1];
+  if (!prev || !s.here || (prev.latitude === s.here.latitude && prev.longitude === s.here.longitude)) return s;
+  const end = { latitude: s.here.latitude, longitude: s.here.longitude };
+  return { ...s, segments: [...s.segments.slice(0, -1), [...current, end]], distanceM: s.distanceM + distanceM(prev, end) };
+}
+
 export function pause(s: Session, now: number): Session {
   if (s.paused) return s;
-  return { ...s, paused: true, pausedAt: new Date(now).toISOString() };
+  return { ...closeSegment(s), paused: true, pausedAt: new Date(now).toISOString() };
+}
+
+export function knownPauses(s: Session): [string, string][] | null {
+  return s.pauses === undefined ? (s.pausedSec > 0 ? null : []) : s.pauses;
+}
+
+function closePause(s: Session, now: number): [string, string][] | null {
+  const pauses = knownPauses(s);
+  return pauses && s.pausedAt ? [...pauses, [s.pausedAt, new Date(now).toISOString()]] : null;
 }
 
 export function resume(s: Session, now: number): Session {
@@ -103,6 +126,7 @@ export function resume(s: Session, now: number): Session {
     paused: false,
     pausedAt: null,
     pausedSec: s.pausedSec + pausedFor,
+    pauses: closePause(s, now),
     // 정지 중에 걸어간 거리를 속도 필터가 순간 이동으로 오인하지 않게 필터도 새로 시작한다
     filter: initialFilterState,
     segments: [...s.segments, []],
@@ -156,7 +180,8 @@ export function livePayload(s: Session, now: number) {
   };
 }
 
-export function endBody(s: Session, now: number) {
+export function endBody(active: Session, now: number) {
+  const s = active.paused ? active : closeSegment(active);
   const durationSec = elapsedSec(s, now);
   const totalSec = Math.max(0, Math.floor((now - Date.parse(s.startedAt)) / 1000));
   return {

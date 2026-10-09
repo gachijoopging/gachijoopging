@@ -14,7 +14,8 @@
       "package": "site.gachijoopging.app",
       "permissions": [
         "android.permission.ACCESS_FINE_LOCATION",
-        "android.permission.ACCESS_COARSE_LOCATION"
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.health.READ_STEPS"
       ],
       "adaptiveIcon": {
         "backgroundColor": "#6DE78C",
@@ -64,6 +65,15 @@
         }
       ],
       "./plugins/with-kakao-maven",
+      "react-native-health-connect",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "minSdkVersion": 26
+          }
+        }
+      ],
       [
         "expo-image-picker",
         {

@@ -3,9 +3,9 @@ spring:
     name: gachijoopging-server
 
   datasource:
-    url: ${DB_URL}
-    username: ${DB_USERNAME}
-    password: ${DB_PASSWORD}
+    url: ${DATABASE_URL}
+    username: ${DATABASE_USER}
+    password: ${DATABASE_PASSWORD}
 
   jpa:
     hibernate:
@@ -90,7 +90,7 @@ app:
   invite:
     # 초대 링크의 앞부분 (openapi.yaml POST /meets/{id}/invite-link). 공개 도메인이라 비밀이 아니다.
     # 기본값을 두는 이유는 값이 없어도 서버가 뜨는 편이 낫기 때문이다 — 틀린 주소로 나간 링크는
-    base-url: ${INVITE_BASE_URL:https://www.gachi-joopging.site/invite}
+    base-url: ${INVITE_BASE_URL:https://www.gachijoopging.site/invite}
     # openapi.yaml — "7일 만료".
     token-ttl: 7d
 
@@ -105,7 +105,7 @@ app:
     # PUBLIC_BASE_URL 은 infra/.env.example 이 이미 갖고 있고 compose 의 env_file: [.env] 가
     # 이 컨테이너에 그대로 넣는다 — 새로 만드는 환경변수가 아니다.
     # 기본값을 두는 이유는 app.invite.base-url 과 같다: 값이 없어도 서버가 뜨는 편이 낫다.
-    base-url: ${PUBLIC_BASE_URL:https://www.gachi-joopging.site}
+    base-url: ${PUBLIC_BASE_URL:https://www.gachijoopging.site}
     # Nginx 의 secure_link_md5 와 공유하는 비밀이다. 기본값을 두지 않는 이유는 JWT 키와 같다 —
     # 한쪽만 다른 서버가 뜨면 모든 사진 URL 이 403 이 되는데, 그 사실이 배포 뒤에야 드러난다.
     secure-link-secret: ${MEDIA_SECURE_LINK_SECRET}
@@ -138,7 +138,7 @@ app:
 
   password-reset-mail:
     subject: 가치줍깅 비밀번호 재설정
-    from: ${MAIL_USERNAME:no-reply@gachi-joopging.site}
+    from: ${MAIL_USERNAME:no-reply@gachijoopging.site}
 
   fcm:
     # ⚠️ 값이 비어 있는 것이 지금의 정상 상태다. Firebase 콘솔의 서비스 계정 키가 아직 팀에 없다

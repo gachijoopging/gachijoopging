@@ -40,7 +40,7 @@ servers:
   - url: https://{host}/api/v1
     variables:
       host:
-        default: www.gachi-joopging.site
+        default: www.gachijoopging.site
 
 security:
   - bearerAuth: []
@@ -274,9 +274,9 @@ paths:
               example:
                 data:
                   items:
-                    - { type: TERMS, version: '2026-10', required: true, url: https://www.gachi-joopging.site/terms }
-                    - { type: PRIVACY, version: '2026-10', required: true, url: https://www.gachi-joopging.site/privacy }
-                    - { type: MARKETING, version: '2026-10', required: false, url: https://www.gachi-joopging.site/marketing }
+                    - { type: TERMS, version: '2026-10', required: true, url: https://www.gachijoopging.site/terms }
+                    - { type: PRIVACY, version: '2026-10', required: true, url: https://www.gachijoopging.site/privacy }
+                    - { type: MARKETING, version: '2026-10', required: false, url: https://www.gachijoopging.site/marketing }
         '503': { $ref: '#/components/responses/Error' }
 
   /users/me/agreements:
@@ -294,9 +294,9 @@ paths:
                 data:
                   complete: false
                   items:
-                    - { type: TERMS, version: '2026-10', required: true, url: https://www.gachi-joopging.site/terms, agreed: false, agreedAt: null }
-                    - { type: PRIVACY, version: '2026-10', required: true, url: https://www.gachi-joopging.site/privacy, agreed: false, agreedAt: null }
-                    - { type: MARKETING, version: '2026-10', required: false, url: https://www.gachi-joopging.site/marketing, agreed: false, agreedAt: null }
+                    - { type: TERMS, version: '2026-10', required: true, url: https://www.gachijoopging.site/terms, agreed: false, agreedAt: null }
+                    - { type: PRIVACY, version: '2026-10', required: true, url: https://www.gachijoopging.site/privacy, agreed: false, agreedAt: null }
+                    - { type: MARKETING, version: '2026-10', required: false, url: https://www.gachijoopging.site/marketing, agreed: false, agreedAt: null }
     put:
       tags: [me]
       summary: 동의 저장 — 보낸 항목만 갱신, 같은 내용 재전송은 200
@@ -328,9 +328,9 @@ paths:
                 data:
                   complete: true
                   items:
-                    - { type: TERMS, version: '2026-10', required: true, url: https://www.gachi-joopging.site/terms, agreed: true, agreedAt: '2026-10-10T00:00:00Z' }
-                    - { type: PRIVACY, version: '2026-10', required: true, url: https://www.gachi-joopging.site/privacy, agreed: true, agreedAt: '2026-10-10T00:00:00Z' }
-                    - { type: MARKETING, version: '2026-10', required: false, url: https://www.gachi-joopging.site/marketing, agreed: false, agreedAt: null }
+                    - { type: TERMS, version: '2026-10', required: true, url: https://www.gachijoopging.site/terms, agreed: true, agreedAt: '2026-10-10T00:00:00Z' }
+                    - { type: PRIVACY, version: '2026-10', required: true, url: https://www.gachijoopging.site/privacy, agreed: true, agreedAt: '2026-10-10T00:00:00Z' }
+                    - { type: MARKETING, version: '2026-10', required: false, url: https://www.gachijoopging.site/marketing, agreed: false, agreedAt: null }
         '422': { $ref: '#/components/responses/Error' }
         '503': { $ref: '#/components/responses/Error' }
 

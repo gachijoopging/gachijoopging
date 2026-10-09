@@ -19,7 +19,7 @@ import {
   space,
   useTheme,
 } from 'design-system/src';
-import { createMockClient, type ApiClient } from '../../src/api/client';
+import { createMockClient, forget, type ApiClient } from '../../src/api/client';
 import type { MOCKS } from '../../src/api/mocks.generated';
 import { blockedUsers, reconcileBlockedUsers, setUserBlocked } from '../../src/profile/blocked-users';
 import { currentAccount } from '../../src/auth/account';
@@ -129,6 +129,7 @@ export default function ManageBlocksScreen() {
     setList((prev) => prev?.filter((u) => u.id !== user.id) ?? prev);
     try {
       await api.mutate('DELETE /users/{userId}/block', { userId: user.id });
+      forget('GET /crew/members/{userId}', { userId: user.id });
       if (viewerId.current) setUserBlocked(viewerId.current, user.id, false);
       setTotal((n) => Math.max(0, n - 1));
       setSnackbar('차단을 해제했어요');
