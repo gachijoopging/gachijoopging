@@ -3,7 +3,9 @@ import type { MembershipStatus } from '../auth/destination';
 import type { JoinRequestStatus } from '../auth/pending-request';
 import type { EndBody } from '../activity/outbox';
 import type { AgreementDefinition, AgreementState } from '../auth/agreements';
-import { currentAccount } from '../auth/account';
+import { currentAccount, forgetAccount } from '../auth/account';
+import { ApiError, NetworkError, fromEnvelope } from './errors';
+import { clearTokens, getTokens, setTokens, type TokenPair } from './tokens';
 import { kstDate } from '../crew/calendar';
 
 type MeData = (typeof MOCKS)['GET /users/me']['data'];
@@ -70,16 +72,7 @@ export type ApiClient = {
   mutate<K extends MutationKey>(key: K, body?: unknown): Promise<MutationResponse<K>>;
 };
 
-export type ApiErrorField = { field: string; code: string };
-
-export class ApiError extends Error {
-  constructor(
-    readonly code: string,
-    readonly fields?: readonly ApiErrorField[],
-  ) {
-    super(code);
-  }
-}
+export { ApiError, NetworkError, type ApiErrorField } from './errors';
 
 export type MockOptions = {
   /** 응답 지연. 화면의 로딩 상태를 눈으로 보려면 올린다 */
@@ -208,3 +201,145 @@ export function createMockClient({ delayMs = 0, failing = [], activityTotals }: 
     },
   };
 }
+
+/** 로그아웃 상태로. 남은 토큰·계정·기억한 응답이 다음 계정에 보이면 안 된다 */
+async function signOut(): Promise<void> {
+  session += 1;
+  lastResponses.clear();
+  responsesOwner = null;
+  forgetAccount();
+  await clearTokens().catch(() => {});
+}
+
+export type HttpOptions = {
+  /** 예 https://www.gachijoopging.site/api/v1 */
+  baseUrl: string;
+  fetch?: typeof fetch;
+  timeoutMs?: number;
+};
+
+/** 화면마다 클라이언트를 만들므로 refresh 는 모듈에 하나다. 동시에 401 이 나도 refresh 는 한 번만 나간다 */
+let refreshing: Promise<void> | null = null;
+
+/** 로그인·로그아웃마다 바뀐다. 이전 세션에서 시작한 refresh·재시도가 다음 계정의 토큰을 덮거나 지우면 안 된다 */
+let session = 0;
+
+/** 토큰을 내주는 경로. 성공하면 받은 토큰 쌍을 저장한다 */
+const SIGN_IN_KEYS: readonly MutationKey[] = ['POST /auth/login', 'POST /auth/signup', 'POST /auth/kakao', 'POST /auth/google'];
+
+export function createHttpClient({ baseUrl, fetch: send = (...args) => globalThis.fetch(...args), timeoutMs = 15_000 }: HttpOptions): ApiClient {
+  async function call(key: MutationKey, args: unknown, token: string | null): Promise<unknown> {
+    const [method, template] = key.split(' ');
+    const isForm = typeof FormData !== 'undefined' && args instanceof FormData;
+    const rest: Record<string, unknown> = isForm ? {} : { ...(args as object) };
+    const path = template.replace(/\{(\w+)\}/g, (_, name: string) => {
+      const value = rest[name];
+      delete rest[name];
+      return encodeURIComponent(String(value));
+    });
+    const query = method === 'GET'
+      ? new URLSearchParams(Object.entries(rest).filter(([, v]) => v != null).map(([k, v]) => [k, String(v)])).toString()
+      : '';
+    const headers: Record<string, string> = { Accept: 'application/json' };
+    if (token) headers.Authorization = `Bearer ${token}`;
+    let body: BodyInit | undefined;
+    if (isForm) body = args as FormData;
+    else if (method !== 'GET' && Object.keys(rest).length > 0) {
+      headers['Content-Type'] = 'application/json';
+      body = JSON.stringify(rest);
+    }
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    let response: Response;
+    try {
+      response = await send(`${baseUrl}${path}${query ? `?${query}` : ''}`, { method, headers, body, signal: controller.signal });
+    } catch {
+      throw new NetworkError(controller.signal.aborted ? 'TIMEOUT' : 'OFFLINE');
+    } finally {
+      clearTimeout(timer);
+    }
+    const text = response.status === 204 ? '' : await response.text();
+    let json: unknown = null;
+    try { json = text ? JSON.parse(text) : null; } catch {}
+    if (!response.ok) throw fromEnvelope(response.status, json);
+    return json ?? undefined;
+  }
+
+  function refresh(): Promise<void> {
+    const started = session;
+    refreshing ??= (async () => {
+      const tokens = await getTokens();
+      if (!tokens) throw new ApiError('TOKEN_EXPIRED', undefined, 401);
+      const { data } = (await call('POST /auth/refresh', { refreshToken: tokens.refreshToken }, null)) as { data: TokenPair };
+      if (started !== session) throw new ApiError('TOKEN_EXPIRED', undefined, 401);
+      await setTokens(data);
+    })()
+      .catch(async (error) => {
+        // 연결이 안 돼 못 바꾼 것은 로그아웃 사유가 아니다. 서버가 거절했을 때만 로그아웃
+        if (error instanceof NetworkError) throw error;
+        if (started === session) await signOut();
+        throw new ApiError('TOKEN_EXPIRED', undefined, 401);
+      })
+      .finally(() => { refreshing = null; });
+    return refreshing;
+  }
+
+  /** args 가 함수면 보낼 때마다 다시 만든다. refresh 로 바뀐 토큰을 본문에 담아야 하는 로그아웃용 */
+  async function authed(key: MutationKey, args: unknown | (() => Promise<unknown>)): Promise<unknown> {
+    const started = session;
+    const payload = () => (typeof args === 'function' ? args() : args);
+    const token = (await getTokens())?.accessToken ?? null;
+    try {
+      return await call(key, await payload(), token);
+    } catch (error) {
+      if (!token || !(error instanceof ApiError) || error.code !== 'TOKEN_EXPIRED') throw error;
+      // 다른 요청이 이미 바꿔 놓았으면 refresh 없이 지금 토큰으로 다시 보낸다
+      if ((await getTokens())?.accessToken === token) await refresh();
+      const retry = await payload();
+      const next = (await getTokens())?.accessToken ?? null;
+      if (started !== session) throw error;
+      return call(key, retry, next);
+    }
+  }
+
+  return {
+    async get(key, query) {
+      const owner = currentOwner();
+      const sentAt = forgets;
+      const response = (await authed(key, query)) as ApiResponse<typeof key>;
+      remember(owner, sentAt, key, query, response);
+      return response;
+    },
+    async mutate(key, body) {
+      // 응답을 기다리는 사이 다른 계정으로 로그인했으면 그 세션은 건드리지도 돌려주지도 않는다
+      const started = session;
+      if (key === 'POST /auth/refresh') {
+        await refresh();
+        const tokens = await getTokens();
+        if (started !== session) throw new ApiError('TOKEN_EXPIRED', undefined, 401);
+        return { data: tokens } as never;
+      }
+      if (key === 'POST /auth/logout') {
+        try {
+          return (await authed(key, async () => ({ ...(body as object), refreshToken: (await getTokens())?.refreshToken }))) as never;
+        } finally {
+          if (started === session) await signOut();
+        }
+      }
+      if (key === 'DELETE /users/me') {
+        await authed(key, body);
+        if (started === session) await signOut();
+        return undefined as never;
+      }
+      if (SIGN_IN_KEYS.includes(key)) {
+        const response = (await call(key, body, null)) as { data: TokenPair };
+        session += 1;
+        await setTokens(response.data);
+        return response as never;
+      }
+      return (await authed(key, body)) as never;
+    },
+  };
+}
+

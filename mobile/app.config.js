@@ -6,5 +6,7 @@ module.exports = {
   extra: {
     ...base.extra,
     kakaoNativeAppKey: process.env.KAKAO_NATIVE_APP_KEY ?? '',
+    apiBaseUrl: process.env.API_BASE_URL ?? '',
+    wsUrl: process.env.WS_URL ?? '',
   },
 };
