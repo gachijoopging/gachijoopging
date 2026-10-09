@@ -204,6 +204,7 @@ export function createMockClient({ delayMs = 0, failing = [], activityTotals }: 
 
 /** 로그아웃 상태로. 남은 토큰·계정·기억한 응답이 다음 계정에 보이면 안 된다 */
 async function signOut(): Promise<void> {
+  session += 1;
   lastResponses.clear();
   responsesOwner = null;
   forgetAccount();
@@ -219,6 +220,9 @@ export type HttpOptions = {
 
 /** 화면마다 클라이언트를 만들므로 refresh 는 모듈에 하나다. 동시에 401 이 나도 refresh 는 한 번만 나간다 */
 let refreshing: Promise<void> | null = null;
+
+/** 로그인·로그아웃마다 바뀐다. 이전 세션에서 시작한 refresh·재시도가 다음 계정의 토큰을 덮거나 지우면 안 된다 */
+let session = 0;
 
 /** 토큰을 내주는 경로. 성공하면 받은 토큰 쌍을 저장한다 */
 const SIGN_IN_KEYS: readonly MutationKey[] = ['POST /auth/login', 'POST /auth/signup', 'POST /auth/kakao', 'POST /auth/google'];
@@ -263,30 +267,37 @@ export function createHttpClient({ baseUrl, fetch: send = (...args) => globalThi
   }
 
   function refresh(): Promise<void> {
+    const started = session;
     refreshing ??= (async () => {
       const tokens = await getTokens();
       if (!tokens) throw new ApiError('TOKEN_EXPIRED', undefined, 401);
       const { data } = (await call('POST /auth/refresh', { refreshToken: tokens.refreshToken }, null)) as { data: TokenPair };
+      if (started !== session) throw new ApiError('TOKEN_EXPIRED', undefined, 401);
       await setTokens(data);
     })()
       .catch(async (error) => {
         // 연결이 안 돼 못 바꾼 것은 로그아웃 사유가 아니다. 서버가 거절했을 때만 로그아웃
         if (error instanceof NetworkError) throw error;
-        await signOut();
+        if (started === session) await signOut();
         throw new ApiError('TOKEN_EXPIRED', undefined, 401);
       })
       .finally(() => { refreshing = null; });
     return refreshing;
   }
 
-  async function authed(key: MutationKey, args: unknown): Promise<unknown> {
+  /** args 가 함수면 보낼 때마다 다시 만든다. refresh 로 바뀐 토큰을 본문에 담아야 하는 로그아웃용 */
+  async function authed(key: MutationKey, args: unknown | (() => Promise<unknown>)): Promise<unknown> {
+    const started = session;
+    const payload = () => (typeof args === 'function' ? args() : args);
     const token = (await getTokens())?.accessToken ?? null;
     try {
-      return await call(key, args, token);
+      return await call(key, await payload(), token);
     } catch (error) {
       if (!token || !(error instanceof ApiError) || error.code !== 'TOKEN_EXPIRED') throw error;
-      await refresh();
-      return call(key, args, (await getTokens())?.accessToken ?? null);
+      // 다른 요청이 이미 바꿔 놓았으면 refresh 없이 지금 토큰으로 다시 보낸다
+      if ((await getTokens())?.accessToken === token) await refresh();
+      if (started !== session) throw error;
+      return call(key, await payload(), (await getTokens())?.accessToken ?? null);
     }
   }
 
@@ -304,15 +315,15 @@ export function createHttpClient({ baseUrl, fetch: send = (...args) => globalThi
         return { data: await getTokens() } as never;
       }
       if (key === 'POST /auth/logout') {
-        const refreshToken = (await getTokens())?.refreshToken;
         try {
-          return (await authed(key, { ...(body as object), refreshToken })) as never;
+          return (await authed(key, async () => ({ ...(body as object), refreshToken: (await getTokens())?.refreshToken }))) as never;
         } finally {
           await signOut();
         }
       }
       if (SIGN_IN_KEYS.includes(key)) {
         const response = (await call(key, body, null)) as { data: TokenPair };
+        session += 1;
         await setTokens(response.data);
         return response as never;
       }

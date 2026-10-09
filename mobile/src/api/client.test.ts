@@ -311,5 +311,60 @@ describe('실 API 클라이언트', () => {
     expect(calls[1].body).toBe('{"refreshToken":"r2"}');
     await expect(getTokens()).resolves.toBeNull();
   });
+
+  test('refresh 를 기다리는 사이 로그아웃·재로그인했으면 늦게 온 결과가 새 세션을 건드리지 않는다', async () => {
+    let answer!: (r: Response) => void;
+    const { calls, api } = server((c) => {
+      if (isRefresh(c)) return new Promise<Response>((r) => { answer = r; });
+      if (c.url.endsWith('/auth/logout')) return json(204);
+      if (c.url.endsWith('/auth/login')) return json(200, { data: { accessToken: 'b', refreshToken: 'r-b' } });
+      return c.headers.Authorization === 'Bearer b' ? json(200, { data: {} }) : expired();
+    });
+    const stale = api.get('GET /crew/home').catch((e) => e);
+    await new Promise((r) => setTimeout(r, 0));
+    await api.mutate('POST /auth/logout');
+    await api.mutate('POST /auth/login', { email: 'b@b.c', password: 'p' });
+    answer(renewed());
+    await expect(stale).resolves.toMatchObject({ code: 'TOKEN_EXPIRED' });
+    await expect(getTokens()).resolves.toEqual({ accessToken: 'b', refreshToken: 'r-b' });
+    expect(calls.filter((c) => c.url.endsWith('/crew/home'))).toHaveLength(1);
+
+    const rejected = server((c) => {
+      if (isRefresh(c)) return new Promise<Response>((r) => { answer = r; });
+      return c.url.endsWith('/auth/login') ? json(200, { data: { accessToken: 'b', refreshToken: 'r-b' } }) : expired();
+    });
+    await setTokens({ accessToken: 'old', refreshToken: 'r-old' });
+    const late = rejected.api.get('GET /crew/home').catch((e) => e);
+    await new Promise((r) => setTimeout(r, 0));
+    await rejected.api.mutate('POST /auth/login', { email: 'b@b.c', password: 'p' });
+    answer(expired());
+    await late;
+    await expect(getTokens()).resolves.toEqual({ accessToken: 'b', refreshToken: 'r-b' });
+  });
+
+  test('refresh 가 끝난 뒤 옛 토큰의 401 이 늦게 와도 refresh 는 다시 나가지 않는다', async () => {
+    let lateAnswer!: (r: Response) => void;
+    const { calls, api } = server((c) => {
+      if (isRefresh(c)) return renewed();
+      if (c.headers.Authorization === 'Bearer new') return json(200, { data: c.url });
+      if (c.url.endsWith('/crew')) return new Promise<Response>((r) => { lateAnswer = r; });
+      return expired();
+    });
+    const late = api.get('GET /crew');
+    await api.get('GET /crew/home');
+    lateAnswer(expired());
+    await expect(late).resolves.toEqual({ data: `${BASE}/crew` });
+    expect(calls.filter(isRefresh)).toHaveLength(1);
+  });
+
+  test('access 가 만료된 로그아웃은 refresh 로 바뀐 refreshToken 을 보낸다', async () => {
+    const { calls, api } = server((c) => {
+      if (isRefresh(c)) return renewed();
+      return c.headers.Authorization === 'Bearer new' ? json(204) : expired();
+    });
+    await api.mutate('POST /auth/logout');
+    expect(calls.map((c) => c.body)).toEqual(['{"refreshToken":"r-old"}', '{"refreshToken":"r-old"}', '{"refreshToken":"r-new"}']);
+    await expect(getTokens()).resolves.toBeNull();
+  });
 });
 
