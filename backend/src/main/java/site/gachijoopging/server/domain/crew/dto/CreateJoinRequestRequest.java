@@ -1,8 +1,6 @@
 package site.gachijoopging.server.domain.crew.dto;
 
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Pattern;
-import site.gachijoopging.server.domain.crew.service.InviteCodes;
+import java.util.UUID;
 
-public record CreateJoinRequestRequest(
-    @NotNull @Pattern(regexp = InviteCodes.PATTERN) String inviteCode) {}
+public record CreateJoinRequestRequest(@NotNull UUID crewId) {}

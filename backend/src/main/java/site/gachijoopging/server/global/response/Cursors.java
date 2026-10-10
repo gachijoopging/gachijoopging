@@ -41,6 +41,21 @@ public final class Cursors {
     }
   }
 
+  public static String encodeText(String key) {
+    return Base64.getUrlEncoder()
+        .withoutPadding()
+        .encodeToString(key.getBytes(StandardCharsets.UTF_8));
+  }
+
+  // PostgreSQL 은 NUL 이 든 문자열 파라미터를 거부한다 — 조작된 커서가 500 이 되지 않게 여기서 막는다
+  public static String decodeText(String cursor) {
+    String key = decodeBase64Url(cursor);
+    if (key.indexOf('\0') >= 0) {
+      throw invalidCursor();
+    }
+    return key;
+  }
+
   private static String encodeRaw(Instant createdAt, String id) {
     String raw = micros(createdAt) + ":" + id;
     return Base64.getUrlEncoder()

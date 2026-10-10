@@ -160,7 +160,7 @@ JSON 필드명은 openapi.yaml 이 정본이다 — camelCase, 철자 하나도 
   | FORBIDDEN | 403 | 크루장 전용 경로를 크루원이 부름 등 |
   | NO_CREW | 403 | `/crew/...` 를 소속 크루 없이 부름 |
   | LEADER_MUST_DELEGATE | 403 | 크루장이 위임 없이 나가려 함 |
-  | EXPELLED_FROM_CREW | 403 | 추방된 크루(공개)에 다시 가입하려 함 |
+  | EXPELLED_FROM_CREW | 403 | 추방된 크루에 다시 가입·신청하려 함(공개·비공개 모두) |
   | NOT_FOUND | 404 | |
   | CONFLICT | 409 | |
   | EMAIL_TAKEN | 409 | 이메일 중복 |

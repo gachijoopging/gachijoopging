@@ -2,6 +2,8 @@ package site.gachijoopging.server.domain.crew.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
@@ -31,8 +33,13 @@ public class Crew {
   @Column(name = "leader_id", nullable = false)
   private UUID leaderId;
 
-  @Column(name = "invite_code", nullable = false)
-  private String inviteCode;
+  @Enumerated(EnumType.STRING)
+  @Column(nullable = false)
+  private Region region;
+
+  @Enumerated(EnumType.STRING)
+  @Column(name = "join_policy", nullable = false)
+  private JoinPolicy joinPolicy;
 
   @Column(name = "goal_count", nullable = false)
   private int goalCount;

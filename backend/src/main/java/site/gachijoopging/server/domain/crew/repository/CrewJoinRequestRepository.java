@@ -35,6 +35,20 @@ public interface CrewJoinRequestRepository extends JpaRepository<CrewJoinRequest
       @Param("userId") UUID userId,
       @Param("now") Instant now);
 
+  @Modifying
+  @Query(
+      value =
+          """
+          INSERT INTO crew_join_requests (id, crew_id, user_id, status, created_at, decided_at)
+          VALUES (:id, :crewId, :userId, 'APPROVED', :now, :now)
+          """,
+      nativeQuery = true)
+  void insertApproved(
+      @Param("id") UUID id,
+      @Param("crewId") UUID crewId,
+      @Param("userId") UUID userId,
+      @Param("now") Instant now);
+
   // 다른 기기에서 먼저 처리한 신청을 다시 처리하지 않도록 PENDING 일 때만 바꾼다
   @Modifying(clearAutomatically = true, flushAutomatically = true)
   @Query(

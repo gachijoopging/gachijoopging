@@ -3,7 +3,7 @@ package site.gachijoopging.server.domain.crew.controller;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -19,15 +19,14 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import site.gachijoopging.server.domain.crew.dto.CreateCrewRequest;
 import site.gachijoopging.server.domain.crew.dto.CreateJoinRequestRequest;
-import site.gachijoopging.server.domain.crew.dto.CrewPreviewResponse;
 import site.gachijoopging.server.domain.crew.dto.CrewResponse;
+import site.gachijoopging.server.domain.crew.dto.CrewSummaryResponse;
 import site.gachijoopging.server.domain.crew.dto.DecideJoinRequestRequest;
-import site.gachijoopging.server.domain.crew.dto.InviteCodeResponse;
 import site.gachijoopging.server.domain.crew.dto.JoinRequestResponse;
 import site.gachijoopging.server.domain.crew.dto.UpdateCrewRequest;
+import site.gachijoopging.server.domain.crew.entity.Region;
 import site.gachijoopging.server.domain.crew.service.CrewJoinService;
 import site.gachijoopging.server.domain.crew.service.CrewService;
-import site.gachijoopging.server.domain.crew.service.InviteCodes;
 import site.gachijoopging.server.global.response.ApiResponse;
 import site.gachijoopging.server.global.response.CursorPage;
 import site.gachijoopging.server.global.security.CrewMembership;
@@ -48,10 +47,14 @@ public class CrewController {
     return ApiResponse.of(crewService.create(me, request));
   }
 
-  @GetMapping("/crews/preview")
-  public ApiResponse<CrewPreviewResponse> preview(
-      @RequestParam @Pattern(regexp = InviteCodes.PATTERN) String inviteCode) {
-    return ApiResponse.of(crewService.preview(inviteCode));
+  @GetMapping("/crews")
+  public ApiResponse<CursorPage<CrewSummaryResponse>> search(
+      @CurrentUser UUID me,
+      @RequestParam(required = false) @Size(min = 1, max = 20) String query,
+      @RequestParam(required = false) Region region,
+      @RequestParam(required = false) String cursor,
+      @RequestParam(defaultValue = "20") @Min(1) @Max(50) int limit) {
+    return ApiResponse.of(crewService.search(me, query, region, cursor, limit));
   }
 
   @GetMapping("/crew")
@@ -71,7 +74,7 @@ public class CrewController {
   @PostMapping("/crews/join-requests")
   public ResponseEntity<ApiResponse<JoinRequestResponse>> apply(
       @CurrentUser UUID me, @Valid @RequestBody CreateJoinRequestRequest request) {
-    CrewJoinService.Applied applied = crewJoinService.apply(me, request.inviteCode());
+    CrewJoinService.Applied applied = crewJoinService.apply(me, request.crewId());
     return ResponseEntity.status(applied.created() ? HttpStatus.CREATED : HttpStatus.OK)
         .body(ApiResponse.of(applied.request()));
   }
@@ -103,10 +106,5 @@ public class CrewController {
       @PathVariable UUID requestId,
       @Valid @RequestBody DecideJoinRequestRequest request) {
     crewJoinService.decide(me, membership, requestId, request.decision());
-  }
-
-  @PostMapping("/crew/invite-code")
-  public ApiResponse<InviteCodeResponse> reissueInviteCode(@CurrentCrew CrewMembership membership) {
-    return ApiResponse.of(crewService.reissueInviteCode(membership));
   }
 }
