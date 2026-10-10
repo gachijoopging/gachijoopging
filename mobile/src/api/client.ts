@@ -1,5 +1,5 @@
 import { MOCKS, type MockKey } from './mocks.generated';
-import type { MembershipStatus } from '../auth/destination';
+import type { MembershipStatus, Rejection } from '../auth/destination';
 import type { JoinRequestStatus } from '../auth/pending-request';
 import type { EndBody } from '../activity/outbox';
 import type { AgreementDefinition, AgreementState } from '../auth/agreements';
@@ -27,7 +27,7 @@ export type ApiResponse<K extends QueryKey> =
   K extends 'GET /agreements' ? { data: { items: readonly AgreementDefinition[] } } :
   K extends 'GET /users/me/agreements' ? { data: AgreementState } :
   K extends 'GET /users/me' ? { data: Omit<MeData, 'membership'> & {
-    membership: { status: MembershipStatus; crew: MeData['membership']['crew'] | null };
+    membership: { status: MembershipStatus; crew: MeData['membership']['crew'] | null; rejection: Rejection | null };
   } } : K extends 'GET /crews/join-requests/mine' ? {
     data: (Omit<JoinRequestData, 'status'> & { status: JoinRequestStatus }) | null;
   } : K extends 'GET /activities/current' ? { data: Activity | null } : K extends MockKey ? (typeof MOCKS)[K] : never;
@@ -37,6 +37,7 @@ export type VoidMutationKey =
   | 'POST /auth/password-reset'
   | 'POST /auth/password-reset/confirm'
   | 'DELETE /crews/join-requests/mine'
+  | 'POST /crews/join-requests/{requestId}/read'
   | 'POST /notifications/read'
   | 'DELETE /notices/{noticeId}'
   | 'DELETE /notice-comments/{commentId}'
@@ -64,7 +65,12 @@ export type VoidMutationKey =
   | 'DELETE /activities/{id}/items/{itemId}'
   | 'DELETE /activities/{id}';
 export type MutationKey = QueryKey | VoidMutationKey;
-export type MutationResponse<K extends MutationKey> = K extends 'PUT /users/me/agreements' ? { data: AgreementState } : K extends MockKey ? (typeof MOCKS)[K] : void;
+/** 1-8 가입 응답. 공개 크루는 APPROVED, 비공개 크루는 PENDING 으로 온다 */
+export type JoinResult = { id: string; crew: { id: string; name: string }; status: JoinRequestStatus };
+export type MutationResponse<K extends MutationKey> =
+  K extends 'PUT /users/me/agreements' ? { data: AgreementState } :
+  K extends 'POST /crews/join-requests' ? { data: JoinResult } :
+  K extends MockKey ? (typeof MOCKS)[K] : void;
 
 export type ApiClient = {
   get<K extends QueryKey>(key: K, query?: unknown): Promise<ApiResponse<K>>;

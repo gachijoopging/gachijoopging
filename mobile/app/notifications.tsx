@@ -23,7 +23,7 @@ import {
 } from 'design-system/src';
 import { createMockClient, type ApiClient } from '../src/api/client';
 import { MOCKS } from '../src/api/mocks.generated';
-import type { MembershipStatus } from '../src/auth/destination';
+import { resolveDestination, type Me } from '../src/auth/destination';
 import {
   markAllRead,
   markRead,
@@ -40,6 +40,7 @@ const api: ApiClient = createMockClient({ delayMs: 300 });
 
 const ICON: Record<string, IconName> = {
   JOIN_REQUEST: 'account-plus-outline',
+  CREW_JOINED: 'account-check-outline',
   JOIN_APPROVED: 'check-circle-outline',
   JOIN_REJECTED: 'close-circle-outline',
   NOTICE: 'bullhorn-outline',
@@ -54,7 +55,7 @@ const ICON: Record<string, IconName> = {
 export default function NotificationsScreen() {
   const [read, setRead] = useState<ReadState<Item> | null>(null);
   const [pending, setPending] = useState<Page['pending'] | null>(null);
-  const [membership, setMembership] = useState<MembershipStatus>('MEMBER');
+  const [membership, setMembership] = useState<Me['membership']>({ status: 'MEMBER' });
   const [failed, setFailed] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [markingAll, setMarkingAll] = useState(false);
@@ -84,7 +85,7 @@ export default function NotificationsScreen() {
   }, []);
 
   useEffect(() => {
-    api.get('GET /users/me').then((res) => setMembership(res.data.membership.status)).catch(() => {});
+    api.get('GET /users/me').then((res) => setMembership(res.data.membership)).catch(() => {});
   }, [load]);
 
   // 설정에서 권한을 켜고 돌아오면 배너를 걷는다
@@ -128,7 +129,7 @@ export default function NotificationsScreen() {
 
   return (
     <Screen scroll refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load('pull')} />}>
-      <AppHeader title="알림" subtitle={subtitle} onBack={() => (router.canGoBack() ? router.back() : router.replace(membership === 'MEMBER' ? '/(tabs)' : '/crew-choice'))} />
+      <AppHeader title="알림" subtitle={subtitle} onBack={() => (router.canGoBack() ? router.back() : router.replace(resolveDestination({ profileComplete: true, membership })))} />
 
       {notifyOff ? (
         <Banner

@@ -2,7 +2,7 @@
 
 **목적** 비공개 크루에 가입 신청을 낸 사람이 어느 크루의 승인을 기다리는지 확인하고, 원하면 요청을 취소해 크루 선택으로 돌아간다. 거절됐으면 거절 안내를 한 번 보여 주고 확인을 받는다. 승인 대기는 크루원이 아니므로 이 화면 밖의 앱 기능은 열리지 않는다.
 **원본** 신규 — `fragment_invite_redeem.xml`의 가운데 상태 묶음과 `view_empty_state.xml`의 안내 구성을 재조립 · **변경** 옛 초대는 승인 없이 바로 소속됐다. 새 화면은 비공개 크루 가입 신청 뒤 PENDING 상태를 명확히 보여 주고 취소를 제공한다. 공개 크루 가입은 바로 크루원이 되어 이 화면에 오지 않는다.
-**진입** 1-8 크루 검색에서 `POST /crews/join-requests` 201·200 의 `status` PENDING · 첫 로그인·재로그인·앱 실행·복귀 때 `GET /users/me` 의 `membership.status` PENDING, 또는 NONE 이면서 `membership.rejection` 이 있을 때 · 1-7·1-8 의 409 JOIN_REQUEST_PENDING · JOIN_REJECTED 푸시 · **이탈** 승인됨 → 2-1 홈 · 요청 취소 → 1-6 · 거절 안내 [확인] → 1-6 · 설정 → 5-7(로그아웃·탈퇴만) · 시스템 뒤로 가기 → 앱 종료
+**진입** 1-8 크루 검색에서 `POST /crews/join-requests` 201·200 의 `status` PENDING · 첫 로그인·재로그인·앱 실행·복귀 때 `GET /users/me` 의 `membership.status` PENDING, 또는 NONE 이면서 `membership.rejection` 이 있을 때 · 1-7·1-8 의 409 JOIN_REQUEST_PENDING · JOIN_REJECTED 푸시 · **이탈** 승인됨 → 2-1 홈 · 요청 취소 → 1-6 · 거절 안내 [확인] → 1-6 · 내 활동 기록 → 5-5 기록 전용 → 5-3 · 설정 → 5-7(로그아웃·탈퇴만) · 시스템 뒤로 가기 → 앱 종료
 
 ## 배치
 
@@ -33,6 +33,7 @@
 | ② | 신청 크루 카드 | `crew.name` · 부제 대기 "크루장이 승인하면 크루원이 돼요" · 거절 "다른 크루를 찾거나 다시 신청할 수 있어요" | `Card` + `Txt` title + `Txt` caption | — |
 | ③ | 요청 취소 버튼 | "요청 취소" (회의 확정 문구). PENDING 일 때만 | `Button` ghost lg | 확인 대화상자 → `DELETE /crews/join-requests/mine` → 1-6 |
 | ④ | 상태 확인 | "다시 확인하기". PENDING 일 때만. 당겨서 새로고침과 같은 일 | `Button` soft lg | `GET /users/me`·`GET /crews/join-requests/mine` 재조회 |
+| ⑥ | 내 활동 기록 | "내 활동 기록 보기". PENDING 일 때만. 1-6 ⑤ 와 같다(승인 대기도 미가입자라 본인 기록·통계를 볼 수 있다) | `Button` ghost lg | 5-5 기록 전용 화면 → 5-3 상세 |
 | ⑤ | 거절 확인 버튼 | "확인". 거절 안내일 때만 | `Button` primary lg | `POST /crews/join-requests/{requestId}/read` (`requestId` = `membership.rejection.requestId` 또는 `GET /crews/join-requests/mine` 의 `id`) → 1-6 |
 
 이 화면이 무엇을 보일지는 `GET /users/me` 의 `membership` 이 정한다.
@@ -95,7 +96,8 @@
 - 옛 다시 시도·취소 텍스트 버튼은 상태 오류에만 있었고, 새 [요청 취소]는 사용자가 대기 자체를 끝내는 행동이다
 - 초대 링크·모임 용어·즉시 참여 메시지를 없애고 크루장 승인·크루원 용어로 바꿨다
 - 2026-10 회의: 큰 제목·취소 버튼을 확정 문구("{크루명} 크루 가입 승인 대기 중입니다." · [요청 취소])로 바꿨다. 거절 안내는 재로그인 때도 보이고 [확인]으로 한 번만 확인한다(`membership.rejection`). 신청이 없을 때의 빈 상태는 1-6 으로 대신한다
+- 2026-10: 승인 대기 중에도 본인 기록을 볼 수 있게 1-6 과 같은 [내 활동 기록 보기] 를 둔다(⑥)
 
 ## 미결
 
-- 승인 대기 중인 사람의 본인 기록 진입로. 미가입자 모두 본인 기록을 볼 수 있지만 이 화면에는 기록으로 가는 버튼이 없다(1-6 에만 있다). 여기에도 둘지 확인 필요(`feature-scope.md` §미결)
+- 없음

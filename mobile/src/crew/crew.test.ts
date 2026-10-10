@@ -1,10 +1,4 @@
-import { monthDay, spelledCode } from './crew';
-
-describe('초대 코드 읽기', () => {
-  test('글자마다 끊어 읽고 구분 기호는 읽지 않는다', () => {
-    expect(spelledCode('HG-7K2P')).toBe('H G 7 K 2 P');
-  });
-});
+import { monthDay } from './crew';
 
 describe('공지 날짜 표시', () => {
   test('한국 시간 기준 월과 일만 보인다', () => {

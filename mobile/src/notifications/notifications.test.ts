@@ -40,23 +40,26 @@ describe('알림을 누르면 가는 곳', () => {
     ['COMMENT', 'POST', { pathname: '/posts/[id]', params: { id: 'x1' } }],
     ['CHAT', 'CHAT', { pathname: '/crew/chat' }],
     ['ACTIVITY_STARTED', 'LIVE', { pathname: '/crew/live' }],
+    ['CREW_JOINED', 'MEMBERS', { pathname: '/crew/members' }],
   ])('%s 는 대상 화면으로 간다', (type, targetType, expected) => {
-    expect(notificationDestination(item(type, targetType), 'MEMBER')).toEqual(expected);
+    expect(notificationDestination(item(type, targetType), { status: 'MEMBER' })).toEqual(expected);
   });
 
   test('가입 승인은 크루원이면 홈, 아니면 크루 선택으로 간다', () => {
-    expect(notificationDestination(item('JOIN_APPROVED', 'CREW'), 'MEMBER')).toEqual({ pathname: '/(tabs)' });
-    expect(notificationDestination(item('JOIN_APPROVED', 'CREW'), 'NONE')).toEqual({ pathname: '/crew-choice' });
+    expect(notificationDestination(item('JOIN_APPROVED', 'CREW'), { status: 'MEMBER' })).toEqual({ pathname: '/(tabs)' });
+    expect(notificationDestination(item('JOIN_APPROVED', 'CREW'), { status: 'NONE' })).toEqual({ pathname: '/crew-choice' });
   });
 
-  test('가입 거절은 비소속이면 거절 안내, 이미 가입했으면 홈으로 간다', () => {
-    expect(notificationDestination(item('JOIN_REJECTED', 'CREW'), 'NONE')).toEqual({ pathname: '/pending-approval' });
-    expect(notificationDestination(item('JOIN_REJECTED', 'CREW'), 'MEMBER')).toEqual({ pathname: '/(tabs)' });
+  test('가입 거절은 미확인이면 거절 안내, 확인했으면 크루 선택, 이미 가입했으면 홈으로 간다', () => {
+    const rejection = { requestId: 'jr001', crew: { id: 'c001', name: '한강줍깅크루' }, decidedAt: '2026-10-01T00:00:00Z' };
+    expect(notificationDestination(item('JOIN_REJECTED', 'CREW'), { status: 'NONE', rejection })).toEqual({ pathname: '/pending-approval' });
+    expect(notificationDestination(item('JOIN_REJECTED', 'CREW'), { status: 'NONE', rejection: null })).toEqual({ pathname: '/crew-choice' });
+    expect(notificationDestination(item('JOIN_REJECTED', 'CREW'), { status: 'MEMBER' })).toEqual({ pathname: '/(tabs)' });
   });
 
   test('게시물 삭제·신고 처리 결과는 이동하지 않고 목록에 남는다', () => {
-    expect(notificationDestination(item('POST_REMOVED', 'POST', null), 'MEMBER')).toBeNull();
-    expect(notificationDestination(item('REPORT_RESOLVED', 'NOTIFICATIONS'), 'MEMBER')).toBeNull();
+    expect(notificationDestination(item('POST_REMOVED', 'POST', null), { status: 'MEMBER' })).toBeNull();
+    expect(notificationDestination(item('REPORT_RESOLVED', 'NOTIFICATIONS'), { status: 'MEMBER' })).toBeNull();
   });
 });
 

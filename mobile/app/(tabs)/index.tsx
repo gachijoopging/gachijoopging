@@ -28,6 +28,7 @@ import {
 import { createMockClient, peek, type ApiClient } from '../../src/api/client';
 import { MOCKS } from '../../src/api/mocks.generated';
 import { characterBubble, myCategorySummary } from '../../src/home/home';
+import { useFlash } from '../../src/ui/useFlash';
 
 type Home = (typeof MOCKS)['GET /crew/home']['data'];
 
@@ -42,6 +43,7 @@ export default function HomeScreen() {
   const [failed, setFailed] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [refreshFailed, setRefreshFailed] = useState(false);
+  const [flash, setFlash] = useFlash();
 
   const load = useCallback(async (mode: 'quiet' | 'pull') => {
     if (mode === 'pull') setRefreshing(true);
@@ -105,6 +107,7 @@ export default function HomeScreen() {
       {home ? <HomeCards home={home} /> : failed ? <ErrorState onRetry={() => load('quiet')} /> : <Loading />}
 
       <Snackbar visible={refreshFailed} message="새로고침에 실패했어요" onDismiss={() => setRefreshFailed(false)} />
+      <Snackbar visible={flash != null} message={flash ?? ''} onDismiss={() => setFlash(null)} />
     </Screen>
   );
 }

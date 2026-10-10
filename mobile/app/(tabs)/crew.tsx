@@ -28,9 +28,14 @@ import { NoticesPanel } from '../../src/crew/NoticesPanel';
 import { RecordsPanel } from '../../src/crew/RecordsPanel';
 import { useFlash } from '../../src/ui/useFlash';
 import { monthDay } from '../../src/crew/crew';
+import type { JoinPolicy, Region } from '../../src/crew/region';
 
 type CrewData = (typeof MOCKS)['GET /crew']['data'];
-export type Crew = Omit<CrewData, 'pinnedNotice'> & { pinnedNotice: CrewData['pinnedNotice'] | null };
+export type Crew = Omit<CrewData, 'pinnedNotice' | 'region' | 'joinPolicy'> & {
+  pinnedNotice: CrewData['pinnedNotice'] | null;
+  region: Region;
+  joinPolicy: JoinPolicy;
+};
 
 const api: ApiClient = createMockClient({ delayMs: 300 });
 

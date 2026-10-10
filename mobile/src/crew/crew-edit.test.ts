@@ -1,8 +1,8 @@
-import { crewChanged, crewFormErrors, crewPatch } from './crew-edit';
+import { crewChanged, crewFormErrors, crewPatch, openingOverflows, opensCrew, type CrewForm } from './crew-edit';
 
-const original = { name: '한강줍깅크루', intro: '매주 토요일 아침 여의도', goalCount: 300 };
+const original = { name: '한강줍깅크루', intro: '매주 토요일 아침 여의도', goalCount: 300, region: 'SEOUL', joinPolicy: 'APPROVAL' } as const;
 /** photoMediaId — undefined: 사진 그대로 · null: 삭제 · 문자열: 새로 올린 사진 */
-const form = (overrides: Partial<typeof original> & { photoMediaId?: string | null } = {}) => ({
+const form = (overrides: Partial<CrewForm> = {}): CrewForm => ({
   ...original,
   ...overrides,
 });
@@ -75,4 +75,23 @@ describe('버리기 확인이 필요한 변경', () => {
 
 test('붙여넣은 \r\n 줄바꿈도 이름에서 지운다', () => {
   expect(crewPatch(original, form({ name: '여의도\r\n크루' }))).toEqual({ name: '여의도크루' });
+});
+
+describe('활동 지역·가입 방식', () => {
+  test('바꾼 것만 보낸다', () => {
+    expect(crewPatch(original, form({ region: 'BUSAN' }))).toEqual({ region: 'BUSAN' });
+    expect(crewPatch(original, form({ joinPolicy: 'OPEN' }))).toEqual({ joinPolicy: 'OPEN' });
+  });
+
+  test('비공개 → 공개만 공개 전환 확인을 받는다', () => {
+    expect(opensCrew(original, { joinPolicy: 'OPEN' })).toBe(true);
+    expect(opensCrew({ joinPolicy: 'OPEN' }, { joinPolicy: 'APPROVAL' })).toBe(false);
+    expect(opensCrew(original, { goalCount: 10 })).toBe(false);
+  });
+
+  test('크루원 + 대기 신청이 50명을 넘을 때만 공개 전환이 막힌다', () => {
+    expect(openingOverflows(18, 2)).toBe(false);
+    expect(openingOverflows(48, 2)).toBe(false);
+    expect(openingOverflows(49, 2)).toBe(true);
+  });
 });

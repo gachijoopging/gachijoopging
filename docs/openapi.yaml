@@ -484,6 +484,7 @@ paths:
                   items:
                     - { id: c001, name: 한강줍깅크루, intro: 매주 토요일 아침 여의도, photoUrl: null, region: SEOUL, joinPolicy: APPROVAL, memberCount: 18, leader: { id: u001, nickname: 관열, photoUrl: null, withdrawn: false } }
                     - { id: c002, name: 한강망원줍깅, intro: '', photoUrl: null, region: SEOUL, joinPolicy: OPEN, memberCount: 50, leader: { id: u002, nickname: 상혁, photoUrl: null, withdrawn: false } }
+                    - { id: c003, name: 여의도아침줍깅, intro: 평일 아침 30분, photoUrl: null, region: SEOUL, joinPolicy: OPEN, memberCount: 12, leader: { id: u003, nickname: 도윤, photoUrl: null, withdrawn: false } }
                   nextCursor: null
         '409': { $ref: '#/components/responses/Error' }
         '422': { $ref: '#/components/responses/Error' }

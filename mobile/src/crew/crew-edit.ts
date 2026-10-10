@@ -1,16 +1,20 @@
+import { CREW_CAPACITY, type JoinPolicy, type Region } from './region';
+
 export const CREW_NAME_MIN = 2;
 export const CREW_NAME_MAX = 20;
 export const CREW_INTRO_MAX = 200;
 
-type CrewFields = { name: string; intro: string; goalCount: number };
+type CrewFields = { name: string; intro: string; goalCount: number; region: Region; joinPolicy: JoinPolicy };
 /** photoMediaId — undefined: 사진 그대로 · null: 삭제 · 문자열: 새로 올린 사진 */
 export type CrewForm = CrewFields & { photoMediaId?: string | null };
 export type CrewPatch = Partial<CrewFields & { photoMediaId: string | null }>;
 
 const cleanName = (name: string) => name.replace(/[\r\n]/g, '').trim();
 
-export function crewFormErrors(form: CrewForm): Partial<Record<keyof CrewFields, string>> {
-  const errors: Partial<Record<keyof CrewFields, string>> = {};
+type TextFields = 'name' | 'intro' | 'goalCount';
+
+export function crewFormErrors(form: CrewForm): Partial<Record<TextFields, string>> {
+  const errors: Partial<Record<TextFields, string>> = {};
   const name = cleanName(form.name);
   if (name.length < CREW_NAME_MIN || name.length > CREW_NAME_MAX) errors.name = '크루 이름은 2~20자로 입력해 주세요.';
   if (form.intro.trim().length > CREW_INTRO_MAX) errors.intro = '소개는 200자까지 입력할 수 있어요.';
@@ -25,6 +29,8 @@ function changes(original: CrewFields, form: CrewForm): CrewPatch {
   if (name !== original.name) patch.name = name;
   if (intro !== original.intro) patch.intro = intro;
   if (form.goalCount !== original.goalCount) patch.goalCount = form.goalCount;
+  if (form.region !== original.region) patch.region = form.region;
+  if (form.joinPolicy !== original.joinPolicy) patch.joinPolicy = form.joinPolicy;
   if (form.photoMediaId !== undefined) patch.photoMediaId = form.photoMediaId;
   return patch;
 }
@@ -39,4 +45,14 @@ export function crewPatch(original: CrewFields, form: CrewForm): CrewPatch | nul
 /** 떠날 때 버리기를 물어야 하는 변경. 유효하지 않은 입력도 사라지므로 포함한다 */
 export function crewChanged(original: CrewFields, form: CrewForm): boolean {
   return Object.keys(changes(original, form)).length > 0;
+}
+
+/** 비공개 → 공개 전환이면 서버가 대기 신청을 모두 가입시킨다. 저장 전에 확인을 받는다 */
+export function opensCrew(original: Pick<CrewFields, 'joinPolicy'>, patch: CrewPatch): boolean {
+  return original.joinPolicy === 'APPROVAL' && patch.joinPolicy === 'OPEN';
+}
+
+/** 크루원 + 대기 신청이 정원을 넘으면 공개 전환 전체가 거부된다(서버 409 CREW_FULL) */
+export function openingOverflows(memberCount: number, pendingJoinRequests: number): boolean {
+  return memberCount + pendingJoinRequests > CREW_CAPACITY;
 }

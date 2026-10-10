@@ -31,9 +31,13 @@ for (const [path, methods] of Object.entries(spec.paths ?? {})) {
     }
   }
 }
-entries.sort((a, b) => a.key.localeCompare(b.key));
+entries.sort((a, b) => a.key.localeCompare(b.key) || a.status - b.status);
 
-const body = entries
+// 한 경로에 성공 응답 example 이 여럿이면(예: 200 재전송 흡수 · 201 생성) 가장 낮은 상태 코드 것만 쓴다.
+// 같은 키가 두 번 나오면 생성물이 타입 검사에서 깨진다
+const unique = entries.filter((e, i) => i === 0 || entries[i - 1].key !== e.key);
+
+const body = unique
   .map((e) => `  ${JSON.stringify(e.key)}: ${JSON.stringify(e.example, null, 2).replace(/\n/g, '\n  ')},`)
   .join('\n');
 
@@ -45,4 +49,4 @@ writeFileSync(
   'utf8',
 );
 
-console.log(`${entries.length}개 example → src/api/mocks.generated.ts`);
+console.log(`${unique.length}개 example → src/api/mocks.generated.ts`);

@@ -36,11 +36,3 @@ export function validateCrewName(value: string): string | undefined {
   if (normalized.length > 20) return '크루 이름은 20자까지 입력할 수 있어요.';
   return undefined;
 }
-
-export function normalizeInviteCode(value: string): string {
-  return value.trim();
-}
-
-export function validateInviteCode(value: string): string | undefined {
-  return normalizeInviteCode(value) ? undefined : '초대 코드를 입력해 주세요.';
-}
