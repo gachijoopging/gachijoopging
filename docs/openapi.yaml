@@ -1403,7 +1403,7 @@ paths:
               example:
                 data:
                   items:
-                    - { seq: 101, id: 00000000-0000-4000-8000-000000000101, author: { id: 8a2d…, nickname: 상혁, photoUrl: null, withdrawn: false }, text: 내일 여의도 9시 어때요?, createdAt: 2026-09-06T06:24:00Z }
+                    - { seq: 101, id: 00000000-0000-4000-8000-000000000101, author: { id: 8a2d…, nickname: 상혁, photoUrl: null, withdrawn: false }, text: '내일 여의도 9시 어때요?', createdAt: 2026-09-06T06:24:00Z }
                     - { seq: 102, id: 00000000-0000-4000-8000-000000000102, author: { id: 8a2d…, nickname: 상혁, photoUrl: null, withdrawn: false }, text: 봉투는 제가 챙길게요., createdAt: 2026-09-06T06:24:30Z }
                     - { seq: 103, id: 00000000-0000-4000-8000-000000000103, author: { id: 6f1c…, nickname: 관열, photoUrl: null, withdrawn: false }, text: "좋아요, 갈게요!", createdAt: 2026-09-06T06:25:00Z }
                   hasMore: false

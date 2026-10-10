@@ -1,5 +1,6 @@
 package site.gachijoopging.server.domain.crew;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -10,6 +11,7 @@ import static site.gachijoopging.server.support.TestAccounts.가입한다;
 import com.jayway.jsonpath.JsonPath;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,11 +42,9 @@ class CrewApiTest extends IntegrationTest {
             .andExpect(jsonPath("$.data.leader.id").value(나.id().toString()))
             .andExpect(jsonPath("$.data.memberCount").value(1))
             .andExpect(jsonPath("$.data.goalCount").value(200))
-            .andExpect(
-                jsonPath("$.data.inviteCode")
-                    .value(
-                        org.hamcrest.Matchers.matchesRegex(
-                            "^[A-HJ-NP-Z2-9]{2}-[A-HJ-NP-Z2-9]{4}$")))
+            .andExpect(jsonPath("$.data.intro").value(""))
+            .andExpect(jsonPath("$.data.region").value("SEOUL"))
+            .andExpect(jsonPath("$.data.joinPolicy").value("APPROVAL"))
             .andExpect(jsonPath("$.data.isLeader").value(true))
             .andExpect(jsonPath("$.data.pinnedNotice").isEmpty())
             .andReturn()
@@ -109,36 +109,18 @@ class CrewApiTest extends IntegrationTest {
   }
 
   @Test
-  void 초대_코드로_미리_보면_대소문자와_하이픈을_가리지_않는다() throws Exception {
-    TestAccount 크루장 = 가입한다(mockMvc, "crew-preview-leader@test.io");
-    String 응답 = mockMvc.perform(만든다(크루장, "미리보기크루")).andReturn().getResponse().getContentAsString();
-    String 코드 = JsonPath.read(응답, "$.data.inviteCode");
-    TestAccount 가입_희망자 = 가입한다(mockMvc, "crew-preview-guest@test.io");
+  void 활동_지역이나_가입_방식이_없으면_422_다() throws Exception {
+    TestAccount 나 = 가입한다(mockMvc, "crew-missing-policy@test.io");
 
     mockMvc
-        .perform(
-            get("/api/v1/crews/preview")
-                .param("inviteCode", 코드.replace("-", "").toLowerCase())
-                .header(HttpHeaders.AUTHORIZATION, 가입_희망자.bearer()))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.data.id").value(JsonPath.<String>read(응답, "$.data.id")))
-        .andExpect(jsonPath("$.data.name").value("미리보기크루"))
-        .andExpect(jsonPath("$.data.memberCount").value(1))
-        .andExpect(jsonPath("$.data.leader.withdrawn").value(false));
-  }
-
-  @Test
-  void 없는_초대_코드는_404_형식이_틀리면_422_다() throws Exception {
-    TestAccount 나 = 가입한다(mockMvc, "crew-preview-bad@test.io");
-
+        .perform(만든다(나, "{\"name\":\"지역없는크루\",\"joinPolicy\":\"OPEN\"}"))
+        .andExpect(status().isUnprocessableEntity());
     mockMvc
-        .perform(미리보기(나, "ZZ-ZZZZ"))
-        .andExpect(status().isNotFound())
-        .andExpect(jsonPath("$.code").value("NOT_FOUND"));
+        .perform(만든다(나, "{\"name\":\"방식없는크루\",\"region\":\"SEOUL\"}"))
+        .andExpect(status().isUnprocessableEntity());
     mockMvc
-        .perform(미리보기(나, "ZZ-ZZ"))
-        .andExpect(status().isUnprocessableEntity())
-        .andExpect(jsonPath("$.code").value("VALIDATION"));
+        .perform(만든다(나, "{\"name\":\"틀린지역크루\",\"region\":\"MARS\",\"joinPolicy\":\"OPEN\"}"))
+        .andExpect(status().isUnprocessableEntity());
   }
 
   @Test
@@ -201,19 +183,118 @@ class CrewApiTest extends IntegrationTest {
   }
 
   @Test
-  void 크루장이_탈퇴했으면_미리보기의_크루장은_탈퇴한_크루원이다() throws Exception {
+  void 크루장이_탈퇴했으면_검색의_크루장은_탈퇴한_크루원이다() throws Exception {
     TestAccount 크루장 = 가입한다(mockMvc, "crew-withdrawn-leader@test.io");
-    String 코드 =
-        JsonPath.read(
-            mockMvc.perform(만든다(크루장, "탈퇴확인크루")).andReturn().getResponse().getContentAsString(),
-            "$.data.inviteCode");
+    mockMvc.perform(만든다(크루장, "탈퇴확인크루"));
     jdbcTemplate.update("UPDATE users SET status = 'DELETED' WHERE id = ?", 크루장.id());
 
     mockMvc
-        .perform(미리보기(가입한다(mockMvc, "crew-withdrawn-guest@test.io"), 코드))
+        .perform(검색(가입한다(mockMvc, "crew-withdrawn-guest@test.io")).param("query", "탈퇴확인크루"))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.data.leader.withdrawn").value(true))
-        .andExpect(jsonPath("$.data.leader.nickname").value("탈퇴한 크루원"));
+        .andExpect(jsonPath("$.data.items[0].leader.withdrawn").value(true))
+        .andExpect(jsonPath("$.data.items[0].leader.nickname").value("탈퇴한 크루원"));
+  }
+
+  @Test
+  void 검색은_이름_부분_일치를_대소문자_없이_이름순으로_커서로_준다() throws Exception {
+    mockMvc.perform(만든다(가입한다(mockMvc, "crew-search-a@test.io"), "SrchTest-A"));
+    mockMvc.perform(만든다(가입한다(mockMvc, "crew-search-b@test.io"), "srchtest-b"));
+    TestAccount 나 = 가입한다(mockMvc, "crew-search-me@test.io");
+
+    String 첫_페이지 =
+        mockMvc
+            .perform(검색(나).param("query", "SRCHTEST").param("limit", "1"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.data.items.length()").value(1))
+            .andExpect(jsonPath("$.data.items[0].name").value("SrchTest-A"))
+            .andExpect(jsonPath("$.data.items[0].memberCount").value(1))
+            .andExpect(jsonPath("$.data.items[0].region").value("SEOUL"))
+            .andExpect(jsonPath("$.data.items[0].joinPolicy").value("APPROVAL"))
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+
+    mockMvc
+        .perform(
+            검색(나)
+                .param("query", "SRCHTEST")
+                .param("limit", "1")
+                .param("cursor", JsonPath.<String>read(첫_페이지, "$.data.nextCursor")))
+        .andExpect(jsonPath("$.data.items[0].name").value("srchtest-b"))
+        .andExpect(jsonPath("$.data.nextCursor").isEmpty());
+  }
+
+  @Test
+  void 검색어의_퍼센트는_와일드카드가_아니다() throws Exception {
+    mockMvc.perform(만든다(가입한다(mockMvc, "crew-search-pct@test.io"), "퍼센트없는크루"));
+
+    mockMvc
+        .perform(검색(가입한다(mockMvc, "crew-search-pct-me@test.io")).param("query", "%"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.items[?(@.name == '퍼센트없는크루')]").isEmpty());
+  }
+
+  @Test
+  void 검색은_활동_지역이_같은_크루만_준다() throws Exception {
+    mockMvc.perform(
+        만든다(
+            가입한다(mockMvc, "crew-search-jeju@test.io"),
+            "{\"name\":\"지역검색제주\",\"region\":\"JEJU\",\"joinPolicy\":\"OPEN\"}"));
+    mockMvc.perform(만든다(가입한다(mockMvc, "crew-search-seoul@test.io"), "지역검색서울"));
+    TestAccount 나 = 가입한다(mockMvc, "crew-search-region-me@test.io");
+
+    mockMvc
+        .perform(검색(나).param("query", "지역검색").param("region", "JEJU"))
+        .andExpect(jsonPath("$.data.items.length()").value(1))
+        .andExpect(jsonPath("$.data.items[0].name").value("지역검색제주"))
+        .andExpect(jsonPath("$.data.items[0].joinPolicy").value("OPEN"));
+  }
+
+  @Test
+  void 조건이_없으면_전체_크루를_이름순으로_준다() throws Exception {
+    mockMvc.perform(만든다(가입한다(mockMvc, "crew-search-all@test.io"), "전체검색크루"));
+
+    String 응답 =
+        mockMvc
+            .perform(검색(가입한다(mockMvc, "crew-search-all-me@test.io")).param("limit", "50"))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+
+    List<String> 이름 = JsonPath.read(응답, "$.data.items[*].name");
+    assertThat(이름).isNotEmpty();
+    List<String> 정렬 =
+        jdbcTemplate.queryForList(
+            "SELECT name FROM crews WHERE deleted_at IS NULL ORDER BY name LIMIT 50", String.class);
+    assertThat(이름).containsExactlyElementsOf(정렬);
+  }
+
+  @Test
+  void 소속이면_검색은_409_ALREADY_IN_CREW_다() throws Exception {
+    TestAccount 나 = 가입한다(mockMvc, "crew-search-member@test.io");
+    mockMvc.perform(만든다(나, "검색소속크루"));
+
+    mockMvc
+        .perform(검색(나))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.code").value("ALREADY_IN_CREW"));
+  }
+
+  @Test
+  void 초대_코드_경로는_없다() throws Exception {
+    TestAccount 나 = 가입한다(mockMvc, "crew-no-invite@test.io");
+    mockMvc.perform(만든다(나, "초대없는크루"));
+
+    mockMvc
+        .perform(
+            get("/api/v1/crews/preview")
+                .param("inviteCode", "AB-CDEF")
+                .header(HttpHeaders.AUTHORIZATION, 나.bearer()))
+        .andExpect(status().isNotFound());
+    mockMvc
+        .perform(post("/api/v1/crew/invite-code").header(HttpHeaders.AUTHORIZATION, 나.bearer()))
+        .andExpect(status().isNotFound());
   }
 
   private UUID 사진을_만든다(UUID 주인) {
@@ -227,11 +308,20 @@ class CrewApiTest extends IntegrationTest {
     return id;
   }
 
-  private static MockHttpServletRequestBuilder 만든다(TestAccount 계정, String 이름) {
+  private static MockHttpServletRequestBuilder 만든다(TestAccount 계정, String 이름_또는_본문) {
+    String 본문 =
+        이름_또는_본문.startsWith("{")
+            ? 이름_또는_본문
+            : "{\"name\":%s,\"region\":\"SEOUL\",\"joinPolicy\":\"APPROVAL\"}"
+                .formatted(json문자열(이름_또는_본문));
     return post("/api/v1/crews")
         .header(HttpHeaders.AUTHORIZATION, 계정.bearer())
         .contentType(MediaType.APPLICATION_JSON)
-        .content("{\"name\":%s}".formatted(json문자열(이름)));
+        .content(본문);
+  }
+
+  private static MockHttpServletRequestBuilder 검색(TestAccount 계정) {
+    return get("/api/v1/crews").header(HttpHeaders.AUTHORIZATION, 계정.bearer());
   }
 
   private static MockHttpServletRequestBuilder 수정(TestAccount 계정, String 본문) {
@@ -239,12 +329,6 @@ class CrewApiTest extends IntegrationTest {
         .header(HttpHeaders.AUTHORIZATION, 계정.bearer())
         .contentType(MediaType.APPLICATION_JSON)
         .content(본문);
-  }
-
-  private static MockHttpServletRequestBuilder 미리보기(TestAccount 계정, String 코드) {
-    return get("/api/v1/crews/preview")
-        .param("inviteCode", 코드)
-        .header(HttpHeaders.AUTHORIZATION, 계정.bearer());
   }
 
   private void 소속시킨다(TestAccount 계정, String 크루_id) {

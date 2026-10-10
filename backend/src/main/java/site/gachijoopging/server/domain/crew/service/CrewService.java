@@ -2,6 +2,7 @@ package site.gachijoopging.server.domain.crew.service;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
@@ -9,20 +10,25 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import site.gachijoopging.server.domain.crew.dto.CreateCrewRequest;
-import site.gachijoopging.server.domain.crew.dto.CrewPreviewResponse;
 import site.gachijoopging.server.domain.crew.dto.CrewResponse;
-import site.gachijoopging.server.domain.crew.dto.InviteCodeResponse;
+import site.gachijoopging.server.domain.crew.dto.CrewSummaryResponse;
 import site.gachijoopging.server.domain.crew.dto.UpdateCrewRequest;
 import site.gachijoopging.server.domain.crew.dto.UserBriefResponse;
 import site.gachijoopging.server.domain.crew.entity.Crew;
+import site.gachijoopging.server.domain.crew.entity.JoinPolicy;
+import site.gachijoopging.server.domain.crew.entity.JoinRequestStatus;
+import site.gachijoopging.server.domain.crew.entity.Region;
 import site.gachijoopging.server.domain.crew.repository.CrewJoinRequestRepository;
 import site.gachijoopging.server.domain.crew.repository.CrewQueryRepository;
+import site.gachijoopging.server.domain.crew.repository.CrewQueryRepository.CrewSummaryRow;
 import site.gachijoopging.server.domain.crew.repository.CrewQueryRepository.UserBriefRow;
 import site.gachijoopging.server.domain.crew.repository.CrewRepository;
 import site.gachijoopging.server.domain.media.service.MediaService;
 import site.gachijoopging.server.domain.media.service.MediaSignedUrl;
 import site.gachijoopging.server.global.error.BusinessException;
 import site.gachijoopging.server.global.error.ErrorCode;
+import site.gachijoopging.server.global.response.CursorPage;
+import site.gachijoopging.server.global.response.Cursors;
 import site.gachijoopging.server.global.security.CrewMembership;
 import site.gachijoopging.server.global.security.CrewMembershipLoader;
 
@@ -30,7 +36,7 @@ import site.gachijoopging.server.global.security.CrewMembershipLoader;
 @RequiredArgsConstructor
 public class CrewService implements CrewMembershipLoader {
 
-  private static final int INVITE_CODE_ATTEMPTS = 5;
+  static final int CAPACITY = 50;
 
   private static final String WITHDRAWN_NICKNAME = "탈퇴한 크루원";
 
@@ -52,18 +58,65 @@ public class CrewService implements CrewMembershipLoader {
   @Transactional
   public CrewResponse create(UUID me, CreateCrewRequest request) {
     String name = trimmedName(request.name());
-    if (crewRepository.findMembership(me).isPresent()) {
-      throw new BusinessException(ErrorCode.ALREADY_IN_CREW, "이미 크루에 소속돼 있다");
-    }
+    requireNoCrewNorPending(me);
     UUID crewId = UUID.randomUUID();
     Instant now = clock.instant();
-    insertCrew(crewId, name, me, now);
+    if (crewRepository.existsByName(name)
+        || crewRepository.insertIfAbsent(
+                crewId,
+                name,
+                Objects.requireNonNullElse(request.intro(), ""),
+                me,
+                request.region().name(),
+                request.joinPolicy().name(),
+                now)
+            == 0) {
+      throw new BusinessException(ErrorCode.CREW_NAME_TAKEN, "이미 쓰는 크루 이름이다");
+    }
     if (crewRepository.insertMemberIfAbsent(crewId, me, now) == 0) {
       throw new BusinessException(ErrorCode.ALREADY_IN_CREW, "이미 크루에 소속돼 있다");
     }
-    // 내 크루가 생겼으니 다른 크루에 넣어 둔 신청은 승인될 수 없다 — 크루장 목록에 남기지 않는다
-    joinRequestRepository.cancelPending(me, now);
     return view(activeCrew(crewId), me);
+  }
+
+  @Transactional(readOnly = true)
+  public CursorPage<CrewSummaryResponse> search(
+      UUID me, String query, Region region, String cursor, int limit) {
+    requireNoCrewNorPending(me);
+    String keyword = query == null || query.isBlank() ? null : query.strip();
+    List<CrewSummaryRow> rows =
+        crewQueryRepository.search(
+            keyword,
+            region == null ? null : region.name(),
+            cursor == null ? null : Cursors.decodeText(cursor),
+            limit + 1);
+    List<CrewSummaryRow> page = rows.subList(0, Math.min(limit, rows.size()));
+    String next = rows.size() > limit ? Cursors.encodeText(page.getLast().getName()) : null;
+    return new CursorPage<>(page.stream().map(this::summary).toList(), next);
+  }
+
+  // 검색·만들기·가입은 미가입자 전용이고, 대기 신청은 자동 취소하지 않는다 — 사용자가 1-9 에서 직접 취소한다
+  void requireNoCrewNorPending(UUID me) {
+    if (crewRepository.findMembership(me).isPresent()) {
+      throw new BusinessException(ErrorCode.ALREADY_IN_CREW, "이미 크루에 소속돼 있다");
+    }
+    if (joinRequestRepository.findByUserIdAndStatus(me, JoinRequestStatus.PENDING).isPresent()) {
+      throw new BusinessException(ErrorCode.JOIN_REQUEST_PENDING, "승인 대기 중인 가입 신청이 있다");
+    }
+  }
+
+  // 호출자가 findActiveForUpdate 로 그 크루 행을 잠근 트랜잭션 안에서만 부른다
+  void admit(UUID crewId, UUID userId, Instant now) {
+    requireSeat(crewId);
+    if (crewRepository.insertMemberIfAbsent(crewId, userId, now) == 0) {
+      throw new BusinessException(ErrorCode.ALREADY_IN_CREW, "이미 크루에 소속돼 있다");
+    }
+  }
+
+  void requireSeat(UUID crewId) {
+    if (crewRepository.countMembers(crewId) >= CAPACITY) {
+      throw new BusinessException(ErrorCode.CREW_FULL, "크루 정원이 찼다");
+    }
   }
 
   @Transactional(readOnly = true)
@@ -90,46 +143,6 @@ public class CrewService implements CrewMembershipLoader {
     return view(crew, me);
   }
 
-  @Transactional(readOnly = true)
-  public CrewPreviewResponse preview(String inviteCode) {
-    Crew crew =
-        crewRepository
-            .findByInviteCodeAndDeletedAtIsNull(InviteCodes.canonical(inviteCode))
-            .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "없는 초대 코드다"));
-    return new CrewPreviewResponse(
-        crew.getId().toString(),
-        crew.getName(),
-        crewRepository.countMembers(crew.getId()),
-        photoUrl(crew.getPhotoMediaId()),
-        crew.getIntro(),
-        brief(crew.getLeaderId()));
-  }
-
-  @Transactional
-  public InviteCodeResponse reissueInviteCode(CrewMembership membership) {
-    membership.requireLeader();
-    Instant now = clock.instant();
-    for (int attempt = 0; attempt < INVITE_CODE_ATTEMPTS; attempt++) {
-      String code = InviteCodes.issue();
-      if (crewRepository.changeInviteCodeIfFree(membership.crewId(), code, now) == 1) {
-        return new InviteCodeResponse(code);
-      }
-    }
-    throw new IllegalStateException("초대 코드가 계속 겹친다 — 코드 공간을 늘릴 때다");
-  }
-
-  private void insertCrew(UUID crewId, String name, UUID leaderId, Instant now) {
-    for (int attempt = 0; attempt < INVITE_CODE_ATTEMPTS; attempt++) {
-      if (crewRepository.existsByName(name)) {
-        throw new BusinessException(ErrorCode.CREW_NAME_TAKEN, "이미 쓰는 크루 이름이다");
-      }
-      if (crewRepository.insertIfAbsent(crewId, name, leaderId, InviteCodes.issue(), now) == 1) {
-        return;
-      }
-    }
-    throw new IllegalStateException("초대 코드가 계속 겹친다 — 코드 공간을 늘릴 때다");
-  }
-
   private Crew activeCrew(UUID crewId) {
     return crewRepository
         .findByIdAndDeletedAtIsNull(crewId)
@@ -144,25 +157,43 @@ public class CrewService implements CrewMembershipLoader {
         crew.getIntro(),
         photoUrl(crew.getPhotoMediaId()),
         brief(crew.getLeaderId()),
+        crew.getRegion(),
+        crew.getJoinPolicy(),
         crewRepository.countMembers(crew.getId()),
         crew.getGoalCount(),
-        crew.getInviteCode(),
         leader ? crewRepository.countPendingJoinRequests(crew.getId()) : 0,
         null,
         0,
         leader);
   }
 
+  private CrewSummaryResponse summary(CrewSummaryRow row) {
+    return new CrewSummaryResponse(
+        row.getId().toString(),
+        row.getName(),
+        row.getIntro(),
+        photoUrl(row.getPhotoMediaId()),
+        Region.valueOf(row.getRegion()),
+        JoinPolicy.valueOf(row.getJoinPolicy()),
+        row.getMemberCount(),
+        brief(
+            row.getLeaderId(),
+            row.getLeaderNickname(),
+            row.getLeaderPhotoMediaId(),
+            row.getLeaderStatus()));
+  }
+
   public UserBriefResponse brief(UUID userId) {
     UserBriefRow user = crewQueryRepository.findUserBrief(userId);
-    if ("DELETED".equals(user.getStatus())) {
-      return new UserBriefResponse(user.getId().toString(), WITHDRAWN_NICKNAME, null, true);
+    return brief(user.getId(), user.getNickname(), user.getPhotoMediaId(), user.getStatus());
+  }
+
+  private UserBriefResponse brief(UUID id, String nickname, UUID photoMediaId, String status) {
+    if ("DELETED".equals(status)) {
+      return new UserBriefResponse(id.toString(), WITHDRAWN_NICKNAME, null, true);
     }
     return new UserBriefResponse(
-        user.getId().toString(),
-        Objects.requireNonNullElse(user.getNickname(), ""),
-        photoUrl(user.getPhotoMediaId()),
-        false);
+        id.toString(), Objects.requireNonNullElse(nickname, ""), photoUrl(photoMediaId), false);
   }
 
   private String photoUrl(UUID photoMediaId) {

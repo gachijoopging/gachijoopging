@@ -13,6 +13,7 @@ import site.gachijoopging.server.domain.crew.dto.DecideJoinRequestRequest.Decisi
 import site.gachijoopging.server.domain.crew.dto.JoinRequestResponse;
 import site.gachijoopging.server.domain.crew.entity.Crew;
 import site.gachijoopging.server.domain.crew.entity.CrewJoinRequest;
+import site.gachijoopging.server.domain.crew.entity.JoinPolicy;
 import site.gachijoopging.server.domain.crew.entity.JoinRequestStatus;
 import site.gachijoopging.server.domain.crew.event.JoinRequestDecidedEvent;
 import site.gachijoopging.server.domain.crew.event.JoinRequestedEvent;
@@ -38,25 +39,45 @@ public class CrewJoinService {
   public record Applied(JoinRequestResponse request, boolean created) {}
 
   @Transactional
-  public Applied apply(UUID me, String inviteCode) {
-    Crew crew =
-        crewRepository
-            .findByInviteCodeAndDeletedAtIsNull(InviteCodes.canonical(inviteCode))
-            .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "없는 초대 코드다"));
+  public Applied apply(UUID me, UUID crewId) {
     if (crewRepository.findMembership(me).isPresent()) {
       throw new BusinessException(ErrorCode.ALREADY_IN_CREW, "이미 크루에 소속돼 있다");
     }
-    return pendingFor(me, crew.getId()).orElseGet(() -> applyNew(me, crew));
+    Crew crew =
+        crewRepository
+            .findActiveForUpdate(crewId)
+            .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "없는 크루다"));
+    Optional<CrewJoinRequest> pending =
+        joinRequestRepository.findByUserIdAndStatus(me, JoinRequestStatus.PENDING);
+    if (pending.isPresent()) {
+      if (pending.get().getCrewId().equals(crewId)) {
+        return new Applied(view(pending.get()), false);
+      }
+      throw new BusinessException(ErrorCode.JOIN_REQUEST_PENDING, "승인 대기 중인 가입 신청이 있다");
+    }
+    if (crewRepository.wasExpelled(crewId, me)) {
+      throw new BusinessException(ErrorCode.EXPELLED_FROM_CREW, "추방된 크루에는 다시 가입할 수 없다");
+    }
+    return crew.getJoinPolicy() == JoinPolicy.OPEN ? joinOpen(me, crew) : applyNew(me, crew);
+  }
+
+  private Applied joinOpen(UUID me, Crew crew) {
+    Instant now = clock.instant();
+    crewService.admit(crew.getId(), me, now);
+    UUID requestId = UUID.randomUUID();
+    joinRequestRepository.insertApproved(requestId, crew.getId(), me, now);
+    return new Applied(view(requireRequest(joinRequestRepository.findById(requestId))), true);
   }
 
   private Applied applyNew(UUID me, Crew crew) {
+    crewService.requireSeat(crew.getId());
     Instant now = clock.instant();
-    joinRequestRepository.cancelPending(me, now);
     UUID requestId = UUID.randomUUID();
     if (joinRequestRepository.insertPendingIfAbsent(requestId, crew.getId(), me, now) == 0) {
       // 같은 순간 다른 요청이 먼저 넣었다. 새 문장은 그 커밋을 보므로 같은 크루면 그 신청으로 흡수한다
       return pendingFor(me, crew.getId())
-          .orElseThrow(() -> new BusinessException(ErrorCode.CONFLICT, "다른 요청이 먼저 가입 신청을 만들었다"));
+          .orElseThrow(
+              () -> new BusinessException(ErrorCode.JOIN_REQUEST_PENDING, "승인 대기 중인 가입 신청이 있다"));
     }
     events.publishEvent(new JoinRequestedEvent(requestId, crew.getId(), crew.getLeaderId(), me));
     return new Applied(view(requireRequest(joinRequestRepository.findById(requestId))), true);
@@ -96,6 +117,9 @@ public class CrewJoinService {
   @Transactional
   public void decide(UUID me, CrewMembership membership, UUID requestId, Decision decision) {
     membership.requireLeader();
+    crewRepository
+        .findActiveForUpdate(membership.crewId())
+        .orElseThrow(() -> new BusinessException(ErrorCode.NO_CREW, "소속 크루가 없다"));
     CrewJoinRequest request =
         requireRequest(joinRequestRepository.findByIdAndCrewId(requestId, membership.crewId()));
     if (request.getStatus() != JoinRequestStatus.PENDING) {
@@ -103,6 +127,9 @@ public class CrewJoinService {
     }
     Instant now = clock.instant();
     boolean approve = decision == Decision.APPROVE;
+    if (approve) {
+      crewService.requireSeat(membership.crewId());
+    }
     JoinRequestStatus result = approve ? JoinRequestStatus.APPROVED : JoinRequestStatus.REJECTED;
     if (joinRequestRepository.closeIfPending(requestId, result, me, now) == 0) {
       throw new BusinessException(ErrorCode.CONFLICT, "이미 처리된 가입 신청이다");
