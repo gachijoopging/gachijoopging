@@ -142,7 +142,7 @@ export default function ManageCrewMembersScreen() {
           ) : null}
           {crew && me?.isLeader ? (
             <Card style={{ paddingVertical: 0 }}>
-              {/* 공개 크루는 신청이 생기지 않는다. 공개로 바뀌기 전 남은 신청이 있을 때만 보인다 */}
+              {/* 공개 크루는 신청이 생기지 않는다. 공개 전환 때 자동 가입되지 않은 신청(추방 이력)이 남았을 때만 보인다 */}
               {crew.joinPolicy === 'APPROVAL' || crew.pendingJoinRequests > 0 ? (
                 <ListRow
                   icon="account-clock-outline"

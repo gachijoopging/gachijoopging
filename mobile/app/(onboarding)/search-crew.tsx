@@ -65,13 +65,25 @@ export default function SearchCrewScreen() {
   const [snackbar, setSnackbar] = useState<string | null>(null);
   const generation = useRef(0);
   const cursor = useRef<string | null>(null);
+  const loaded = useRef<Filter | null>(null);
   const busy = useRef(false);
   // 시트가 다 내려간 뒤에 넘어간다. 내려가는 중에 화면을 바꾸면 시트가 다음 화면 위에 겹친다
   const afterClose = useRef<Leave | null>(null);
   usePreventBack(joining);
 
+  // 검색 도중 다른 기기에서 가입·신청했으면 GET /crews 도 409 다. 다시 불러도 같으니 옮겨 보낸다
+  const moveOn = useCallback((e: unknown) => {
+    const moved = mapJoinError(e).moved;
+    if (!moved) return false;
+    finishOnboarding(navigation, moved.to, { flash: moved.flash });
+    return true;
+  }, [navigation]);
+
   const load = useCallback(async (next: Filter, mode: 'search' | 'pull' = 'search') => {
     const request = ++generation.current;
+    const prevCursor = cursor.current;
+    // 이전 조건의 커서로 다음 페이지를 이어 붙이지 않도록 첫 페이지가 올 때까지 막는다
+    cursor.current = null;
     if (mode === 'pull') setRefreshing(true);
     else setSearching(true);
     setMoreState('idle');
@@ -80,17 +92,21 @@ export default function SearchCrewScreen() {
       if (request !== generation.current) return;
       setItems([...(data.items as readonly CrewSummary[])]);
       cursor.current = data.nextCursor;
+      loaded.current = next;
       setFailed(false);
-    } catch {
-      if (request !== generation.current) return;
+    } catch (e) {
+      if (request !== generation.current || moveOn(e)) return;
       setFailed(true);
+      // 조건을 바꾼 조회가 실패하면 이전 조건의 결과를 새 조건의 결과처럼 보이게 두지 않는다
+      if (loaded.current === next) cursor.current = prevCursor;
+      else setItems(null);
     } finally {
       if (request === generation.current) {
         setSearching(false);
         setRefreshing(false);
       }
     }
-  }, []);
+  }, [moveOn]);
 
   useEffect(() => {
     void load(filter);
@@ -107,14 +123,15 @@ export default function SearchCrewScreen() {
       setItems((prev) => [...(prev ?? []), ...(data.items as readonly CrewSummary[])]);
       cursor.current = data.nextCursor;
       setMoreState('idle');
-    } catch {
-      if (request === generation.current) setMoreState('failed');
+    } catch (e) {
+      if (request === generation.current && !moveOn(e)) setMoreState('failed');
     }
   };
 
   const search = () => {
     const query = input.trim() || undefined;
     if (query !== filter.query) setFilter((f) => ({ ...f, query }));
+    else void load(filter);
   };
 
   const open = (crew: CrewSummary) => {

@@ -6,6 +6,7 @@ const { act, create } = require('react-test-renderer');
 const mockGet = jest.fn();
 const mockMutate = jest.fn();
 const mockReset = jest.fn();
+const mockNavigation = { reset: (...a: unknown[]) => mockReset(...a) };
 jest.mock('expo/src/winter/fetch', () => ({ fetch: jest.fn() }));
 jest.mock('../api/client', () => ({
   ApiError: class extends Error {
@@ -19,7 +20,8 @@ jest.mock('../api/onboarding', () => ({
 jest.mock('./usePreventBack', () => ({ usePreventBack: jest.fn() }));
 jest.mock('expo-router', () => ({
   router: { push: jest.fn(), back: jest.fn() },
-  useNavigation: () => ({ reset: (...a: unknown[]) => mockReset(...a) }),
+  // 실제 useNavigation 처럼 렌더마다 같은 객체를 돌려준다
+  useNavigation: () => mockNavigation,
 }));
 jest.mock('react-native', () => ({ View: 'View', Pressable: 'Pressable', RefreshControl: 'RefreshControl' }));
 jest.mock('design-system/src', () => new Proxy({ space: {}, size: {}, useRipple: () => undefined }, { get: (target, key) => (key in target ? target[key as keyof typeof target] : String(key)) }));
@@ -57,6 +59,39 @@ test('들어오면 전체 크루를 이름순으로 부르고, 검색어로 다�
   await act(async () => find('Field')[0].props.onSubmitEditing());
   expect(mockGet).toHaveBeenLastCalledWith('GET /crews', { query: '망원' });
   expect(ids()).toEqual(['c002']);
+});
+
+test('조건을 바꾸면 새 첫 페이지가 오기 전에는 이전 커서로 더 부르지 않는다', async () => {
+  const page = MOCKS['GET /crews'].data;
+  mockGet.mockResolvedValueOnce({ data: { ...page, nextCursor: 'old' } });
+  await act(async () => { tree = create(React.createElement(SearchCrewScreen)); });
+  mockGet.mockClear().mockReturnValue(new Promise(() => {}));
+  await act(async () => find('Field')[0].props.onChangeText('망원'));
+  await act(async () => find('Field')[0].props.onSubmitEditing());
+  await act(async () => list().props.onEndReached());
+  expect(mockGet).toHaveBeenCalledTimes(1);
+  expect(mockGet).toHaveBeenCalledWith('GET /crews', { query: '망원' });
+});
+
+test('조건을 바꾼 조회가 실패하면 이전 결과를 지우고, 같은 검색어로 다시 찾을 수 있다', async () => {
+  const { ApiError } = require('../api/client');
+  await act(async () => { tree = create(React.createElement(SearchCrewScreen)); });
+  const succeed = mockGet.getMockImplementation();
+  mockGet.mockRejectedValueOnce(new ApiError('NETWORK'));
+  await act(async () => find('Field')[0].props.onChangeText('망원'));
+  await act(async () => find('Field')[0].props.onSubmitEditing());
+  expect(find('List')).toHaveLength(0);
+  expect(find('ErrorState')).toHaveLength(1);
+  mockGet.mockImplementation(succeed);
+  await act(async () => find('Field')[0].props.onSubmitEditing());
+  expect(ids()).toEqual(['c002']);
+});
+
+test('검색 중 다른 기기에서 신청해 409 가 오면 승인 대기로 간다', async () => {
+  const { ApiError } = require('../api/client');
+  mockGet.mockRejectedValueOnce(new ApiError('JOIN_REQUEST_PENDING'));
+  await act(async () => { tree = create(React.createElement(SearchCrewScreen)); });
+  expect(mockReset).toHaveBeenCalledWith({ index: 0, routes: [{ name: '(onboarding)/pending-approval', params: { flash: '승인 대기 중인 가입 요청이 있어요.' } }] });
 });
 
 test('정원이 찬 크루는 공개여도 가입 버튼이 꺼져 있다', async () => {

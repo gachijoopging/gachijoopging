@@ -116,10 +116,23 @@ export default function EditCrewScreen() {
 
   const opening = !!original && !!patch && opensCrew(original, patch);
 
-  const requestSave = () => {
-    if (!original || !patch) return;
+  const readCounts = () =>
+    api.get('GET /crew').then(
+      ({ data }) => ({ memberCount: data.memberCount, pendingJoinRequests: data.pendingJoinRequests }),
+      () => null,
+    );
+
+  const requestSave = async () => {
+    if (!original || !patch || busy.current) return;
     if (!opening) return void save();
-    setOpenDialog(openingOverflows(original.memberCount, original.pendingJoinRequests) ? 'full' : 'confirm');
+    // 정원 초과 안내를 따라 신청을 정리하고 돌아왔을 수 있어 인원은 저장 직전에 다시 읽는다
+    busy.current = true;
+    setSaving(true);
+    const counts = (await readCounts()) ?? original;
+    busy.current = false;
+    setSaving(false);
+    setOriginal((o) => (o ? { ...o, ...counts } : o));
+    setOpenDialog(openingOverflows(counts.memberCount, counts.pendingJoinRequests) ? 'full' : 'confirm');
   };
 
   const save = async () => {
@@ -131,7 +144,9 @@ export default function EditCrewScreen() {
     try {
       await api.mutate('PATCH /crew', patch);
       saved.current = true;
-      const joined = opening ? original.pendingJoinRequests : 0;
+      // 추방 이력이 있는 신청은 자동 가입되지 않아 대기 건수와 다를 수 있다. 실제로 늘어난 인원을 센다
+      const after = opening ? await readCounts() : null;
+      const joined = after ? Math.max(0, after.memberCount - original.memberCount) : 0;
       const flash = joined > 0 ? `공개 크루로 바꿨어요. 기다리던 ${joined}명이 가입했어요.` : '크루 정보를 저장했어요.';
       // 떠나는 화면은 다시 그리지 않는다. 전환 중에 입력·스테퍼가 되살아나면 안드로이드 Fabric 이
       // 사라지는 뷰를 다시 붙이려다 "child already has a parent" 로 죽는다
