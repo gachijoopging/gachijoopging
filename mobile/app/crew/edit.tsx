@@ -144,10 +144,8 @@ export default function EditCrewScreen() {
     try {
       await api.mutate('PATCH /crew', patch);
       saved.current = true;
-      // 추방 이력이 있는 신청은 자동 가입되지 않아 대기 건수와 다를 수 있다. 실제로 늘어난 인원을 센다
-      const after = opening ? await readCounts() : null;
-      const joined = after ? Math.max(0, after.memberCount - original.memberCount) : 0;
-      const flash = joined > 0 ? `공개 크루로 바꿨어요. 기다리던 ${joined}명이 가입했어요.` : '크루 정보를 저장했어요.';
+      // 응답에 자동 가입 인원이 없고 추방 이력 신청은 남으므로 가입 인원을 세어 말하지 않는다
+      const flash = opening ? '공개 크루로 바꿨어요.' : '크루 정보를 저장했어요.';
       // 떠나는 화면은 다시 그리지 않는다. 전환 중에 입력·스테퍼가 되살아나면 안드로이드 Fabric 이
       // 사라지는 뷰를 다시 붙이려다 "child already has a parent" 로 죽는다
       router.dismissTo({ pathname: '/crew/members', params: { flash } });
@@ -355,7 +353,7 @@ export default function EditCrewScreen() {
         }
       >
         <Txt variant="body">
-          {`이제부터 누구나 승인 없이 바로 가입해요.${original?.pendingJoinRequests ? ` 지금 기다리는 가입 신청 ${original.pendingJoinRequests}건은 모두 바로 가입돼요.` : ''}`}
+          {`이제부터 누구나 승인 없이 바로 가입해요.${original?.pendingJoinRequests ? ` 지금 기다리는 가입 신청 ${original.pendingJoinRequests}건도 바로 가입돼요. 내보낸 적 있는 사람의 신청은 그대로 남아요.` : ''}`}
         </Txt>
       </Dialog>
 

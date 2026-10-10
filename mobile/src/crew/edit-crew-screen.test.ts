@@ -45,15 +45,13 @@ async function switchToOpen(memberCount: number, pending: number) {
   await act(async () => tree.root.findAll((n: any) => n.type === 'Button' && n.props.label === '변경사항 저장')[0].props.onPress());
 }
 
-test('비공개 → 공개는 확인을 받은 뒤 저장하고, 실제로 가입한 인원을 알린다', async () => {
+test('비공개 → 공개는 확인을 받은 뒤 저장하고, 가입 인원 없이 전환만 알린다', async () => {
   await switchToOpen(18, 2);
   expect(mockMutate).not.toHaveBeenCalled();
   expect(dialog('공개 크루로 바꿀까요?').props.visible).toBe(true);
-  // 대기 2건 중 1건은 추방 이력이라 자동 가입되지 않았다
-  mockGet.mockResolvedValue(crew(19, 1));
   await act(async () => dialog('공개 크루로 바꿀까요?').props.actions.props.children[1].props.onPress());
   expect(mockMutate).toHaveBeenCalledWith('PATCH /crew', { joinPolicy: 'OPEN' });
-  expect(mockDismiss).toHaveBeenCalledWith({ pathname: '/crew/members', params: { flash: '공개 크루로 바꿨어요. 기다리던 1명이 가입했어요.' } });
+  expect(mockDismiss).toHaveBeenCalledWith({ pathname: '/crew/members', params: { flash: '공개 크루로 바꿨어요.' } });
 });
 
 test('신청 관리에서 정리하고 돌아오면 최신 인원으로 다시 검사한다', async () => {
