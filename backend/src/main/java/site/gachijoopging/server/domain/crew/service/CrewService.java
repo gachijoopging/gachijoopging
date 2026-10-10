@@ -58,6 +58,7 @@ public class CrewService implements CrewMembershipLoader {
   @Transactional
   public CrewResponse create(UUID me, CreateCrewRequest request) {
     String name = trimmedName(request.name());
+    crewRepository.lockUser(me);
     requireNoCrewNorPending(me);
     UUID crewId = UUID.randomUUID();
     Instant now = clock.instant();

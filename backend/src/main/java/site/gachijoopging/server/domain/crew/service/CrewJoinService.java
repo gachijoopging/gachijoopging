@@ -40,6 +40,7 @@ public class CrewJoinService {
 
   @Transactional
   public Applied apply(UUID me, UUID crewId) {
+    crewRepository.lockUser(me);
     if (crewRepository.findMembership(me).isPresent()) {
       throw new BusinessException(ErrorCode.ALREADY_IN_CREW, "이미 크루에 소속돼 있다");
     }
@@ -128,16 +129,11 @@ public class CrewJoinService {
     Instant now = clock.instant();
     boolean approve = decision == Decision.APPROVE;
     if (approve) {
-      crewService.requireSeat(membership.crewId());
+      crewService.admit(membership.crewId(), request.getUserId(), now);
     }
     JoinRequestStatus result = approve ? JoinRequestStatus.APPROVED : JoinRequestStatus.REJECTED;
     if (joinRequestRepository.closeIfPending(requestId, result, me, now) == 0) {
       throw new BusinessException(ErrorCode.CONFLICT, "이미 처리된 가입 신청이다");
-    }
-    if (approve
-        && crewRepository.insertMemberIfAbsent(membership.crewId(), request.getUserId(), now)
-            == 0) {
-      throw new BusinessException(ErrorCode.ALREADY_IN_CREW, "신청자가 이미 크루에 소속돼 있다");
     }
     events.publishEvent(
         new JoinRequestDecidedEvent(requestId, membership.crewId(), request.getUserId(), approve));

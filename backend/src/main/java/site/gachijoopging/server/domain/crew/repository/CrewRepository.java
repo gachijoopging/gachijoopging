@@ -73,6 +73,14 @@ public interface CrewRepository extends JpaRepository<Crew, UUID> {
       nativeQuery = true)
   int countPendingJoinRequests(@Param("crewId") UUID crewId);
 
+  // 소속·대기 신청은 사람 단위 불변식이라 한 사람의 가입·신청·만들기를 줄 세운다. 크루 잠금보다 먼저 잡는다.
+  // users 는 user 도메인 테이블이라 행 잠금 대신 advisory lock 을 쓴다
+  @Query(
+      value =
+          "SELECT 1 FROM (SELECT pg_advisory_xact_lock(hashtextextended(CAST(:userId AS text), 0))) l",
+      nativeQuery = true)
+  int lockUser(@Param("userId") UUID userId);
+
   @Query(
       value =
           "SELECT EXISTS (SELECT 1 FROM crew_expulsions WHERE crew_id = :crewId AND user_id = :userId)",

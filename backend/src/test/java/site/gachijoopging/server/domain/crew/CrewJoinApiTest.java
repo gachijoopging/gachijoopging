@@ -207,6 +207,24 @@ class CrewJoinApiTest extends IntegrationTest {
   }
 
   @Test
+  void 한_사람이_공개_가입과_다른_크루_신청을_동시에_하면_하나만_된다() throws Exception {
+    String 공개_크루 = 공개_크루를_만든다(가입한다(mockMvc, "join-mix-open-leader@test.io"));
+    String 비공개_크루 = 크루를_만든다(가입한다(mockMvc, "join-mix-closed-leader@test.io"));
+    TestAccount 나 = 가입한다(mockMvc, "join-mix-me@test.io");
+
+    assertThat(동시에(() -> 신청한다(나, 공개_크루), () -> 신청한다(나, 비공개_크루)))
+        .containsExactlyInAnyOrder(201, 409);
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT (SELECT count(*) FROM crew_members WHERE user_id = ?)"
+                    + " + (SELECT count(*) FROM crew_join_requests WHERE user_id = ? AND status = 'PENDING')",
+                Integer.class,
+                나.id(),
+                나.id()))
+        .isEqualTo(1);
+  }
+
+  @Test
   void 크루장은_대기_신청을_먼저_신청한_순으로_커서로_본다() throws Exception {
     TestAccount 크루장 = 가입한다(mockMvc, "join-leader-6@test.io");
     String 크루 = 크루를_만든다(크루장);
