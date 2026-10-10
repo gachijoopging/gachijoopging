@@ -7,12 +7,14 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.jayway.jsonpath.JsonPath;
+import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -94,6 +96,43 @@ class DemoSeedRunnerTest extends IntegrationTest {
     String 결과 = jdbcTemplate.queryForObject(대조, String.class, 데모_크루, 데모_크루);
     String[] 양쪽 = 결과.split("=");
     assertThat(양쪽[0]).isEqualTo(양쪽[1]);
+  }
+
+  @Test
+  void 리셋_SQL_뒤_다시_돌리면_데모_상태로_돌아가고_통계가_두_배가_되지_않는다() throws Exception {
+    UUID 데모_크루 = DemoSeedRunner.id("crew:demo");
+    UUID 게스트 = DemoSeedRunner.id("user:guest");
+    jdbcTemplate.update(
+        "INSERT INTO crew_members (crew_id, user_id, joined_at) VALUES (?, ?, now())", 데모_크루, 게스트);
+    jdbcTemplate.update(
+        "INSERT INTO crew_join_requests (id, crew_id, user_id, status, created_at, decided_at)"
+            + " VALUES (?, ?, ?, 'APPROVED', now(), now())",
+        UUID.randomUUID(),
+        데모_크루,
+        게스트);
+
+    jdbcTemplate.execute(
+        new String(
+            new ClassPathResource("seed/demo-reset.sql").getInputStream().readAllBytes(),
+            StandardCharsets.UTF_8));
+    runner.run(null);
+
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM crew_members WHERE crew_id = ?", Integer.class, 데모_크루))
+        .isEqualTo(4);
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM users WHERE id = ?", Integer.class, 게스트))
+        .isEqualTo(1);
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT (SELECT sum(item_count) FROM crew_daily_stats WHERE crew_id = ?)"
+                    + " = (SELECT sum(item_count) FROM activities WHERE crew_id = ?)",
+                Boolean.class,
+                데모_크루,
+                데모_크루))
+        .isTrue();
   }
 
   @Test
