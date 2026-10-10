@@ -94,6 +94,17 @@ test('검색 중 다른 기기에서 신청해 409 가 오면 승인 대기로 �
   expect(mockReset).toHaveBeenCalledWith({ index: 0, routes: [{ name: '(onboarding)/pending-approval', params: { flash: '승인 대기 중인 가입 요청이 있어요.' } }] });
 });
 
+test('가입 실패 뒤 새로고침이 409 면 시트가 내려간 뒤 홈으로 간다', async () => {
+  const { ApiError } = require('../api/client');
+  mockMutate.mockRejectedValue(new ApiError('CREW_FULL'));
+  await openCrew('c001');
+  mockGet.mockRejectedValueOnce(new ApiError('ALREADY_IN_CREW'));
+  await act(async () => sheetButton().props.onPress());
+  expect(mockReset).not.toHaveBeenCalled();
+  await act(async () => find('BottomSheet', (p) => p.title === '한강줍깅크루')[0].props.onClosed());
+  expect(mockReset).toHaveBeenCalledWith({ index: 0, routes: [{ name: '(tabs)', params: { screen: 'index', params: { flash: '이미 크루에 소속돼 있어요.' } } }] });
+});
+
 test('정원이 찬 크루는 공개여도 가입 버튼이 꺼져 있다', async () => {
   await openCrew('c002');
   expect(sheetButton().props.disabled).toBe(true);

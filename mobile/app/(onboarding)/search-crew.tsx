@@ -69,13 +69,19 @@ export default function SearchCrewScreen() {
   const busy = useRef(false);
   // 시트가 다 내려간 뒤에 넘어간다. 내려가는 중에 화면을 바꾸면 시트가 다음 화면 위에 겹친다
   const afterClose = useRef<Leave | null>(null);
+  const sheetShown = useRef(false);
+  sheetShown.current = sheetOpen;
   usePreventBack(joining);
 
   // 검색 도중 다른 기기에서 가입·신청했으면 GET /crews 도 409 다. 다시 불러도 같으니 옮겨 보낸다
   const moveOn = useCallback((e: unknown) => {
     const moved = mapJoinError(e).moved;
     if (!moved) return false;
-    finishOnboarding(navigation, moved.to, { flash: moved.flash });
+    // 가입 실패 뒤 새로고침이면 시트가 열려 있다. 시트가 다 내려간 뒤에 넘어간다
+    if (sheetShown.current) {
+      afterClose.current = moved;
+      setSheetOpen(false);
+    } else finishOnboarding(navigation, moved.to, { flash: moved.flash });
     return true;
   }, [navigation]);
 
