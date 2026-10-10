@@ -19,7 +19,7 @@ export function joinDecisionOutcome(
   decision: JoinDecision,
   nickname: string,
   error: unknown,
-): { removeRow: boolean; message: string | null; denied?: true } {
+): { removeRow: boolean; message: string | null; denied?: true; full?: true } {
   if (error == null) {
     return {
       removeRow: true,
@@ -27,6 +27,8 @@ export function joinDecisionOutcome(
     };
   }
   if (alreadyChanged(error)) return { removeRow: true, message: '이미 처리된 가입 신청이에요.' };
+  // 정원이 차도 신청은 대기 그대로다. 거절은 여전히 할 수 있어 행을 남긴다
+  if (error instanceof ApiError && error.code === 'CREW_FULL') return { removeRow: false, message: '크루 정원(50명)이 차서 승인할 수 없어요.', full: true };
   if (error instanceof ApiError && error.code === 'FORBIDDEN') return { removeRow: false, message: null, denied: true };
   return { removeRow: false, message: '가입 신청을 처리하지 못했어요. 다시 시도해 주세요.' };
 }

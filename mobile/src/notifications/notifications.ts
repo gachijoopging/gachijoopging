@@ -1,5 +1,5 @@
 import type { Href } from 'expo-router';
-import type { MembershipStatus } from '../auth/destination';
+import { resolveDestination, type Me } from '../auth/destination';
 
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
@@ -25,7 +25,7 @@ export type NotificationDestination = Href;
 /** null 이면 이동하지 않고 알림 목록에 남는다 */
 export function notificationDestination(
   item: { type: string; target: Target },
-  membership: MembershipStatus,
+  membership: Me['membership'],
 ): NotificationDestination | null {
   const { type, id } = item.target;
   switch (type) {
@@ -41,9 +41,11 @@ export function notificationDestination(
       return { pathname: '/crew/chat' };
     case 'LIVE':
       return { pathname: '/crew/live' };
+    case 'MEMBERS':
+      return { pathname: '/crew/members' };
     case 'CREW':
-      if (membership === 'MEMBER') return { pathname: '/(tabs)' };
-      return { pathname: item.type === 'JOIN_REJECTED' ? '/pending-approval' : '/crew-choice' };
+      // 승인·거절 알림은 지금 소속으로 간다. 미확인 거절이면 1-9 거절 안내, 이미 확인했으면 1-6
+      return { pathname: resolveDestination({ profileComplete: true, membership }) };
     default:
       return null;
   }

@@ -36,6 +36,14 @@ describe('가입 신청 처리 결과', () => {
     expect(joinDecisionOutcome('REJECT', '지수', new ApiError('CONFLICT'))).toEqual(already);
   });
 
+  test('정원이 차서 승인이 막히면(409 CREW_FULL) 행을 남긴다', () => {
+    expect(joinDecisionOutcome('APPROVE', '지수', new ApiError('CREW_FULL'))).toEqual({
+      removeRow: false,
+      message: '크루 정원(50명)이 차서 승인할 수 없어요.',
+      full: true,
+    });
+  });
+
   test('그 밖의 실패·오프라인이면 행을 남겨 다시 시도하게 한다', () => {
     const retry = { removeRow: false, message: '가입 신청을 처리하지 못했어요. 다시 시도해 주세요.' };
     expect(joinDecisionOutcome('APPROVE', '지수', new ApiError('INTERNAL'))).toEqual(retry);

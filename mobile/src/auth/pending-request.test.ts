@@ -10,8 +10,8 @@ test('신청 조회 뒤 소속이 바뀌면 최신 소속으로 이동한다', (
   expect(resolvePendingRequest(undefined, 'MEMBER')).toBe('home');
 });
 
-test('거절과 취소·없는 신청을 구분한다', () => {
+test('거절은 안내를 보이고, 취소·없는 신청은 크루 선택으로 보낸다', () => {
   expect(resolvePendingRequest('REJECTED', 'NONE')).toBe('rejected');
-  expect(resolvePendingRequest('CANCELED', 'NONE')).toBe('empty');
-  expect(resolvePendingRequest(undefined, 'NONE')).toBe('empty');
+  expect(resolvePendingRequest('CANCELED', 'NONE')).toBe('choice');
+  expect(resolvePendingRequest(undefined, 'NONE')).toBe('choice');
 });

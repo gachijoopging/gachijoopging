@@ -1,10 +1,8 @@
 import {
   normalizeCrewName,
-  normalizeInviteCode,
   normalizeNickname,
   validateCrewName,
   validateEmail,
-  validateInviteCode,
   validateNickname,
   validatePassword,
 } from './validators';
@@ -76,17 +74,5 @@ describe('validateCrewName', () => {
   test('1자와 21자는 길이 오류', () => {
     expect(validateCrewName('가')).toBe('크루 이름은 2자 이상이어야 해요.');
     expect(validateCrewName('가'.repeat(21))).toBe('크루 이름은 20자까지 입력할 수 있어요.');
-  });
-});
-
-describe('normalizeInviteCode', () => {
-  test('앞뒤 공백만 제거하고 대소문자를 유지한다', () => {
-    expect(normalizeInviteCode(' HG-7k2P ')).toBe('HG-7k2P');
-  });
-});
-
-describe('validateInviteCode', () => {
-  test('빈 값은 전용 문구', () => {
-    expect(validateInviteCode(' ')).toBe('초대 코드를 입력해 주세요.');
   });
 });

@@ -33,6 +33,8 @@ type Me = {
   hasPassword: boolean;
   /** 크루 소속이 아니면(가입 전·승인 대기) 크루 관련 행을 숨기고 계정 행만 보인다 */
   member: boolean;
+  /** 승인 대기 중. 탈퇴하면 그 신청도 취소된다 */
+  pending: boolean;
   crewName: string | null;
   isLeader: boolean;
   shareLocationDefault: boolean;
@@ -50,16 +52,16 @@ type Modal =
 
 const api: ApiClient = createMockClient({ delayMs: 300 });
 
-const CONFIRM: Record<Kind, { title: string; body: (crew: string) => string; cancel: string; ok: string }> = {
+const CONFIRM: Record<Kind, { title: string; body: (crew: string, pending: boolean) => string; cancel: string; ok: string }> = {
   leave: {
     title: '크루를 나갈까요?',
-    body: (crew) => `${crew}에서 나가요. 크루원 목록에서 빠지고, 활동 기록과 게시물은 그대로 남아요. 다시 가입하려면 초대 코드가 필요해요.`,
+    body: (crew) => `${crew}에서 나가요. 크루원 목록에서 빠지고, 활동 기록과 게시물은 그대로 남아요. 다시 들어오려면 크루 찾기에서 다시 가입해야 해요.`,
     cancel: '돌아가기',
     ok: '나가기',
   },
   withdraw: {
     title: '정말 탈퇴할까요?',
-    body: () => '계정과 활동 상세 기록(경로 포함)이 삭제되고 되돌릴 수 없어요. 게시물과 크루 합산 기록은 "탈퇴한 크루원" 이름으로 남아요.',
+    body: (_, pending) => `계정과 활동 상세 기록(경로 포함)이 삭제되고 되돌릴 수 없어요. 게시물과 크루 합산 기록은 "탈퇴한 크루원" 이름으로 남아요.${pending ? ' 기다리던 가입 신청도 취소돼요.' : ''}`,
     cancel: '계속 사용하기',
     ok: '탈퇴하기',
   },
@@ -105,6 +107,7 @@ export default function SettingsScreen() {
       setMe({
         hasPassword: data.hasPassword,
         member: data.membership.status === 'MEMBER',
+        pending: data.membership.status === 'PENDING',
         crewName: data.membership.crew?.name ?? null,
         isLeader: !!data.membership.crew?.isLeader,
         shareLocationDefault: data.settings.shareLocationDefault,
@@ -217,9 +220,9 @@ export default function SettingsScreen() {
       ) : (
         <>
           {failed || offline ? <Banner tone="warn">인터넷 연결을 확인해 주세요.</Banner> : null}
-          <Card style={{ paddingVertical: 0 }}>
+          {/* 크루에 소속돼야 앱을 쓴다. 가입 전·승인 대기에는 로그아웃·회원 탈퇴만 보인다 */}
+          {me.member ? <Card style={{ paddingVertical: 0 }}>
             <ListRow title="프로필 수정" subtitle="닉네임과 사진을 바꿔요." onPress={() => router.push('/settings/profile')} />
-            {me.member ? <>
             <ToggleRow
               title="위치 공유 기본값"
               subtitle="활동을 시작할 때 미리 선택돼요."
@@ -234,7 +237,6 @@ export default function SettingsScreen() {
               disabled={pendingSettings.has('notifyActivityStart')}
               onToggle={() => toggle('notifyActivityStart')}
             />
-            </> : null}
             {me.marketing ? (
               <ToggleRow
                 title="마케팅 정보 수신"
@@ -245,7 +247,7 @@ export default function SettingsScreen() {
               />
             ) : null}
             <ListRow title="차단 관리" divider={false} onPress={() => router.push('/settings/blocks')} />
-          </Card>
+          </Card> : null}
 
           <Card style={{ paddingVertical: 0 }}>
             {me.member ? (
@@ -258,7 +260,7 @@ export default function SettingsScreen() {
                 onPress={() => ask('leave')}
               />
             ) : null}
-            {me.hasPassword ? (
+            {me.member && me.hasPassword ? (
               <ListRow title="비밀번호 재설정" subtitle="재설정 메일을 보낼 수 있어요." onPress={() => router.push('/reset-password')} />
             ) : null}
             <ListRow title="로그아웃" disabled={busy} onPress={() => ask('logout')} />
@@ -329,7 +331,7 @@ export default function SettingsScreen() {
               ? modal.action === 'withdraw'
                 ? DISSOLVE.withdraw
                 : DISSOLVE.leave
-              : CONFIRM[modal.action].body(me?.crewName ?? '')}
+              : CONFIRM[modal.action].body(me?.crewName ?? '', !!me?.pending)}
           </Txt>
         ) : null}
       </Dialog>

@@ -32,7 +32,7 @@ describe('resolveDestination', () => {
     expect(resolveDestination(me)).toBe('/nickname');
   });
 
-  test('소속 없음(NONE)이면 크루 만들기/가입하기로', () => {
+  test('소속 없음(NONE)이면 크루 선택으로', () => {
     const me: Me = { profileComplete: true, membership: { status: 'NONE' } };
     expect(resolveDestination(me)).toBe('/crew-choice');
   });
@@ -45,6 +45,12 @@ describe('resolveDestination', () => {
   test('크루원(MEMBER)이면 탭으로', () => {
     const me: Me = { profileComplete: true, membership: { status: 'MEMBER' } };
     expect(resolveDestination(me)).toBe('/(tabs)');
+  });
+
+  test('확인하지 않은 거절이 있으면 크루 선택보다 거절 안내를 먼저 보인다', () => {
+    const rejection = { requestId: 'jr001', crew: { id: 'c001', name: '한강줍깅크루' }, decidedAt: '2026-10-01T00:00:00Z' };
+    expect(resolveDestination({ profileComplete: true, membership: { status: 'NONE', rejection } })).toBe('/pending-approval');
+    expect(resolveDestination({ profileComplete: true, membership: { status: 'NONE', rejection: null } })).toBe('/crew-choice');
   });
 
   test('membership 이 없으면 NONE 과 동일하게 취급한다', () => {

@@ -40,16 +40,40 @@ export function mapNicknameError(error: unknown): NicknameFieldError {
   return { banner: '저장하지 못했어요. 다시 시도해 주세요.' };
 }
 
-export type CrewCreateError = { field?: string; banner?: string; alreadyInCrew?: boolean };
+/** 소속·대기 상태가 화면이 알던 것과 달라 다른 화면으로 보내야 하는 오류 */
+export type MembershipMoved = { flash: string; to: '/(tabs)' | '/pending-approval' };
 
-/** 1-6 크루 만들기 시트 */
+function membershipMoved(error: ApiError, pendingFlash: string): MembershipMoved | undefined {
+  if (error.code === 'ALREADY_IN_CREW') return { flash: '이미 크루에 소속돼 있어요.', to: '/(tabs)' };
+  if (error.code === 'JOIN_REQUEST_PENDING') return { flash: pendingFlash, to: '/pending-approval' };
+  return undefined;
+}
+
+export type CrewCreateError = { field?: string; banner?: string; moved?: MembershipMoved };
+
+/** 1-7 크루 만들기 */
 export function mapCrewCreateError(error: unknown): CrewCreateError {
   if (error instanceof ApiError) {
-    if (error.code === 'ALREADY_IN_CREW') return { banner: '이미 크루에 소속돼 있어요.', alreadyInCrew: true };
+    const moved = membershipMoved(error, '승인 대기 중인 가입 요청이 있어요. 요청을 취소한 뒤 만들 수 있어요.');
+    if (moved) return { moved };
     if (error.code === 'CREW_NAME_TAKEN') return { field: '이미 사용 중인 크루 이름이에요.' };
     if (error.code === 'VALIDATION') return { field: '크루 이름을 다시 확인해 주세요.' };
   }
   return { banner: '크루를 만들지 못했어요. 네트워크 상태를 확인하고 다시 시도해 주세요.' };
+}
+
+export type JoinError = { banner?: string; blocked?: boolean; gone?: boolean; refresh?: boolean; moved?: MembershipMoved };
+
+/** 1-8 가입 확인 시트. blocked 면 가입 버튼을 끈다 */
+export function mapJoinError(error: unknown): JoinError {
+  if (error instanceof ApiError) {
+    const moved = membershipMoved(error, '승인 대기 중인 가입 요청이 있어요.');
+    if (moved) return { moved };
+    if (error.code === 'CREW_FULL') return { banner: '정원(50명)이 차서 가입할 수 없어요. 자리가 생기면 다시 신청할 수 있어요.', blocked: true, refresh: true };
+    if (error.code === 'EXPELLED_FROM_CREW') return { banner: '이 크루에서 내보내져 다시 가입할 수 없어요.', blocked: true };
+    if (error.code === 'NOT_FOUND') return { gone: true, refresh: true };
+  }
+  return { banner: '가입하지 못했어요. 네트워크 상태를 확인하고 다시 시도해 주세요.' };
 }
 
 /** 1-5 A 재설정 메일 발송 — 서버는 항상 204 라 실패는 네트워크·서버 오류뿐이다 */

@@ -12,5 +12,7 @@ export const ROUTE_NAME: Record<Destination, string> = {
 };
 
 export function finishOnboarding(navigation: Pick<OnboardingNavigation, 'reset'>, destination: Destination, params?: { flash: string }) {
-  navigation.reset({ index: 0, routes: [{ name: ROUTE_NAME[destination], params }] });
+  // 탭은 내비게이터라 파라미터를 받는 쪽이 첫 탭(홈) 화면이어야 스낵바가 뜬다
+  const routeParams = destination === '/(tabs)' && params ? { screen: 'index', params } : params;
+  navigation.reset({ index: 0, routes: [{ name: ROUTE_NAME[destination], params: routeParams }] });
 }
