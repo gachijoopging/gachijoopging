@@ -161,6 +161,14 @@ app:
       - 어드민
       - admin
       - 가치줍깅
+  seed:
+    demo:
+      # 데모 계정·크루를 넣는 러너. 스테이징이 없어(ADR-0005) 운영 서버에서 이 플래그로만 켠다
+      enabled: ${DEMO_SEED_ENABLED:false}
+      member-email: ${DEMO_MEMBER_EMAIL:}
+      member-password: ${DEMO_MEMBER_PASSWORD:}
+      guest-email: ${DEMO_GUEST_EMAIL:}
+      guest-password: ${DEMO_GUEST_PASSWORD:}
 
 live:
   # presence 임계값 — 근거는 ERD §설계 근거 "활동 중 위치" · §보존·정리. 30초는 앱의 발신 주기라 서버가 읽지 않는다
