@@ -36,7 +36,7 @@ const CONFIRM: Record<ReportAction, { title: (r: Report) => string; body: string
   DELETE: { title: () => '신고 대상을 삭제할까요?', body: '삭제한 게시물·댓글·메시지는 되돌릴 수 없어요.', label: '대상 삭제' },
   KICK: {
     title: (r) => `${r.targetPreview} 님을 크루에서 추방할까요?`,
-    body: '활동 기록과 크루 합산은 남아요. 유효한 초대 코드로 다시 가입 신청할 수 있어요.',
+    body: '활동 기록과 크루 합산은 남아요. 추방된 사람은 이 크루에 다시 가입하거나 가입 신청할 수 없어요.',
     label: '추방',
   },
 };

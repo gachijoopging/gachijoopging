@@ -11,6 +11,7 @@ import {
   Banner,
   BottomSheet,
   Button,
+  Card,
   Dialog,
   ErrorState,
   Field,
@@ -18,14 +19,31 @@ import {
   Loading,
   NumberStepper,
   Screen,
+  SelectRow,
   Snackbar,
+  Txt,
   space,
 } from 'design-system/src';
 import { ApiError, createMockClient, type ApiClient } from '../../src/api/client';
-import { CREW_INTRO_MAX, CREW_NAME_MAX, crewChanged, crewFormErrors, crewPatch, type CrewForm } from '../../src/crew/crew-edit';
+import { CREW_INTRO_MAX, CREW_NAME_MAX, crewChanged, crewFormErrors, crewPatch, openingOverflows, opensCrew, type CrewForm } from '../../src/crew/crew-edit';
+import { REGIONS, regionName, type JoinPolicy, type Region } from '../../src/crew/region';
 import { usePreventBack } from '../../src/auth/usePreventBack';
 
-type Original = { name: string; intro: string; goalCount: number; photoUrl: string | null };
+type Original = {
+  name: string;
+  intro: string;
+  goalCount: number;
+  region: Region;
+  joinPolicy: JoinPolicy;
+  photoUrl: string | null;
+  memberCount: number;
+  pendingJoinRequests: number;
+};
+
+const POLICIES: { value: JoinPolicy; title: string; subtitle: string }[] = [
+  { value: 'OPEN', title: '공개', subtitle: '승인 없이 바로 가입' },
+  { value: 'APPROVAL', title: '비공개', subtitle: '크루장이 승인해야 가입' },
+];
 
 const api: ApiClient = createMockClient({ delayMs: 300 });
 
@@ -39,6 +57,8 @@ export default function EditCrewScreen() {
   const [nameError, setNameError] = useState<string>();
   const [saving, setSaving] = useState(false);
   const [photoSheet, setPhotoSheet] = useState(false);
+  const [regionSheet, setRegionSheet] = useState(false);
+  const [openDialog, setOpenDialog] = useState<'confirm' | 'full' | null>(null);
   const [pendingLeave, setPendingLeave] = useState<(() => void) | null>(null);
   const [snackbar, setSnackbar] = useState<string | null>(null);
   const [photo, setPhoto] = useState<{ uri: string; mediaId: string } | null>(null);
@@ -56,9 +76,18 @@ export default function EditCrewScreen() {
     try {
       const { data } = await api.get('GET /crew');
       if (!data.isLeader) return setDenied(true);
-      const next = { name: data.name, intro: data.intro ?? '', goalCount: data.goalCount, photoUrl: data.photoUrl };
+      const next: Original = {
+        name: data.name,
+        intro: data.intro ?? '',
+        goalCount: data.goalCount,
+        region: data.region,
+        joinPolicy: data.joinPolicy,
+        photoUrl: data.photoUrl,
+        memberCount: data.memberCount,
+        pendingJoinRequests: data.pendingJoinRequests,
+      };
       setOriginal(next);
-      setForm({ name: next.name, intro: next.intro, goalCount: next.goalCount });
+      setForm({ name: next.name, intro: next.intro, goalCount: next.goalCount, region: next.region, joinPolicy: next.joinPolicy });
     } catch {
       setFailed(true);
     }
@@ -85,21 +114,46 @@ export default function EditCrewScreen() {
 
   const update = (next: Partial<CrewForm>) => setForm((prev) => (prev ? { ...prev, ...next } : prev));
 
+  const opening = !!original && !!patch && opensCrew(original, patch);
+
+  const readCounts = () =>
+    api.get('GET /crew').then(
+      ({ data }) => ({ memberCount: data.memberCount, pendingJoinRequests: data.pendingJoinRequests }),
+      () => null,
+    );
+
+  const requestSave = async () => {
+    if (!original || !patch || busy.current) return;
+    if (!opening) return void save();
+    // 정원 초과 안내를 따라 신청을 정리하고 돌아왔을 수 있어 인원은 저장 직전에 다시 읽는다
+    busy.current = true;
+    setSaving(true);
+    const counts = (await readCounts()) ?? original;
+    busy.current = false;
+    setSaving(false);
+    setOriginal((o) => (o ? { ...o, ...counts } : o));
+    setOpenDialog(openingOverflows(counts.memberCount, counts.pendingJoinRequests) ? 'full' : 'confirm');
+  };
+
   const save = async () => {
     // 같은 프레임의 연속 탭은 saving 상태가 반영되기 전이라 ref 로 막는다
-    if (busy.current || !patch) return;
+    if (busy.current || !patch || !original) return;
     busy.current = true;
+    setOpenDialog(null);
     setSaving(true);
     try {
       await api.mutate('PATCH /crew', patch);
       saved.current = true;
+      // 응답에 자동 가입 인원이 없고 추방 이력 신청은 남으므로 가입 인원을 세어 말하지 않는다
+      const flash = opening ? '공개 크루로 바꿨어요.' : '크루 정보를 저장했어요.';
       // 떠나는 화면은 다시 그리지 않는다. 전환 중에 입력·스테퍼가 되살아나면 안드로이드 Fabric 이
       // 사라지는 뷰를 다시 붙이려다 "child already has a parent" 로 죽는다
-      router.dismissTo({ pathname: '/crew/members', params: { flash: '크루 정보를 저장했어요.' } });
+      router.dismissTo({ pathname: '/crew/members', params: { flash } });
       return;
     } catch (e) {
       if (e instanceof ApiError && e.code === 'FORBIDDEN') setDenied(true);
-      else if (e instanceof ApiError && e.code === 'CONFLICT') setNameError('이미 사용 중인 크루 이름이에요.');
+      else if (e instanceof ApiError && e.code === 'CREW_FULL') setOpenDialog('full');
+      else if (e instanceof ApiError && e.code === 'CREW_NAME_TAKEN') setNameError('이미 사용 중인 크루 이름이에요.');
       else if (e instanceof ApiError && e.code === 'VALIDATION') setNameError('크루 이름을 다시 확인해 주세요.');
       else if (form?.photoMediaId) setSnackbar('사진은 준비됐어요. 저장을 다시 시도해 주세요.');
       else setSnackbar('크루 정보를 저장하지 못했어요. 다시 시도해 주세요.');
@@ -210,6 +264,31 @@ export default function EditCrewScreen() {
             multiline
             editable={!saving}
           />
+          <View style={{ gap: space.xs }}>
+            <Txt variant="label">활동 지역</Txt>
+            <Card style={{ paddingVertical: 0 }}>
+              <ListRow
+                title={regionName(form.region)}
+                accessibilityLabel={`활동 지역, ${regionName(form.region)}, 바꾸기`}
+                disabled={saving}
+                divider={false}
+                onPress={() => setRegionSheet(true)}
+              />
+            </Card>
+          </View>
+          <View style={{ gap: space.xs }} accessibilityLabel="가입 방식">
+            <Txt variant="label">가입 방식</Txt>
+            {POLICIES.map((p) => (
+              <SelectRow
+                key={p.value}
+                title={p.title}
+                subtitle={p.subtitle}
+                selected={form.joinPolicy === p.value}
+                disabled={saving}
+                onPress={() => update({ joinPolicy: p.value })}
+              />
+            ))}
+          </View>
           <NumberStepper
             label="14일 목표"
             value={form.goalCount}
@@ -226,7 +305,7 @@ export default function EditCrewScreen() {
             fullWidth
             loading={saving}
             disabled={!patch || uploading}
-            onPress={save}
+            onPress={requestSave}
           />
         </>
       )}
@@ -246,6 +325,60 @@ export default function EditCrewScreen() {
           />
         ) : null}
       </BottomSheet>
+
+      <BottomSheet visible={regionSheet} onClose={() => setRegionSheet(false)} title="활동 지역">
+        {REGIONS.map(([code, label]) => (
+          <ListRow
+            key={code}
+            title={label}
+            chevron={false}
+            emphasized={code === form?.region}
+            onPress={() => {
+              update({ region: code });
+              setRegionSheet(false);
+            }}
+          />
+        ))}
+      </BottomSheet>
+
+      <Dialog
+        visible={openDialog === 'confirm'}
+        onClose={() => setOpenDialog(null)}
+        title="공개 크루로 바꿀까요?"
+        actions={
+          <>
+            <Button label="그대로 두기" variant="ghost" size="md" onPress={() => setOpenDialog(null)} />
+            <Button label="공개로 바꾸기" size="md" onPress={() => void save()} />
+          </>
+        }
+      >
+        <Txt variant="body">
+          {`이제부터 누구나 승인 없이 바로 가입해요.${original?.pendingJoinRequests ? ` 지금 기다리는 가입 신청 ${original.pendingJoinRequests}건도 바로 가입돼요. 내보낸 적 있는 사람의 신청은 그대로 남아요.` : ''}`}
+        </Txt>
+      </Dialog>
+
+      <Dialog
+        visible={openDialog === 'full'}
+        onClose={() => setOpenDialog(null)}
+        title="공개로 바꿀 수 없어요"
+        actions={
+          <>
+            <Button label="닫기" variant="ghost" size="md" onPress={() => setOpenDialog(null)} />
+            <Button
+              label="가입 신청 관리로"
+              size="md"
+              onPress={() => {
+                setOpenDialog(null);
+                router.push('/crew/join-requests');
+              }}
+            />
+          </>
+        }
+      >
+        <Txt variant="body">
+          {`지금 크루원 ${original?.memberCount ?? 0}명과 기다리는 신청 ${original?.pendingJoinRequests ?? 0}건을 합하면 정원(50명)을 넘어요. 가입 신청을 정리한 뒤 다시 바꿔 주세요.`}
+        </Txt>
+      </Dialog>
 
       <Dialog
         visible={pendingLeave != null}

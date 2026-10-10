@@ -24,6 +24,7 @@ import { ApiError, createMockClient, type ApiClient } from '../../src/api/client
 import type { MOCKS } from '../../src/api/mocks.generated';
 import { monthDay } from '../../src/crew/crew';
 import { joinDecisionOutcome, type JoinDecision } from '../../src/crew/manage';
+import { CREW_CAPACITY } from '../../src/crew/region';
 
 type JoinRequest = (typeof MOCKS)['GET /crew/join-requests']['data']['items'][number];
 
@@ -32,6 +33,7 @@ const api: ApiClient = createMockClient({ delayMs: 300 });
 export default function ManageJoinRequestsScreen() {
   const [requests, setRequests] = useState<readonly JoinRequest[] | null>(null);
   const [pending, setPending] = useState(0);
+  const [full, setFull] = useState(false);
   const [isLeader, setIsLeader] = useState<boolean | null>(null);
   const [failed, setFailed] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -69,6 +71,7 @@ export default function ManageJoinRequestsScreen() {
     }
     setIsLeader(crewRes.value.data.isLeader);
     setPending(crewRes.value.data.pendingJoinRequests);
+    setFull(crewRes.value.data.memberCount >= CREW_CAPACITY);
     setRequests(listRes.value.data.items);
     cursor.current = listRes.value.data.nextCursor;
     setFailed(false);
@@ -122,6 +125,7 @@ export default function ManageJoinRequestsScreen() {
       setPending((n) => Math.max(0, n - 1));
     }
     if (outcome.denied) setIsLeader(false);
+    if (outcome.full) setFull(true);
     generation.current += 1;
     setBusy(null);
     if (outcome.message) setSnackbar(outcome.message);
@@ -164,6 +168,7 @@ export default function ManageJoinRequestsScreen() {
           ListHeaderComponent={
             requests.length > 0 ? (
               <View style={{ gap: space.md, paddingBottom: space.md }}>
+                {full ? <Banner tone="warn">{`크루원이 ${CREW_CAPACITY}명이라 승인할 수 없어요.`}</Banner> : null}
                 <Txt variant="section" accessibilityRole="header">{`대기 중인 가입 신청 ${pending}건`}</Txt>
                 {failed ? <Banner tone="warn">인터넷 연결을 확인해 주세요.</Banner> : null}
               </View>

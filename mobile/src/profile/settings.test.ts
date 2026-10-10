@@ -90,7 +90,7 @@ test('프로필 사진 업로드 응답이 유실돼도 같은 업로드 id로 �
   expect(uploads.map(([, body]) => body.get('mediaId'))).toEqual(['upload-1', 'upload-1']);
 });
 
-test('크루가 없거나 승인 대기여도 설정에 머물러 계정 행만 보이고 로그아웃할 수 있다', async () => {
+test('크루가 없거나 승인 대기면 로그아웃·회원 탈퇴만 보이고 로그아웃할 수 있다', async () => {
   const { router } = require('expo-router');
   for (const status of ['NONE', 'PENDING']) {
     router.replace.mockClear();
@@ -99,6 +99,7 @@ test('크루가 없거나 승인 대기여도 설정에 머물러 계정 행만 
     expect(router.replace).not.toHaveBeenCalled();
     expect(row('크루 나가기')).toBeUndefined();
     expect(row('위치 공유 기본값')).toBeUndefined();
+    for (const hidden of ['프로필 수정', '마케팅 정보 수신', '차단 관리', '비밀번호 재설정']) expect(row(hidden)).toBeUndefined();
     expect(row('로그아웃')).toBeDefined();
     expect(row('회원 탈퇴')).toBeDefined();
     act(() => tree.unmount());
@@ -108,6 +109,15 @@ test('크루가 없거나 승인 대기여도 설정에 머물러 계정 행만 
   await act(async () => button('로그아웃')!.props.onPress());
   expect(mockForget).toHaveBeenCalled();
   expect(mockDismiss).toHaveBeenCalledWith('/start');
+});
+
+test('승인 대기 중에 탈퇴하면 기다리던 가입 신청도 취소된다고 알린다', async () => {
+  mockGet.mockImplementation((key: string) => Promise.resolve({ data: key === 'GET /users/me' ? { ...user, membership: { status: 'PENDING', crew: null } } : key === 'GET /users/me/agreements' ? agreements : null }));
+  await mount();
+  await act(async () => row('회원 탈퇴').props.onPress());
+  const dialog = tree.root.findAllByType('Dialog').find((node: any) => node.props.visible);
+  const body = dialog.findAllByType('Txt').map((node: any) => node.props.children).join('');
+  expect(body).toContain('기다리던 가입 신청도 취소돼요.');
 });
 
 test('동기화가 남아 막혔을 때 줍깅 탭으로 바로 갈 수 있다', async () => {

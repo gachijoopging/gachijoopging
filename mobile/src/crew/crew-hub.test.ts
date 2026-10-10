@@ -16,7 +16,7 @@ jest.mock('design-system/src', () => new Proxy(
 ));
 import Hub from '../../app/crew/members';
 
-const crew = (isLeader: boolean) => ({ data: { name: '한강줍깅크루', intro: '매주 토요일', goalCount: 300, photoUrl: null, memberCount: 2, isLeader, inviteCode: 'AB12CD', pendingJoinRequests: 1 } });
+const crew = (isLeader: boolean) => ({ data: { name: '한강줍깅크루', intro: '매주 토요일', goalCount: 300, photoUrl: null, memberCount: 2, isLeader, region: 'SEOUL', joinPolicy: 'APPROVAL', pendingJoinRequests: 1 } });
 const members = { data: [{ id: 'u1', nickname: '관열', photoUrl: null, isLeader: true, totalItems: 10, joinedAt: '2026-09-01T00:00:00Z' }] };
 
 let tree: ReactTestRenderer;
@@ -38,13 +38,19 @@ test('크루 정보와 크루원이 한 화면에 있다', async () => {
   expect(row('관열')).toBeDefined();
 });
 
-test('초대 코드는 화면을 옮기지 않고 시트로 연다', async () => {
+test('크루 카드에 활동 지역·가입 방식, 크루원 수에 정원이 보인다', async () => {
   await mount(false);
-  const sheet = () => tree.root.find((n) => (n.type as unknown) === 'BottomSheet' && n.props.title === '초대 코드');
-  expect(sheet().props.visible).toBe(false);
-  act(() => row('초대 코드').props.onPress());
-  expect(sheet().props.visible).toBe(true);
-  expect(mockPush).not.toHaveBeenCalled();
+  expect(texts()).toContain('서울특별시');
+  expect(tree.root.findAll((n) => (n.type as unknown) === 'Badge' && n.props.label === '비공개')).toHaveLength(1);
+  expect(texts()).toContain('크루원 1/50명');
+});
+
+test('가입 신청 행은 크루장에게, 비공개 크루거나 대기 신청이 있을 때만 보인다', async () => {
+  await mount(false);
+  expect(row('가입 신청')).toBeUndefined();
+  act(() => tree.unmount());
+  await mount(true);
+  expect(row('가입 신청')).toBeDefined();
 });
 
 test('크루장만 신고 처리로 갈 수 있다', async () => {

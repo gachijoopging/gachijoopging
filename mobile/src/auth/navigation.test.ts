@@ -11,6 +11,12 @@ test('승인·생성 완료 후 뒤로 가기로 이전 온보딩에 돌아가�
   expect(navigation.reset).toHaveBeenCalledWith({ index: 0, routes: [{ name: '(tabs)' }] });
 });
 
+test('홈에 남길 문구는 탭 내비게이터가 아니라 홈 화면에 넘긴다', () => {
+  const navigation = { reset: jest.fn() };
+  finishOnboarding(navigation, '/(tabs)', { flash: '가입했어요.' });
+  expect(navigation.reset).toHaveBeenCalledWith({ index: 0, routes: [{ name: '(tabs)', params: { screen: 'index', params: { flash: '가입했어요.' } } }] });
+});
+
 // reset 은 URL 을 해석하지 않는다. 그룹 폴더가 빠진 이름은 조용히 아무 데도 가지 않는다
 test.each(Object.entries(ROUTE_NAME))('목적지 %s 의 reset 이름 %s 은 app/ 에 등록된 라우트다', (_, name) => {
   const base = resolve(__dirname, '../../app', name);

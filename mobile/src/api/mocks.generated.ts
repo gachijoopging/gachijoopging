@@ -114,8 +114,9 @@ export const MOCKS = {
         "withdrawn": false
       },
       "memberCount": 18,
+      "region": "SEOUL",
+      "joinPolicy": "APPROVAL",
       "goalCount": 300,
-      "inviteCode": "HG-7K2P",
       "pendingJoinRequests": 2,
       "pinnedNotice": {
         "id": "n01",
@@ -637,6 +638,58 @@ export const MOCKS = {
       ]
     }
   },
+  "GET /crews": {
+    "data": {
+      "items": [
+        {
+          "id": "c001",
+          "name": "한강줍깅크루",
+          "intro": "매주 토요일 아침 여의도",
+          "photoUrl": null,
+          "region": "SEOUL",
+          "joinPolicy": "APPROVAL",
+          "memberCount": 18,
+          "leader": {
+            "id": "u001",
+            "nickname": "관열",
+            "photoUrl": null,
+            "withdrawn": false
+          }
+        },
+        {
+          "id": "c002",
+          "name": "한강망원줍깅",
+          "intro": "",
+          "photoUrl": null,
+          "region": "SEOUL",
+          "joinPolicy": "OPEN",
+          "memberCount": 50,
+          "leader": {
+            "id": "u002",
+            "nickname": "상혁",
+            "photoUrl": null,
+            "withdrawn": false
+          }
+        },
+        {
+          "id": "c003",
+          "name": "여의도아침줍깅",
+          "intro": "평일 아침 30분",
+          "photoUrl": null,
+          "region": "SEOUL",
+          "joinPolicy": "OPEN",
+          "memberCount": 12,
+          "leader": {
+            "id": "u003",
+            "nickname": "도윤",
+            "photoUrl": null,
+            "withdrawn": false
+          }
+        }
+      ],
+      "nextCursor": null
+    }
+  },
   "GET /crews/join-requests/mine": {
     "data": {
       "id": "jr001",
@@ -652,21 +705,6 @@ export const MOCKS = {
       },
       "status": "PENDING",
       "createdAt": "2026-09-15T10:00:00Z"
-    }
-  },
-  "GET /crews/preview": {
-    "data": {
-      "id": "c001",
-      "name": "한강줍깅크루",
-      "memberCount": 18,
-      "photoUrl": null,
-      "intro": "매주 토요일 아침 여의도",
-      "leader": {
-        "id": "u001",
-        "nickname": "관열",
-        "photoUrl": null,
-        "withdrawn": false
-      }
     }
   },
   "GET /notices/{noticeId}": {
@@ -837,7 +875,8 @@ export const MOCKS = {
           "id": "c001",
           "name": "한강줍깅크루",
           "isLeader": true
-        }
+        },
+        "rejection": null
       }
     }
   },
@@ -953,8 +992,9 @@ export const MOCKS = {
         "withdrawn": false
       },
       "memberCount": 18,
+      "region": "SEOUL",
+      "joinPolicy": "APPROVAL",
       "goalCount": 300,
-      "inviteCode": "HG-7K2P",
       "pendingJoinRequests": 2,
       "pinnedNotice": {
         "id": "n01",
@@ -984,7 +1024,8 @@ export const MOCKS = {
       },
       "membership": {
         "status": "NONE",
-        "crew": null
+        "crew": null,
+        "rejection": null
       }
     }
   },
@@ -1081,11 +1122,6 @@ export const MOCKS = {
       "isNew": false
     }
   },
-  "POST /crew/invite-code": {
-    "data": {
-      "inviteCode": "HG-9QX4"
-    }
-  },
   "POST /crew/notices": {
     "data": {
       "id": "n02",
@@ -1118,8 +1154,10 @@ export const MOCKS = {
     "data": {
       "id": "c001",
       "name": "한강줍깅크루",
-      "intro": "",
+      "intro": "매주 토요일 아침 여의도",
       "photoUrl": null,
+      "region": "SEOUL",
+      "joinPolicy": "APPROVAL",
       "leader": {
         "id": "u001",
         "nickname": "관열",
@@ -1128,7 +1166,6 @@ export const MOCKS = {
       },
       "memberCount": 1,
       "goalCount": 300,
-      "inviteCode": "HG-7K2P",
       "pendingJoinRequests": 0,
       "pinnedNotice": null,
       "unreadChat": 0,
@@ -1143,8 +1180,8 @@ export const MOCKS = {
         "name": "한강줍깅크루"
       },
       "user": {
-        "id": "u001",
-        "nickname": "관열",
+        "id": "u009",
+        "nickname": "지수",
         "photoUrl": null,
         "withdrawn": false
       },

@@ -2,6 +2,7 @@ import { ApiError } from '../api/client';
 import {
   loginErrorMessage,
   mapCrewCreateError,
+  mapJoinError,
   mapNicknameError,
   mapResetConfirmError,
   mapSignupError,
@@ -64,10 +65,13 @@ describe('mapNicknameError', () => {
 });
 
 describe('mapCrewCreateError', () => {
-  test('ALREADY_IN_CREW 는 소속 안내 배너로', () => {
-    expect(mapCrewCreateError(new ApiError('ALREADY_IN_CREW'))).toEqual({
-      banner: '이미 크루에 소속돼 있어요.',
-      alreadyInCrew: true,
+  test('ALREADY_IN_CREW 는 안내 뒤 홈으로', () => {
+    expect(mapCrewCreateError(new ApiError('ALREADY_IN_CREW'))).toEqual({ moved: { flash: '이미 크루에 소속돼 있어요.', to: '/(tabs)' } });
+  });
+
+  test('JOIN_REQUEST_PENDING 은 안내 뒤 승인 대기로', () => {
+    expect(mapCrewCreateError(new ApiError('JOIN_REQUEST_PENDING'))).toEqual({
+      moved: { flash: '승인 대기 중인 가입 요청이 있어요. 요청을 취소한 뒤 만들 수 있어요.', to: '/pending-approval' },
     });
   });
 
@@ -85,6 +89,32 @@ describe('mapCrewCreateError', () => {
     expect(mapCrewCreateError(new Error('network'))).toEqual({
       banner: '크루를 만들지 못했어요. 네트워크 상태를 확인하고 다시 시도해 주세요.',
     });
+  });
+});
+
+describe('mapJoinError', () => {
+  test('정원이 차면 시트 안에 알리고 버튼을 끈 뒤 결과를 다시 부른다', () => {
+    expect(mapJoinError(new ApiError('CREW_FULL'))).toEqual({
+      banner: '정원(50명)이 차서 가입할 수 없어요. 자리가 생기면 다시 신청할 수 있어요.',
+      blocked: true,
+      refresh: true,
+    });
+  });
+
+  test('추방된 크루는 다시 가입할 수 없다', () => {
+    expect(mapJoinError(new ApiError('EXPELLED_FROM_CREW'))).toEqual({ banner: '이 크루에서 내보내져 다시 가입할 수 없어요.', blocked: true });
+  });
+
+  test('사라진 크루는 시트를 닫고 결과를 다시 부른다', () => {
+    expect(mapJoinError(new ApiError('NOT_FOUND'))).toEqual({ gone: true, refresh: true });
+  });
+
+  test('다른 기기에서 신청했으면 승인 대기로', () => {
+    expect(mapJoinError(new ApiError('JOIN_REQUEST_PENDING'))).toEqual({ moved: { flash: '승인 대기 중인 가입 요청이 있어요.', to: '/pending-approval' } });
+  });
+
+  test('그 외 실패는 시트 안 배너로, 버튼은 남긴다', () => {
+    expect(mapJoinError(new Error('network'))).toEqual({ banner: '가입하지 못했어요. 네트워크 상태를 확인하고 다시 시도해 주세요.' });
   });
 });
 
