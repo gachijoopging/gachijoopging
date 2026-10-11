@@ -10,7 +10,7 @@
 >
 > **기입 규칙** — 지시 단위가 끝나면 이 파일 **맨 아래**에 번호순으로 붙인다. `한 일 / 걸린 것 / 결과 / 이월` 네 줄 뼈대를 지키고, 근거 표는 그 아래에 붙인다. **"이월" 줄이 비면 그 작업은 아무것도 남기지 못한 것이다** — 그럴 리 없으니 다시 본다.
 
-- 최종 갱신: 2026-08-04 (⑫ 판독 + `GENERAL` A/B)
+- 최종 갱신: 2026-10-11 (GAC-30 새 저장소 기동·계약 대조)
 
 ---
 
@@ -535,10 +535,18 @@ W1 완료 판정은 **터널 경유 외부 호출까지**로 다시 썼다. `/me
 
 ## GAC-30 새 저장소에서 기동·계약 고정 (2026-10-11)
 
-옛 저장소에서 통째로 가져온 `ai/` 가 새 저장소에서도 그대로 도는지, 백엔드가 붙는 계약이 맞는지 확인했다. **코드는 고치지 않았다.**
+**한 일** — 옛 저장소에서 통째로 가져온 `ai/` 가 새 저장소에서도 그대로 도는지, 백엔드가 붙는 계약이 맞는지 확인했다. **AI 코드는 고치지 않았다.**
 
 - `uv sync` 한 번으로 환경이 섰다. `torch 2.13.0+cu130` · `cuda.is_available() == True`. 이번 기기는 **RTX 4050 Laptop** 이라 지연은 §3.5(4070) 와 직접 비교하지 않는다 — 워밍업 1회차 6,004ms · 2회차 140ms
-- `smoke.py` **23/23 · FAIL 0 · SKIP 0** — 로컬 직결. `--image docs/labeling-examples/CAN-1.jpg` 로 돌렸다. **이 저장소에는 학습셋 이미지가 없어서 기본 이미지가 `bus.jpg` 로 떨어지고 SKIP 5 가 난다** — 새 머신에서는 `labeling-examples` 사진을 넘긴다
-- 계약: `/internal/infer` 응답 `{modelVersion, inferenceMs, items[{bbox, category, aiConfidence}]}` 이 백엔드 `AiInferenceClient` 의 역직렬화와 `docs/openapi.yaml` `MediaResult.inference` 에 그대로 들어간다(`status` 는 백엔드가 붙인다). Category 7종·Bbox `x,y,w,h` 일치. **계약 문서 수정 없음**
+- 성공 응답: `/internal/infer` 의 `{modelVersion, inferenceMs, items[{bbox, category, aiConfidence}]}` 이 백엔드 `AiInferenceClient` 의 역직렬화와 `docs/openapi.yaml` `MediaResult.inference` 에 그대로 들어간다(`status` 는 백엔드가 붙인다). Category 7종·Bbox `x,y,w,h` 일치
 - 폴백: 백엔드 `AiInferenceClientTest` 9건 + `AiInferenceTimeoutTest` 1건 통과 — 주소 미설정·연결 불가·401·500·503·타임아웃 모두 `UNAVAILABLE`, 모르는 category 는 `GENERAL`
 - 터널 경유는 다시 돌리지 않았다 — W1 판정에서 이미 통과했고(§2) 월 1GB 를 태운다
+
+**걸린 것** — 둘이다.
+
+- **새 클론에는 학습셋이 없어서 기본 이미지로는 SKIP 5 가 난다.** `smoke.py` 의 기본 이미지가 `bus.jpg` 로 떨어지기 때문이다(⑬). `--image docs/labeling-examples/CAN-1.jpg` 를 넘겨 해결했다
+- **`UNAVAILABLE` 응답이 계약과 어긋난다.** 처음에는 성공 응답만 대조하고 "계약 문서 수정 없음"으로 결론 냈는데, 리뷰에서 지적됐다. `MediaDtos.InferenceResponse.unavailable()` 은 `modelVersion`·`inferenceMs`·`items` 를 `null` 로 내리지만 계약은 셋을 `string`·`integer`·`array` 로만 적고 `nullable` 이 없다. `inference` 객체의 `nullable: true` 는 안쪽 필드의 `null` 까지 허용하지 않는다. **폴백은 살아 있지만 그 응답이 계약을 어긴다.** 앱은 `status === 'OK'` 일 때만 `items` 를 읽으므로(`mobile/src/activity/pickup.ts`) 지금 화면이 깨지지는 않는다
+
+**결과** — `smoke.py` **23/23 · FAIL 0 · SKIP 0**(로컬 직결). 성공 응답은 계약과 일치하고, `UNAVAILABLE` 응답의 불일치는 이슈 요구사항대로 계약 문서를 고치는 별도 PR 로 넘겼다.
+
+**이월** — `progress.md` §3.1 `smoke.py 의 SKIP 은 통과가 아니다` 행(새 클론에서 넘길 이미지). `UNAVAILABLE` 필드 nullable 은 GAC-134(계약 PR).
