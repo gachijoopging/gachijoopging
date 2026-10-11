@@ -18,6 +18,33 @@ VM 한 대에 docker compose 로 컨테이너 셋을 띄운다 — 백엔드(Spr
 | DB | Supabase Postgres(PostGIS) · 서울 (ADR-0001) |
 | AI | 담당자 GPU 노트북 + 터널. 서버에 올리지 않는다 (`ai/README.md` §8) |
 
+## 로컬 기동
+
+```powershell
+powershell -ExecutionPolicy Bypass -File infra\dev-keys.ps1   # 최초 1회
+docker compose -f infra/docker-compose.dev.yml up -d
+curl http://localhost:8080/actuator/health                     # {"status":"UP"}
+```
+
+`dev-keys.ps1` 은 JWT 키 한 쌍을 만들어 루트 `.env` 에 넣는다. 백엔드는 그 키가 없으면 기동에서 죽는다 —
+`application.yml` 이 기본값을 일부러 두지 않았다. 기본값이 있으면 운영에 키를 깜빡해도 서버가 떠 버리고,
+그러면 누구나 공개된 그 키로 남의 토큰을 위조한다.
+
+운영과 다른 점이 둘이다.
+
+| | 로컬(`docker-compose.dev.yml`) | 운영(`docker-compose.yml`) |
+|---|---|---|
+| DB | **PostGIS 컨테이너** | Supabase (서버 밖) |
+| 이미지 | 그 자리에서 빌드 | 레지스트리에서 태그로 가져옴 |
+
+로컬에 DB 컨테이너를 두는 이유는 스테이징이 없기 때문이다(ADR-0005). 로컬이 Supabase 를 보면 각자 PC 가
+운영 DB 를 만지게 되고, Flyway 마이그레이션을 깨뜨려 보며 고치는 일이 불가능해진다.
+`postgis/postgis` 이미지라야 한다 — `V1__init.sql` 첫 줄이 `CREATE EXTENSION postgis` 다.
+
+**호스트 포트가 표준이 아니다** — Postgres `15432`, Redis `16379`. 다른 프로젝트의 컨테이너가 5432·6379 를
+쓰고 있으면 기동이 막혀서 비켜 놓았다. 컨테이너끼리는 내부 포트로 통신하므로 영향이 없다.
+백엔드만 IDE 에서 띄울 때는 `SPRING_DATASOURCE_URL`·`SPRING_DATA_REDIS_PORT` 로 알려준다.
+
 ## 배포
 
 스테이징이 없다(ADR-0005). 서버는 운영 한 대뿐이다.

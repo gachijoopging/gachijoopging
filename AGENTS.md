@@ -1,7 +1,7 @@
 # 가치줍깅
 
 크루 단위 플로깅 앱. 옛 모노레포 `gachijupging` 에서 갈라져 나왔고, 그쪽은 읽기 전용 보존이다.
-배포 산출물은 app(React Native, Android) · backend(Spring Boot) · ai(FastAPI) 셋이고, design-system 은 앱이 의존하는 패키지다. 서버 구성은 미결이다.
+배포 산출물은 app(React Native, Android) · backend(Spring Boot) · ai(FastAPI) 셋이고, design-system 은 앱이 의존하는 패키지다. 서버는 Lightsail VM 한 대다(ADR-0005).
 
 이 파일이 이 저장소에서 일하는 **모든 AI 에이전트의 단일 진입점**이다. Claude Code · Codex · Cursor 등 도구와 무관하게 이 파일이 먼저다.
 프로젝트 규칙은 여기 한 곳에만 있다. `CLAUDE.md` 는 Claude Code 전용 항목(스킬·에이전트·알림)만 담는다.
@@ -129,5 +129,5 @@ iOS · 관리자 웹 · 크루 웹 · 게시물 수정 · 1:1 채팅 · 기존 �
 
 - 손으로 알릴 것은 `node infra/notify.mjs "메시지"`. 웹훅 URL 을 직접 `curl` 하지 않는다 — 쉘 히스토리에 남는다
 - 환경 변수 **키 목록**의 정본은 `docs/operations.md`. 값은 어디에도 커밋하지 않는다
-- 루트 `.env` 는 각자의 로컬 설정, `infra/.env` 는 EC2 에 올라가는 운영 값이다. 섞지 않는다
-- 서버 구성(플랫폼·배포·감시)은 미결이다. 정해지면 `docs/adr/` 에 남긴다
+- 루트 `.env` 는 각자의 로컬 설정, `infra/.env` 는 서버에 올라가는 운영 값이다. 섞지 않는다
+- 서버 구성은 ADR-0005 로 정해졌다 — Lightsail VM 한 대에 docker compose, 스테이징 없음. 구성·배포·감시는 `docs/operations.md`
