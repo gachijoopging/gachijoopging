@@ -530,3 +530,15 @@ W1 완료 판정은 **터널 경유 외부 호출까지**로 다시 썼다. `/me
 **이월** — `progress.md` §1 · §2(⑭ 종료) · **§3.4 전면 재작성**(열린 결정 → 확정) · §3.5(터널 전송 비용·측정 지점 함정 2행 신규) · §4.1 #3(로그가 ⑭ 의 입력이 아니게 된 경위) · §5(AI 주입 행 재작성 + **EC2 접근 없음 신규**). `infra/docker-compose.yml`(`APP_AI_BASE_URL`·`APP_AI_SECRET`) · `infra/.env.example`(AI 절 신규). 측정 스크립트는 **일회성이라 저장소에 두지 않았다**(⑬ 과 같은 이유).
 
 **다음에 할 일** — **촬영 날짜 확정**(8/11 까지)이 여전히 유일한 리드타임이고 ⑮ 부터가 그걸 기다린다. `AI_BASE_URL`·`AI_SECRET` 주입은 EC2 접근이 생기는 자리에서 같이 한다 — 급한 것은 데모(㉔) 전까지다.
+
+---
+
+## GAC-30 새 저장소에서 기동·계약 고정 (2026-10-11)
+
+옛 저장소에서 통째로 가져온 `ai/` 가 새 저장소에서도 그대로 도는지, 백엔드가 붙는 계약이 맞는지 확인했다. **코드는 고치지 않았다.**
+
+- `uv sync` 한 번으로 환경이 섰다. `torch 2.13.0+cu130` · `cuda.is_available() == True`. 이번 기기는 **RTX 4050 Laptop** 이라 지연은 §3.5(4070) 와 직접 비교하지 않는다 — 워밍업 1회차 6,004ms · 2회차 140ms
+- `smoke.py` **23/23 · FAIL 0 · SKIP 0** — 로컬 직결. `--image docs/labeling-examples/CAN-1.jpg` 로 돌렸다. **이 저장소에는 학습셋 이미지가 없어서 기본 이미지가 `bus.jpg` 로 떨어지고 SKIP 5 가 난다** — 새 머신에서는 `labeling-examples` 사진을 넘긴다
+- 계약: `/internal/infer` 응답 `{modelVersion, inferenceMs, items[{bbox, category, aiConfidence}]}` 이 백엔드 `AiInferenceClient` 의 역직렬화와 `docs/openapi.yaml` `MediaResult.inference` 에 그대로 들어간다(`status` 는 백엔드가 붙인다). Category 7종·Bbox `x,y,w,h` 일치. **계약 문서 수정 없음**
+- 폴백: 백엔드 `AiInferenceClientTest` 9건 + `AiInferenceTimeoutTest` 1건 통과 — 주소 미설정·연결 불가·401·500·503·타임아웃 모두 `UNAVAILABLE`, 모르는 category 는 `GENERAL`
+- 터널 경유는 다시 돌리지 않았다 — W1 판정에서 이미 통과했고(§2) 월 1GB 를 태운다
