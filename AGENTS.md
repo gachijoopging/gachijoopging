@@ -98,7 +98,7 @@ iOS · 관리자 웹 · 크루 웹 · 게시물 수정 · 1:1 채팅 · 기존 �
 
 ## backend (Java/Spring)
 
-- 기준: Java 21 · Spring Boot 3.5.x · Gradle Wrapper 8.10 · PostgreSQL 16 + PostGIS(Supabase) · Spring Data JPA/Hibernate · Jakarta. 정본은 `backend/build.gradle`·`gradle-wrapper.properties`·`infra/`. Spring Boot 2.x·`javax.*` 패턴을 제안하지 않는다
+- 기준: Java 21 · Spring Boot 3.5.x · Gradle Wrapper 8.10 · PostgreSQL(Supabase 가 주는 버전 — 지금 17) + PostGIS · Spring Data JPA/Hibernate · Jakarta. 정본은 `backend/build.gradle`·`gradle-wrapper.properties`·`infra/`. Spring Boot 2.x·`javax.*` 패턴을 제안하지 않는다
 - Entity 생성·상태 변경과 CRUD 는 Spring Data JPA, 조회 조건 조합은 QueryDSL, PostGIS·통계·Export 는 JDBC/native/projection
 - Entity 와 DTO 분리. 도메인 간 연관관계 대신 식별자 참조. 새 연관관계는 같은 도메인 안에서만
 - Entity Lombok 은 `@Getter` + `@NoArgsConstructor(access = PROTECTED)`. `@Setter`·`@Data`·`@ToString`·`@EqualsAndHashCode` 금지. Builder 는 필수값·불변조건을 우회하지 않을 때만

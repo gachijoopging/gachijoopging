@@ -15,7 +15,7 @@ VM 한 대에 docker compose 로 컨테이너 셋을 띄운다 — 백엔드(Spr
 | 스왑 | 2GB(`/swapfile`). 없으면 램이 찰 때 OOM Killer 가 가장 큰 프로세스 — 즉 백엔드 — 를 죽인다 |
 | 공개 주소 | `www.gachijoopging.site`(apex 는 301 이라 쓰지 않는다) |
 | 입구 | Nginx 가 443 을 잡고 `/api/v1/...` 를 백엔드로, 사진을 디스크에서 직접 보낸다. 채팅·위치가 STOMP 소켓(`realtime.md`)이라 WebSocket 업그레이드를 통과시킨다 |
-| DB | Supabase Postgres(PostGIS) · 서울 (ADR-0001) |
+| DB | Supabase Postgres(PostGIS) · 서울 (ADR-0001). **PostgreSQL 17.11 · PostGIS 3.3** |
 | AI | 담당자 GPU 노트북 + 터널. 서버에 올리지 않는다 (`ai/README.md` §8) |
 
 ### 서버를 새로 만들 때
@@ -89,7 +89,11 @@ curl http://localhost:8080/actuator/health                     # {"status":"UP"}
 
 | | 로컬(`docker-compose.dev.yml`) | 운영(`docker-compose.yml`) |
 |---|---|---|
-| DB | **PostGIS 컨테이너** | Supabase (서버 밖) |
+| DB | **PostGIS 컨테이너**(PG16 · PostGIS 3.4) | Supabase (서버 밖, **PG17** · PostGIS 3.3) |
+
+⚠️ **로컬과 운영의 Postgres 메이저 버전이 다르다.** Supabase 가 17 을 주는데 로컬 이미지는 16 이다.
+마이그레이션이 로컬에서만 통과하는 일이 생길 수 있다. 로컬을 `postgis/postgis:17-3.4` 로 올리는 것이
+맞지만, 지금은 Docker Hub 에서 그 이미지를 받지 못해(네트워크) 검증을 못 했다. 받을 수 있게 되면 바꾼다.
 | 이미지 | 그 자리에서 빌드 | 레지스트리에서 태그로 가져옴 |
 
 로컬에 DB 컨테이너를 두는 이유는 스테이징이 없기 때문이다(ADR-0005). 로컬이 Supabase 를 보면 각자 PC 가
