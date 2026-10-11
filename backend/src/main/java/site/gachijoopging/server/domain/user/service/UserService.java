@@ -151,9 +151,25 @@ public class UserService implements AccountAuthorityLoader {
                     new MeResponse.MembershipCrew(
                         row.getCrewId().toString(),
                         row.getCrewName(),
-                        row.getLeaderId().equals(userId))))
+                        row.getLeaderId().equals(userId)),
+                    null))
         .or(() -> pendingMembership(userId))
-        .orElse(new MeResponse.Membership(MeResponse.MembershipStatus.NONE, null));
+        .orElseGet(
+            () ->
+                new MeResponse.Membership(
+                    MeResponse.MembershipStatus.NONE, null, unreadRejection(userId)));
+  }
+
+  private MeResponse.Rejection unreadRejection(UUID userId) {
+    return userQueryRepository
+        .findUnreadRejection(userId)
+        .map(
+            row ->
+                new MeResponse.Rejection(
+                    row.getRequestId().toString(),
+                    new MeResponse.RejectionCrew(row.getCrewId().toString(), row.getCrewName()),
+                    row.getDecidedAt()))
+        .orElse(null);
   }
 
   private Optional<MeResponse.Membership> pendingMembership(UUID userId) {
@@ -164,7 +180,8 @@ public class UserService implements AccountAuthorityLoader {
                 new MeResponse.Membership(
                     MeResponse.MembershipStatus.PENDING,
                     new MeResponse.MembershipCrew(
-                        row.getCrewId().toString(), row.getCrewName(), false)));
+                        row.getCrewId().toString(), row.getCrewName(), false),
+                    null));
   }
 
   @Transactional

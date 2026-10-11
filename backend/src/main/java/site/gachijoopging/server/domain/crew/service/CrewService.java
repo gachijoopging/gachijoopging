@@ -7,6 +7,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import site.gachijoopging.server.domain.crew.dto.CreateCrewRequest;
@@ -18,6 +19,7 @@ import site.gachijoopging.server.domain.crew.entity.Crew;
 import site.gachijoopging.server.domain.crew.entity.JoinPolicy;
 import site.gachijoopging.server.domain.crew.entity.JoinRequestStatus;
 import site.gachijoopging.server.domain.crew.entity.Region;
+import site.gachijoopging.server.domain.crew.event.JoinRequestDecidedEvent;
 import site.gachijoopging.server.domain.crew.repository.CrewJoinRequestRepository;
 import site.gachijoopging.server.domain.crew.repository.CrewQueryRepository;
 import site.gachijoopging.server.domain.crew.repository.CrewQueryRepository.CrewSummaryRow;
@@ -45,6 +47,7 @@ public class CrewService implements CrewMembershipLoader {
   private final CrewJoinRequestRepository joinRequestRepository;
   private final MediaService mediaService;
   private final MediaSignedUrl mediaSignedUrl;
+  private final ApplicationEventPublisher events;
   private final Clock clock;
 
   @Override
@@ -128,7 +131,10 @@ public class CrewService implements CrewMembershipLoader {
   @Transactional
   public CrewResponse update(UUID me, CrewMembership membership, UpdateCrewRequest request) {
     membership.requireLeader();
-    Crew crew = activeCrew(membership.crewId());
+    Crew crew =
+        crewRepository
+            .findActiveForUpdate(membership.crewId())
+            .orElseThrow(() -> new BusinessException(ErrorCode.NO_CREW, "소속 크루가 없다"));
     if (!crew.ledBy(me)) {
       throw new BusinessException(ErrorCode.FORBIDDEN, "크루장만 할 수 있다");
     }
@@ -139,9 +145,35 @@ public class CrewService implements CrewMembershipLoader {
     if (request.photoMediaId() != null) {
       request.photoMediaId().ifPresent(mediaId -> mediaService.requireOwnedBy(mediaId, me));
     }
+    Instant now = clock.instant();
+    if (crew.getJoinPolicy() == JoinPolicy.APPROVAL && request.joinPolicy() == JoinPolicy.OPEN) {
+      admitAllPending(crew, me, now);
+    }
     crew.update(
-        name, request.intro(), request.photoMediaId(), request.goalCount(), clock.instant());
+        name,
+        request.intro(),
+        request.photoMediaId(),
+        request.region(),
+        request.joinPolicy(),
+        request.goalCount(),
+        now);
     return view(crew, me);
+  }
+
+  // 일부만 가입시키면 남은 신청이 공개 크루에 영영 대기로 남으므로 전부 넣거나 전환을 막는다
+  private void admitAllPending(Crew crew, UUID me, Instant now) {
+    if (crewRepository.countMembers(crew.getId())
+            + joinRequestRepository.countAdmissiblePending(crew.getId())
+        > CAPACITY) {
+      throw new BusinessException(ErrorCode.CREW_FULL, "대기 신청을 모두 받으면 정원을 넘는다");
+    }
+    joinRequestRepository
+        .approveAllAdmissible(crew.getId(), me, now)
+        .forEach(
+            row ->
+                events.publishEvent(
+                    new JoinRequestDecidedEvent(
+                        row.getRequestId(), crew.getId(), row.getUserId(), true)));
   }
 
   private Crew activeCrew(UUID crewId) {

@@ -58,7 +58,13 @@ public class Crew {
   }
 
   public void update(
-      String name, String intro, Optional<UUID> photoMediaId, Integer goalCount, Instant now) {
+      String name,
+      String intro,
+      Optional<UUID> photoMediaId,
+      Region region,
+      JoinPolicy joinPolicy,
+      Integer goalCount,
+      Instant now) {
     if (name != null) {
       this.name = name;
     }
@@ -67,6 +73,12 @@ public class Crew {
     }
     if (photoMediaId != null) {
       this.photoMediaId = photoMediaId.orElse(null);
+    }
+    if (region != null) {
+      this.region = region;
+    }
+    if (joinPolicy != null) {
+      this.joinPolicy = joinPolicy;
     }
     if (goalCount != null) {
       this.goalCount = goalCount;

@@ -3,6 +3,7 @@ package site.gachijoopging.server.domain.crew;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -27,6 +28,7 @@ import org.springframework.test.context.event.RecordApplicationEvents;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
+import site.gachijoopging.server.domain.crew.event.CrewJoinedEvent;
 import site.gachijoopging.server.domain.crew.event.JoinRequestDecidedEvent;
 import site.gachijoopging.server.domain.crew.event.JoinRequestedEvent;
 import site.gachijoopging.server.support.IntegrationTest;
@@ -325,6 +327,144 @@ class CrewJoinApiTest extends IntegrationTest {
   }
 
   @Test
+  void 거절되면_내_정보에_거절_안내가_있고_확인하면_사라진다() throws Exception {
+    TestAccount 크루장 = 가입한다(mockMvc, "reject-leader-1@test.io");
+    String 크루 = 크루를_만든다(크루장);
+    TestAccount 나 = 가입한다(mockMvc, "reject-applicant-1@test.io");
+    String 신청 = 신청_id(신청한다(나, 크루));
+    mockMvc.perform(처리한다(크루장, 신청, "REJECT"));
+
+    mockMvc
+        .perform(내_정보(나))
+        .andExpect(jsonPath("$.data.membership.status").value("NONE"))
+        .andExpect(jsonPath("$.data.membership.rejection.requestId").value(신청))
+        .andExpect(jsonPath("$.data.membership.rejection.crew.id").value(크루))
+        .andExpect(jsonPath("$.data.membership.rejection.decidedAt").isNotEmpty());
+
+    mockMvc.perform(거절_확인(나, 신청)).andExpect(status().isNoContent());
+    mockMvc.perform(거절_확인(나, 신청)).andExpect(status().isNoContent());
+    mockMvc.perform(내_정보(나)).andExpect(jsonPath("$.data.membership.rejection").isEmpty());
+  }
+
+  @Test
+  void 오래된_미확인_거절_뒤_새_신청을_취소하면_거절_안내는_없다() throws Exception {
+    TestAccount 크루장 = 가입한다(mockMvc, "reject-leader-2@test.io");
+    String 크루 = 크루를_만든다(크루장);
+    TestAccount 나 = 가입한다(mockMvc, "reject-applicant-2@test.io");
+    mockMvc.perform(처리한다(크루장, 신청_id(신청한다(나, 크루)), "REJECT"));
+    신청한다(나, 크루);
+    mockMvc.perform(
+        delete("/api/v1/crews/join-requests/mine").header(HttpHeaders.AUTHORIZATION, 나.bearer()));
+
+    mockMvc
+        .perform(내_정보(나))
+        .andExpect(jsonPath("$.data.membership.status").value("NONE"))
+        .andExpect(jsonPath("$.data.membership.rejection").isEmpty());
+  }
+
+  @Test
+  void 남의_신청이나_거절되지_않은_신청을_확인하면_404_다() throws Exception {
+    TestAccount 크루장 = 가입한다(mockMvc, "reject-leader-3@test.io");
+    String 크루 = 크루를_만든다(크루장);
+    TestAccount 나 = 가입한다(mockMvc, "reject-applicant-3@test.io");
+    String 신청 = 신청_id(신청한다(나, 크루));
+
+    mockMvc.perform(거절_확인(나, 신청)).andExpect(status().isNotFound());
+    mockMvc.perform(처리한다(크루장, 신청, "REJECT"));
+    mockMvc.perform(거절_확인(크루장, 신청)).andExpect(status().isNotFound());
+  }
+
+  @Test
+  void 공개로_바꾸면_대기_신청이_모두_크루원이_된다() throws Exception {
+    TestAccount 크루장 = 가입한다(mockMvc, "open-switch-leader-1@test.io");
+    String 크루 = 크루를_만든다(크루장);
+    List<String> 신청들 =
+        List.of(
+            신청_id(신청한다(가입한다(mockMvc, "open-switch-a1@test.io"), 크루)),
+            신청_id(신청한다(가입한다(mockMvc, "open-switch-a2@test.io"), 크루)),
+            신청_id(신청한다(가입한다(mockMvc, "open-switch-a3@test.io"), 크루)));
+    크루원을_채운다(크루, 9);
+
+    mockMvc
+        .perform(가입_방식을_바꾼다(크루장, "OPEN"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.joinPolicy").value("OPEN"))
+        .andExpect(jsonPath("$.data.region").value("BUSAN"))
+        .andExpect(jsonPath("$.data.memberCount").value(13))
+        .andExpect(jsonPath("$.data.pendingJoinRequests").value(0));
+
+    assertThat(신청들).allSatisfy(신청 -> assertThat(신청_상태(신청)).isEqualTo("APPROVED"));
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM crew_join_requests WHERE crew_id = ? AND decided_by = ?",
+                Integer.class,
+                UUID.fromString(크루),
+                크루장.id()))
+        .isEqualTo(3);
+    assertThat(
+            events.stream(JoinRequestDecidedEvent.class).filter(JoinRequestDecidedEvent::approved))
+        .hasSize(3);
+  }
+
+  @Test
+  void 대기_신청을_다_받으면_정원을_넘을_때_공개_전환은_409_CREW_FULL_이고_아무것도_안_바뀐다() throws Exception {
+    TestAccount 크루장 = 가입한다(mockMvc, "open-switch-leader-2@test.io");
+    String 크루 = 크루를_만든다(크루장);
+    List<String> 신청들 =
+        List.of(
+            신청_id(신청한다(가입한다(mockMvc, "open-switch-b1@test.io"), 크루)),
+            신청_id(신청한다(가입한다(mockMvc, "open-switch-b2@test.io"), 크루)),
+            신청_id(신청한다(가입한다(mockMvc, "open-switch-b3@test.io"), 크루)));
+    크루원을_채운다(크루, 47);
+
+    mockMvc
+        .perform(가입_방식을_바꾼다(크루장, "OPEN"))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.code").value("CREW_FULL"));
+
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT join_policy || '/' || region FROM crews WHERE id = ?",
+                String.class,
+                UUID.fromString(크루)))
+        .isEqualTo("APPROVAL/SEOUL");
+    assertThat(신청들).allSatisfy(신청 -> assertThat(신청_상태(신청)).isEqualTo("PENDING"));
+    assertThat(크루원_수(크루)).isEqualTo(48);
+  }
+
+  @Test
+  void 추방_이력이_있는_대기_신청은_공개_전환_때_가입되지_않는다() throws Exception {
+    TestAccount 크루장 = 가입한다(mockMvc, "open-switch-leader-3@test.io");
+    String 크루 = 크루를_만든다(크루장);
+    TestAccount 추방된_사람 = 가입한다(mockMvc, "open-switch-expelled@test.io");
+    추방_이력을_남긴다(크루, 추방된_사람, 크루장);
+    UUID 신청 = UUID.randomUUID();
+    jdbcTemplate.update(
+        "INSERT INTO crew_join_requests (id, crew_id, user_id, status, created_at)"
+            + " VALUES (?, ?, ?, 'PENDING', now())",
+        신청,
+        UUID.fromString(크루),
+        추방된_사람.id());
+
+    mockMvc.perform(가입_방식을_바꾼다(크루장, "OPEN")).andExpect(status().isOk());
+
+    assertThat(크루원_수(크루)).isEqualTo(1);
+    assertThat(신청_상태(신청.toString())).isEqualTo("PENDING");
+  }
+
+  @Test
+  void 공개_크루에_가입하면_크루장에게_갈_CREW_JOINED_이벤트가_하나_남는다() throws Exception {
+    TestAccount 크루장 = 가입한다(mockMvc, "crew-joined-leader@test.io");
+    String 크루 = 공개_크루를_만든다(크루장);
+    TestAccount 나 = 가입한다(mockMvc, "crew-joined-me@test.io");
+
+    신청한다(나, 크루).andExpect(status().isCreated());
+
+    assertThat(events.stream(CrewJoinedEvent.class))
+        .containsExactly(new CrewJoinedEvent(UUID.fromString(크루), 크루장.id(), 나.id()));
+  }
+
+  @Test
   void 신청한_적이_없으면_내_신청은_null_이다() throws Exception {
     mockMvc
         .perform(내_신청(가입한다(mockMvc, "join-applicant-12@test.io")))
@@ -445,6 +585,18 @@ class CrewJoinApiTest extends IntegrationTest {
 
   private static MockHttpServletRequestBuilder 내_신청(TestAccount 계정) {
     return get("/api/v1/crews/join-requests/mine").header(HttpHeaders.AUTHORIZATION, 계정.bearer());
+  }
+
+  private static MockHttpServletRequestBuilder 거절_확인(TestAccount 계정, String 신청) {
+    return post("/api/v1/crews/join-requests/%s/read".formatted(신청))
+        .header(HttpHeaders.AUTHORIZATION, 계정.bearer());
+  }
+
+  private static MockHttpServletRequestBuilder 가입_방식을_바꾼다(TestAccount 크루장, String 가입_방식) {
+    return patch("/api/v1/crew")
+        .header(HttpHeaders.AUTHORIZATION, 크루장.bearer())
+        .contentType(MediaType.APPLICATION_JSON)
+        .content("{\"region\":\"BUSAN\",\"joinPolicy\":\"%s\"}".formatted(가입_방식));
   }
 
   private static MockHttpServletRequestBuilder 내_정보(TestAccount 계정) {
