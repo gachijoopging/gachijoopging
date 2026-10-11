@@ -2140,10 +2140,12 @@ components:
           nullable: true
           properties:
             status: { type: string, enum: [OK, UNAVAILABLE] }
-            modelVersion: { type: string }
-            inferenceMs: { type: integer }
+            modelVersion: { type: string, nullable: true, description: UNAVAILABLE 이면 null }
+            inferenceMs: { type: integer, nullable: true, description: UNAVAILABLE 이면 null }
             items:
               type: array
+              nullable: true
+              description: UNAVAILABLE 이면 null. OK 인데 찾은 물체가 없으면 빈 배열
               items:
                 type: object
                 properties:

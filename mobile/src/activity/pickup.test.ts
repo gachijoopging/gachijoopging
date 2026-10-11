@@ -32,7 +32,7 @@ describe('AI 탐지 묶기', () => {
 
   test('배너는 사용 불가 › 못 찾음 › 확인 필요 순서로 하나만', () => {
     expect(aiBanner(null)).toBe('unavailable');
-    expect(aiBanner({ status: 'UNAVAILABLE', items: [] })).toBe('unavailable');
+    expect(aiBanner({ status: 'UNAVAILABLE', items: null })).toBe('unavailable');
     expect(aiBanner({ status: 'OK', items: [] })).toBe('none');
     expect(aiBanner({ status: 'OK', items: detections })).toBe('check');
     expect(aiBanner({ status: 'OK', items: [detections[0]] })).toBeNull();

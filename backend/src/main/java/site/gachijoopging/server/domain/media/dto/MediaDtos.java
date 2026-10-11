@@ -15,7 +15,7 @@ public final class MediaDtos {
       @Schema(allowableValues = {"OK", "UNAVAILABLE"}) String status,
       @Schema(nullable = true) String modelVersion,
       @Schema(nullable = true) Integer inferenceMs,
-      List<InferenceItemResponse> items) {
+      @Schema(nullable = true) List<InferenceItemResponse> items) {
 
     private static final String OK = "OK";
     private static final String UNAVAILABLE = "UNAVAILABLE";

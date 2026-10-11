@@ -9,7 +9,7 @@ export const CONFIDENCE_CHECK = 0.7;
 const ORDER = Object.keys(CATEGORY_LABEL) as Category[];
 
 export type Detection = { category: Category; aiConfidence: number };
-export type Inference = { status: 'OK' | 'UNAVAILABLE'; items: readonly Detection[] } | null;
+export type Inference = { status: 'OK'; items: readonly Detection[] } | { status: 'UNAVAILABLE'; items: null } | null;
 export type Group = { count: number; needsCheck: boolean; maxConfidence: number };
 export type Counts = Partial<Record<Category, number>>;
 
