@@ -152,7 +152,7 @@ curl http://localhost:8080/actuator/health                     # {"status":"UP"}
 | `FCM_CREDENTIALS` | 백엔드 | 푸시 |
 | `AI_BASE_URL` · `AI_SECRET` | 백엔드 | AI 서버. `ai/.env` 의 `NGROK_DOMAIN`·`AI_SECRET` 과 짝이다 — `AI_SECRET` 이 다르면 호출이 전부 401 인데 백엔드가 401 을 `UNAVAILABLE` 로 내려 "AI 서버 다운" 과 구별되지 않는다 |
 | `CERT_DOMAIN` · `CERT_EMAIL` | acme | 인증서 발급·갱신 |
-| `AGREEMENTS_VERSION` · `TERMS_URL` · `PRIVACY_URL` · `MARKETING_URL` | **아직 없음** | 현재 동의 버전과 공개 전문 URL. 계약(`openapi.yaml` `/agreements`)과 테이블(`user_agreements`)은 있지만 **백엔드가 아직 읽지 않는다** — 동의 API 를 구현할 때 들어온다. 전문 정본은 `docs/legal/`, 버전은 각 문서 머리의 값(지금 `2026-10`). 정식 주소가 서빙되기 전까지는 `https://djm030.github.io/gachijoopging-legal/{terms,privacy,marketing}` 를 넣는다. 정식 주소 전환과 전문의 빈칸(문의 이메일·리전)은 GAC-80 |
+| `AGREEMENTS_VERSION` · `TERMS_URL` · `PRIVACY_URL` · `MARKETING_URL` | **아직 없음** | 현재 동의 버전과 공개 전문 URL. 계약(`openapi.yaml` `/agreements`)과 테이블(`user_agreements`)은 있지만 **백엔드가 아직 읽지 않는다** — 동의 API 를 구현할 때 들어온다. 전문 정본은 `docs/legal/`, 버전은 각 문서 머리의 값(지금 `2026-10`). 정식 주소가 서빙되기 전까지는 `https://gachijoopging.github.io/gachijoopging-legal/{terms,privacy,marketing}` 를 넣는다. 정식 주소 전환과 전문의 빈칸(문의 이메일·리전)은 GAC-80 |
 
 없어지는 키: `LIVEKIT_*` · `GRAFANA_ADMIN_PASSWORD` · `ADMIN_WEB_TAG` · `POSTGRES_*` ·
 `KAKAO_REST_API_KEY`(auth 를 계약 기준으로 다시 쓰면서 카카오 좌표 조회가 빠졌다).
