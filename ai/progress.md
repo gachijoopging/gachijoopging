@@ -98,7 +98,7 @@
 | torch 설치 경로 | `pyproject.toml` 의 `[tool.uv.index] pytorch-cu130`. **PyPI 휠은 Windows 에서 CPU 전용**이라 이걸 지우면 GPU 가 안 잡힌다 | 확정 (W1 ①) |
 | FP16 지정 방법 | `predict(quantize=16)`. `half=True` 는 8.4.112 에서 deprecated 경고 | 확정 (W1 ①) |
 | weights 경로 | **서빙은 `ai/weights/yolo26s-1024-v1.pt`** (⑬ 에서 교체 · `modelVersion` 과 같은 이름이라 응답만 보고 파일을 되찾을 수 있다). `yolo26s.pt` 는 **학습 베이스**로 남는다 — `scripts/train.py` 가 여기서 전이학습한다. 둘 다 커밋하지 않는다(`.gitignore` 의 `*.pt`) | 확정 (⑬) |
-| `smoke.py` 의 SKIP 은 통과가 아니다 | **검출 0개인 사진으로 돌리면 항목 단위 검사 5건이 빈 목록 위에서 `all() == True` 로 통과한다.** 그래서 그 5건은 PASS 가 아니라 **SKIP** 으로 찍고 **종료 코드를 0 이 아니게** 한다 — 버그가 아니라 결정이다(⑬). 기본 이미지도 `bus.jpg` 에서 **학습셋 첫 이미지**로 바꿨다(자체 학습 모델은 버스를 검출하지 않는다). 데이터셋이 없는 머신에서는 `bus.jpg` 로 떨어지고 SKIP 5건이 무엇을 줘야 하는지 말한다. **W1 판정·㉔ 는 `SKIP 0` 까지 봐야 한다** | 확정 (⑬) |
+| `smoke.py` 의 SKIP 은 통과가 아니다 | **검출 0개인 사진으로 돌리면 항목 단위 검사 5건이 빈 목록 위에서 `all() == True` 로 통과한다.** 그래서 그 5건은 PASS 가 아니라 **SKIP** 으로 찍고 **종료 코드를 0 이 아니게** 한다 — 버그가 아니라 결정이다(⑬). 기본 이미지도 `bus.jpg` 에서 **학습셋 첫 이미지**로 바꿨다(자체 학습 모델은 버스를 검출하지 않는다). 데이터셋이 없는 머신에서는 `bus.jpg` 로 떨어지고 SKIP 5건이 무엇을 줘야 하는지 말한다. **새 저장소를 막 클론한 머신이 그 경우다** — `--image docs/labeling-examples/CAN-1.jpg` 를 넘긴다(GAC-30). **W1 판정·㉔ 는 `SKIP 0` 까지 봐야 한다** | 확정 (⑬) |
 | weights 클래스 검증 | **로드 시 `app/classes.py:validate_model_names` 가 이름·순서를 `CLASSES` 와 대조한다.** W1 COCO 매핑이 있던 자리다 — 그 매핑은 모르는 이름을 `GENERAL` 로 보내 **응답이 항상 7종임을 보장**했고, 지우면서 그 보장이 사라졌다. 불일치는 로드 실패 → 503 + `/healthz` 로 드러난다 | 확정 (⑬) |
 | letterbox | **`predict(rect=False)` 필수** — 정사각 `1024×1024` 고정. 기본값 `rect=True` 는 모양이 3가지로 갈라져 모양별 약 810ms 가 붙고 학습과도 어긋난다 | 확정 (W1 ②) |
 | GPU 직렬화 방식 | **전용 스레드 1개**(`ThreadPoolExecutor(1)`). 세마포어는 스레드별 CUDA 초기화 비용 때문에 안 된다 | 확정 (W1 ②) |
