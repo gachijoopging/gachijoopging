@@ -3,7 +3,6 @@
 # Postgres 가 없다. DB 는 Supabase 이고 서버 밖이다(ADR-0001) — PostGIS 를 안 쓴다는 뜻이 아니라
 # 우리가 돌리지 않는다는 뜻이다. 로컬 개발용 DB 는 docker-compose.dev.yml 에 있다.
 #
-# Nginx(443·인증서·소켓 프록시)는 GAC-104 에서 이 파일에 추가한다.
 #
 # 이미지는 여기서 빌드하지 않는다. CI 가 만들어 레지스트리에 올린 것을 태그로 가져온다 —
 # 다시 빌드하면 CI 가 검증한 것과 다른 물건이 올라간다(GAC-107).
@@ -47,5 +46,32 @@ services:
       timeout: 3s
       retries: 10
 
+  # 앱이 붙는 단일 입구. 백엔드·Redis 는 바깥에 포트를 열지 않는다.
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - certbot-conf:/etc/letsencrypt:ro
+      - certbot-www:/var/www/certbot:ro
+    # 인증서가 갱신돼도 Nginx 는 모른다. 주기적으로 설정을 다시 읽게 한다.
+    command: >
+      sh -c "while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g 'daemon off;'"
+
+  # 인증서 자동 갱신. 발급은 최초 1회 손으로 한다(docs/operations.md §HTTPS).
+  certbot:
+    image: certbot/certbot:latest
+    restart: unless-stopped
+    volumes:
+      - certbot-conf:/etc/letsencrypt
+      - certbot-www:/var/www/certbot
+    entrypoint: >
+      sh -c "while :; do certbot renew --webroot -w /var/www/certbot --quiet; sleep 12h & wait $${!}; done"
+
 volumes:
   redisdata:
+  certbot-conf:
+  certbot-www:

@@ -40,6 +40,39 @@ sh infra/provision.sh
 
 스왑·도커·디렉터리를 만든다. 여러 번 돌려도 안전하다 — 이미 돼 있으면 건너뛴다.
 
+### HTTPS
+
+Nginx 가 443 을 잡고 `/api/v1/...` 를 백엔드로 넘긴다. 백엔드는 루트에서 서비스하는데 계약의 base 가
+`/api/v1` 이라(`openapi.yaml` servers) Nginx 가 `rewrite` 로 접두사를 뗀다.
+
+| 주소 | |
+|---|---|
+| `http://...` | 301 → `https://www.gachijoopging.site` |
+| `https://gachijoopging.site` | 301 → `www` (apex 는 쓰지 않는다) |
+| `https://www.gachijoopging.site/api/v1/...` | 백엔드 |
+| `.../api/v1/ws` | STOMP 소켓. 유휴 타임아웃 1시간 — 기본 60초면 조용한 구간에서 끊긴다 |
+| `.../actuator/health` | 헬스체크만 연다. `/actuator` 전체를 열면 prometheus 지표가 같이 공개된다 |
+
+**upstream 을 변수로 쓴다.** `proxy_pass http://backend:8080` 처럼 고정 이름으로 적으면 Nginx 가
+**시작할 때** 이름을 해석하고, 백엔드가 아직 없으면 아예 뜨지 않는다. `resolver` + `set $upstream` 이면
+요청할 때 해석하므로 백엔드가 재시작돼 IP 가 바뀌어도 reload 가 필요 없다.
+
+**최초 발급은 손으로 한 번.** 80 이 비어 있을 때 standalone 으로 받는다.
+
+```sh
+sudo docker run --rm -p 80:80 \
+  -v gachijoopging_certbot-conf:/etc/letsencrypt -v gachijoopging_certbot-www:/var/www/certbot \
+  certbot/certbot certonly --standalone \
+  -d www.gachijoopging.site -d gachijoopging.site \
+  --email "$CERT_EMAIL" --agree-tos --no-eff-email
+```
+
+그다음부터는 compose 의 `certbot` 컨테이너가 12시간마다 webroot 로 갱신하고, `nginx` 가 6시간마다
+설정을 다시 읽는다. 인증서가 갱신돼도 Nginx 는 스스로 알지 못하기 때문이다.
+
+> ⚠️ 지금 인증서는 **이메일 없이**(`--register-unsafely-without-email`) 발급돼 있어 만료 경고 메일이
+> 오지 않는다. `CERT_EMAIL` 을 정하면 위 명령으로 다시 받는다.
+
 ## 로컬 기동
 
 ```powershell
