@@ -15,6 +15,7 @@ import site.gachijoopging.server.domain.crew.entity.Crew;
 import site.gachijoopging.server.domain.crew.entity.CrewJoinRequest;
 import site.gachijoopging.server.domain.crew.entity.JoinPolicy;
 import site.gachijoopging.server.domain.crew.entity.JoinRequestStatus;
+import site.gachijoopging.server.domain.crew.event.CrewJoinedEvent;
 import site.gachijoopging.server.domain.crew.event.JoinRequestDecidedEvent;
 import site.gachijoopging.server.domain.crew.event.JoinRequestedEvent;
 import site.gachijoopging.server.domain.crew.repository.CrewJoinRequestRepository;
@@ -67,6 +68,7 @@ public class CrewJoinService {
     crewService.admit(crew.getId(), me, now);
     UUID requestId = UUID.randomUUID();
     joinRequestRepository.insertApproved(requestId, crew.getId(), me, now);
+    events.publishEvent(new CrewJoinedEvent(crew.getId(), crew.getLeaderId(), me));
     return new Applied(view(requireRequest(joinRequestRepository.findById(requestId))), true);
   }
 
@@ -98,6 +100,13 @@ public class CrewJoinService {
   @Transactional
   public void cancelMine(UUID me) {
     joinRequestRepository.cancelPending(me, clock.instant());
+  }
+
+  @Transactional
+  public void markRejectionRead(UUID me, UUID requestId) {
+    if (joinRequestRepository.markRejectionRead(requestId, me, clock.instant()) == 0) {
+      throw new BusinessException(ErrorCode.NOT_FOUND, "없는 거절 신청이다");
+    }
   }
 
   public CursorPage<JoinRequestResponse> pending(

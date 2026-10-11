@@ -90,6 +90,12 @@ public class CrewController {
     crewJoinService.cancelMine(me);
   }
 
+  @PostMapping("/crews/join-requests/{requestId}/read")
+  @ResponseStatus(HttpStatus.NO_CONTENT)
+  public void markRejectionRead(@CurrentUser UUID me, @PathVariable UUID requestId) {
+    crewJoinService.markRejectionRead(me, requestId);
+  }
+
   @GetMapping("/crew/join-requests")
   public ApiResponse<CursorPage<JoinRequestResponse>> pending(
       @CurrentCrew CrewMembership membership,

@@ -1,6 +1,7 @@
 package site.gachijoopging.server.domain.user.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import java.time.Instant;
 
 public record MeResponse(
     String id,
@@ -18,7 +19,10 @@ public record MeResponse(
 
   public record Settings(boolean shareLocationDefault, boolean notifyActivityStart) {}
 
-  public record Membership(MembershipStatus status, @Schema(nullable = true) MembershipCrew crew) {}
+  public record Membership(
+      MembershipStatus status,
+      @Schema(nullable = true) MembershipCrew crew,
+      @Schema(nullable = true) Rejection rejection) {}
 
   public enum MembershipStatus {
     NONE,
@@ -27,4 +31,8 @@ public record MeResponse(
   }
 
   public record MembershipCrew(String id, String name, boolean isLeader) {}
+
+  public record Rejection(String requestId, RejectionCrew crew, Instant decidedAt) {}
+
+  public record RejectionCrew(String id, String name) {}
 }
