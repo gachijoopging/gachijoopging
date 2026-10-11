@@ -18,6 +18,28 @@ VM 한 대에 docker compose 로 컨테이너 셋을 띄운다 — 백엔드(Spr
 | DB | Supabase Postgres(PostGIS) · 서울 (ADR-0001) |
 | AI | 담당자 GPU 노트북 + 터널. 서버에 올리지 않는다 (`ai/README.md` §8) |
 
+### 서버를 새로 만들 때
+
+콘솔에서 하는 것과 스크립트가 하는 것이 나뉜다. 콘솔 작업은 자동화할 수 없어 여기 적는다.
+
+**Lightsail 콘솔**
+
+| | |
+|---|---|
+| 리전 | Seoul (ap-northeast-2). Supabase 와 같은 리전이라 DB 왕복이 짧다 |
+| 블루프린트 | **OS Only → Ubuntu 24.04 LTS**. Apps+OS 를 고르면 Bitnami 가 80·443 을 미리 잡아 우리 Nginx 와 겹친다 |
+| 번들 | $12 (2 vCPU · 2GB · 60GB SSD · 전송량 3TB). 1GB 짜리는 Spring Boot 하나로 찬다 |
+| 고정 IP | `Networking` → `Attach static IP`. **안 붙이면 재시작마다 주소가 바뀌어 DNS 가 깨진다** |
+| 방화벽 | `IPv4 Firewall` 에 **443 을 직접 추가**한다. 22·80 은 기본으로 열려 있다 |
+
+**그다음 서버에서**
+
+```sh
+sh infra/provision.sh
+```
+
+스왑·도커·디렉터리를 만든다. 여러 번 돌려도 안전하다 — 이미 돼 있으면 건너뛴다.
+
 ## 로컬 기동
 
 ```powershell
