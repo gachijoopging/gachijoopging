@@ -1,0 +1,81 @@
+# 로컬 개발 — 백엔드 + Redis + PostGIS 를 내 PC 에서 띄운다.
+#
+# 운영은 DB 가 서버 밖(Supabase)이라 docker-compose.yml 에 Postgres 가 없다(ADR-0001).
+# 로컬까지 Supabase 를 보게 하면 스테이징이 없는 지금 구조에서 각자 PC 가 운영 DB 를 만지게 되고,
+# Flyway 마이그레이션을 깨뜨려 보며 고치는 작업이 불가능해진다. 그래서 로컬만 컨테이너로 띄운다.
+#
+# PostGIS 가 필요하다 — V1__init.sql 첫 줄이 CREATE EXTENSION postgis 라
+# 순정 postgres 이미지로는 백엔드가 기동하자마자 죽는다.
+#
+#   powershell -ExecutionPolicy Bypass -File infra\dev-keys.ps1   # 최초 1회
+#   docker compose -f infra/docker-compose.dev.yml up -d
+#
+# 백엔드를 IDE 에서 디버깅하려면 의존 서비스만 띄운다:
+#   docker compose -f infra/docker-compose.dev.yml up -d postgres redis
+#
+# 그때는 호스트 포트가 표준이 아니므로 백엔드에 알려줘야 한다:
+#   $env:SPRING_DATASOURCE_URL="jdbc:postgresql://localhost:15432/gachijoopging"
+#   $env:SPRING_DATA_REDIS_PORT="16379"
+
+name: gachijoopging-dev
+
+services:
+  postgres:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_DB: gachijoopging
+      POSTGRES_USER: gachijoopging
+      POSTGRES_PASSWORD: gachijoopging
+    ports:
+      # 표준 포트를 피한다 — 다른 프로젝트의 Postgres 가 5432 를 쓰고 있으면 기동이 막힌다.
+      - "15432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gachijoopging -d gachijoopging"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "16379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  backend:
+    build:
+      context: ../backend
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: local
+      # local 프로파일은 localhost 를 가리키는데 컨테이너 안에서 localhost 는 자기 자신이다.
+      # 서비스 이름으로 바꿔 준다.
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/gachijoopging
+      SPRING_DATA_REDIS_HOST: redis
+    # JWT_ACTIVE_KID·JWT_PRIVATE_KEY_PEM·JWT_PUBLIC_KEY_PEM 은 여기 적지 않는다.
+    # 루트 .env 가 통째로 들어가고(infra/dev-keys.ps1 이 넣는다), environment 에 ${...} 로 쓰면
+    # compose 가 그 변수를 infra/.env 에서 찾다가 못 찾아 빈 문자열로 덮어쓴다.
+    env_file:
+      - ../.env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
+    # Dockerfile 주석대로 Boot 의 graceful shutdown 유예(기본 30s)보다 길게 준다.
+    stop_grace_period: 45s
+
+volumes:
+  pgdata:

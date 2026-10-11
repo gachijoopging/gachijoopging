@@ -1,0 +1,51 @@
+# 운영 — 백엔드 + Redis. 서버 한 대에 이것만 올린다(ADR-0005).
+#
+# Postgres 가 없다. DB 는 Supabase 이고 서버 밖이다(ADR-0001) — PostGIS 를 안 쓴다는 뜻이 아니라
+# 우리가 돌리지 않는다는 뜻이다. 로컬 개발용 DB 는 docker-compose.dev.yml 에 있다.
+#
+# Nginx(443·인증서·소켓 프록시)는 GAC-104 에서 이 파일에 추가한다.
+#
+# 이미지는 여기서 빌드하지 않는다. CI 가 만들어 레지스트리에 올린 것을 태그로 가져온다 —
+# 다시 빌드하면 CI 가 검증한 것과 다른 물건이 올라간다(GAC-107).
+#
+#   docker compose -f infra/docker-compose.yml up -d
+
+name: gachijoopging
+
+services:
+  backend:
+    image: ${DOCKERHUB_USER}/gachijoopging-backend:${IMAGE_TAG}
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    volumes:
+      # 사진은 로컬 디스크에 두고 Nginx 가 직접 서빙한다(결정 33).
+      # 호스트 쪽 소유자를 컨테이너 UID 로 맞춰야 업로드가 된다 — backend/Dockerfile 주석 참고.
+      - ${MEDIA_ROOT}:${MEDIA_ROOT}
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/actuator/health/readiness"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
+    stop_grace_period: 45s
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    # 바깥에 열지 않는다. 백엔드만 compose 네트워크 안에서 붙는다.
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  redisdata:
