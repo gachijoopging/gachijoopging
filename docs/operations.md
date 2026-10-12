@@ -133,6 +133,11 @@ curl http://localhost:8080/actuator/health                     # {"status":"UP"}
 `build.yml` 에 경로 필터를 걸지 않은 것도 같은 이유다 — 문서만 바뀐 커밋에 이미지가 없으면, 그 커밋이
 머리인 채로 머지됐을 때 배포할 태그가 사라진다.
 
+> ⚠️ **`infra/.env` 의 `$` 는 `$$` 로 적는다.** compose 는 `env_file` 값도 보간한다. 비밀번호가
+> `pa$$w0rd` 인데 그대로 적으면 컨테이너는 `pa$w0rd` 를 받고, Flyway 가
+> `password authentication failed` 로 죽는다. 같은 파일을 `docker run --env-file` 로 쓰면 보간하지
+> 않으므로 **그쪽에서는 통과한다** — 그래서 "psql 은 붙는데 백엔드만 안 붙는" 모양으로 나타난다.
+
 ### 롤백
 
 Actions → **deploy** → Run workflow → 태그를 **비우고** 실행. 직전 태그(`/opt/gachijoopging/.image-tag.prev`)로
