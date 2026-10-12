@@ -120,6 +120,41 @@ curl http://localhost:8080/actuator/health                     # {"status":"UP"}
 `application.yml` 에서 `${PUBLIC_BASE_URL:...}` 처럼 쓰인 것이 그 모양이고, 콜론 뒤는 값이 없을 때의
 기본값일 뿐이다. 키 1:1 대조는 GAC-99.
 
+| 무엇 | 어디 |
+|---|---|
+| `dev` 머지 → 이미지 | `.github/workflows/build.yml` → `yydd12/gachijoopging-backend:<커밋 SHA>` |
+| `main` 머지 → 배포 | `.github/workflows/deploy.yml` → 서버에서 `infra/deploy.sh` |
+| 서버의 파일 | `/opt/gachijoopging/` 에 `docker-compose.yml`·`nginx/nginx.conf`·`deploy.sh`·`.env`. 저장소를 두지 않는다 — deploy.yml 이 배포마다 올린다 |
+
+**배포할 태그는 머지 커밋의 두 번째 부모다.** `dev → main` 은 merge commit 이라(`conventions.md`) `main`
+머리 SHA 로 만든 이미지는 없다. 이미지가 있는 것은 머지 당시 `dev` 머리, 즉 `git rev-parse HEAD^2` 다.
+그 태그가 레지스트리에 없으면 deploy 는 **멈춘다.** 대신 빌드해서 메우면 CI 가 검증하지 않은 물건이 올라간다.
+
+`build.yml` 에 경로 필터를 걸지 않은 것도 같은 이유다 — 문서만 바뀐 커밋에 이미지가 없으면, 그 커밋이
+머리인 채로 머지됐을 때 배포할 태그가 사라진다.
+
+### 롤백
+
+Actions → **deploy** → Run workflow → 태그를 **비우고** 실행. 직전 태그(`/opt/gachijoopging/.image-tag.prev`)로
+되돌린다. 서버에서 직접 하려면:
+
+```sh
+cd /opt/gachijoopging && ./deploy.sh            # 직전 태그로
+cd /opt/gachijoopging && ./deploy.sh <태그>      # 특정 태그로
+```
+
+`deploy.sh` 는 기동을 3분까지 기다린다. healthy 가 안 되면 **스스로 직전 태그로 되돌리고** 실패로 끝난다.
+안 기다리면 깨진 배포가 초록으로 끝난다.
+
+### 필요한 GitHub Secret
+
+| 이름 | |
+|---|---|
+| `DOCKERHUB_TOKEN` | Docker Hub Personal access token (Read & Write). 계정 비밀번호를 쓰지 않는다 |
+| `SSH_PRIVATE_KEY` | 배포 전용 키. Lightsail 기본 키와 다른 것을 쓴다 — CI 접근만 따로 끊을 수 있어야 한다 |
+
+아이디(`yydd12`)와 서버 주소는 시크릿이 아니다. 가리면 로그에서 `***` 가 돼 어디로 갔는지 못 본다.
+
 ## 감시
 
 헬스체크와 바깥에서 찌르는 것, 둘을 함께 쓴다. 서버가 통째로 꺼지면 자기 자신에게 묻는 헬스체크도 같이
