@@ -111,8 +111,8 @@ tasks.withType(Test).configureEach {
 }
 
 // 통합 테스트는 기본 test 에서 뺀다. backend:test 러너에 도커가 없어 Testcontainers 를 쓸 수
-// 없기 때문이다 — 넣으면 backend:test 가 통째로 깨진다. CI 는 backend:dockerTest 잡이
-// GitLab services 로 DB·Redis 를 띄워 따로 돌린다(02-conventions §12).
+// 없기 때문이다 — 넣으면 backend:test 가 통째로 깨진다. CI(GitHub Actions)는 아직 test 만
+// 돌리고 dockerTest 는 로컬에서 돌린다(02-conventions §12).
 tasks.named('test') {
     useJUnitPlatform {
         excludeTags 'docker'
@@ -121,7 +121,7 @@ tasks.named('test') {
 
 tasks.register('dockerTest', Test) {
     group = 'verification'
-    description = 'DB·Redis 가 필요한 통합 테스트(@Tag("docker")). 로컬은 Testcontainers, CI 는 GitLab services 로 돈다.'
+    description = 'DB·Redis 가 필요한 통합 테스트(@Tag("docker")). Testcontainers 로 DB·Redis 를 띄운다.'
     testClassesDirs = sourceSets.test.output.classesDirs
     classpath = sourceSets.test.runtimeClasspath
     useJUnitPlatform {

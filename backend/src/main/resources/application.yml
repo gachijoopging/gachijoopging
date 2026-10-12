@@ -87,13 +87,6 @@ app:
     jwks-uri: https://www.googleapis.com/oauth2/v3/certs
     timeout: 3s
 
-  invite:
-    # 초대 링크의 앞부분 (openapi.yaml POST /meets/{id}/invite-link). 공개 도메인이라 비밀이 아니다.
-    # 기본값을 두는 이유는 값이 없어도 서버가 뜨는 편이 낫기 때문이다 — 틀린 주소로 나간 링크는
-    base-url: ${INVITE_BASE_URL:https://www.gachijoopging.site/invite}
-    # openapi.yaml — "7일 만료".
-    token-ttl: 7d
-
   media:
     # 사진은 오브젝트 스토리지가 아니라 로컬 디스크에 두고 Nginx 가 직접 서빙한다 (결정 33).
     # 이름은 infra/docker-compose.yml 의 APP_MEDIA_* 와 짝이다 — 바꾸면 컨테이너가 값을 못 받는다.
@@ -104,7 +97,7 @@ app:
     #
     # PUBLIC_BASE_URL 은 infra/.env.example 이 이미 갖고 있고 compose 의 env_file: [.env] 가
     # 이 컨테이너에 그대로 넣는다 — 새로 만드는 환경변수가 아니다.
-    # 기본값을 두는 이유는 app.invite.base-url 과 같다: 값이 없어도 서버가 뜨는 편이 낫다.
+    # 공개 도메인이라 비밀이 아니고, 값이 없어도 서버가 뜨는 편이 나아 기본값을 둔다.
     base-url: ${PUBLIC_BASE_URL:https://www.gachijoopging.site}
     # Nginx 의 secure_link_md5 와 공유하는 비밀이다. 기본값을 두지 않는 이유는 JWT 키와 같다 —
     # 한쪽만 다른 서버가 뜨면 모든 사진 URL 이 403 이 되는데, 그 사실이 배포 뒤에야 드러난다.
@@ -185,9 +178,8 @@ management:
   endpoints:
     web:
       exposure:
-        # prometheus 는 infra/prometheus/prometheus.yml 의 job=spring 이 긁는다
-        #. nginx 가 /actuator 를 프록시하지 않아 외부에는 열리지 않는다 —
-        # 스크레이프는 docker 의 frontend 네트워크에서 컨테이너로 직접 붙는다.
+        # prometheus 는 지금 긁는 곳이 없고 노출만 유지한다(operations.md §감시).
+        # nginx 가 /actuator 를 프록시하지 않아 외부에는 열리지 않는다.
         include: health,prometheus
   health:
     mail:
