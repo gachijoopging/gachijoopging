@@ -208,6 +208,18 @@ class ActivityApiTest extends IntegrationTest {
   }
 
   @Test
+  void 줍기_목록의_null_원소는_422_이고_함께_보낸_줍기도_저장하지_않는다() throws Exception {
+    TestAccount 나 = 크루원이_된다("act-null-item@test.io");
+    UUID 활동 = 진행_중_활동(나);
+
+    mockMvc
+        .perform(줍는다(나, 활동, null, 줍기(UUID.randomUUID(), "CAN", 1) + ",null"))
+        .andExpect(status().isUnprocessableEntity())
+        .andExpect(jsonPath("$.code").value("VALIDATION"));
+    assertThat(줍기_수(활동)).isZero();
+  }
+
+  @Test
   void 칠_종_밖_카테고리와_수량_0_과_사진_없는_bbox_는_422_다() throws Exception {
     TestAccount 나 = 크루원이_된다("act-invalid@test.io");
     UUID 활동 = 진행_중_활동(나);
