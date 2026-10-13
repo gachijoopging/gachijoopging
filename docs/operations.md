@@ -160,6 +160,53 @@ cd /opt/gachijoopging && ./deploy.sh <태그>      # 특정 태그로
 
 아이디(`yydd12`)와 서버 주소는 시크릿이 아니다. 가리면 로그에서 `***` 가 돼 어디로 갔는지 못 본다.
 
+## 미디어
+
+사진은 오브젝트 스토리지가 아니라 **VM 로컬 디스크**에 두고 Nginx 가 직접 보낸다(결정 33·ADR-0005).
+백엔드를 거치지 않으므로 사진 트래픽이 JVM 스레드를 쓰지 않는다.
+
+| | |
+|---|---|
+| 저장 경로 | `/data/uploads/<yyyy>/<MM>/<mediaId>.jpg` · 섬네일은 `_thumb` 접미사 |
+| 공개 경로 | `https://www.gachijoopging.site/media/<yyyy>/<MM>/<mediaId>.jpg?s=<서명>&e=<만료>` |
+| 유지 | compose 가 호스트 `${MEDIA_ROOT}` 를 바인드한다. 컨테이너를 다시 만들어도 남는다 |
+| 소유자 | 호스트 쪽이 **UID 10001** — `backend/Dockerfile` 의 비루트 사용자다. 안 맞으면 업로드가 전부 permission denied |
+| 격리 | `/media/deleted/` 는 서명이 맞아도 403. 신고로 내린 사진이 URL 하나로 다시 살아나지 않게 |
+
+### 서명
+
+만료 6시간(`app.media.signed-url-ttl`). 만드는 쪽은 백엔드 `MediaSignedUrl`, 검증하는 쪽은 Nginx
+`secure_link_md5` 다. **식이 한 글자만 달라도 모든 사진이 403 이 되고, 그 사실은 배포한 뒤에야 드러난다.**
+
+```
+raw = <만료><uri> <MEDIA_SECURE_LINK_SECRET>      ← uri 와 비밀 사이에 공백 한 칸
+서명 = base64url(MD5(raw)) · 패딩 없음
+```
+
+Nginx 설정 파일은 그대로 쓰이지 않는다. 컨테이너가 `envsubst` 로 `${MEDIA_SECURE_LINK_SECRET}` 와
+`${MEDIA_ROOT}` **둘만** 바꿔 `/etc/nginx/nginx.conf` 를 만든다. 이름을 넘기지 않은 `$host`·`$uri` 는
+그대로 남는다. 이미지의 기본 템플릿 기능(`/etc/nginx/templates`)은 명령이 `nginx` 로 시작할 때만 도는데
+우리 `command` 는 `sh` 로 감싸므로 건너뛴다 — 그래서 직접 부른다.
+
+> ⚠️ **`.env` 값에 CR 이 들어가면 안 된다.** Windows 에서 `openssl ... | tr -d '\n'` 은 CR 을 남긴다.
+> 비밀 끝에 CR 하나가 붙으면 Nginx 쪽 서명과 어긋나 **유효한 서명까지 403** 이 된다. `tr -d '\r\n'` 으로 만든다.
+
+### 크기 상한
+
+세 곳이 같은 사진을 두고 서로 다른 한도를 본다. 바깥부터 안쪽으로 느슨→빡빡해야 우리 오류 봉투가 나간다.
+
+| | 값 | 왜 |
+|---|---|---|
+| Nginx `client_max_body_size` | 22m | 여기가 작으면 Nginx 가 먼저 끊어 422 봉투가 못 나간다 |
+| Spring `max-request-size` | 22MB | multipart 경계 포함 |
+| `MediaImageValidator` | 20MB | **계약상 한도.** 422 + 오류 봉투를 내는 유일한 곳 |
+
+### CORS 를 열지 않는다
+
+앱(React Native)은 브라우저가 아니라 Origin 검사를 받지 않는다. AI 서버도 사진 URL 을 읽지 않는다 —
+백엔드가 multipart 로 직접 보낸다(`AiInferenceClient`). 웹에서 쓸 일이 없으므로 web origin 을
+허용하지 않는다(GAC-111).
+
 ## 감시
 
 헬스체크와 바깥에서 찌르는 것, 둘을 함께 쓴다. 서버가 통째로 꺼지면 자기 자신에게 묻는 헬스체크도 같이
