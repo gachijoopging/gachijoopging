@@ -1345,7 +1345,7 @@ paths:
                     - { id: nc2, author: { id: 6f1c…, nickname: 관열, photoUrl: null, withdrawn: false }, text: 비 오면 일요일로 미뤄요., createdAt: 2026-09-01T11:00:00Z }
     patch:
       tags: [notices]
-      summary: "[크루장] 수정·고정"
+      summary: "[크루장] 수정"
       parameters: [{ $ref: '#/components/parameters/NoticeId' }]
       requestBody: { $ref: '#/components/requestBodies/NoticeInput' }
       responses: { '204': { description: 완료 } }
@@ -1424,7 +1424,7 @@ paths:
     get:
       tags: [notifications]
       summary: 알림 목록 (2-3). 크루장은 pending 에 처리 대기가 따로 온다
-      description: CHAT 은 받는 사람이 채팅을 마지막으로 읽은(`POST /crew/chat/read`) 뒤 처음 온 메시지에만 알림 1건·푸시 1회를 만든다. 그 뒤 메시지는 다시 읽을 때까지 알림을 만들지 않는다. 보낸 사람 본인은 받지 않는다
+      description: CHAT 은 받는 사람이 채팅을 마지막으로 읽은(`PUT /crew/chat/read`) 뒤 처음 온 메시지에만 알림 1건·푸시 1회를 만든다. 그 뒤 메시지는 다시 읽을 때까지 알림을 만들지 않는다. 보낸 사람 본인은 받지 않는다
       parameters:
         - { $ref: '#/components/parameters/Cursor' }
         - { $ref: '#/components/parameters/Limit' }

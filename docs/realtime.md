@@ -46,7 +46,7 @@ wss://www.gachijoopging.site/api/v1/ws?token=<accessToken>
 ## 끊김과 이어받기
 
 - 앱은 지수 백오프(1·2·4·8·최대 30초)로 재연결한다. 화면에는 "연결 중" 배너
-- 재연결 뒤 채팅은 `GET /crew/chat/messages?afterSeq=<마지막 seq>` 로 빈 구간을 채운다 (`beforeSeq` 의 반대 방향. openapi 에 `afterSeq` 도 받도록 추가돼 있어야 한다)
+- 재연결 뒤 채팅은 `GET /crew/chat/messages?afterSeq=<마지막 seq>` 로 빈 구간을 채운다 (`beforeSeq` 의 반대 방향)
 - 재연결 뒤 위치는 `GET /crew/live` 로 전체를 다시 받는다. 소켓은 이후 변경만 준다
 - 활동 중 앱이 배경으로 가도 소켓은 유지한다. OS 가 끊으면 포그라운드 서비스가 위치를 HTTP 로 대신 올린다: `POST /activities/{id}/live` (같은 body). 이 경로는 배경 전용이라 openapi 에 그렇게 적는다
 

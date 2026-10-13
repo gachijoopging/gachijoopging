@@ -20,6 +20,6 @@ test('자간은 글자 크기의 5% 를 넘지 않는다', () => {
   for (const v of sizes) assert.ok(Math.abs(tracking[v]) <= fontSize[v] * 0.05, `${v} 자간이 지나치다`);
 });
 
-test('초대 코드처럼 한 글자씩 읽는 문자열의 자간은 따로 둔다', () => {
+test('재설정 코드처럼 한 글자씩 읽는 문자열의 자간은 따로 둔다', () => {
   assert.ok(tracking.code > 0);
 });
