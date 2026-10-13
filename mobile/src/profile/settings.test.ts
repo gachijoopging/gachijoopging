@@ -12,11 +12,13 @@ const mockRemember = jest.fn();
 const mockDismiss = jest.fn();
 let mockUploadId = 0;
 let mockOffline = false;
+const mockToken = jest.fn();
 let mockStored = { session: null, ended: null, outbox: [] as unknown[] };
 jest.mock('../api/client', () => ({ ApiError: class extends Error { code: string; constructor(code: string) { super(code); this.code = code; } }, createMockClient: () => ({ get: (...args: unknown[]) => mockGet(...args), mutate: (...args: unknown[]) => mockMutate(...args) }) }));
 jest.mock('expo-router', () => ({ router: { replace: jest.fn(), push: jest.fn(), back: jest.fn(), dismissTo: (...args: unknown[]) => mockDismiss(...args) }, useFocusEffect: (fn: () => void) => require('react').useEffect(fn, [fn]), useNavigation: () => ({ addListener: () => () => {}, dispatch: jest.fn() }) }));
 jest.mock('expo-crypto', () => ({ randomUUID: () => `upload-${++mockUploadId}` }));
 jest.mock('expo-image-picker', () => ({ launchImageLibraryAsync: async () => ({ canceled: false, assets: [{ uri: 'file:///profile.jpg' }] }) }));
+jest.mock('../auth/social', () => ({ PROVIDER_KEY: { kakao: 'KAKAO', google: 'GOOGLE' }, providerToken: (...args: unknown[]) => mockToken(...args) }));
 jest.mock('../auth/usePreventBack', () => ({ usePreventBack: jest.fn() }));
 jest.mock('expo-constants', () => ({ default: { expoConfig: {} } }));
 jest.mock('expo-network', () => ({ useNetworkState: () => ({ isConnected: !mockOffline }) }));
@@ -34,6 +36,7 @@ beforeEach(() => {
   mockStored = { session: null, ended: null, outbox: [] };
   mockGet.mockReset().mockImplementation((key: string) => Promise.resolve({ data: key === 'GET /users/me' ? user : key === 'GET /users/me/agreements' ? agreements : null }));
   mockMutate.mockReset().mockResolvedValue(undefined);
+  mockToken.mockReset().mockResolvedValue('provider-token');
   mockForget.mockClear(); mockRemember.mockClear(); mockDismiss.mockClear();
 });
 afterEach(() => { if (tree) act(() => tree.unmount()); });
@@ -173,4 +176,54 @@ test('마케팅 저장이 422 면 되돌리고 동의 목록을 다시 받는다
   await act(async () => { row('마케팅 정보 수신').props.onPress(); });
   expect(row('마케팅 정보 수신').props.accessibilityState.checked).toBe(true);
   expect(mockGet).toHaveBeenCalledWith('GET /users/me/agreements');
+});
+
+const snackbar = () => tree.root.findAllByType('Snackbar' as any)[0].props;
+function withUser(patch: object) {
+  mockGet.mockImplementation((key: string) => Promise.resolve({ data: key === 'GET /users/me' ? { ...user, ...patch } : key === 'GET /users/me/agreements' ? agreements : null }));
+}
+
+test('이메일 계정이 카카오를 연결하면 토큰을 PUT /users/me/social 로 보내고 연결됨으로 바꾼다', async () => {
+  withUser({ linked: { kakao: false, google: false } });
+  await mount();
+  await act(async () => row('카카오 계정 연결').props.onPress());
+  expect(mockToken).toHaveBeenCalledWith('kakao');
+  expect(mockMutate).toHaveBeenCalledWith('PUT /users/me/social', { provider: 'KAKAO', token: 'provider-token' });
+  expect(row('카카오 계정 연결').props).toMatchObject({ subtitle: '연결됨', onPress: undefined });
+  expect(snackbar()).toMatchObject({ visible: true, message: '카카오 계정을 연결했어요. 이제 카카오로도 로그인할 수 있어요.' });
+});
+
+test('이미 연결된 제공자는 연결됨으로 보이고 누를 수 없다', async () => {
+  withUser({ linked: { kakao: false, google: true } });
+  await mount();
+  expect(row('구글 계정 연결').props).toMatchObject({ subtitle: '연결됨', onPress: undefined });
+  expect(row('카카오 계정 연결').props.onPress).toEqual(expect.any(Function));
+});
+
+test('다른 계정에 연결된 소셜 계정이면(409) 어느 계정인지 말하지 않고 안내한다', async () => {
+  withUser({ linked: { kakao: false, google: false } });
+  mockMutate.mockRejectedValueOnce(new ApiError('CONFLICT'));
+  await mount();
+  await act(async () => row('구글 계정 연결').props.onPress());
+  expect(snackbar()).toMatchObject({ visible: true, message: '이 구글 계정은 연결할 수 없어요. 다른 계정으로 시도해 주세요.' });
+  expect(row('구글 계정 연결').props.subtitle).not.toBe('연결됨');
+});
+
+test('연결 요청이 실패하면 다시 시도하라고 안내하고, 제공자 창을 닫으면 아무것도 보내지 않는다', async () => {
+  withUser({ linked: { kakao: false, google: false } });
+  mockToken.mockResolvedValueOnce(null);
+  await mount();
+  await act(async () => row('카카오 계정 연결').props.onPress());
+  expect(mockMutate).not.toHaveBeenCalled();
+  expect(snackbar().visible).toBe(false);
+  mockMutate.mockRejectedValueOnce(new ApiError('INTERNAL'));
+  await act(async () => row('카카오 계정 연결').props.onPress());
+  expect(snackbar().message).toBe('카카오 계정을 연결하지 못했어요. 다시 시도해 주세요.');
+});
+
+test('소셜로 가입한 계정에는 소셜 연결 행이 없다', async () => {
+  withUser({ hasPassword: false, linked: { kakao: true, google: false } });
+  await mount();
+  expect(row('카카오 계정 연결')).toBeUndefined();
+  expect(row('구글 계정 연결')).toBeUndefined();
 });

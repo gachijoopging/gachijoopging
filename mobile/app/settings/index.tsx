@@ -28,9 +28,12 @@ import { ApiError, createMockClient, type ApiClient } from '../../src/api/client
 import { accountGate, leaveConfirm, leaveFailure } from '../../src/profile/profile';
 import { getStored, loadAccount, loadLastAccount } from '../../src/activity/store';
 import { currentAccount, forgetAccount, rememberAccount } from '../../src/auth/account';
+import { PROVIDER_KEY, providerToken, type Provider } from '../../src/auth/social';
 
 type Me = {
   hasPassword: boolean;
+  /** 이메일 계정에 붙인 소셜 로그인. 연결된 제공자는 다시 연결하지 않는다 */
+  linked: Record<Provider, boolean>;
   /** 크루 소속이 아니면(가입 전·승인 대기) 크루 관련 행을 숨기고 계정 행만 보인다 */
   member: boolean;
   /** 승인 대기 중. 탈퇴하면 그 신청도 취소된다 */
@@ -80,6 +83,17 @@ const DISSOLVE = {
   ok: '해산하고 나가기',
 };
 
+const PROVIDER_NAME: Record<Provider, string> = { kakao: '카카오', google: '구글' };
+
+/**
+ * 409 는 이 소셜 계정이 다른 가치줍깅 계정에 이미 연결된 경우다. 어느 계정인지는 말하지 않는다 —
+ * 남의 소셜 계정으로 가입 여부를 떠보는 통로가 되지 않게
+ */
+function linkFailure(provider: Provider, error: unknown): string {
+  if (error instanceof ApiError && error.code === 'CONFLICT') return `이 ${PROVIDER_NAME[provider]} 계정은 연결할 수 없어요. 다른 계정으로 시도해 주세요.`;
+  return `${PROVIDER_NAME[provider]} 계정을 연결하지 못했어요. 다시 시도해 주세요.`;
+}
+
 const BLOCKED: Record<Kind, string> = {
   leave: '진행 중이거나 아직 저장되지 않은 기록이 있어요. 줍깅 탭에서 종료와 동기화를 완료한 뒤 다시 시도해 주세요.',
   withdraw: '진행 중인 활동이 있으면 회원 탈퇴를 할 수 없어요. 줍깅 탭에서 종료와 동기화를 완료한 뒤 다시 시도해 주세요.',
@@ -92,6 +106,7 @@ export default function SettingsScreen() {
   const [modal, setModal] = useState<Modal | null>(null);
   const [busy, setBusy] = useState(false);
   const [snackbar, setSnackbar] = useState<string | null>(null);
+  const [linking, setLinking] = useState<Provider | null>(null);
   const toggling = useRef(new Set<SettingKey>());
   const [pendingSettings, setPendingSettings] = useState<ReadonlySet<SettingKey>>(new Set());
   const network = useNetworkState();
@@ -106,6 +121,7 @@ export default function SettingsScreen() {
       loadAccount(data.id);
       setMe({
         hasPassword: data.hasPassword,
+        linked: { kakao: !!data.linked?.kakao, google: !!data.linked?.google },
         member: data.membership.status === 'MEMBER',
         pending: data.membership.status === 'PENDING',
         crewName: data.membership.crew?.name ?? null,
@@ -146,6 +162,23 @@ export default function SettingsScreen() {
     } finally {
       toggling.current.delete(key);
       setPendingSettings(new Set(toggling.current));
+    }
+  };
+
+  const link = async (provider: Provider) => {
+    if (!me || linking) return;
+    setLinking(provider);
+    try {
+      if (offline) throw new ApiError('OFFLINE');
+      const token = await providerToken(provider);
+      if (token == null) return;
+      await api.mutate('PUT /users/me/social', { provider: PROVIDER_KEY[provider], token });
+      setMe((m) => m && { ...m, linked: { ...m.linked, [provider]: true } });
+      setSnackbar(`${PROVIDER_NAME[provider]} 계정을 연결했어요. 이제 ${PROVIDER_NAME[provider]}로도 로그인할 수 있어요.`);
+    } catch (error) {
+      setSnackbar(linkFailure(provider, error));
+    } finally {
+      setLinking(null);
     }
   };
 
@@ -263,6 +296,19 @@ export default function SettingsScreen() {
             {me.member && me.hasPassword ? (
               <ListRow title="비밀번호 재설정" subtitle="재설정 메일을 보낼 수 있어요." onPress={() => router.push('/reset-password')} />
             ) : null}
+            {/* 소셜로 가입한 계정은 이미 그 제공자로 로그인한다. 연결은 이메일로 가입한 크루원에게만 */}
+            {me.member && me.hasPassword
+              ? (['kakao', 'google'] as const).map((provider) => (
+                  <ListRow
+                    key={provider}
+                    title={`${PROVIDER_NAME[provider]} 계정 연결`}
+                    subtitle={me.linked[provider] ? '연결됨' : `${PROVIDER_NAME[provider]}로도 로그인할 수 있어요.`}
+                    accessibilityLabel={me.linked[provider] ? `${PROVIDER_NAME[provider]} 계정 연결, 연결됨` : undefined}
+                    disabled={linking != null}
+                    onPress={me.linked[provider] ? undefined : () => link(provider)}
+                  />
+                ))
+              : null}
             <ListRow title="로그아웃" disabled={busy} onPress={() => ask('logout')} />
             <ListRow title="회원 탈퇴" tone="danger" divider={false} accessibilityLabel="회원 탈퇴, 계정을 삭제해요" disabled={busy} onPress={() => ask('withdraw')} />
           </Card>
