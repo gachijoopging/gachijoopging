@@ -1,0 +1,73 @@
+# main 머지 → 운영 배포(GAC-107). 여기서 빌드하지 않는다 — build.yml 이 만들어
+# 레지스트리에 올려둔 이미지를 태그로 가져다 바꿔 끼운다.
+#
+# 손으로 돌릴 때: Actions → deploy → Run workflow
+#   태그를 적으면 그 태그로, 비우면 직전 태그로 되돌린다(롤백).
+
+name: deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "배포할 이미지 태그. 비우면 직전 배포로 롤백한다"
+        required: false
+
+env:
+  IMAGE: yydd12/gachijoopging-backend
+  HOST: ubuntu@13.125.10.7
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - id: tag
+        env:
+          INPUT_TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "tag=$INPUT_TAG" >> "$GITHUB_OUTPUT"   # 비어 있으면 deploy.sh 가 롤백한다
+            exit 0
+          fi
+          # dev → main 은 merge commit 이다(AGENTS.md §작업 시 주의). main 머리 SHA 로
+          # 만든 이미지는 없다 — 이미지가 있는 것은 머지 당시 dev 머리, 즉 두 번째 부모다.
+          echo "tag=$(git rev-parse HEAD^2)" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/login-action@v3
+        with:
+          username: yydd12
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # 없으면 여기서 멈춘다. 대신 빌드해서 메우면 CI 가 검증하지 않은 물건이 운영에 올라간다.
+      - name: 이미지가 레지스트리에 있나
+        if: steps.tag.outputs.tag != ''
+        run: docker manifest inspect "$IMAGE:${{ steps.tag.outputs.tag }}" > /dev/null
+
+      - name: 서버 열쇠
+        run: |
+          set -euo pipefail
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          # keyscan 으로 그때그때 받으면 아무 키나 믿는다는 뜻이다. 호스트 키는 공개 값이라 박아 둔다.
+          echo '13.125.10.7 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOeOHFjZ0ZK/FXfxqeIib8YEXg9iQ9Gbz2yyHwBFVKl4' > ~/.ssh/known_hosts
+
+      # 설정도 같이 올린다. 서버에 저장소를 두지 않으므로 이 파일들이 유일한 사본이다.
+      - name: 설정 올리기
+        run: |
+          set -euo pipefail
+          scp infra/docker-compose.yml infra/deploy.sh "$HOST:/opt/gachijoopging/"
+          scp infra/nginx/nginx.conf "$HOST:/opt/gachijoopging/nginx/"
+
+      - name: 배포
+        run: ssh "$HOST" "chmod +x /opt/gachijoopging/deploy.sh && /opt/gachijoopging/deploy.sh ${{ steps.tag.outputs.tag }}"
+
+      - name: 바깥에서 확인
+        run: curl -fsS --retry 5 --retry-delay 5 https://www.gachijoopging.site/actuator/health

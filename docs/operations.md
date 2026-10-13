@@ -120,6 +120,93 @@ curl http://localhost:8080/actuator/health                     # {"status":"UP"}
 `application.yml` 에서 `${PUBLIC_BASE_URL:...}` 처럼 쓰인 것이 그 모양이고, 콜론 뒤는 값이 없을 때의
 기본값일 뿐이다. 키 1:1 대조는 GAC-99.
 
+| 무엇 | 어디 |
+|---|---|
+| `dev` 머지 → 이미지 | `.github/workflows/build.yml` → `yydd12/gachijoopging-backend:<커밋 SHA>` |
+| `main` 머지 → 배포 | `.github/workflows/deploy.yml` → 서버에서 `infra/deploy.sh` |
+| 서버의 파일 | `/opt/gachijoopging/` 에 `docker-compose.yml`·`nginx/nginx.conf`·`deploy.sh`·`.env`. 저장소를 두지 않는다 — deploy.yml 이 배포마다 올린다 |
+
+**배포할 태그는 머지 커밋의 두 번째 부모다.** `dev → main` 은 merge commit 이라(`conventions.md`) `main`
+머리 SHA 로 만든 이미지는 없다. 이미지가 있는 것은 머지 당시 `dev` 머리, 즉 `git rev-parse HEAD^2` 다.
+그 태그가 레지스트리에 없으면 deploy 는 **멈춘다.** 대신 빌드해서 메우면 CI 가 검증하지 않은 물건이 올라간다.
+
+`build.yml` 에 경로 필터를 걸지 않은 것도 같은 이유다 — 문서만 바뀐 커밋에 이미지가 없으면, 그 커밋이
+머리인 채로 머지됐을 때 배포할 태그가 사라진다.
+
+> ⚠️ **`infra/.env` 의 `$` 는 `$$` 로 적는다.** compose 는 `env_file` 값도 보간한다. 비밀번호가
+> `pa$$w0rd` 인데 그대로 적으면 컨테이너는 `pa$w0rd` 를 받고, Flyway 가
+> `password authentication failed` 로 죽는다. 같은 파일을 `docker run --env-file` 로 쓰면 보간하지
+> 않으므로 **그쪽에서는 통과한다** — 그래서 "psql 은 붙는데 백엔드만 안 붙는" 모양으로 나타난다.
+
+### 롤백
+
+Actions → **deploy** → Run workflow → 태그를 **비우고** 실행. 직전 태그(`/opt/gachijoopging/.image-tag.prev`)로
+되돌린다. 서버에서 직접 하려면:
+
+```sh
+cd /opt/gachijoopging && ./deploy.sh            # 직전 태그로
+cd /opt/gachijoopging && ./deploy.sh <태그>      # 특정 태그로
+```
+
+`deploy.sh` 는 기동을 3분까지 기다린다. healthy 가 안 되면 **스스로 직전 태그로 되돌리고** 실패로 끝난다.
+안 기다리면 깨진 배포가 초록으로 끝난다.
+
+### 필요한 GitHub Secret
+
+| 이름 | |
+|---|---|
+| `DOCKERHUB_TOKEN` | Docker Hub Personal access token (Read & Write). 계정 비밀번호를 쓰지 않는다 |
+| `SSH_PRIVATE_KEY` | 배포 전용 키. Lightsail 기본 키와 다른 것을 쓴다 — CI 접근만 따로 끊을 수 있어야 한다 |
+
+아이디(`yydd12`)와 서버 주소는 시크릿이 아니다. 가리면 로그에서 `***` 가 돼 어디로 갔는지 못 본다.
+
+## 미디어
+
+사진은 오브젝트 스토리지가 아니라 **VM 로컬 디스크**에 두고 Nginx 가 직접 보낸다(결정 33·ADR-0005).
+백엔드를 거치지 않으므로 사진 트래픽이 JVM 스레드를 쓰지 않는다.
+
+| | |
+|---|---|
+| 저장 경로 | `/data/uploads/<yyyy>/<MM>/<mediaId>.jpg` · 섬네일은 `_thumb` 접미사 |
+| 공개 경로 | `https://www.gachijoopging.site/media/<yyyy>/<MM>/<mediaId>.jpg?s=<서명>&e=<만료>` |
+| 유지 | compose 가 호스트 `${MEDIA_ROOT}` 를 바인드한다. 컨테이너를 다시 만들어도 남는다 |
+| 소유자 | 호스트 쪽이 **UID 10001** — `backend/Dockerfile` 의 비루트 사용자다. 안 맞으면 업로드가 전부 permission denied |
+| 격리 | `/media/deleted/` 는 서명이 맞아도 403. 신고로 내린 사진이 URL 하나로 다시 살아나지 않게 |
+
+### 서명
+
+만료 6시간(`app.media.signed-url-ttl`). 만드는 쪽은 백엔드 `MediaSignedUrl`, 검증하는 쪽은 Nginx
+`secure_link_md5` 다. **식이 한 글자만 달라도 모든 사진이 403 이 되고, 그 사실은 배포한 뒤에야 드러난다.**
+
+```
+raw = <만료><uri> <MEDIA_SECURE_LINK_SECRET>      ← uri 와 비밀 사이에 공백 한 칸
+서명 = base64url(MD5(raw)) · 패딩 없음
+```
+
+Nginx 설정 파일은 그대로 쓰이지 않는다. 컨테이너가 `envsubst` 로 `${MEDIA_SECURE_LINK_SECRET}` 와
+`${MEDIA_ROOT}` **둘만** 바꿔 `/etc/nginx/nginx.conf` 를 만든다. 이름을 넘기지 않은 `$host`·`$uri` 는
+그대로 남는다. 이미지의 기본 템플릿 기능(`/etc/nginx/templates`)은 명령이 `nginx` 로 시작할 때만 도는데
+우리 `command` 는 `sh` 로 감싸므로 건너뛴다 — 그래서 직접 부른다.
+
+> ⚠️ **`.env` 값에 CR 이 들어가면 안 된다.** Windows 에서 `openssl ... | tr -d '\n'` 은 CR 을 남긴다.
+> 비밀 끝에 CR 하나가 붙으면 Nginx 쪽 서명과 어긋나 **유효한 서명까지 403** 이 된다. `tr -d '\r\n'` 으로 만든다.
+
+### 크기 상한
+
+세 곳이 같은 사진을 두고 서로 다른 한도를 본다. 바깥부터 안쪽으로 느슨→빡빡해야 우리 오류 봉투가 나간다.
+
+| | 값 | 왜 |
+|---|---|---|
+| Nginx `client_max_body_size` | 22m | 여기가 작으면 Nginx 가 먼저 끊어 422 봉투가 못 나간다 |
+| Spring `max-request-size` | 22MB | multipart 경계 포함 |
+| `MediaImageValidator` | 20MB | **계약상 한도.** 422 + 오류 봉투를 내는 유일한 곳 |
+
+### CORS 를 열지 않는다
+
+앱(React Native)은 브라우저가 아니라 Origin 검사를 받지 않는다. AI 서버도 사진 URL 을 읽지 않는다 —
+백엔드가 multipart 로 직접 보낸다(`AiInferenceClient`). 웹에서 쓸 일이 없으므로 web origin 을
+허용하지 않는다(GAC-111).
+
 ## 감시
 
 헬스체크와 바깥에서 찌르는 것, 둘을 함께 쓴다. 서버가 통째로 꺼지면 자기 자신에게 묻는 헬스체크도 같이
