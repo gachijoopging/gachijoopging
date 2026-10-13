@@ -64,17 +64,17 @@ flowchart TD
 |---|---|---|---|---|
 | 1-1 | 시작 | fragment_start | [1-1-start.md](screens/1-1-start.md) | 승인 |
 | 1-2 | 로그인 | fragment_login | [1-2-login.md](screens/1-2-login.md) | 승인 |
-| 1-3 | 회원가입 | fragment_signup | [1-3-sign-up.md](screens/1-3-sign-up.md) | 배치 승인 · 동의자료 대기 |
-| 1-4 | 소셜 첫 가입 닉네임 | fragment_nickname | [1-4-nickname.md](screens/1-4-nickname.md) | 배치 승인 · 동의자료 대기 |
+| 1-3 | 회원가입 | fragment_signup | [1-3-sign-up.md](screens/1-3-sign-up.md) | 승인 |
+| 1-4 | 소셜 첫 가입 닉네임 | fragment_nickname | [1-4-nickname.md](screens/1-4-nickname.md) | 승인 |
 | 1-5 | 비밀번호 재설정 (요청·코드 입력 한 화면) | fragment_password_reset, fragment_password_reset_confirm | [1-5-reset-password.md](screens/1-5-reset-password.md) | 승인 |
-| 1-6 | 크루 선택 (기존 크루에 들어가기 / 크루 만들기) | 재조립 ← fragment_hood | [1-6-create-or-join-crew.md](screens/1-6-create-or-join-crew.md) | 초안 |
-| 1-7 | 크루 만들기 | 신규 (별도 화면으로 복원) | [1-7-create-crew.md](screens/1-7-create-crew.md) | 초안 |
-| 1-8 | 크루 검색 | 신규 ← fragment_hood 부품 | [1-8-search-crew.md](screens/1-8-search-crew.md) | 초안 |
-| 1-9 | 승인 대기 | 신규 | [1-9-pending-approval.md](screens/1-9-pending-approval.md) | 초안 |
+| 1-6 | 크루 선택 (기존 크루에 들어가기 / 크루 만들기) | 재조립 ← fragment_hood | [1-6-create-or-join-crew.md](screens/1-6-create-or-join-crew.md) | 승인 |
+| 1-7 | 크루 만들기 | 신규 (별도 화면으로 복원) | [1-7-create-crew.md](screens/1-7-create-crew.md) | 승인 |
+| 1-8 | 크루 검색 | 신규 ← fragment_hood 부품 | [1-8-search-crew.md](screens/1-8-search-crew.md) | 승인 |
+| 1-9 | 승인 대기 | 신규 | [1-9-pending-approval.md](screens/1-9-pending-approval.md) | 승인 |
 | 1-10 | 위치 권한 안내 | 통합됨 → 4-2 시트 | [1-10-location-permission.md](screens/1-10-location-permission.md) | 통합됨 |
 | 2-1 | 홈 | fragment_home | [2-1-home.md](screens/2-1-home.md) | 승인 |
 | 2-2 | 활동 중인 크루원 목록 | 재조립 ← fragment_friends | [2-2-active-crew-members.md](screens/2-2-active-crew-members.md) | 승인 |
-| 2-3 | 알림 목록 | fragment_notification | [2-3-notifications.md](screens/2-3-notifications.md) | 초안 |
+| 2-3 | 알림 목록 | fragment_notification | [2-3-notifications.md](screens/2-3-notifications.md) | 승인 |
 | 3-1 | 모이깅 | 재조립 ← fragment_meet | [3-1-crew.md](screens/3-1-crew.md) | 승인 |
 | 3-2 | 크루 정보 | 통합됨 → 3-11 | [3-2-crew-info.md](screens/3-2-crew-info.md) | 통합됨 |
 | 3-3 | 초대 코드 | 끔 | [3-3-invite-code.md](screens/3-3-invite-code.md) | 끔 |
@@ -82,10 +82,10 @@ flowchart TD
 | 3-5 | 공지 목록 | 재조립 ← fragment_feed | [3-5-notices.md](screens/3-5-notices.md) (3-1 탭으로 통합) | 승인 |
 | 3-6 | 공지 상세 | 재조립 ← fragment_post_detail | [3-6-notice-detail.md](screens/3-6-notice-detail.md) | 승인 |
 | 3-7 | 크루 채팅 | fragment_chat | [3-7-crew-chat.md](screens/3-7-crew-chat.md) | 승인 |
-| 3-8 | 가입 신청 관리 | 재조립 ← fragment_friends | [3-8-manage-join-requests.md](screens/3-8-manage-join-requests.md) | 초안 |
+| 3-8 | 가입 신청 관리 | 재조립 ← fragment_friends | [3-8-manage-join-requests.md](screens/3-8-manage-join-requests.md) | 승인 |
 | 3-9 | 활동 달력 | 신규 | [3-9-activity-calendar.md](screens/3-9-activity-calendar.md) (3-1 탭으로 통합) | 승인 |
-| 3-10 | 크루 정보 수정 | 재조립 ← fragment_meet_edit | [3-10-edit-crew.md](screens/3-10-edit-crew.md) | 초안 |
-| 3-11 | 크루 정보·크루원 | 재조립 ← fragment_meet_manage | [3-11-manage-crew-members.md](screens/3-11-manage-crew-members.md) | 초안 |
+| 3-10 | 크루 정보 수정 | 재조립 ← fragment_meet_edit | [3-10-edit-crew.md](screens/3-10-edit-crew.md) | 승인 |
+| 3-11 | 크루 정보·크루원 | 재조립 ← fragment_meet_manage | [3-11-manage-crew-members.md](screens/3-11-manage-crew-members.md) | 승인 |
 | 3-12 | 공지 작성·수정 | 재조립 ← fragment_publish | [3-12-edit-notice.md](screens/3-12-edit-notice.md) | 승인 |
 | 4-1 | 줍깅 대기 | 재조립 ← sheet_start | [4-1-plogging-ready.md](screens/4-1-plogging-ready.md) | 승인 |
 | 4-2 | 활동 시작 시트 | sheet_start | [4-2-start-activity-sheet.md](screens/4-2-start-activity-sheet.md) | 승인 |
@@ -98,9 +98,9 @@ flowchart TD
 | 5-2 | 게시물 상세 | fragment_post_detail, sheet_post_menu | [5-2-post-detail.md](screens/5-2-post-detail.md) | 승인 |
 | 5-3 | 활동 기록 상세 | fragment_record_detail, sheet_record_items | [5-3-activity-record-detail.md](screens/5-3-activity-record-detail.md) | 승인 |
 | 5-4 | 타인 프로필 | fragment_user_profile, sheet_safety | [5-4-user-profile.md](screens/5-4-user-profile.md) | 승인 |
-| 5-5 | 내 정보 | fragment_profile | [5-5-my-profile.md](screens/5-5-my-profile.md) | 초안 |
+| 5-5 | 내 정보 | fragment_profile | [5-5-my-profile.md](screens/5-5-my-profile.md) | 승인 |
 | 5-6 | 게시물 작성 | fragment_publish | [5-6-create-post.md](screens/5-6-create-post.md) | 승인 |
-| 5-7 | 설정 | fragment_settings | [5-7-settings.md](screens/5-7-settings.md) | 초안 |
+| 5-7 | 설정 | fragment_settings | [5-7-settings.md](screens/5-7-settings.md) | 승인 |
 | 5-8 | 프로필 수정 | fragment_edit_profile | [5-8-edit-profile.md](screens/5-8-edit-profile.md) | 승인 |
 | 5-9 | 차단 관리 | fragment_blocklist | [5-9-manage-blocks.md](screens/5-9-manage-blocks.md) | 승인 |
 | 6-1 | 신고 | fragment_report | [6-1-report.md](screens/6-1-report.md) | 승인 |

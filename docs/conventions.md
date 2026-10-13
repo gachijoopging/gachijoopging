@@ -36,7 +36,7 @@ Conventional Commits.
 **scope 는 최상위 폴더 이름**: `app` · `backend` · `infra` · `design-system` · `docs`. 백엔드는 도메인까지 내려 쓴다.
 
 ```
-feat(backend/crew): 초대 코드 재발급
+feat(backend/crew): 크루 검색
 fix(app): 활동 중 일시정지 뒤 거리 누적 오류
 chore(infra): 모니터링 컨테이너 제거
 ```
@@ -70,7 +70,7 @@ chore(infra): 모니터링 컨테이너 제거
 
 ## PR
 
-- 제목은 커밋 메시지와 같은 형식: `feat(backend/crew): 초대 코드 재발급`
+- 제목은 커밋 메시지와 같은 형식: `feat(backend/crew): 크루 검색`
 - 본문 템플릿은 `.github/PULL_REQUEST_TEMPLATE.md`. 이슈는 브랜치 이름의 ID 로 자동 연결된다
 - 리뷰어는 `.github/CODEOWNERS` 가 폴더별로 자동 지정한다. 사람이 고르지 않는다
 - 평일 24시간 내 응답. 넘기면 데일리에서 언급
@@ -89,7 +89,7 @@ chore(infra): 모니터링 컨테이너 제거
 | `W1 골격` | 9/27 ~ 10/4 | 백엔드 빌드 복구 · 카카오맵 스파이크 · RN 골격 · 서버 구성 결정 |
 | `W2 도메인` | 10/5 ~ 10/11 | 전 도메인 · 인프라 · 앱 실 API 전환. 10/11 에 운영 서버에서 데모 경로가 끝까지 돈다 |
 | `W3 통합·마무리` | 10/12 ~ 10/18 | 통합 QA · W2 에서 밀린 것 · **10/18 코드 프리즈** |
-| `W4 마무리` | 10/19 ~ 10/25 | 버퍼. 크래시·데이터 유실급 버그만 · 릴리스 APK · 발표 |
+| `W4 마무리` | 10/19 ~ 10/25 | 버퍼. 크래시·데이터 유실급 버그만 · 릴리스 APK |
 
 - 추정: `1`=1시간 이내 · `2`=3~4시간 · `3`=하루 · `5`=이틀 · `8`=3일. 8 이 나오면 쪼개라는 신호다
 - 등록 절차와 설명 템플릿은 `/create-issue` 스킬(`.claude/skills/create-issue/SKILL.md`)이 정본이다
@@ -115,7 +115,8 @@ Linear↔GitHub 연동이 브랜치 이름의 이슈 ID 로 PR 을 이슈에 붙
 
 보내는 것은 **셋뿐**이다. `.claude/hooks/notify-push.mjs` 가 보낸다 — Claude Code 의 PostToolUse
 훅으로, `git push`·`gh pr create`·`gh pr merge` 를 로컬에서 잡아 각자의 웹훅으로 직접 쏜다.
-GitHub Actions 는 안 쓴다.
+이 셋에는 GitHub Actions 를 쓰지 않는다. 예외는 PR 리뷰 SLA 알림 하나로, 스케줄이 돌아야 해서
+`.github/workflows/pr-review-sla.yml` 이 Actions 로 보낸다.
 
 | 언제 | 무엇 |
 |---|---|
@@ -129,12 +130,13 @@ CI 실패도 안 보낸다 — PR 에 이미 보인다.
 **한계**: 로컬 훅이라 Claude Code 를 거치지 않은 작업은 못 잡는다 — GitHub 웹에서 직접 머지하거나
 터미널에서 맨 `git`/`gh` 를 쓰면 알림이 안 나간다. 그 경우 아래처럼 손으로 보낸다.
 
-웹훅 값은 각자 저장소 루트 `.env` 의 `MM_WEBHOOK_URL` 이다. 팀 공용 Secret 은 안 쓴다.
+웹훅 값은 각자 저장소 루트 `.env` 의 `MM_WEBHOOK_URL` 이다. 팀 공용 Secret 은 PR 리뷰 SLA 알림이 쓰는
+저장소 Secret `MM_WEBHOOK_URL` 하나뿐이다.
 
 손으로 뭔가 알리고 싶으면 `node infra/notify.mjs "메시지"` 를 쓴다. 이건 각자 저장소 루트 `.env` 의
 `MM_WEBHOOK_URL` 을 읽으므로 자기 이름으로 나간다. 발급 방법은 루트 `.env.example` 에 있다.
 웹훅 URL 을 직접 `curl` 하지 않는다 — 쉘 히스토리에 남는다.
-루트 `.env` 는 로컬 설정, `infra/.env` 는 EC2 에 올라가는 운영 값이다. 섞지 않는다.
+루트 `.env` 는 로컬 설정, `infra/.env` 는 Lightsail 운영 서버(ADR-0005)에 올라가는 운영 값이다. 섞지 않는다.
 
 ## 테스트
 
@@ -142,21 +144,23 @@ CI 실패도 안 보낸다 — PR 에 이미 보인다.
 - 앱: 화면 로직은 훅·유틸 단위 테스트(Jest). 화면 자체는 목 데이터로 스토리(카탈로그)에 올려 눈으로 본다. E2E 는 1차에 두지 않는다
 - 계약: `openapi.yaml` 은 CI 에서 `redocly lint` 로 검증하고, 백엔드 컨트롤러 경로·메서드와 대조하는 계약 테스트를 유지한다(옛 `OpenApiContractTest` 이식)
 
-### CI — 아직 없다
+### CI
 
-백엔드 빌드가 초록이 된 뒤에 넣는다. 그 전에 넣으면 첫날부터 빨간 체크를 보게 되고, 빨강을 무시하는
-습관이 먼저 생긴다. 넣을 때 `.github/workflows/` 에 셋을 두고 바뀐 폴더의 것만 돌린다.
+`.github/workflows/` 에 있다. 검사 셋은 PR 과 `dev`·`main` 푸시에 돌고, 배포 둘과 알림 하나가 따로 있다.
 
 | 워크플로 | 언제 | 무엇 |
 |---|---|---|
-| `contract` | `docs/openapi.yaml` | `redocly lint`. 설정은 `redocly.yaml` — 경고 0 이라야 새 경고가 신호가 된다 |
-| `backend` | `backend/**` | `./gradlew test` (Java 21) |
-| `design-system` | `design-system/**` | `npm test`. `node:test` 와 타입 스트리핑만 써서 설치가 필요 없다 |
+| `contract` | PR · `dev`·`main` 푸시 (`docs/openapi.yaml`·`redocly.yaml` 이 바뀌었을 때만 lint) | `redocly lint`. 설정은 `redocly.yaml` — 경고 0 이라야 새 경고가 신호가 된다. 버전은 워크플로에 고정 |
+| `backend` | PR · `dev`·`main` 푸시 | `./gradlew test` (Java 21). `@Tag("docker")` 통합 테스트는 돌리지 않는다 |
+| `design-system` | PR · `dev`·`main` 푸시 | `npm test`. `node:test` 와 타입 스트리핑만 써서 설치가 필요 없다 |
+| `build` | `dev` 푸시 | 백엔드 이미지를 만들어 레지스트리에 올린다. 배포하지 않는다 |
+| `deploy` | `main` 푸시 · 수동 | `build` 가 올린 이미지를 운영에 배포. 수동 실행으로 롤백 |
+| `pr-review-sla` | 평일 09:00 KST | 리뷰 요청 뒤 24시간 동안 리뷰가 없는 PR 의 리뷰어를 Mattermost 로 멘션 |
 
 여기 없는 것: 커버리지 게이트 · 앱 빌드 · 타입체크. 1차에 회수가 안 된다.
 
-그때까지는 손으로 돌린다 — `npx @redocly/cli@1 lint docs/openapi.yaml` · `cd design-system && npm test` ·
-`cd backend && ./gradlew test`.
+로컬에서 미리 돌릴 때는 워크플로와 같은 버전으로 — `npx @redocly/cli@2.57.0 lint docs/openapi.yaml` ·
+`cd design-system && npm test` · `cd backend && ./gradlew test`.
 
 ### 완료의 정의
 

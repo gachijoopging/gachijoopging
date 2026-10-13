@@ -17,14 +17,14 @@ tools: Read, Grep, Glob, Bash
 2. **동기화** — `git merge origin/dev` 로 충돌이 풀렸는가. **`rebase` 를 쓰지 않는다** —
    `--force push` 가 남의 커밋을 날린다
 3. **계약** — `docs/openapi.yaml` 을 바꿨으면 같은 PR 에 앱·백엔드 양쪽 수정이 있는가.
-   `npx @redocly/cli@1 lint docs/openapi.yaml` 이 경고 0 인가
+   `npx @redocly/cli@2.57.0 lint docs/openapi.yaml` 이 경고 0 인가
 4. **완료의 정의** (`docs/conventions.md`) — 이슈의 완료 조건에 적힌 검증을 **실제로 돌린 출력**이
    PR 본문에 있는가. 없으면 돌려서 붙인다. 돌릴 수 없으면 멈추고 보고한다
 5. **정본 문서** — 계약·화면·ERD 를 바꿨으면 해당 문서를 같은 PR 에서 고쳤는가
 
 ## PR 을 연다
 
-- 제목은 커밋 메시지와 같은 형식: `feat(backend/crew): 초대 코드 재발급`
+- 제목은 커밋 메시지와 같은 형식: `feat(backend/crew): 크루 검색`
 - 본문은 `.github/PULL_REQUEST_TEMPLATE.md`. 이슈는 브랜치 이름의 `gac-N` 으로 자동 연결된다
 - 리뷰어는 `.github/CODEOWNERS` 가 자동 지정한다. **사람이 고르지 않는다**
 - `gh pr create` 로 연다 — 이 명령은 훅이 잡아 리뷰어 알림을 자동으로 보낸다.
