@@ -42,7 +42,7 @@
 | ②-a | 프로필 수정 | "프로필 수정" · "닉네임과 사진을 바꿔요." | `ListRow` (옛 `view_settings_row`) | 5-8 프로필 수정 |
 | ②-b | 위치 공유 기본값 | 크루원(`membership.status` MEMBER)일 때만 보인다. "위치 공유 기본값" · "활동을 시작할 때 미리 선택돼요." 값은 `settings.shareLocationDefault` (`GET /users/me`) | `ListRow` + `Switch` (옛 `Gachi.Switch`, 행 id rowSwitch) | 스위치 토글 → 아래 "토글 저장" |
 | ②-c | 활동 시작 알림 | 크루원일 때만 보인다. "활동 시작 알림" · "팔로우한 크루원이 활동을 시작하면 알려줘요." 값은 `settings.notifyActivityStart` (`GET /users/me`) | `ListRow` + `Switch` (옛 `Gachi.Switch`, 행 id rowSwitch) | 스위치 토글 → 아래 "토글 저장" |
-| ②-d | 마케팅 정보 수신 | 소속과 무관하게 보인다. "마케팅 정보 수신" · "새 기능과 이벤트 소식을 알려줘요." 값은 `GET /users/me/agreements` 항목 중 type 이 MARKETING 인 것의 `agreed`. 그 항목이 없거나 동의 목록 조회에 실패하면 행을 그리지 않는다 | `ListRow` + `Switch` | 스위치 토글 → 아래 "토글 저장" |
+| ②-d | 마케팅 정보 수신 | 크루원일 때만 보인다(미가입자는 아래 "크루 없음 · 승인 대기" 대로 로그아웃·회원 탈퇴만). "마케팅 정보 수신" · "새 기능과 이벤트 소식을 알려줘요." 값은 `GET /users/me/agreements` 항목 중 type 이 MARKETING 인 것의 `agreed`. 그 항목이 없거나 동의 목록 조회에 실패하면 행을 그리지 않는다 | `ListRow` + `Switch` | 스위치 토글 → 아래 "토글 저장" |
 | ②-e | 차단 관리 | "차단 관리" | `ListRow` | 5-9 차단 관리 |
 | ② | 카드 | 위 다섯 행을 담는 카드 | `Card` | — |
 | ③-a | 크루 나가기 | 크루원일 때만 보인다. "크루 나가기" · `membership.crew.name` (`GET /users/me`) + "에서 나가요." | `ListRow` | 아래 "크루 나가기" |

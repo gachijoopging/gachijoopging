@@ -9,7 +9,7 @@ app/             React Native 앱 — 1차는 Android
 backend/         Spring Boot 3.5 · Java 21 · Flyway (global·auth·media 이관, 나머지는 새로 작성)
 design-system/   토큰 · 컴포넌트 · 캐릭터 에셋. 앱이 의존한다
 ai/              추론 서버(FastAPI)·모델 학습. 담당자 영역. 가중치·데이터셋은 git 밖
-infra/           (미결) 서버 구성이 정해지면 여기에
+infra/           운영 서버 구성 — Lightsail VM 한 대에 docker compose (ADR-0005)
 docs/            아래 문서 지도
 CONTEXT.md       용어집. 코드·문서·대화의 말은 여기 것을 쓴다
 ```
@@ -32,7 +32,7 @@ CONTEXT.md       용어집. 코드·문서·대화의 말은 여기 것을 쓴�
 
 ## 진행 순서
 
-1. 계약(`openapi.yaml` · `realtime.md`) — 화면 합의 반영, 동의 저장 계약은 준비 중
+1. 계약(`openapi.yaml` · `realtime.md`) — 화면 합의·동의 저장 계약 반영
 2. 앱 프론트를 계약의 `example` 로 완성
 3. 백엔드 — 가져온 3영역 잇기 + 나머지 새로 쓰기
 4. 연결 · 테스트 · 마무리
@@ -47,13 +47,13 @@ git config --global core.longpaths true
 
 공통: Docker Desktop(WSL2). 기본 브랜치는 `dev`.
 
-**백엔드** — JDK 21. 로컬 DB 는 Supabase 개발 프로젝트 또는 로컬 PostGIS — 방식 미결
+**백엔드** — JDK 21. 로컬 DB 는 `infra/docker-compose.dev.yml` 의 PostGIS 컨테이너다. 띄우는 법은 `docs/operations.md`
 
 **디자인 시스템** — `design-system/` 에서 `npm run web` 이 카탈로그를 브라우저에 띄운다.
 
 ## 막히면
 
 - 로컬은 되는데 CI 만 깨진다 → 대소문자
-- `.sh` 가 EC2 에서 안 돈다 → CRLF 또는 실행 권한
+- `.sh` 가 운영 서버(Lightsail)에서 안 돈다 → CRLF 또는 실행 권한
 - 로그인은 되는데 목록이 비었다 → 앱이 보는 서버 주소(`www` 인지, localhost 인지)
-- 배포 구성·장애 대응 → `docs/operations.md` (신규 서버 구성 방식은 미결)
+- 배포 구성·장애 대응 → `docs/operations.md`
