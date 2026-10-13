@@ -65,7 +65,7 @@ public class CrewService implements CrewMembershipLoader {
     requireNoCrewNorPending(me);
     UUID crewId = UUID.randomUUID();
     Instant now = clock.instant();
-    if (crewRepository.existsByName(name)
+    if (crewRepository.existsByNameAndDeletedAtIsNull(name)
         || crewRepository.insertIfAbsent(
                 crewId,
                 name,
@@ -139,7 +139,7 @@ public class CrewService implements CrewMembershipLoader {
       throw new BusinessException(ErrorCode.FORBIDDEN, "크루장만 할 수 있다");
     }
     String name = request.name() == null ? null : trimmedName(request.name());
-    if (name != null && crewRepository.existsByNameAndIdNot(name, crew.getId())) {
+    if (name != null && crewRepository.existsByNameAndIdNotAndDeletedAtIsNull(name, crew.getId())) {
       throw new BusinessException(ErrorCode.CREW_NAME_TAKEN, "이미 쓰는 크루 이름이다");
     }
     if (request.photoMediaId() != null) {
@@ -221,7 +221,7 @@ public class CrewService implements CrewMembershipLoader {
     return brief(user.getId(), user.getNickname(), user.getPhotoMediaId(), user.getStatus());
   }
 
-  private UserBriefResponse brief(UUID id, String nickname, UUID photoMediaId, String status) {
+  UserBriefResponse brief(UUID id, String nickname, UUID photoMediaId, String status) {
     if ("DELETED".equals(status)) {
       return new UserBriefResponse(id.toString(), WITHDRAWN_NICKNAME, null, true);
     }

@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Size;
+import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -13,19 +14,24 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import site.gachijoopging.server.domain.crew.dto.ChangeLeaderRequest;
 import site.gachijoopging.server.domain.crew.dto.CreateCrewRequest;
 import site.gachijoopging.server.domain.crew.dto.CreateJoinRequestRequest;
 import site.gachijoopging.server.domain.crew.dto.CrewResponse;
 import site.gachijoopging.server.domain.crew.dto.CrewSummaryResponse;
 import site.gachijoopging.server.domain.crew.dto.DecideJoinRequestRequest;
 import site.gachijoopging.server.domain.crew.dto.JoinRequestResponse;
+import site.gachijoopging.server.domain.crew.dto.MemberProfileResponse;
+import site.gachijoopging.server.domain.crew.dto.MemberResponse;
 import site.gachijoopging.server.domain.crew.dto.UpdateCrewRequest;
 import site.gachijoopging.server.domain.crew.entity.Region;
 import site.gachijoopging.server.domain.crew.service.CrewJoinService;
+import site.gachijoopging.server.domain.crew.service.CrewMemberService;
 import site.gachijoopging.server.domain.crew.service.CrewService;
 import site.gachijoopging.server.global.response.ApiResponse;
 import site.gachijoopging.server.global.response.CursorPage;
@@ -39,6 +45,7 @@ public class CrewController {
 
   private final CrewService crewService;
   private final CrewJoinService crewJoinService;
+  private final CrewMemberService crewMemberService;
 
   @PostMapping("/crews")
   @ResponseStatus(HttpStatus.CREATED)
@@ -69,6 +76,40 @@ public class CrewController {
       @CurrentCrew CrewMembership membership,
       @Valid @RequestBody UpdateCrewRequest request) {
     return ApiResponse.of(crewService.update(me, membership, request));
+  }
+
+  @PostMapping("/crew/leave")
+  @ResponseStatus(HttpStatus.NO_CONTENT)
+  public void leave(@CurrentUser UUID me, @CurrentCrew CrewMembership membership) {
+    crewMemberService.leave(me, membership);
+  }
+
+  @GetMapping("/crew/members")
+  public ApiResponse<List<MemberResponse>> members(
+      @CurrentUser UUID me, @CurrentCrew CrewMembership membership) {
+    return ApiResponse.of(crewMemberService.members(me, membership));
+  }
+
+  @GetMapping("/crew/members/{userId}")
+  public ApiResponse<MemberProfileResponse> member(
+      @CurrentUser UUID me, @CurrentCrew CrewMembership membership, @PathVariable UUID userId) {
+    return ApiResponse.of(crewMemberService.profile(me, membership, userId));
+  }
+
+  @DeleteMapping("/crew/members/{userId}")
+  @ResponseStatus(HttpStatus.NO_CONTENT)
+  public void expel(
+      @CurrentUser UUID me, @CurrentCrew CrewMembership membership, @PathVariable UUID userId) {
+    crewMemberService.expel(me, membership, userId);
+  }
+
+  @PutMapping("/crew/leader")
+  @ResponseStatus(HttpStatus.NO_CONTENT)
+  public void changeLeader(
+      @CurrentUser UUID me,
+      @CurrentCrew CrewMembership membership,
+      @Valid @RequestBody ChangeLeaderRequest request) {
+    crewMemberService.changeLeader(me, membership, request.userId());
   }
 
   @PostMapping("/crews/join-requests")

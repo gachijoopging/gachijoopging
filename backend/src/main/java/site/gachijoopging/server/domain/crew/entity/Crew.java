@@ -57,6 +57,16 @@ public class Crew {
     return leaderId.equals(userId);
   }
 
+  public void changeLeader(UUID userId, Instant now) {
+    this.leaderId = userId;
+    this.updatedAt = now;
+  }
+
+  public void dissolve(Instant now) {
+    this.deletedAt = now;
+    this.updatedAt = now;
+  }
+
   public void update(
       String name,
       String intro,

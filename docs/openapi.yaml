@@ -680,7 +680,7 @@ paths:
   /crew/members/{userId}:
     get:
       tags: [members]
-      summary: 타인 프로필 (5-4) — 차단한 사람은 404
+      summary: 타인 프로필 (5-4) — 크루원이 아니면 404. 차단한 사람도 200 이고 blocked 로 알린다
       description: 현재 소속 크루의 활동을 locationShared와 무관하게 합산한다. 본인의 이전 크루 포함 합산은 /users/me/stats
       parameters: [{ $ref: '#/components/parameters/UserId' }]
       responses:

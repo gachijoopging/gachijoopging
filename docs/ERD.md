@@ -107,7 +107,7 @@ erDiagram
 | 컬럼 | 타입 | 제약 |
 |---|---|---|
 | id | uuid | PK |
-| name | text | UNIQUE NOT NULL. 앞뒤 공백·줄바꿈 제거 뒤 저장. 중복은 API 409 CREW_NAME_TAKEN |
+| name | text | NOT NULL. 살아 있는 크루끼리 UNIQUE(부분 UNIQUE WHERE deleted_at IS NULL) — 해산한 크루의 이름은 다시 쓸 수 있다. 앞뒤 공백·줄바꿈 제거 뒤 저장. 중복은 API 409 CREW_NAME_TAKEN |
 | intro | text | NOT NULL DEFAULT ''. 크루 설명 |
 | photo_media_id | uuid | → media |
 | leader_id | uuid | NOT NULL → users. 크루장은 한 명(Q21) |
