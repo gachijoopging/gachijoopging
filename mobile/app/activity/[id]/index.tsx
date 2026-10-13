@@ -37,13 +37,12 @@ import { KakaoMapView } from '../../../modules/kakao-map';
 import { createMockClient, type ApiClient } from '../../../src/api/client';
 import type { MOCKS } from '../../../src/api/mocks.generated';
 import { enqueue } from '../../../src/activity/outbox';
+import { endActivity } from '../../../src/activity/actions';
 import { QuickPickupSheet } from '../../../src/activity/QuickPickupSheet';
 import {
   bannerFor,
   displayDistance,
   elapsedSec,
-  closeSegment,
-  endBody,
   gpsStatus,
   metricsLabel,
   newSession,
@@ -54,7 +53,7 @@ import {
   type Session,
 } from '../../../src/activity/session';
 import { getStored, loadAccount, loadLastAccount, subscribe, updateStored } from '../../../src/activity/store';
-import { finalSteps, refreshSteps, startTracking, stopTracking, syncOutbox, tick } from '../../../src/activity/tracking';
+import { refreshSteps, startTracking, syncOutbox, tick } from '../../../src/activity/tracking';
 import { formatClock, formatDistance } from '../../../src/format';
 import { crewMarkers } from '../../../src/live/live';
 import { useBlockedUsers } from '../../../src/profile/blocked-users';
@@ -258,25 +257,7 @@ export default function ActivityInProgressScreen() {
     if (ending || !session) return;
     setEnding(true);
     setEndFailed(false);
-    // 마지막 읽기 뒤 걸음까지 담는다. Health Connect 가 늦거나 실패해도 종료는 기다리지 않는다
-    const counted = await Promise.race([
-      finalSteps().then(() => true, () => false),
-      new Promise<boolean>((r) => setTimeout(() => r(false), 1_500)),
-    ]);
-    try {
-      updateStored((st) =>
-        {
-          if (!st.session) return st;
-          // 종료 시각까지 읽지 못한 걸음은 일부 구간 값이다. 그것으로 전체 거리를 줄이지 않는다
-          const measured = counted ? st.session : { ...st.session, steps: null };
-          // 요약 지도·공유 카드도 종료 기록과 같은 경로를 그리도록 닫은 세션을 남긴다
-          const session = measured.paused ? measured : closeSegment(measured);
-          const body = endBody(session, Date.now());
-          return { ...st, session, ended: body, outbox: enqueue(st.outbox, { kind: 'end', activityId: st.session.activityId, body }) };
-        },
-      );
-    } catch {
-      // 디스크에 못 남기면 추적을 끄지 않는다 — 여기서 넘어가면 기록을 잃는다
+    if ((await endActivity()) === 'saveFailed') {
       setEnding(false);
       setEndFailed(true);
       return;
@@ -284,9 +265,7 @@ export default function ActivityInProgressScreen() {
     // 기록이 기기에 남은 뒤에만 알린다. API 30 미만은 Confirm 이 없어 조용히 넘어간다
     performAndroidHapticsAsync(AndroidHaptics.Confirm).catch(() => {});
     setConfirmEnd(false);
-    await stopTracking();
     router.replace({ pathname: '/activity/[id]/summary', params: { id } });
-    void syncOutbox();
   };
 
   const status = session ? gpsStatus(session, now) : 'searching';

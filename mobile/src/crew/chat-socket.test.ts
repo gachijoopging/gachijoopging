@@ -50,15 +50,6 @@ describe('목 소켓 끊김', () => {
     await jest.advanceTimersByTimeAsync(60_000);
     expect(seen).toEqual(['open', { closed: 4401 }]);
   });
-
-  test('토큰을 갱신한 뒤 reconnect 하면 다시 열린다', async () => {
-    const socket = createMockChatSocket({ author });
-    const seen = statuses(socket);
-    socket.simulateDrop(4401);
-    socket.reconnect();
-    await jest.advanceTimersByTimeAsync(0);
-    expect(seen).toEqual(['open', { closed: 4401 }, 'connecting', 'open']);
-  });
 });
 
 test('연결 시도가 예외로 끝나도 다음 간격에 다시 시도한다', async () => {

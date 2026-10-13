@@ -6,6 +6,7 @@ const mockReplace = jest.fn();
 const mockSession = { activityId: 'a1', userId: 'u1', startedAt: '2026-10-01T00:00:00Z', pausedSec: 0, paused: false, pausedAt: null, locationShared: false, itemCount: 0, byCategory: {}, segments: [], distanceM: 0, steps: null };
 let mockStored: Record<string, unknown> = { session: mockSession, ended: null, outbox: [] };
 jest.mock('expo/src/winter/fetch', () => ({ fetch: jest.fn() }));
+jest.mock('expo-crypto', () => ({ randomUUID: () => 'u' }));
 jest.mock('expo-haptics', () => ({ performAndroidHapticsAsync: (t: string) => mockHaptic(t), AndroidHaptics: { Confirm: 'confirm' } }));
 jest.mock('expo-constants', () => ({ default: { expoConfig: { extra: {} } } }));
 jest.mock('expo-keep-awake', () => ({ useKeepAwake: () => {} }));

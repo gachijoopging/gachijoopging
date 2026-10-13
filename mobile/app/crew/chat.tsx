@@ -180,18 +180,9 @@ export default function CrewChatScreen() {
     }
   }, [update]);
 
-  const onClosed = useCallback(async (code: 4401 | 4403, socket: ChatSocket) => {
-    if (code === 4401) {
-      // 배너는 "연결 중…" 그대로. 갱신이 실패하면 재로그인으로 가되 초안·미전송 큐는 떠날 때 보존된다
-      setConnected(false);
-      try {
-        await api.mutate('POST /auth/refresh');
-        socket.reconnect();
-      } catch {
-        router.replace('/start');
-      }
-      return;
-    }
+  const onClosed = useCallback(async (code: 4401 | 4403) => {
+    // 4401 은 소켓이 토큰 갱신까지 실패하고 로그아웃한 뒤다. 초안·미전송 큐는 떠날 때 보존된다
+    if (code === 4401) return router.dismissTo('/start');
     // 추방·나가기·해산. 배너 없이 소속 상태대로 보내고 이 화면은 스택에서 지운다
     try {
       const { data } = await api.get('GET /users/me');
@@ -228,7 +219,7 @@ export default function CrewChatScreen() {
       let wasConnecting = false;
       socket.onStatus((status) => {
         socketOpen.current = status === 'open';
-        if (typeof status === 'object') return void onClosed(status.closed, socket);
+        if (typeof status === 'object') return void onClosed(status.closed);
         if (status === 'connecting') {
           wasConnecting = true;
           setConnected(false);

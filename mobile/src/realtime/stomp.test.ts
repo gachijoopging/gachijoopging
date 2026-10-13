@@ -113,7 +113,7 @@ test('refresh 뒤에도 4401 이면 로그아웃 상태로 만든 뒤 닫힘 440
   await flush();
   expect(refresh).toHaveBeenCalledTimes(1);
   expect(signOut).toHaveBeenCalledTimes(1);
-  // 채팅 화면은 closed 4401 을 받으면 refresh 를 다시 한다. 그 전에 토큰이 지워져 있어야 로그인으로 간다
+  // closed 4401 은 로그인 필요다. 화면이 로그인으로 보낼 때 토큰이 이미 지워져 있어야 한다
   expect(statuses[signedOutAt[0]]).toEqual({ closed: 4401 });
 });
 
@@ -126,28 +126,32 @@ test('4401 을 refresh 로 풀면 로그아웃하지 않는다', async () => {
   expect(signOut).not.toHaveBeenCalled();
 });
 
-test('토큰을 기다리는 사이 reconnect 하면 늦게 끝난 옛 시도는 버린다', async () => {
+test('4401 뒤 새 토큰을 기다리는 사이 옛 Client 가 늦게 열려도 버린다', async () => {
   const pending: ((token: string) => void)[] = [];
   const { socket, clients, statuses } = setup({ getToken: () => new Promise((r) => pending.push(r)) });
   await flush();
-  socket.reconnect();
-  await flush();
-  pending[1]('t-new');
-  await flush();
-  clients[0].onConnect();
   pending[0]('t-old');
   await flush();
-  expect(clients).toHaveLength(1);
-  expect(clients[0].url).toBe('wss://x/api/v1/ws?token=t-new');
+  clients[0].onWebSocketClose({ code: 4401 });
+  await flush();
+  clients[0].onConnect();
+  expect(clients[0].deactivate).toHaveBeenCalled();
+  expect(statuses[statuses.length - 1]).toBe('connecting');
+  pending[1]('t-new');
+  await flush();
+  expect(clients).toHaveLength(2);
+  expect(clients[1].url).toBe('wss://x/api/v1/ws?token=t-new');
+  clients[1].onConnect();
   socket.send({ id: 'm1', text: 'x' });
-  expect(clients[0].publish).toHaveBeenCalledTimes(1);
+  expect(clients[0].publish).not.toHaveBeenCalled();
+  expect(clients[1].publish).toHaveBeenCalledTimes(1);
   expect(statuses[statuses.length - 1]).toBe('open');
 });
 
 test('밀려난 옛 Client 의 onConnect·close 는 상태를 바꾸지 않는다', async () => {
-  const { socket, clients, statuses } = setup();
+  const { clients, statuses } = setup();
   await flush();
-  socket.reconnect();
+  clients[0].onWebSocketClose({ code: 4401 });
   await flush();
   clients[1].onConnect();
   clients[0].onConnect();
