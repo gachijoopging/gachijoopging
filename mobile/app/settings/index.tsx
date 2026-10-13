@@ -9,6 +9,7 @@ import {
   Banner,
   Button,
   Card,
+  Chip,
   Dialog,
   ErrorState,
   ListRow,
@@ -282,6 +283,24 @@ export default function SettingsScreen() {
             <ListRow title="차단 관리" divider={false} onPress={() => router.push('/settings/blocks')} />
           </Card> : null}
 
+          {/* 소셜로 가입한 계정은 이미 그 제공자로 로그인한다. 연결은 이메일로 가입한 크루원에게만 */}
+          {me.member && me.hasPassword ? (
+            <Card style={{ paddingVertical: 0 }}>
+              <Txt variant="label" tone="muted" style={{ paddingTop: space.md }}>로그인 연결</Txt>
+              {(['kakao', 'google'] as const).map((provider, i) => (
+                <SocialLinkRow
+                  key={provider}
+                  provider={provider}
+                  linked={me.linked[provider]}
+                  loading={linking === provider}
+                  disabled={linking != null}
+                  divider={i === 0}
+                  onLink={() => link(provider)}
+                />
+              ))}
+            </Card>
+          ) : null}
+
           <Card style={{ paddingVertical: 0 }}>
             {me.member ? (
               <ListRow
@@ -296,19 +315,6 @@ export default function SettingsScreen() {
             {me.member && me.hasPassword ? (
               <ListRow title="비밀번호 재설정" subtitle="재설정 메일을 보낼 수 있어요." onPress={() => router.push('/reset-password')} />
             ) : null}
-            {/* 소셜로 가입한 계정은 이미 그 제공자로 로그인한다. 연결은 이메일로 가입한 크루원에게만 */}
-            {me.member && me.hasPassword
-              ? (['kakao', 'google'] as const).map((provider) => (
-                  <ListRow
-                    key={provider}
-                    title={`${PROVIDER_NAME[provider]} 계정 연결`}
-                    subtitle={me.linked[provider] ? '연결됨' : `${PROVIDER_NAME[provider]}로도 로그인할 수 있어요.`}
-                    accessibilityLabel={me.linked[provider] ? `${PROVIDER_NAME[provider]} 계정 연결, 연결됨` : undefined}
-                    disabled={linking != null}
-                    onPress={me.linked[provider] ? undefined : () => link(provider)}
-                  />
-                ))
-              : null}
             <ListRow title="로그아웃" disabled={busy} onPress={() => ask('logout')} />
             <ListRow title="회원 탈퇴" tone="danger" divider={false} accessibilityLabel="회원 탈퇴, 계정을 삭제해요" disabled={busy} onPress={() => ask('withdraw')} />
           </Card>
@@ -443,5 +449,36 @@ function ToggleRow({ title, subtitle, value, onToggle, disabled }: { title: stri
         <Switch label={title} hideLabel value={value} disabled={disabled} onValueChange={onToggle} />
       </View>
     </Pressable>
+  );
+}
+
+/**
+ * 소셜 로그인 한 줄. 1-1 시작 화면의 소셜 버튼과 같은 브랜드 표시를 쓴다 — 카카오는 노랑 컨테이너(디자인 가이드 #FEE500),
+ * 구글은 로고. 두 제공자를 같은 크기로 둔다(카카오 가이드: 다른 버튼보다 강조하거나 약하게 그리지 않는다)
+ */
+function SocialLinkRow({ provider, linked, loading, disabled, divider, onLink }: { provider: Provider; linked: boolean; loading: boolean; disabled: boolean; divider: boolean; onLink: () => void }) {
+  const name = PROVIDER_NAME[provider];
+  return (
+    <ListRow
+      title={name}
+      subtitle={linked ? `${name} 계정으로도 로그인할 수 있어요.` : `연결하면 ${name}로도 로그인할 수 있어요.`}
+      divider={divider}
+      right={
+        linked ? (
+          <Chip label="연결됨" tone="soft" icon="check" accessibilityLabel={`${name} 연결됨`} />
+        ) : (
+          <Button
+            label="연결"
+            size="sm"
+            variant={provider === 'kakao' ? 'kakao' : 'soft'}
+            icon={provider === 'google' ? 'google' : undefined}
+            loading={loading}
+            disabled={disabled}
+            accessibilityLabel={`${name} 계정 연결하기`}
+            onPress={onLink}
+          />
+        )
+      }
+    />
   );
 }
