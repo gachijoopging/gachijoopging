@@ -182,7 +182,7 @@ export default function CrewChatScreen() {
 
   const onClosed = useCallback(async (code: 4401 | 4403) => {
     // 4401 은 소켓이 토큰 갱신까지 실패하고 로그아웃한 뒤다. 초안·미전송 큐는 떠날 때 보존된다
-    if (code === 4401) return router.replace('/start');
+    if (code === 4401) return router.dismissTo('/start');
     // 추방·나가기·해산. 배너 없이 소속 상태대로 보내고 이 화면은 스택에서 지운다
     try {
       const { data } = await api.get('GET /users/me');

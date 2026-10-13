@@ -15,7 +15,6 @@ export type ChatSocket = {
   subscribe(onEvent: (event: ChatSocketEvent) => void): () => void;
   /** 등록 즉시 현재 상태를 한 번 알린다 */
   onStatus(listener: (status: ChatSocketStatus) => void): () => void;
-  reconnect(): void;
   close(): void;
 };
 
@@ -97,15 +96,6 @@ export function createMockChatSocket({
       listeners.add(listener);
       listener(status);
       return () => listeners.delete(listener);
-    },
-    reconnect() {
-      cancelReconnect?.();
-      setStatus('connecting');
-      const timer = setTimeout(() => {
-        timers.delete(timer);
-        setStatus('open');
-      }, 0);
-      timers.add(timer);
     },
     simulateDrop(code) {
       cancelReconnect?.();

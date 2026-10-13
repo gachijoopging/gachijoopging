@@ -195,13 +195,6 @@ export function createStompSocket({ url, getToken, refresh, signOut, postLive, c
       listener(status);
       return () => listeners.delete(listener);
     },
-    /** 화면이 refresh 를 마친 뒤 부른다. 여기서 또 4401 이면 다시 refresh 하지 않고 닫힘을 알린다 */
-    reconnect() {
-      refreshed = true;
-      client?.deactivate();
-      client = null;
-      connectNow();
-    },
     close() {
       closed = true;
       stopBackoff?.();
