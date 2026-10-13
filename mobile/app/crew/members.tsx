@@ -24,6 +24,7 @@ import {
 import { createMockClient, peek, type ApiClient } from '../../src/api/client';
 import type { MOCKS } from '../../src/api/mocks.generated';
 import { ExportSheet } from '../../src/crew/ExportSheet';
+import { LeaveCrew } from '../../src/crew/LeaveCrew';
 import { CREW_CAPACITY, JOIN_POLICY_LABEL, regionName } from '../../src/crew/region';
 import { memberActionOutcome, memberMenu, type MemberAction } from '../../src/crew/manage';
 import { useFlash } from '../../src/ui/useFlash';
@@ -209,6 +210,8 @@ export default function ManageCrewMembersScreen() {
               );
             })}
           </View>
+          {/* 크루 나가기는 크루 화면에서만 한다. 설정(5-7)은 계정만 다룬다 */}
+          {crew && me ? <LeaveCrew api={api} crewName={crew.name} isLeader={me.isLeader} /> : null}
         </>
       )}
 

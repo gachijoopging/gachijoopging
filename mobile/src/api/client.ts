@@ -54,6 +54,7 @@ export type VoidMutationKey =
   | 'DELETE /users/{userId}/follow'
   | 'POST /crew/leave'
   | 'DELETE /users/me'
+  | 'PUT /users/me/social'
   | 'POST /auth/logout'
   | 'PUT /posts/{postId}/like'
   | 'DELETE /posts/{postId}/like'

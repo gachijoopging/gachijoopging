@@ -364,7 +364,8 @@ paths:
   /users/me/social:
     put:
       tags: [me]
-      summary: 이메일 계정에 소셜 연결 — 옛 계약 유지
+      summary: 이메일 계정에 소셜 연결 (5-7) — 옛 계약 유지
+      description: 이 제공자에 이미 다른 소셜 계정이 연결돼 있거나, 그 소셜 계정이 다른 사용자에게 연결돼 있으면 409 CONFLICT
       requestBody:
         required: true
         content:
@@ -376,7 +377,8 @@ paths:
                 provider: { type: string, enum: [KAKAO, GOOGLE] }
                 token: { type: string }
       responses:
-        '204': { description: 완료 }
+        '204': { description: 완료. 이미 같은 소셜 계정이 연결돼 있어도 204 }
+        '409': { $ref: '#/components/responses/Error' }
   /users/me/devices:
     put:
       tags: [me]
