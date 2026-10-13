@@ -134,7 +134,9 @@ export default function ReportScreen() {
   const quote = targetType !== 'USER' && !(targetType === 'POST' && thumbUrl) && text ? `"${text}"` : null;
   const submittable = canSubmitReport(reason, memo);
 
-  if (!validTarget || denied) return <Screen><AppHeader title="신고하기" onBack={back} /><ErrorState title={denied ? '크루원만 신고할 수 있어요.' : '신고 대상을 확인할 수 없어요.'} actionLabel="돌아가기" onRetry={back} /></Screen>;
+  if (!validTarget || denied) return <Screen><AppHeader title="신고하기" onBack={back} />{denied
+    ? <ErrorState title="크루원만 신고할 수 있어요" description="크루장과 크루에 가입하지 않은 사용자는 신고할 수 없어요." icon="account-cancel-outline" actionLabel="돌아가기" onRetry={back} />
+    : <ErrorState title="신고 대상을 확인할 수 없어요" description="삭제됐거나 잘못된 링크예요." icon="link-variant-off" actionLabel="돌아가기" onRetry={back} />}</Screen>;
   if (!accountId) return <Screen><AppHeader title="신고하기" onBack={back} />{loadFailed ? <ErrorState title="신고 권한을 확인하지 못했어요" actionLabel="돌아가기" onRetry={back} /> : <Loading label="신고 권한을 확인하는 중" />}</Screen>;
 
   return (
