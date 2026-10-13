@@ -22,6 +22,7 @@ import site.gachijoopging.server.domain.crew.repository.CrewJoinRequestRepositor
 import site.gachijoopging.server.domain.crew.repository.CrewRepository;
 import site.gachijoopging.server.global.error.BusinessException;
 import site.gachijoopging.server.global.error.ErrorCode;
+import site.gachijoopging.server.global.lock.UserLock;
 import site.gachijoopging.server.global.response.CursorPage;
 import site.gachijoopging.server.global.response.Cursors;
 import site.gachijoopging.server.global.security.CrewMembership;
@@ -32,6 +33,7 @@ import site.gachijoopging.server.global.security.CrewMembership;
 public class CrewJoinService {
 
   private final CrewRepository crewRepository;
+  private final UserLock userLock;
   private final CrewJoinRequestRepository joinRequestRepository;
   private final CrewService crewService;
   private final ApplicationEventPublisher events;
@@ -41,7 +43,7 @@ public class CrewJoinService {
 
   @Transactional
   public Applied apply(UUID me, UUID crewId) {
-    crewRepository.lockUser(me);
+    userLock.lock(me);
     if (crewRepository.findMembership(me).isPresent()) {
       throw new BusinessException(ErrorCode.ALREADY_IN_CREW, "이미 크루에 소속돼 있다");
     }
