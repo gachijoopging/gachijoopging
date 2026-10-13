@@ -51,7 +51,7 @@ describe('목 소켓 끊김', () => {
     expect(seen).toEqual(['open', { closed: 4401 }]);
   });
 
-  test('토큰을 갱신한 뒤 reconnect 하면 다시 열린다', async () => {
+  test('닫힌 뒤 reconnect 하면 다시 열린다', async () => {
     const socket = createMockChatSocket({ author });
     const seen = statuses(socket);
     socket.simulateDrop(4401);

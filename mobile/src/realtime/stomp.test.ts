@@ -113,7 +113,7 @@ test('refresh 뒤에도 4401 이면 로그아웃 상태로 만든 뒤 닫힘 440
   await flush();
   expect(refresh).toHaveBeenCalledTimes(1);
   expect(signOut).toHaveBeenCalledTimes(1);
-  // 채팅 화면은 closed 4401 을 받으면 refresh 를 다시 한다. 그 전에 토큰이 지워져 있어야 로그인으로 간다
+  // closed 4401 은 로그인 필요다. 화면이 로그인으로 보낼 때 토큰이 이미 지워져 있어야 한다
   expect(statuses[signedOutAt[0]]).toEqual({ closed: 4401 });
 });
 
