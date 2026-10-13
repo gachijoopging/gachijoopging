@@ -92,6 +92,9 @@ test('크루장 직접 진입과 권한 조회 실패는 신고 폼을 열지 �
   await mount();
   expect(rendered.root.findByType('ErrorState').props.title).toBe('신고 권한을 확인하지 못했어요');
   expect(mockMutate).not.toHaveBeenCalled();
+  mockGet.mockResolvedValue(me());
+  await act(async () => rendered.root.findByType('ErrorState').props.onRetry());
+  expect(rendered.root.findAllByType('SelectRow').length).toBe(5);
 });
 
 test('권한이 바뀌어 제출이 거부되면 메모를 보존하고 재제출을 막는다', async () => {
@@ -109,7 +112,7 @@ test('잘못된 링크의 대상 유형 또는 누락 id는 조회·제출 전�
   mockParams = { targetType: 'UNKNOWN', targetId: 'p1' };
   await mount();
   expect(rendered.root.findByType('ErrorState').props.title).toBe('신고 대상을 확인할 수 없어요');
-  expect(rendered.root.findByType('ErrorState').props.description).toBe('삭제됐거나 잘못된 링크예요.');
+  expect(rendered.root.findByType('ErrorState').props.description).toBe('잘못된 링크예요. 진입한 화면에서 다시 열어 주세요.');
   expect(mockGet).not.toHaveBeenCalled();
   expect(mockMutate).not.toHaveBeenCalled();
 });
