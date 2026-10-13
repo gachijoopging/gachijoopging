@@ -14,6 +14,7 @@ class ErrorCodeTest {
     assertThat(ErrorCode.FORBIDDEN.status()).isEqualTo(HttpStatus.FORBIDDEN);
     assertThat(ErrorCode.NO_CREW.status()).isEqualTo(HttpStatus.FORBIDDEN);
     assertThat(ErrorCode.EXPELLED_FROM_CREW.status()).isEqualTo(HttpStatus.FORBIDDEN);
+    assertThat(ErrorCode.LEADER_MUST_DELEGATE.status()).isEqualTo(HttpStatus.FORBIDDEN);
     assertThat(ErrorCode.NOT_FOUND.status()).isEqualTo(HttpStatus.NOT_FOUND);
     assertThat(ErrorCode.METHOD_NOT_ALLOWED.status()).isEqualTo(HttpStatus.METHOD_NOT_ALLOWED);
     assertThat(ErrorCode.CONFLICT.status()).isEqualTo(HttpStatus.CONFLICT);
@@ -30,7 +31,7 @@ class ErrorCodeTest {
   }
 
   @Test
-  void 코드는_열여덟_종뿐이다() {
-    assertThat(ErrorCode.values()).hasSize(18);
+  void 코드는_열아홉_종뿐이다() {
+    assertThat(ErrorCode.values()).hasSize(19);
   }
 }

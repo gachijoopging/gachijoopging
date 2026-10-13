@@ -682,7 +682,7 @@ paths:
   /crew/members/{userId}:
     get:
       tags: [members]
-      summary: 타인 프로필 (5-4) — 차단한 사람은 404
+      summary: 타인 프로필 (5-4) — 크루원이 아니면 404. 차단한 사람도 200 이고 blocked 로 알린다
       description: 현재 소속 크루의 활동을 locationShared와 무관하게 합산한다. 본인의 이전 크루 포함 합산은 /users/me/stats
       parameters: [{ $ref: '#/components/parameters/UserId' }]
       responses:
@@ -2005,7 +2005,7 @@ components:
         status:
           type: string
           enum: [PENDING, APPROVED, REJECTED, CANCELED]
-          description: PENDING 은 승인 대기이며 크루원이 아니다. 공개 크루 가입은 처음부터 APPROVED, 비공개 → 공개 전환으로 자동 가입된 신청도 APPROVED. CANCELED 는 신청자가 직접 취소한 것
+          description: PENDING 은 승인 대기이며 크루원이 아니다. 공개 크루 가입은 처음부터 APPROVED, 비공개 → 공개 전환으로 자동 가입된 신청도 APPROVED. CANCELED 는 신청자가 취소했거나, 신청자가 탈퇴했거나, 그 크루가 해산된 것
         createdAt: { type: string, format: date-time }
     Member:
       allOf:
