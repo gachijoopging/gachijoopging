@@ -33,7 +33,8 @@ docker pull "$IMAGE"
 
 printf '%s' "$BEFORE" > "$PREV_FILE"
 sed -i "s|^IMAGE_TAG=.*|IMAGE_TAG=$TAG|" "$ENV_FILE"
-docker compose up -d backend
+# backend 만 지정하면 올려 둔 nginx 설정이 반영되지 않는다. compose 가 바뀐 것만 다시 만든다.
+docker compose up -d
 
 # compose 의 healthcheck 가 readiness 를 본다. 떠도 DB·Flyway 에서 죽을 수 있으므로
 # 성공을 선언하기 전에 기다린다 — 안 기다리면 깨진 배포가 초록으로 끝난다.
@@ -51,6 +52,6 @@ docker compose logs --tail 50 backend >&2
 if [ -n "$BEFORE" ]; then
   echo "되돌린다 → $BEFORE" >&2
   sed -i "s|^IMAGE_TAG=.*|IMAGE_TAG=$BEFORE|" "$ENV_FILE"
-  docker compose up -d backend
+  docker compose up -d
 fi
 exit 1
