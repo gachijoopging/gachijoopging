@@ -340,14 +340,16 @@ AI 서버가 **노트북**이라 데모 당일 리스크가 구조적으로 높�
 
 - [ ] ngrok 계정 생성 → `ngrok config add-authtoken <토큰>`
 - [ ] 대시보드에서 **배정된 dev 도메인** 확인 → `ai/.env`의 `NGROK_DOMAIN`
-- [ ] ngrok 설정 파일에 터널을 적습니다 — `ngrok config edit` 로 열어 아래를 넣고, 경로는 `ngrok config check` 가 알려 줍니다
+- [ ] ngrok 설정 파일에 엔드포인트를 적습니다 — `ngrok config edit` 로 열어 아래를 넣습니다. v3 `endpoints` 형식입니다(`tunnels` 는 deprecated). 파일에 `version: 2` 가 남아 있으면 `tunnels.ai.domain: <NGROK_DOMAIN>` 이 맞는 키입니다
   ```yaml
-  tunnels:
-    ai:
-      proto: http
-      addr: 8000
+  version: 3
+  endpoints:
+    - name: ai
       url: https://<NGROK_DOMAIN>
+      upstream:
+        url: 8000
   ```
+- [ ] `ngrok config check` 가 `Valid` 를 내는지 봅니다. 출력의 경로가 아래 `--config` 값입니다
 - [ ] **관리자 PowerShell** 에서 `ngrok service install --config=<위 경로>` → `ngrok service start`. 터널은 부팅 시 스스로 뜹니다
 - [ ] uvicorn 감시를 작업 스케줄러에 등록합니다(관리자 불필요). 로그온 때 뜨므로 **재부팅 뒤 손대지 않으려면 Windows 자동 로그인**을 켜 둡니다(`netplwiz`)
   ```powershell
@@ -356,6 +358,11 @@ AI 서버가 **노트북**이라 데모 당일 리스크가 구조적으로 높�
     -Trigger (New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME) `
     -Action (New-ScheduledTaskAction -Execute powershell.exe -Argument "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$ps1`"") `
     -Settings (New-ScheduledTaskSettingsSet -ExecutionTimeLimit 0 -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries)
+  ```
+  등록 뒤 `(Get-ScheduledTask gachi-ai-serve).Settings.ExecutionTimeLimit` 이 `PT0S`(무제한)인지 봅니다.
+  **멈출 때**는 `Stop-ScheduledTask` 만으로는 uvicorn 이 살아남아 8000 포트를 잡고 있습니다 — 다시 시작하면 bind 실패로 재시도만 돕니다
+  ```powershell
+  Stop-ScheduledTask gachi-ai-serve; taskkill /F /T /IM uvicorn.exe
   ```
 - [ ] Windows 전원 설정: 전원 연결 시 **절전 안 함** · 덮개를 닫아도 **아무 것도 안 함**
 - [ ] **유선 랜** 연결, 전원 연결

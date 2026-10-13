@@ -4,9 +4,12 @@
 $ErrorActionPreference = 'Continue'
 Set-Location (Split-Path $PSScriptRoot -Parent)
 $log = Join-Path (Get-Location) 'serve.log'
+# 5.1 의 *>> 는 UTF-16LE 로 쓰고 stderr 를 ErrorRecord 로 감싸 로그가 읽히지 않는다. cmd 로 바이트 그대로 붙인다.
+$env:PYTHONUTF8 = '1'
+$utf8 = New-Object System.Text.UTF8Encoding $false
 while ($true) {
-  "$(Get-Date -Format s) uvicorn 시작" | Out-File $log -Append -Encoding utf8
-  uv run uvicorn app.main:app --host 127.0.0.1 --port 8000 *>> $log
-  "$(Get-Date -Format s) uvicorn 종료 (코드 $LASTEXITCODE) — 3초 뒤 다시 띄운다" | Out-File $log -Append -Encoding utf8
+  [IO.File]::AppendAllText($log, "$(Get-Date -Format s) uvicorn 시작`r`n", $utf8)
+  cmd /c "uv run uvicorn app.main:app --host 127.0.0.1 --port 8000 >> serve.log 2>&1"
+  [IO.File]::AppendAllText($log, "$(Get-Date -Format s) uvicorn 종료 (코드 $LASTEXITCODE) — 3초 뒤 다시 띄운다`r`n", $utf8)
   Start-Sleep -Seconds 3
 }
