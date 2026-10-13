@@ -31,11 +31,28 @@ const BANNERS = {
 } as const;
 
 
+function parseMedia(raw: string | undefined): Media | null {
+  try {
+    const media = JSON.parse(raw ?? '');
+    return typeof media?.photoId === 'string' ? media : null;
+  } catch {
+    return null;
+  }
+}
+
 export default function AiClassificationReviewScreen() {
-  const { id, media: raw, localUri } = useLocalSearchParams<{ id: string; media: string; localUri?: string }>();
+  const { id, media: raw, localUri } = useLocalSearchParams<{ id: string; media?: string; localUri?: string }>();
+  const media = useMemo(() => parseMedia(raw), [raw]);
+  // 직접 링크·상태 복원으로 촬영 결과 없이 들어오면 담을 것이 없다. 활동으로 돌려보낸다
+  useEffect(() => {
+    if (!media) router.dismissTo({ pathname: '/activity/[id]', params: { id, flash: '사진 정보를 불러오지 못했어요. 다시 찍어 주세요' } });
+  }, [media, id]);
+  return media ? <Review id={id} media={media} localUri={localUri} /> : null;
+}
+
+function Review({ id, media, localUri }: { id: string; media: Media; localUri?: string }) {
   const navigation = useNavigation();
   const { colors } = useTheme();
-  const media = useMemo<Media>(() => JSON.parse(raw), [raw]);
   const groups = useMemo(() => groupDetections(media.inference?.status === 'OK' ? media.inference.items : []), [media]);
   const [counts, setCounts] = useState<Counts>(() =>
     Object.fromEntries(Object.entries(groups).map(([c, g]) => [c, g?.count ?? 0])),

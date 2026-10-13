@@ -120,7 +120,8 @@ def preflight(data_yaml: Path) -> None:
     try:
         gib = free_gib(device)
         check(f"GPU {device} 여유 VRAM", gib >= NEED_GIB, f"{gib:.0f} GiB / 필요 {NEED_GIB}")
-        # `experiment-log.md` §1 이 "학습 직전에 nvidia-smi 로 다시 확인" 이라고 적은 것을 여기서 한다.
+        # `experiment-log.md` §1 이 "학습 직전에 nvidia-smi 로 다시 확인" 이라고 적은 것을
+        # 여기서 한다.
         # 공유 머신이라 남의 프로세스가 언제든 들어온다.
     except (OSError, subprocess.CalledProcessError) as e:
         check(f"GPU {device} 조회", False, f"{type(e).__name__}: {e}")
