@@ -53,13 +53,25 @@ services:
     ports:
       - "80:80"
       - "443:443"
+    env_file:
+      - .env
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf.template:ro
       - certbot-conf:/etc/letsencrypt:ro
       - certbot-www:/var/www/certbot:ro
+      # 사진을 백엔드를 거치지 않고 직접 보낸다. 쓰지는 않으므로 읽기 전용이다.
+      - ${MEDIA_ROOT}:${MEDIA_ROOT}:ro
+    # envsubst 에 바꿀 이름 둘만 넘긴다. 안 넘기면 $host·$uri 까지 빈 값으로 밀어 버린다.
+    #
+    # 이미지의 기본 템플릿 기능(/etc/nginx/templates)은 쓰지 못한다 — 그쪽은 명령이 nginx 로
+    # 시작할 때만 도는데, 아래처럼 sh 로 감싸면 건너뛴다. 그래서 여기서 직접 부른다.
+    #
     # 인증서가 갱신돼도 Nginx 는 모른다. 주기적으로 설정을 다시 읽게 한다.
     command: >
-      sh -c "while :; do sleep 6h & wait $${!}; nginx -s reload; done & nginx -g 'daemon off;'"
+      sh -c "envsubst '$$MEDIA_SECURE_LINK_SECRET $$MEDIA_ROOT'
+      < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf || exit 1;
+      while :; do sleep 6h & wait $${!}; nginx -s reload; done &
+      nginx -g 'daemon off;'"
 
   # 인증서 자동 갱신. 발급은 최초 1회 손으로 한다(docs/operations.md §HTTPS).
   certbot:
