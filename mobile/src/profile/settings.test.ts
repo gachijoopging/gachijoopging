@@ -138,13 +138,10 @@ test('동기화가 남아 막혔을 때 줍깅 탭으로 바로 갈 수 있다',
   expect(button('닫기')).toBeDefined();
 });
 
-test('크루 나가기가 실패하면 확인 버튼이 다시 눌린다', async () => {
-  mockMutate.mockImplementation((key: string) => key === 'POST /crew/leave' ? Promise.reject(new Error('network')) : Promise.resolve(undefined));
+test('크루 나가기는 설정에 없다 — 크루 화면(3-11)에서만 한다', async () => {
   await mount();
-  await act(async () => row('크루 나가기').props.onPress());
-  await act(async () => button('나가기').props.onPress());
-  expect(mockDismiss).not.toHaveBeenCalled();
-  expect(button('나가기')?.props.loading).toBe(false);
+  expect(row('크루 나가기')).toBeUndefined();
+  expect(mockMutate).not.toHaveBeenCalledWith('POST /crew/leave', expect.anything());
 });
 
 test('마케팅 정보 수신을 끄면 MARKETING 한 항목만 PUT /users/me/agreements 로 보낸다', async () => {

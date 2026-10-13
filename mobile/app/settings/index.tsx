@@ -28,7 +28,7 @@ import {
 import { ApiError, createMockClient, type ApiClient } from '../../src/api/client';
 import { accountGate, leaveConfirm, leaveFailure } from '../../src/profile/profile';
 import { getStored, loadAccount, loadLastAccount } from '../../src/activity/store';
-import { currentAccount, forgetAccount, rememberAccount } from '../../src/auth/account';
+import { forgetAccount, rememberAccount } from '../../src/auth/account';
 import { PROVIDER_KEY, providerToken, type Provider } from '../../src/auth/social';
 
 type Me = {
@@ -47,7 +47,7 @@ type Me = {
   marketing: { version: string; agreed: boolean } | null;
 };
 type SettingKey = 'shareLocationDefault' | 'notifyActivityStart' | 'marketing';
-type Kind = 'leave' | 'withdraw' | 'logout';
+type Kind = 'withdraw' | 'logout';
 type Modal =
   | { kind: 'blocked'; action: Kind }
   | { kind: 'confirm'; action: Kind; dissolve: boolean }
@@ -57,12 +57,6 @@ type Modal =
 const api: ApiClient = createMockClient({ delayMs: 300 });
 
 const CONFIRM: Record<Kind, { title: string; body: (crew: string, pending: boolean) => string; cancel: string; ok: string }> = {
-  leave: {
-    title: '크루를 나갈까요?',
-    body: (crew) => `${crew}에서 나가요. 크루원 목록에서 빠지고, 활동 기록과 게시물은 그대로 남아요. 다시 들어오려면 크루 찾기에서 다시 가입해야 해요.`,
-    cancel: '돌아가기',
-    ok: '나가기',
-  },
   withdraw: {
     title: '정말 탈퇴할까요?',
     body: (_, pending) => `계정과 활동 상세 기록(경로 포함)이 삭제되고 되돌릴 수 없어요. 게시물과 크루 합산 기록은 "탈퇴한 크루원" 이름으로 남아요.${pending ? ' 기다리던 가입 신청도 취소돼요.' : ''}`,
@@ -78,10 +72,8 @@ const CONFIRM: Record<Kind, { title: string; body: (crew: string, pending: boole
 };
 
 const DISSOLVE = {
-  title: '크루를 해산하고 나갈까요?',
-  leave: '혼자 남은 크루장이 나가면 크루가 해산돼요. 내 활동 기록은 남아요.',
+  title: '크루를 해산하고 탈퇴할까요?',
   withdraw: '혼자 남은 크루장이 탈퇴하면 크루가 해산되고, 계정과 활동 상세 기록(경로 포함)이 삭제돼요. 되돌릴 수 없어요.',
-  ok: '해산하고 나가기',
 };
 
 const PROVIDER_NAME: Record<Provider, string> = { kakao: '카카오', google: '구글' };
@@ -96,7 +88,6 @@ function linkFailure(provider: Provider, error: unknown): string {
 }
 
 const BLOCKED: Record<Kind, string> = {
-  leave: '진행 중이거나 아직 저장되지 않은 기록이 있어요. 줍깅 탭에서 종료와 동기화를 완료한 뒤 다시 시도해 주세요.',
   withdraw: '진행 중인 활동이 있으면 회원 탈퇴를 할 수 없어요. 줍깅 탭에서 종료와 동기화를 완료한 뒤 다시 시도해 주세요.',
   logout: '진행 중이거나 아직 저장되지 않은 기록이 있어요. 줍깅 탭에서 종료와 동기화를 완료한 뒤 다시 시도해 주세요.',
 };
@@ -213,14 +204,6 @@ export default function SettingsScreen() {
     if (busy) return;
     setBusy(true);
     try {
-      if (action === 'leave') {
-        if (offline) throw new ApiError('OFFLINE');
-        await api.mutate('POST /crew/leave');
-        const account = currentAccount();
-        if (account) rememberAccount({ id: account.id, membership: { status: 'NONE' } });
-        setModal(null);
-        return router.dismissTo({ pathname: '/crew-choice', params: { flash: '크루를 나갔어요.' } });
-      }
       if (action === 'withdraw') {
         if (offline) throw new ApiError('OFFLINE');
         await api.mutate('DELETE /users/me');
@@ -237,7 +220,7 @@ export default function SettingsScreen() {
       const outcome = leaveFailure(e);
       if (outcome === 'delegate') setModal({ kind: 'delegate' });
       else if (outcome === 'blocked') setModal({ kind: 'blocked', action });
-      else setSnackbar(action === 'leave' ? '나가지 못했어요. 다시 시도해 주세요.' : '탈퇴하지 못했어요. 다시 시도해 주세요.');
+      else setSnackbar('탈퇴하지 못했어요. 다시 시도해 주세요.');
     }
     // 성공하면 위에서 떠났다. 떠나는 화면은 다시 그리지 않는다 — 전환 중 재렌더가 Fabric 을 죽인다
     setBusy(false);
@@ -302,16 +285,6 @@ export default function SettingsScreen() {
           ) : null}
 
           <Card style={{ paddingVertical: 0 }}>
-            {me.member ? (
-              <ListRow
-                title="크루 나가기"
-                tone="danger"
-                subtitle={me.crewName ? `${me.crewName}에서 나가요.` : undefined}
-                accessibilityLabel={me.crewName ? `크루 나가기, ${me.crewName}에서 나가기` : '크루 나가기'}
-                disabled={busy}
-                onPress={() => ask('leave')}
-              />
-            ) : null}
             {me.member && me.hasPassword ? (
               <ListRow title="비밀번호 재설정" subtitle="재설정 메일을 보낼 수 있어요." onPress={() => router.push('/reset-password')} />
             ) : null}
@@ -367,7 +340,7 @@ export default function SettingsScreen() {
             <>
               <Button label={CONFIRM[modal.action].cancel} variant="ghost" size="md" disabled={busy} onPress={() => setModal(null)} />
               <Button
-                label={modal.dissolve && modal.action === 'leave' ? DISSOLVE.ok : CONFIRM[modal.action].ok}
+                label={CONFIRM[modal.action].ok}
                 variant="danger"
                 size="md"
                 loading={busy}
@@ -379,11 +352,7 @@ export default function SettingsScreen() {
       >
         {modal?.kind === 'confirm' ? (
           <Txt variant="body">
-            {modal.dissolve
-              ? modal.action === 'withdraw'
-                ? DISSOLVE.withdraw
-                : DISSOLVE.leave
-              : CONFIRM[modal.action].body(me?.crewName ?? '', !!me?.pending)}
+            {modal.dissolve ? DISSOLVE.withdraw : CONFIRM[modal.action].body(me?.crewName ?? '', !!me?.pending)}
           </Txt>
         ) : null}
       </Dialog>
@@ -391,7 +360,7 @@ export default function SettingsScreen() {
       <Dialog
         visible={modal?.kind === 'delegate'}
         onClose={() => setModal(null)}
-        title="위임한 뒤에 나갈 수 있어요"
+        title="위임한 뒤에 탈퇴할 수 있어요"
         actions={
           <>
             <Button label="닫기" variant="ghost" size="md" onPress={() => setModal(null)} />
@@ -406,7 +375,7 @@ export default function SettingsScreen() {
           </>
         }
       >
-        <Txt variant="body">크루장은 다른 크루원에게 위임한 뒤에만 크루를 나갈 수 있어요.</Txt>
+        <Txt variant="body">크루장은 다른 크루원에게 위임한 뒤에만 탈퇴할 수 있어요.</Txt>
       </Dialog>
 
       <Snackbar visible={snackbar != null} message={snackbar ?? ''} onDismiss={() => setSnackbar(null)} />
