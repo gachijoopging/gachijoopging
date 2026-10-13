@@ -405,7 +405,7 @@ meets · meet_members · meet_invites · meet_join_requests · friendships · ne
 | `refresh_tokens` | 매일 04:00 KST | 만료된 행 삭제 (`RefreshTokenCleanupJob`) | 있음. 지금은 만료 후 30일 지난 행만 지운다 — 만료 즉시로 바꾼다 |
 | 삭제된 콘텐츠의 사진 | 삭제 커밋 뒤 | 스토리지에서 `deleted/` 경로로 옮긴다 (`MediaQuarantineListener`) | 리스너만 있음. 발행은 각 도메인이 삭제를 만들 때 |
 | `live_locations` | 활동 종료 때 | 그 사람의 행 삭제 | 구현 전 |
-| 종료 없이 끊긴 `live_locations` | 매일 04:00 KST | `updated_at` 이 30분 넘게 지난 행 삭제. 활동이 이어지면 다음 갱신이 행을 다시 만든다 | 구현 전 |
+| 종료 없이 끊긴 `live_locations` | 5분마다 | `updated_at` 이 30분 넘게 지난 행 삭제. 활동이 이어지면 다음 갱신이 행을 다시 만든다 | 구현 전 |
 | `password_reset_tokens` | 사용·폐기 때 · 매일 04:00 KST | 사용·재발급·오답 한도로 폐기되는 행은 그때 삭제, 쓰지 않고 만료된 행은 매일 삭제 | 구현 전 — 지금은 `used_at` 만 찍고 쌓인다 |
 | 처리 끝난 `reports` | 매일 04:00 KST | `resolved_at` 이 1년 지난 행 삭제 | 구현 전 |
 | `deleted_at` 이 찍힌 콘텐츠 행 (`activities`·`posts`·`comments`·`notices`·`chat_messages`) | 매일 04:00 KST | `deleted_at` 이 30일 지난 행과 그 행에 딸린 행(댓글·좋아요·사진 연결 등)을 물리 삭제. 사진 파일은 `deleted/` 에서 함께 지운다 | 구현 전 |
