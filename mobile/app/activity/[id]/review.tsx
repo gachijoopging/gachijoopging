@@ -34,7 +34,7 @@ const BANNERS = {
 function parseMedia(raw: string | undefined): Media | null {
   try {
     const media = JSON.parse(raw ?? '');
-    return typeof media?.photoId === 'string' ? media : null;
+    return typeof media?.photoId === 'string' && typeof media?.url === 'string' ? media : null;
   } catch {
     return null;
   }
