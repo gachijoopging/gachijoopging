@@ -51,7 +51,7 @@ export function Snackbar({
     if (!visible || !dismissible || held) return;
     const t = setTimeout(() => dismiss.current?.(), duration);
     return () => clearTimeout(t);
-  }, [visible, duration, dismissible, held]);
+  }, [visible, message, duration, dismissible, held]);
 
   useEffect(() => {
     if (visible) AccessibilityInfo.announceForAccessibility(message);

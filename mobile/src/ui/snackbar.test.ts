@@ -32,3 +32,23 @@ test('매초 새 닫기 콜백을 전달해도 스낵바는 4초 뒤 최신 콜�
     jest.useRealTimers();
   }
 });
+
+test('보이는 중에 문구가 바뀌면 새 문구부터 4초를 다시 잰다', () => {
+  jest.useFakeTimers();
+  const announce = jest.spyOn(AccessibilityInfo, 'announceForAccessibility').mockImplementation(() => {});
+  const dismiss = jest.fn();
+  const frame = (message: string) => React.createElement(Snackbar, { visible: true, message, onDismiss: dismiss });
+  let rendered: ReturnType<typeof create>;
+  try {
+    act(() => { rendered = create(frame('새로고침에 실패했어요')); });
+    act(() => { jest.advanceTimersByTime(3000); rendered.update(frame('팔로우에 실패했어요')); });
+    act(() => { jest.advanceTimersByTime(3000); });
+    expect(dismiss).not.toHaveBeenCalled();
+    act(() => { jest.advanceTimersByTime(1000); });
+    expect(dismiss).toHaveBeenCalledTimes(1);
+  } finally {
+    act(() => { rendered?.unmount(); });
+    announce.mockRestore();
+    jest.useRealTimers();
+  }
+});
