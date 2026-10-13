@@ -58,7 +58,7 @@ export default function StartScreen() {
         style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
       />
       <Screen edges={['top', 'bottom', 'left', 'right']} scroll contentStyle={{ flexGrow: 1 }} style={{ backgroundColor: colors.transparent }}>
-        <View style={{ flex: 1, minHeight: '100%', justifyContent: 'space-between' }}>
+        <View style={{ flex: 1, justifyContent: 'space-between' }}>
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: space.lg }}>
             <View style={{ alignItems: 'center', justifyContent: 'center' }}>
               <View
