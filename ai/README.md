@@ -362,8 +362,13 @@ AI 서버가 **노트북**이라 데모 당일 리스크가 구조적으로 높�
   등록 뒤 `(Get-ScheduledTask gachi-ai-serve).Settings.ExecutionTimeLimit` 이 `PT0S`(무제한)인지 봅니다.
   **멈출 때**는 `Stop-ScheduledTask` 만으로는 uvicorn 이 살아남아 8000 포트를 잡고 있습니다 — 다시 시작하면 bind 실패로 재시도만 돕니다
   ```powershell
-  Stop-ScheduledTask gachi-ai-serve; taskkill /F /T /IM uvicorn.exe
+  Stop-ScheduledTask gachi-ai-serve
+  Get-NetTCPConnection -LocalPort 8000 -State Listen |
+    Select-Object -ExpandProperty OwningProcess -Unique |
+    ForEach-Object { Get-CimInstance Win32_Process -Filter "ProcessId = $_" } |
+    Select-Object ProcessId, ExecutablePath, CommandLine
   ```
+  출력의 `CommandLine` 에 이 저장소의 `ai\.venv\` 경로와 `app.main:app` 이 함께 있는 프로세스의 `ProcessId` 를 `$uvicornPid` 에 넣은 뒤 `taskkill /F /T /PID $uvicornPid` 로 멈춥니다. 포트를 여는 프로세스의 `ExecutablePath` 는 `python.exe` 일 수 있습니다. 이름으로 일괄 종료하면 다른 개발 서버도 함께 꺼집니다.
 - [ ] Windows 전원 설정: 전원 연결 시 **절전 안 함** · 덮개를 닫아도 **아무 것도 안 함**
 - [ ] **유선 랜** 연결, 전원 연결
 - [ ] NVIDIA 제어판 > 3D 설정 > 전원 관리 모드 = **최대 성능 우선** (GeForce는 `nvidia-smi` 전원 관리가 대체로 미지원이라 드라이버 UI에서 합니다)
