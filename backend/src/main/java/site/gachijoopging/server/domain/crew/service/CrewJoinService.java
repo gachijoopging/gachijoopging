@@ -127,9 +127,14 @@ public class CrewJoinService {
   @Transactional
   public void decide(UUID me, CrewMembership membership, UUID requestId, Decision decision) {
     membership.requireLeader();
-    crewRepository
-        .findActiveForUpdate(membership.crewId())
-        .orElseThrow(() -> new BusinessException(ErrorCode.NO_CREW, "소속 크루가 없다"));
+    Crew crew =
+        crewRepository
+            .findActiveForUpdate(membership.crewId())
+            .orElseThrow(() -> new BusinessException(ErrorCode.NO_CREW, "소속 크루가 없다"));
+    // 잠금을 기다리는 사이 위임이 커밋될 수 있어 요청 시작 때의 크루장 여부를 믿지 않는다
+    if (!crew.ledBy(me)) {
+      throw new BusinessException(ErrorCode.FORBIDDEN, "크루장만 할 수 있다");
+    }
     CrewJoinRequest request =
         requireRequest(joinRequestRepository.findByIdAndCrewId(requestId, membership.crewId()));
     if (request.getStatus() != JoinRequestStatus.PENDING) {

@@ -10,6 +10,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static site.gachijoopging.server.support.TestAccounts.가입한다;
 
 import com.jayway.jsonpath.JsonPath;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.Callable;
@@ -17,6 +19,8 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import javax.sql.DataSource;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -41,6 +45,7 @@ class CrewJoinApiTest extends IntegrationTest {
   @Autowired private MockMvc mockMvc;
   @Autowired private ApplicationEvents events;
   @Autowired private JdbcTemplate jdbcTemplate;
+  @Autowired private DataSource dataSource;
 
   @Test
   void 비공개_크루에_신청하면_201_PENDING_이고_크루원은_아니다() throws Exception {
@@ -465,6 +470,44 @@ class CrewJoinApiTest extends IntegrationTest {
   }
 
   @Test
+  void 승인이_크루_잠금을_기다리는_사이_위임되면_이전_크루장의_승인은_403_이고_신청은_PENDING_이다() throws Exception {
+    TestAccount 크루장 = 가입한다(mockMvc, "join-race-leader@test.io");
+    String 크루 = 크루를_만든다(크루장);
+    TestAccount 새_크루장 = 가입한다(mockMvc, "join-race-next@test.io");
+    jdbcTemplate.update(
+        "INSERT INTO crew_members (crew_id, user_id, joined_at) VALUES (?, ?, now())",
+        UUID.fromString(크루),
+        새_크루장.id());
+    String 신청 = 신청_id(신청한다(가입한다(mockMvc, "join-race-me@test.io"), 크루));
+    ExecutorService 손 = Executors.newSingleThreadExecutor();
+    try (Connection 위임 = dataSource.getConnection()) {
+      위임.setAutoCommit(false);
+      try (PreparedStatement 잠금 =
+          위임.prepareStatement("SELECT 1 FROM crews WHERE id = ? FOR UPDATE")) {
+        잠금.setObject(1, UUID.fromString(크루));
+        잠금.executeQuery();
+      }
+      Future<Integer> 승인 =
+          손.submit(
+              () ->
+                  mockMvc.perform(처리한다(크루장, 신청, "APPROVE")).andReturn().getResponse().getStatus());
+      크루_잠금을_기다릴_때까지_본다();
+      try (PreparedStatement 바꾼다 =
+          위임.prepareStatement("UPDATE crews SET leader_id = ? WHERE id = ?")) {
+        바꾼다.setObject(1, 새_크루장.id());
+        바꾼다.setObject(2, UUID.fromString(크루));
+        바꾼다.executeUpdate();
+      }
+      위임.commit();
+
+      assertThat(승인.get(10, TimeUnit.SECONDS)).isEqualTo(403);
+    } finally {
+      손.shutdown();
+    }
+    assertThat(신청_상태(신청)).isEqualTo("PENDING");
+  }
+
+  @Test
   void 신청한_적이_없으면_내_신청은_null_이다() throws Exception {
     mockMvc
         .perform(내_신청(가입한다(mockMvc, "join-applicant-12@test.io")))
@@ -552,6 +595,21 @@ class CrewJoinApiTest extends IntegrationTest {
         UUID.fromString(크루),
         사람.id(),
         크루장.id());
+  }
+
+  private void 크루_잠금을_기다릴_때까지_본다() throws InterruptedException {
+    for (int i = 0; i < 100; i++) {
+      Integer 대기 =
+          jdbcTemplate.queryForObject(
+              "SELECT count(*) FROM pg_stat_activity"
+                  + " WHERE wait_event_type = 'Lock' AND query ILIKE '%from crews%'",
+              Integer.class);
+      if (대기 > 0) {
+        return;
+      }
+      Thread.sleep(50);
+    }
+    throw new AssertionError("승인 요청이 크루 잠금을 기다리지 않는다");
   }
 
   private int 크루원_수(String 크루) {
