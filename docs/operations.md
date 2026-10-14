@@ -194,12 +194,6 @@ Nginx 설정 파일은 그대로 쓰이지 않는다. 컨테이너가 `envsubst`
 | Spring `max-request-size` | 22MB | multipart 경계 포함 |
 | `MediaImageValidator` | 20MB | **계약상 한도.** 422 + 오류 봉투를 내는 유일한 곳 |
 
-### CORS 를 열지 않는다
-
-앱(React Native)은 브라우저가 아니라 Origin 검사를 받지 않는다. AI 서버도 사진 URL 을 읽지 않는다 —
-백엔드가 multipart 로 직접 보낸다(`AiInferenceClient`). 웹에서 쓸 일이 없으므로 web origin 을
-허용하지 않는다(GAC-111).
-
 ## Redis
 
 **지금 쓰는 곳은 레이트리밋 하나다**(`global/ratelimit` · `AuthFacade`). 로그인 10회/이메일,
@@ -322,6 +316,96 @@ cd /opt/gachijoopging && docker compose up -d --force-recreate backend
 | `DATABASE_PASSWORD` | Supabase 콘솔에서 바꾸고 올린다. `$` 가 들어가면 `$$` 로 적는다 |
 
 **터미널·대화·이슈에 값이 노출되면 그 값은 죽은 것으로 본다.** 지웠는지와 무관하게 회전한다.
+
+## 보안
+
+막는 곳이 한 겹뿐이면 **그 한 겹이 전부다.** 아래는 전부 두 겹 이상으로 맞춘 것이다.
+
+### 열린 포트
+
+바깥에 보이는 것은 **22·80·443 뿐**이다. 두 곳에서 막는다 — Lightsail 방화벽(콘솔, §구성)과
+compose 가 호스트에 포트를 내지 않는 것.
+
+| | |
+|---|---|
+| 백엔드 8080 | **호스트에 내지 않는다.** Nginx 가 compose 네트워크로 `backend:8080` 에 붙고, healthcheck 는 컨테이너 안에서 `localhost` 를 본다 |
+| Redis 6379 | 같다. `--requirepass` 까지 걸려 있다(§Redis) |
+| AI · DB | 이 서버에 없다. AI 는 담당자 노트북, DB 는 Supabase |
+
+확인:
+
+```sh
+sudo ss -tlnp | grep 8080          # 없거나 127.0.0.1. 0.0.0.0 이면 안 된다
+```
+
+밖에서는 전 포트를 센다. `nmap` 이 없으면:
+
+```sh
+H=13.125.10.7
+p() { timeout 2 bash -c "echo > /dev/tcp/$H/$1" 2>/dev/null && echo "$1"; }
+export -f p H; seq 1 65535 | xargs -P 600 -I{} bash -c 'p {}' | sort -n
+```
+
+> 닫힌 것만 나오면 **방법을 먼저 의심한다.** 사내망이 바깥 포트를 막고 있으면 전부 닫힌 것으로 보인다.
+> 22·80·443 이 열린 것으로 나와야 측정이 유효하다.
+
+### SSH
+
+키만 받는다. 서버 기본값이 이미 그렇고, 바꾸지 않았다.
+
+```
+passwordauthentication no
+kbdinteractiveauthentication no
+permitemptypasswords no
+permitrootlogin without-password     # 키로만. 비밀번호로는 못 들어온다
+```
+
+CI 는 **배포 전용 키**로 붙는다. Lightsail 기본 키와 다른 것이라 CI 접근만 따로 끊을 수 있다(§시크릿).
+
+### CORS 를 열지 않는다
+
+**설정이 없는 것이 맞는 상태다.** `SecurityConfig` 에 `.cors(...)` 가 없어 `Access-Control-Allow-*`
+헤더가 아예 나가지 않고, 브라우저가 알아서 교차 출처 읽기를 막는다.
+
+```
+$ curl -D - -o /dev/null https://www.gachijoopging.site/api/v1/crews -H 'Origin: https://evil.example.com'
+HTTP/1.1 401
+(Access-Control-* 헤더 없음)
+```
+
+열 이유가 없다 — 앱(React Native)은 브라우저가 아니라 Origin 검사를 받지 않고, 관리자 웹·크루 웹은
+범위 밖이며(`feature-scope.md`), AI 서버는 사진 URL 을 읽지 않는다(백엔드가 multipart 로 직접 보낸다).
+**웹에서 쓸 일이 생기면 그때 Origin 을 하나씩 허용한다.** 미리 열어 두지 않는다.
+
+### rate limit 운영값
+
+백엔드 설정이고 `.env` 로 주입하지 않는다 — 환경마다 다를 값이 아니다. 정본은 `application.yml`.
+
+| 키 | 지금 값 | 왜 |
+|---|---|---|
+| `app.login-rate-limit.window` · `.per-email` · `.per-ip` | 10m · 10 · 50 | 이메일 기준은 한 계정 대입, IP 기준은 여러 계정 대입을 막는다 |
+| `app.password-reset.resend-interval` | 60s | 같은 이메일로 메일을 연타하지 못하게 |
+| `app.password-reset.per-ip-limit` · `.per-ip-window` | 10 · 1h | 한 IP 가 여러 이메일로 메일을 뿌리는 것을 막는다 |
+| `app.password-reset.max-attempts` | 5 | 코드 오답 5회면 폐기 |
+
+위치 전송(`/app/crew/live`)에는 제한을 두지 않는다. 5초마다 보내는 것이 정상 동작이고(`realtime.md`),
+여기에 제한을 걸면 **정상 사용자가 먼저 막힌다.**
+
+**확인은 값이 아니라 동작으로 한다.** `RateLimiter` 는 fail-open 이라 Redis 에 못 붙어도 로그인은 되고
+제한만 사라진다(§Redis).
+
+```sh
+for i in $(seq 1 11); do
+  curl -s -o /dev/null -w '%{http_code} ' -X POST https://www.gachijoopging.site/api/v1/auth/login \
+    -H 'Content-Type: application/json' -d '{"email":"probe@example.com","password":"wrong"}'
+done
+# 401 ×10 뒤 429
+```
+
+### 아직 안 한 것
+
+**Supabase 네트워크 제한.** DB 를 서버 IP(`13.125.10.7`)만 허용하도록 묶고 싶은데, Network
+Restrictions 는 유료 플랜 기능이다. 지금은 비밀번호와 `sslmode=require` 뿐이다. 플랜을 올리면 건다.
 
 ## 감시
 

@@ -15,8 +15,9 @@ services:
   backend:
     image: ${DOCKERHUB_USER}/gachijoopging-backend:${IMAGE_TAG}
     restart: unless-stopped
-    ports:
-      - "8080:8080"
+    # 호스트에 포트를 열지 않는다. Nginx 가 compose 네트워크 안에서 backend:8080 으로 붙고,
+    # healthcheck 는 컨테이너 안에서 localhost 를 본다 — 바깥에 낼 이유가 없다.
+    # Lightsail 방화벽이 8080 을 막고 있지만, 막아 주는 곳이 한 겹뿐이면 그 한 겹이 전부다.
     env_file:
       - .env
     volumes:
