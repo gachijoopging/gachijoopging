@@ -77,6 +77,9 @@ class ActivityApiTest extends IntegrationTest {
     시작한다(나, UUID.randomUUID(), true)
         .andExpect(status().isConflict())
         .andExpect(jsonPath("$.code").value("CONFLICT"));
+    시작한다(나, 지운_활동, true)
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.code").value("CONFLICT"));
   }
 
   @Test
@@ -202,6 +205,14 @@ class ActivityApiTest extends IntegrationTest {
         .andExpect(jsonPath("$.data.items[0].source").value("AI"))
         .andExpect(jsonPath("$.data.items[0].unclassified").value(true))
         .andExpect(jsonPath("$.data.items[0].bbox.w").value(0.3));
+    String 신뢰도만_있는_수동_줍기 =
+        "{\"id\":\"%s\",\"category\":\"CAN\",\"quantity\":1,\"aiConfidence\":0.3}"
+            .formatted(UUID.randomUUID());
+    mockMvc
+        .perform(줍는다(나, 활동, null, 신뢰도만_있는_수동_줍기))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.items[?(@.category=='CAN')].source").value("MANUAL"))
+        .andExpect(jsonPath("$.data.items[?(@.category=='CAN')].unclassified").value(false));
     mockMvc
         .perform(줍는다(나, 활동, 남의_사진, 줍기(UUID.randomUUID(), "CAN", 1)))
         .andExpect(status().isNotFound());

@@ -46,7 +46,7 @@ public class ActivityService {
   @Transactional
   public Started start(UUID me, StartActivityRequest request) {
     userLock.lock(me);
-    Optional<Activity> same = activityRepository.findById(request.id());
+    Optional<Activity> same = activityRepository.findLive(request.id());
     if (same.isPresent()) {
       if (!same.get().ownedBy(me)) {
         throw forbidden();
@@ -64,7 +64,7 @@ public class ActivityService {
     if (activityRepository.insertIfAbsent(
             request.id(), me, crewId, request.startedAt(), request.locationShared())
         == 0) {
-      if (activityRepository.findById(request.id()).isPresent()) {
+      if (activityRepository.findById(request.id()).map(a -> !a.ownedBy(me)).orElse(false)) {
         throw forbidden();
       }
       throw new BusinessException(ErrorCode.CONFLICT, "진행 중인 활동이 있다");
@@ -165,7 +165,7 @@ public class ActivityService {
         confidence,
         item.category().name(),
         item.quantity(),
-        confidence != null && confidence < UNCLASSIFIED_BELOW,
+        item.aiPredictedCategory() != null && confidence != null && confidence < UNCLASSIFIED_BELOW,
         (item.aiPredictedCategory() == null ? ItemSource.MANUAL : ItemSource.AI).name());
   }
 
