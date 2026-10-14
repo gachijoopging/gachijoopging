@@ -329,7 +329,7 @@ Supabase Enforce SSL. 나머지는 한 겹이거나 그보다 약하고, 어디�
 
 | | |
 |---|---|
-| 백엔드 8080 | **호스트에 내지 않는다.** Nginx 가 compose 네트워크로 `backend:8080` 에 붙고, healthcheck 는 컨테이너 안에서 `localhost` 를 본다 |
+| 백엔드 8080 | **호스트에 내지 않는다.** Nginx 가 compose 네트워크로 `backend:8080` 에 붙고, healthcheck 는 컨테이너 안에서 `localhost` 를 본다. 되살리면 Nginx 를 우회해 **`/actuator/prometheus` 가 인증 없이** 열리고, **`X-Real-IP` 를 위조**해 `login:ip:` 카운터를 피할 수 있다 |
 | Redis 6379 | 같다. `--requirepass` 까지 걸려 있다(§Redis) |
 | AI · DB | 이 서버에 없다. AI 는 담당자 노트북, DB 는 Supabase |
 
@@ -401,17 +401,37 @@ curl -sD - -o /dev/null https://www.gachijoopging.site/api/v1/crews \
 
 ### rate limit 운영값
 
+**제한이 걸린 곳은 둘뿐이다** — 로그인(`POST /auth/login`)과 재설정 메일 요청(`POST /auth/password-reset`).
+`AuthFacade` 가 `RateLimiter` 를 거는 자리가 그 둘이다.
+
+아래 **인증 경로에는 제한이 없다.** `SecurityConfig` 가 `/api/v1/auth/**` 를 `permitAll` 하므로
+인증도 없다 — 이 표를 보고 "auth 는 막혀 있다" 고 읽지 않는다.
+
+```
+POST /auth/signup                 가입. 무제한
+POST /auth/kakao · /auth/google   소셜. 무제한 (토큰 검증은 외부 호출이다)
+POST /auth/refresh                무제한
+POST /auth/logout                 무제한
+```
+
+`POST /auth/password-reset/confirm` 은 `RateLimiter` 가 아니라 **코드 5회 오답이면 폐기**로 막는다
+(`app.password-reset.max-attempts`). 종류가 다르다.
+
 백엔드 설정이고 `.env` 로 주입하지 않는다 — 환경마다 다를 값이 아니다. 정본은 `application.yml`.
 
-| 키 | 지금 값 | 왜 |
-|---|---|---|
-| `app.login-rate-limit.window` · `.per-email` · `.per-ip` | 10m · 10 · 50 | 이메일 기준은 한 계정 대입, IP 기준은 여러 계정 대입을 막는다 |
-| `app.password-reset.resend-interval` | 60s | 같은 이메일로 메일을 연타하지 못하게 |
-| `app.password-reset.per-ip-limit` · `.per-ip-window` | 10 · 1h | 한 IP 가 여러 이메일로 메일을 뿌리는 것을 막는다 |
-| `app.password-reset.max-attempts` | 5 | 코드 오답 5회면 폐기 |
+| 키 | 지금 값 | 거는 곳 | 왜 |
+|---|---|---|---|
+| `app.login-rate-limit.window` · `.per-email` · `.per-ip` | 10m · 10 · 50 | `/auth/login` | 이메일 기준은 한 계정 대입, IP 기준은 여러 계정 대입을 막는다 |
+| `app.password-reset.resend-interval` | 60s | `/auth/password-reset` | 같은 이메일로 메일을 연타하지 못하게 |
+| `app.password-reset.per-ip-limit` · `.per-ip-window` | 10 · 1h | `/auth/password-reset` | 한 IP 가 여러 이메일로 메일을 뿌리는 것을 막는다 |
+| `app.password-reset.max-attempts` | 5 | `/auth/password-reset/confirm` | 코드 오답 5회면 폐기. RateLimiter 가 아니다 |
 
-위치 전송(`/app/crew/live`)에는 제한을 두지 않는다. 5초마다 보내는 것이 정상 동작이고(`realtime.md`),
+위치 전송(`/app/crew/live`)에도 제한을 두지 않는다. 5초마다 보내는 것이 정상 동작이고(`realtime.md`),
 여기에 제한을 걸면 **정상 사용자가 먼저 막힌다.**
+
+**IP 기준 제한은 위조할 수 있다.** `AuthController.clientIp()` 가 `X-Real-IP` 를 검증 없이 믿는다.
+지금은 Nginx 만 그 헤더를 쓰고 8080 이 바깥에 없어 닿지 못하지만, 그 전제가 깨지면(위 표 "백엔드 8080")
+IP 카운터는 의미가 없어진다.
 
 **제한은 0겹이 될 수 있다.** `RateLimiter` 는 fail-open 이라 Redis 에 못 붙으면 로그인은 되고 제한만
 사라진다. 확인 방법은 §Redis 에 있다 — 여기 옮겨 적지 않는다.
@@ -433,13 +453,22 @@ curl -sD - -o /dev/null https://www.gachijoopging.site/api/v1/crews \
 grep -o 'sslmode=[a-z-]*' /opt/gachijoopging/.env
 
 # ② 서버 겹 — 평문이 거부되나. disable 이 실패해야 켜져 있는 것이다
-cd /opt/gachijoopging && sed 's/\$\$/$/g' .env > /tmp/e && chmod 600 /tmp/e
+#
+# mktemp 는 처음부터 0600 으로 만든다. `> /tmp/e` 는 umask(보통 0644)로 먼저 만들어져
+# chmod 전까지 남에게 읽히고, 중간에 끊기면 비밀번호가 든 평문 파일이 그대로 남는다.
+# trap 을 거는 이유도 그것이다.
+E=$(mktemp) && trap 'rm -f "$E"' EXIT
+sed 's/\$\$/$/g' /opt/gachijoopging/.env > "$E"
+
+# 호스트는 백엔드가 실제로 붙는 곳에서 꺼낸다. 박아 두면 프로젝트를 옮겼을 때
+# 백엔드와 다른 엔드포인트를 검사하고도 통과한다.
+H=$(sed -n 's|^DATABASE_URL=jdbc:postgresql://||p' "$E" | sed 's|[:/].*||')
+
 for m in disable prefer require; do
   printf 'sslmode=%-8s → ' "$m"
-  docker run --rm --env-file /tmp/e postgres:16-alpine sh -c \
-    "PGPASSWORD=\$DATABASE_PASSWORD psql \"host=aws-0-ap-northeast-2.pooler.supabase.com port=5432 user=\$DATABASE_USER dbname=postgres sslmode=$m\" -tAc 'select 1'" 2>&1 | tail -1
+  docker run --rm --env-file "$E" postgres:16-alpine sh -c \
+    "PGPASSWORD=\$DATABASE_PASSWORD psql \"host=$H port=5432 user=\$DATABASE_USER dbname=postgres sslmode=$m\" -tAc 'select 1'" 2>&1 | tail -1
 done
-rm -f /tmp/e
 ```
 
 `.env` 를 그대로 `--env-file` 로 넘기지 않고 `$$` 를 먼저 푸는 이유는 §배포 에 있다.

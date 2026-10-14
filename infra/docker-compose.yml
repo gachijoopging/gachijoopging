@@ -17,7 +17,12 @@ services:
     restart: unless-stopped
     # 호스트에 포트를 열지 않는다. Nginx 가 compose 네트워크 안에서 backend:8080 으로 붙고,
     # healthcheck 는 컨테이너 안에서 localhost 를 본다 — 바깥에 낼 이유가 없다.
-    # Lightsail 방화벽이 8080 을 막고 있지만, 막아 주는 곳이 한 겹뿐이면 그 한 겹이 전부다.
+    #
+    # 되살리면 Nginx 를 우회해 두 가지가 열린다(operations.md §보안):
+    #   /actuator/prometheus 가 인증 없이 — SecurityConfig 가 /actuator/** 를 permitAll 하고
+    #     Nginx 만 health 하나로 좁히고 있다
+    #   X-Real-IP 위조 — AuthController.clientIp() 가 헤더를 무검증으로 믿어
+    #     login:ip:·pwreset:ip: 카운터를 피하거나 남의 IP 를 막을 수 있다
     env_file:
       - .env
     volumes:
