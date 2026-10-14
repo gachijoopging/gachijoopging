@@ -25,7 +25,8 @@ import {
   useTheme,
   characterEmpty,
 } from 'design-system/src';
-import { ApiError, createMockClient, type ApiClient } from '../../src/api/client';
+import { ApiError, type ApiClient } from '../../src/api/client';
+import { createApiClient } from '../../src/api/config';
 import { canGoNextMonth, isFutureDate, kstToday, monthGrid, shiftMonth } from '../../src/crew/calendar';
 import { PostCard } from '../../src/feed/PostCard';
 import { emptyCopy, rangeLabel, syncLike, tapRange, toggleLike, type DateRange, type FeedScope, type LikeSync, type Post, type RangeDraft } from '../../src/feed/feed';
@@ -33,7 +34,7 @@ import { leaveForMembership } from '../../src/feed/leave';
 import { useFlash } from '../../src/ui/useFlash';
 import { useBlockedUsers } from '../../src/profile/blocked-users';
 
-const api: ApiClient = createMockClient({ delayMs: 300 });
+const api: ApiClient = createApiClient({ delayMs: 300 });
 const SCOPES: { value: FeedScope; label: string }[] = [
   { value: 'CREW', label: '전체' },
   { value: 'MINE', label: '내 게시물' },

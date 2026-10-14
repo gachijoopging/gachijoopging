@@ -24,7 +24,8 @@ import {
   space,
   useRipple,
 } from 'design-system/src';
-import { ApiError, createMockClient, type ApiClient } from '../../src/api/client';
+import { ApiError, type ApiClient } from '../../src/api/client';
+import { createApiClient } from '../../src/api/config';
 import { normalizeNickname, validateNickname } from '../../src/auth/validators';
 import { usePreventBack } from '../../src/auth/usePreventBack';
 import { INTRO_MAX, NICKNAME_MAX, profileChanges, profilePatch } from '../../src/profile/profile';
@@ -33,7 +34,7 @@ type Original = { nickname: string; intro: string; photoUrl: string | null };
 /** 새로 고른 사진. mediaId 는 올린 뒤에만 생기고, 저장이 실패해도 들고 있다가 다시 올리지 않는다 */
 type Picked = { uri: string; name: string; type: string; uploadId: string; mediaId: string | null };
 
-const api: ApiClient = createMockClient({ delayMs: 300 });
+const api: ApiClient = createApiClient({ delayMs: 300 });
 
 export default function EditProfileScreen() {
   const navigation = useNavigation();

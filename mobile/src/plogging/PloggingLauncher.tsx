@@ -4,14 +4,15 @@ import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNetworkState } from 'expo-network';
 import { Snackbar, size, space } from 'design-system/src';
-import { createMockClient, type ApiClient } from '../api/client';
+import { type ApiClient } from '../api/client';
+import { createApiClient } from '../api/config';
 import { getStored, loadLastAccount, openAccount } from '../activity/store';
 import { syncOutbox } from '../activity/tracking';
 import { ploggingEntry } from './entry';
 import { StartSheet } from './StartSheet';
 import type { StartResult } from './start';
 
-const api: ApiClient = createMockClient({ delayMs: 300 });
+const api: ApiClient = createApiClient({ delayMs: 300 });
 
 type Launcher = {
   /** 하단 가운데 줍깅 버튼. 진행 중이면 4-3, 그 밖에는 지금 탭 위에 시작 시트 */

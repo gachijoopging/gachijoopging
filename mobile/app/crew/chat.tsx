@@ -39,7 +39,8 @@ import {
   useRipple,
   useTheme,
 } from 'design-system/src';
-import { createMockClient, type ApiClient } from '../../src/api/client';
+import { type ApiClient } from '../../src/api/client';
+import { createApiClient } from '../../src/api/config';
 import { resolveDestination } from '../../src/auth/destination';
 import { kstToday } from '../../src/crew/calendar';
 import {
@@ -65,7 +66,7 @@ import {
 import { createMockChatSocket, type ChatSocket, type ChatSocketEvent } from '../../src/crew/chat-socket';
 import { useFlash } from '../../src/ui/useFlash';
 
-const api: ApiClient = createMockClient({ delayMs: 300 });
+const api: ApiClient = createApiClient({ delayMs: 300 });
 /** 전송 실패·다시 보내기를 목으로 보려면 dropEcho 를 켠다 */
 const MOCK_SOCKET = { dropEcho: false };
 const PAGE = 50;

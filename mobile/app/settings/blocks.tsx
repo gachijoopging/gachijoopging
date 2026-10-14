@@ -19,14 +19,15 @@ import {
   space,
   useTheme,
 } from 'design-system/src';
-import { createMockClient, forget, type ApiClient } from '../../src/api/client';
+import { forget, type ApiClient } from '../../src/api/client';
+import { createApiClient } from '../../src/api/config';
 import type { MOCKS } from '../../src/api/mocks.generated';
 import { blockedUsers, reconcileBlockedUsers, setUserBlocked } from '../../src/profile/blocked-users';
 import { currentAccount } from '../../src/auth/account';
 
 type Blocked = (typeof MOCKS)['GET /users/me/blocked']['data']['items'][number];
 
-const api: ApiClient = createMockClient({ delayMs: 300 });
+const api: ApiClient = createApiClient({ delayMs: 300 });
 const ROW_DESC = '차단됨, 게시물, 댓글, 채팅, 위치에서 숨김';
 
 export default function ManageBlocksScreen() {

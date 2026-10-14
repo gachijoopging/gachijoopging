@@ -25,7 +25,8 @@ import {
   size,
   space,
 } from 'design-system/src';
-import { ApiError, createMockClient, forget, peek, type ApiClient } from '../../src/api/client';
+import { ApiError, forget, peek, type ApiClient } from '../../src/api/client';
+import { createApiClient } from '../../src/api/config';
 import { CATEGORY_LABEL, type Category } from '../../src/category';
 import {
   changedItems,
@@ -60,7 +61,7 @@ type Detail = {
   items: readonly Item[];
 };
 
-const api: ApiClient = createMockClient({ delayMs: 300 });
+const api: ApiClient = createApiClient({ delayMs: 300 });
 const CATEGORIES = Object.keys(CATEGORY_LABEL) as Category[];
 
 export default function ActivityDetailScreen() {

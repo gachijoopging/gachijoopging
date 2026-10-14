@@ -21,7 +21,8 @@ import {
   space,
   useTheme,
 } from 'design-system/src';
-import { createMockClient, peek, type ApiClient } from '../../src/api/client';
+import { peek, type ApiClient } from '../../src/api/client';
+import { createApiClient } from '../../src/api/config';
 import type { MOCKS } from '../../src/api/mocks.generated';
 import { ExportSheet } from '../../src/crew/ExportSheet';
 import { LeaveCrew } from '../../src/crew/LeaveCrew';
@@ -32,7 +33,7 @@ import type { Crew } from '../(tabs)/crew';
 
 type Member = (typeof MOCKS)['GET /crew/members']['data'][number];
 
-const api: ApiClient = createMockClient({ delayMs: 300 });
+const api: ApiClient = createApiClient({ delayMs: 300 });
 
 function joinedLabel(iso: string): string {
   const d = new Date(Date.parse(iso) + 9 * 60 * 60 * 1000);
