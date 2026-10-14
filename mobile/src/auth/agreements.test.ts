@@ -84,6 +84,15 @@ test('version refresh preserves nickname and unchanged-version choice but clears
   expect(mockReset).not.toHaveBeenCalled();
 });
 
+test('failed profile load hides the agreement spinner until retry succeeds', async () => {
+  mockGet.mockImplementationOnce(() => Promise.reject(new Error('offline')));
+  await mount(Nickname);
+  expect(tree.root.findAllByType('Loading' as never)).toHaveLength(0);
+  expect(tree.root.findAllByType('Checkbox' as never)).toHaveLength(0);
+  await press('다시 시도');
+  expect(tree.root.findAllByType('Checkbox' as never)).toHaveLength(3);
+});
+
 test('missing catalogue exposes retry and prevents signup', async () => {
   mockGet.mockRejectedValue(new Error('unconfigured'));
   await mount(SignUp);

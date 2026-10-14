@@ -98,13 +98,15 @@ export default function NicknameScreen() {
         onSubmitEditing={handleSubmit}
       />
 
-      <AgreementFields
-        items={agreements.items}
-        onChange={agreements.change}
-        failed={agreements.failed}
-        onRetry={agreements.reload}
-        disabled={loading}
-      />
+      {!me && banner ? null : (
+        <AgreementFields
+          items={agreements.items}
+          onChange={agreements.change}
+          failed={agreements.failed}
+          onRetry={agreements.reload}
+          disabled={loading}
+        />
+      )}
 
       {banner ? <Banner tone="danger">{banner}</Banner> : null}
       {!me && banner ? <Button label="다시 시도" variant="ghost" onPress={load} /> : null}
