@@ -207,6 +207,51 @@ Nginx 설정 파일은 그대로 쓰이지 않는다. 컨테이너가 `envsubst`
 백엔드가 multipart 로 직접 보낸다(`AiInferenceClient`). 웹에서 쓸 일이 없으므로 web origin 을
 허용하지 않는다(GAC-111).
 
+## Redis
+
+**지금 쓰는 곳은 레이트리밋 하나다**(`global/ratelimit` · `AuthFacade`). 로그인 10회/이메일,
+50회/IP, 재설정 메일 10회/IP·60초/이메일 — 전부 TTL 이 걸린 카운터다. `docs/realtime.md` 의 소켓은
+아직 코드에 없고, STOMP 브로커 릴레이·채팅 pub/sub 도 들어오지 않았다.
+
+| | |
+|---|---|
+| 비밀번호 | `REDIS_PASSWORD` 필수. compose 가 `--requirepass` 로 건다 |
+| 메모리 | `maxmemory 128mb` · `allkeys-lru`. 실사용은 1MB 남짓이라 100배 여유다 |
+| 영속 | **없다.** `--save ""` 로 스냅샷을 끄고 볼륨도 두지 않는다 |
+| 포트 | 바깥에 열지 않는다. 백엔드만 compose 네트워크 안에서 붙는다 |
+
+### 비밀번호가 틀리면 조용히 망가진다
+
+`RateLimiter` 는 **fail-open** 이다 — Redis 가 죽거나 `NOAUTH` 를 돌려주면 예외를 삼키고 요청을
+통과시킨다(WARN 로그만). 로그인은 계속 되지만 **횟수 제한만 사라진다.** 기동도 성공하고 헬스체크도
+초록이라 눈에 띄지 않는다.
+
+그래서 `redis-cli PING` 만으로는 확인이 안 된다. 그건 `redis-cli` 가 붙었다는 뜻일 뿐이다.
+**레이트리밋이 실제로 걸리는지**를 본다 — 같은 이메일로 틀린 비밀번호를 11번 보내면 11번째가 429 다.
+
+```sh
+for i in $(seq 1 11); do
+  curl -s -o /dev/null -w "%{http_code} " -X POST https://www.gachijoopging.site/api/v1/auth/login \
+    -H 'Content-Type: application/json' -d '{"email":"probe@example.com","password":"wrong"}'
+done
+# 401 ×10 뒤 429 가 나와야 한다. 전부 401 이면 Redis 에 못 붙고 있는 것이다
+```
+
+### 스냅샷을 끈 이유
+
+들어 있는 것이 TTL 걸린 카운터뿐이라 재시작 뒤까지 살아남을 가치가 없다. 반대로 비용은 있다 —
+2GB 한 대에 JVM 이 같이 사는데 `BGSAVE` 는 fork 로 순간 RSS 를 키우고, 그때 죽는 것은 OOM Killer
+기준 가장 큰 프로세스, 즉 백엔드다. 잃는 것은 "재시작 시점에 쌓여 있던 카운터가 0 으로 돌아가
+공격자가 창을 한 번 리셋할 수 있다" 뿐이다.
+
+나중에 pub/sub 이나 세션이 들어오면 그때 다시 본다.
+
+### 로컬은 비밀번호를 걸지 않는다
+
+`infra/docker-compose.dev.yml` 과 Testcontainers(`IntegrationTest`)는 그대로 둔다. 로컬에 지킬 것이
+없고, 팀 전원이 `.env` 를 하나씩 더 채워야 하는 값이 늘기 때문이다. `application.yml` 의
+`${REDIS_PASSWORD:}` 가 기본값을 비워 두는 이유가 이것이다.
+
 ## 감시
 
 헬스체크와 바깥에서 찌르는 것, 둘을 함께 쓴다. 서버가 통째로 꺼지면 자기 자신에게 묻는 헬스체크도 같이
@@ -235,7 +280,7 @@ Nginx 설정 파일은 그대로 쓰이지 않는다. 컨테이너가 `envsubst`
 | `PUBLIC_BASE_URL` | 백엔드 | 서명 URL·메일 링크의 기준 |
 | `INVITE_BASE_URL` | 백엔드 | 초대 링크 앞부분. 카카오톡으로 공유되는 주소다 |
 | `DATABASE_URL` · `DATABASE_USER` · `DATABASE_PASSWORD` | 백엔드 | Supabase 접속. 옛 `POSTGRES_*` 는 컨테이너용이라 없어진다 |
-| `REDIS_HOST` · `REDIS_PORT` | 백엔드 | STOMP 브로커 릴레이·채팅 pub/sub |
+| `REDIS_HOST` · `REDIS_PORT` · `REDIS_PASSWORD` | 백엔드 | 레이트리밋(`global/ratelimit`). 운영은 비밀번호 필수 — 없으면 백엔드가 `NOAUTH` 를 맞고 제한이 **조용히** 꺼진다 |
 | `JWT_ACTIVE_KID` · `JWT_PRIVATE_KEY_PEM` · `JWT_PUBLIC_KEY_PEM` · `JWT_PREVIOUS_*` | 백엔드 | 토큰 서명. kid 회전용 이전 키 |
 | `KAKAO_APP_ID` · `GOOGLE_CLIENT_ID` | 백엔드 | 소셜 토큰 검증 |
 | `MEDIA_ROOT` · `MEDIA_SECURE_LINK_SECRET` | 백엔드 · Nginx | 사진 보관 경로와 서명 URL. `MEDIA_ROOT` 는 컨테이너 안 경로이고 compose 가 볼륨으로 디스크에 잇는다 |
