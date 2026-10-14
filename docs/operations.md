@@ -347,14 +347,15 @@ compose 가 8080 을 publish 하지 않으므로 **무언가 보이면 누가 `p
 nmap -Pn -p- www.gachijoopging.site
 ```
 
-`nmap` 이 없으면 아래로 대신하되 **범위를 좁힌다.**
+`nmap` 이 없으면 아래로 대신하되 **범위를 좁힌다.** 위 표가 닫혀 있어야 한다고 적은 8080·6379 를
+반드시 포함한다 — 빼면 누가 `ports:` 를 되살려도 이 확인이 그냥 통과한다.
 
 ```sh
 H=www.gachijoopging.site
 p() { timeout 3 bash -c "echo > /dev/tcp/$H/$1" 2>/dev/null && echo "$1"; }
 export H; export -f p
-seq 1 1024 | xargs -P 100 -I{} bash -c 'p {}' | sort -n
-# → 22 · 80 · 443 (약 50초)
+{ seq 1 1024; echo 6379; echo 8080; } | xargs -P 100 -I{} bash -c 'p {}' | sort -n
+# → 22 · 80 · 443 (약 40초)
 ```
 
 > ⚠️ **전 범위(1-65535)를 이 루프로 돌리지 않는다.** 팀 전원 Windows 인데 Git Bash 의 `fork` 가 매우
@@ -422,22 +423,38 @@ curl -sD - -o /dev/null https://www.gachijoopging.site/api/v1/crews \
 
 | | |
 |---|---|
-| 클라이언트 | `DATABASE_URL` 에 `?sslmode=require`. 백엔드가 TLS 로만 붙는다 |
-| 서버 | Supabase **Enforce SSL** 켜짐(2026-10-14). 평문으로 들어오는 접속을 거부한다 |
+| 클라이언트 | `DATABASE_URL` 에 `?sslmode=require`. 백엔드가 TLS 가 아니면 붙지 않는다 |
+| 서버 | Supabase **Enforce SSL**. 평문으로 들어오는 접속을 거부한다 |
 
-둘 다 확인한 사실이다.
+둘 다 확인한다. **서버 쪽은 상태가 바뀔 수 있으니 결과만 믿지 말고 다시 돌린다.**
 
 ```sh
-grep -o 'sslmode=[a-z-]*' /opt/gachijoopging/.env     # → sslmode=require
+# ① 클라이언트 겹 — 운영 .env 에 붙어 있나
+grep -o 'sslmode=[a-z-]*' /opt/gachijoopging/.env
+
+# ② 서버 겹 — 평문이 거부되나. disable 이 실패해야 켜져 있는 것이다
+cd /opt/gachijoopging && sed 's/\$\$/$/g' .env > /tmp/e && chmod 600 /tmp/e
+for m in disable prefer require; do
+  printf 'sslmode=%-8s → ' "$m"
+  docker run --rm --env-file /tmp/e postgres:16-alpine sh -c \
+    "PGPASSWORD=\$DATABASE_PASSWORD psql \"host=aws-0-ap-northeast-2.pooler.supabase.com port=5432 user=\$DATABASE_USER dbname=postgres sslmode=$m\" -tAc 'select 1'" 2>&1 | tail -1
+done
+rm -f /tmp/e
 ```
 
+`.env` 를 그대로 `--env-file` 로 넘기지 않고 `$$` 를 먼저 푸는 이유는 §배포 에 있다.
+
+2026-10-14 결과:
+
 ```
-sslmode=disable → FATAL: (ESSLREQUIRED) SSL connection is required for user: postgres
-sslmode=require → 1
+sslmode=disable  → FATAL: (ESSLREQUIRED) SSL connection is required for user: postgres
+sslmode=prefer   → 1
+sslmode=require  → 1
 ```
 
-> Enforce SSL 을 켜기 전에는 평문 접속이 **실제로 됐다.** URL 에서 `?sslmode=require` 를 떨어뜨리면
-> 조용히 평문으로 붙었고, pgjdbc 기본값이 `prefer` 라 경고도 없었다. 클라이언트 쪽 설정만 믿지 않는다.
+> **`?sslmode=require` 를 떨어뜨려도 평문이 되지는 않는다.** pgjdbc 기본값 `prefer` 는 TLS 를 먼저
+> 시도하고, 서버가 거부할 때만 평문으로 떨어진다. 잃는 것은 평문이 아니라 **보장**이다 — 그리고 그 떨어짐은
+> 조용하다. 그래서 두 겹을 둔다. Enforce SSL 을 켜기 전에는 `sslmode=disable` 로 평문 접속이 실제로 됐다.
 
 **네트워크 제한**(서버 IP 만 허용)은 유료 플랜 기능이라 걸지 못했다. 플랜을 올리면 §구성 의 고정 IP 를 넣는다.
 
