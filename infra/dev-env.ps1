@@ -91,13 +91,18 @@ try {
 }
 
 # ── 확인: 서버에서 직접 본다 ─────────────────────────────────────────
-$check = & ssh -i $KeyFile -o BatchMode=yes $Target @"
+# here-string 은 이 파일의 줄끝(CRLF)을 그대로 들고 간다. 그대로 ssh 에 넘기면
+# 원격 쉘이 CR 을 인자의 일부로 읽어 `chmod: cannot access '....env'$'\r'` 가 된다.
+# CR 을 막는 스크립트가 CR 에 당하는 자리라 한 번 더 지운다.
+$remote = @"
 chmod 600 $Remote
 echo "파일   `$(file -b $Remote)"
 echo "CR     `$(tr -dc '\015' < $Remote | wc -c) 바이트"
 echo "키     `$(grep -c '^[A-Z]' $Remote) 개"
 echo "머리   `$(od -c $Remote | head -1)"
-"@
+"@ -replace "`r", ""
+
+$check = & ssh -i $KeyFile -o BatchMode=yes $Target $remote
 $check | ForEach-Object { Write-Host $_ }
 
 Write-Host ""
