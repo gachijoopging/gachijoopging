@@ -319,12 +319,12 @@ cd /opt/gachijoopging && docker compose up -d --force-recreate backend
 
 ## 보안
 
-막는 곳이 한 겹뿐이면 **그 한 겹이 전부다.** 아래는 전부 두 겹 이상으로 맞춘 것이다.
+**열린 포트만 두 겹으로 막혀 있다** — Lightsail 방화벽과 compose 양쪽. 나머지는 한 겹이거나
+그보다 약하고, 어디가 그런지 아래에 적는다. 이 절을 읽고 다른 확인을 건너뛰지 않게 하려는 것이다.
 
 ### 열린 포트
 
-바깥에 보이는 것은 **22·80·443 뿐**이다. 두 곳에서 막는다 — Lightsail 방화벽(콘솔, §구성)과
-compose 가 호스트에 포트를 내지 않는 것.
+바깥에 보이는 것은 **22·80·443 뿐**이다.
 
 | | |
 |---|---|
@@ -332,19 +332,39 @@ compose 가 호스트에 포트를 내지 않는 것.
 | Redis 6379 | 같다. `--requirepass` 까지 걸려 있다(§Redis) |
 | AI · DB | 이 서버에 없다. AI 는 담당자 노트북, DB 는 Supabase |
 
-확인:
+서버 안에서:
 
 ```sh
-sudo ss -tlnp | grep 8080          # 없거나 127.0.0.1. 0.0.0.0 이면 안 된다
+sudo ss -tlnp | grep 8080          # 아무것도 안 나와야 한다
 ```
 
-밖에서는 전 포트를 센다. `nmap` 이 없으면:
+compose 가 8080 을 publish 하지 않으므로 **무언가 보이면 누가 `ports:` 를 되살린 것이다.**
+
+밖에서는 전 포트를 센다. 주소는 §구성 의 공개 주소를 쓴다 — 서버를 새로 만들면 IP 가 바뀐다.
 
 ```sh
-H=13.125.10.7
-p() { timeout 2 bash -c "echo > /dev/tcp/$H/$1" 2>/dev/null && echo "$1"; }
-export -f p H; seq 1 65535 | xargs -P 600 -I{} bash -c 'p {}' | sort -n
+nmap -Pn -p- www.gachijoopging.site
 ```
+
+`nmap` 이 없으면 아래로 대신하되 **범위를 좁힌다.**
+
+```sh
+H=www.gachijoopging.site
+p() { timeout 3 bash -c "echo > /dev/tcp/$H/$1" 2>/dev/null && echo "$1"; }
+export H; export -f p
+seq 1 1024 | xargs -P 100 -I{} bash -c 'p {}' | sort -n
+# → 22 · 80 · 443 (약 50초)
+```
+
+> ⚠️ **전 범위(1-65535)를 이 루프로 돌리지 않는다.** 팀 전원 Windows 인데 Git Bash 의 `fork` 가 매우
+> 느려, `-P 600` 으로 돌렸다가 `fork: retry: Resource temporarily unavailable` 로 죽고 그 사이
+> 노트북이 멈췄다. 전 범위가 필요하면 `nmap` 을 쓴다.
+>
+> 병렬을 더 올리거나 타임아웃을 줄이지 않는다. `-P 200`·`timeout 1` 로 돌렸더니 **열려 있는 22 가
+> 누락됐다** — 부하에 밀려 시간초과한 것을 "닫힘" 으로 읽는다.
+>
+> `export -f p H` 로 쓰지 않는다. `-f` 는 **이름 전부를 함수로 취급**해 `H` 는 export 되지 않고,
+> 자식 bash 에서 `$H` 가 비어 `/dev/tcp//22` 가 된다 — 아무 포트도 안 나오는데 원인이 안 보인다.
 
 > 닫힌 것만 나오면 **방법을 먼저 의심한다.** 사내망이 바깥 포트를 막고 있으면 전부 닫힌 것으로 보인다.
 > 22·80·443 이 열린 것으로 나와야 측정이 유효하다.
@@ -365,12 +385,12 @@ CI 는 **배포 전용 키**로 붙는다. Lightsail 기본 키와 다른 것이
 ### CORS 를 열지 않는다
 
 **설정이 없는 것이 맞는 상태다.** `SecurityConfig` 에 `.cors(...)` 가 없어 `Access-Control-Allow-*`
-헤더가 아예 나가지 않고, 브라우저가 알아서 교차 출처 읽기를 막는다.
+헤더가 아예 나가지 않고, 브라우저가 알아서 교차 출처 읽기를 막는다. 막는 곳은 이 한 겹뿐이다 —
+`.cors(...)` 를 누가 넣는 순간 사라진다.
 
-```
-$ curl -D - -o /dev/null https://www.gachijoopging.site/api/v1/crews -H 'Origin: https://evil.example.com'
-HTTP/1.1 401
-(Access-Control-* 헤더 없음)
+```sh
+curl -sD - -o /dev/null https://www.gachijoopging.site/api/v1/crews \
+  -H 'Origin: https://evil.example.com' | grep -i 'access-control' || echo "CORS 헤더 없음"
 ```
 
 열 이유가 없다 — 앱(React Native)은 브라우저가 아니라 Origin 검사를 받지 않고, 관리자 웹·크루 웹은
@@ -391,21 +411,34 @@ HTTP/1.1 401
 위치 전송(`/app/crew/live`)에는 제한을 두지 않는다. 5초마다 보내는 것이 정상 동작이고(`realtime.md`),
 여기에 제한을 걸면 **정상 사용자가 먼저 막힌다.**
 
-**확인은 값이 아니라 동작으로 한다.** `RateLimiter` 는 fail-open 이라 Redis 에 못 붙어도 로그인은 되고
-제한만 사라진다(§Redis).
+**제한은 0겹이 될 수 있다.** `RateLimiter` 는 fail-open 이라 Redis 에 못 붙으면 로그인은 되고 제한만
+사라진다. 확인 방법은 §Redis 에 있다 — 여기 옮겨 적지 않는다.
+
+> ⚠️ 그 확인 루프는 `login:ip:` 카운터(50/10m)도 함께 쓴다. **공용 IP(SSAFY 처럼 한 NAT 뒤)에서
+> 다섯 번 돌리면 같은 망의 모든 사람이 10분간 429 를 받는다.** 핫스팟 등 개인 회선에서 돌린다.
+
+### DB 는 한 겹이다 — 확인한 사실
+
+`DATABASE_URL` 에 `?sslmode=require` 가 붙어 있어 백엔드는 TLS 로 붙는다. **그게 전부다.**
 
 ```sh
-for i in $(seq 1 11); do
-  curl -s -o /dev/null -w '%{http_code} ' -X POST https://www.gachijoopging.site/api/v1/auth/login \
-    -H 'Content-Type: application/json' -d '{"email":"probe@example.com","password":"wrong"}'
-done
-# 401 ×10 뒤 429
+# 운영 .env 에 붙어 있는지
+grep -o 'sslmode=[a-z-]*' /opt/gachijoopging/.env     # → sslmode=require
 ```
 
-### 아직 안 한 것
+Supabase 쪽 **Enforce SSL 은 꺼져 있다.** 평문 접속이 실제로 된다(2026-10-14 확인).
 
-**Supabase 네트워크 제한.** DB 를 서버 IP(`13.125.10.7`)만 허용하도록 묶고 싶은데, Network
-Restrictions 는 유료 플랜 기능이다. 지금은 비밀번호와 `sslmode=require` 뿐이다. 플랜을 올리면 건다.
+```
+sslmode=disable → 평문 접속 성공
+```
+
+즉 누군가 URL 에서 `?sslmode=require` 를 떨어뜨리면 **조용히 평문으로 붙는다.** pgjdbc 기본값은
+`prefer` 라 경고도 없다. 막는 길 둘:
+
+* Supabase 콘솔 → Settings → Database → **Enforce SSL on incoming connections** 켜기 (서버 쪽에서 강제)
+* `infra/.env.example` 의 예시 URL 에 `?sslmode=require` 를 박아 두기 — 떨어뜨리기 어렵게 (GAC-136 에서 함)
+
+**네트워크 제한**(서버 IP 만 허용)은 유료 플랜 기능이라 걸지 못했다. 플랜을 올리면 §구성 의 고정 IP 를 넣는다.
 
 ## 감시
 
