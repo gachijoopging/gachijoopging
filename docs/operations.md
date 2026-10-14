@@ -151,14 +151,7 @@ cd /opt/gachijoopging && ./deploy.sh <태그>      # 특정 태그로
 `deploy.sh` 는 기동을 3분까지 기다린다. healthy 가 안 되면 **스스로 직전 태그로 되돌리고** 실패로 끝난다.
 안 기다리면 깨진 배포가 초록으로 끝난다.
 
-### 필요한 GitHub Secret
-
-| 이름 | |
-|---|---|
-| `DOCKERHUB_TOKEN` | Docker Hub Personal access token (Read & Write). 계정 비밀번호를 쓰지 않는다 |
-| `SSH_PRIVATE_KEY` | 배포 전용 키. Lightsail 기본 키와 다른 것을 쓴다 — CI 접근만 따로 끊을 수 있어야 한다 |
-
-아이디(`yydd12`)와 서버 주소는 시크릿이 아니다. 가리면 로그에서 `***` 가 돼 어디로 갔는지 못 본다.
+필요한 GitHub Secret 은 §시크릿 에 있다. 여기 옮겨 적지 않는다 — 한쪽이 반드시 낡는다.
 
 ## 미디어
 
@@ -252,6 +245,84 @@ done
 없고, 팀 전원이 `.env` 를 하나씩 더 채워야 하는 값이 늘기 때문이다. `application.yml` 의
 `${REDIS_PASSWORD:}` 가 기본값을 비워 두는 이유가 이것이다.
 
+## 시크릿
+
+비밀값이 사는 곳은 **둘뿐**이다. 셋째 장소를 만들지 않는다.
+
+| 어디 | 무엇 | 누가 읽나 |
+|---|---|---|
+| **GitHub Secrets** | CI·배포가 쓰는 것 | 워크플로 |
+| **서버 `/opt/gachijoopging/.env`** (0600) | 백엔드·Nginx 가 쓰는 운영 값 | 컨테이너 |
+
+저장소에는 이름만 둔다 — 키 목록은 아래 표와 `infra/.env.example`, 값은 어디에도 커밋하지 않는다.
+
+### GitHub Secrets
+
+워크플로가 `${{ secrets.NAME }}` 으로 부르는 이름과 1:1 이다. 여기 없는 이름을 워크플로가 부르면
+**조용히 빈 값**이 들어간다 — CI 가 실패하지 않고 엉뚱하게 동작한다.
+
+| 이름 | 쓰는 곳 | 무엇 |
+|---|---|---|
+| `DOCKERHUB_TOKEN` | `build.yml` · `deploy.yml` | Docker Hub **액세스 토큰**(Read & Write). 계정 비밀번호를 쓰지 않는다 — 비밀번호는 결제·삭제까지 열어 준다 |
+| `SSH_PRIVATE_KEY` | `deploy.yml` | 배포 전용 키. Lightsail 기본 키와 **다른 것**을 쓴다. 그래야 CI 접근만 따로 끊을 수 있다 |
+| `MM_WEBHOOK_URL` | `pr-review-sla.yml` | Mattermost 웹훅 |
+
+아이디(`yydd12`)와 서버 IP 는 **시크릿이 아니다.** DNS 를 찍으면 나오는 값이고, 가리면 로그가 `***` 가 돼
+어디로 배포됐는지 못 본다. 가릴 것만 가린다.
+
+앱 서명 APK 를 CI 에서 만들게 되면(GAC-112) 아래가 더 들어간다. 키 파일은 **base64 로 넣고 워크플로가
+파일로 푼다** — Secrets 에 바이너리를 그대로 넣지 못한다.
+
+```
+ANDROID_KEYSTORE_BASE64      release.jks 를 base64 로
+ANDROID_KEYSTORE_PASSWORD
+ANDROID_KEY_ALIAS
+ANDROID_KEY_PASSWORD
+```
+
+이름은 §앱 서명 의 환경 변수와 맞춘다(`ANDROID_KEYSTORE_PATH` 는 워크들로가 푼 파일 경로를 넣는다).
+
+### 서버 `.env` 를 올릴 때
+
+**손으로 `scp` 하지 않는다.** `infra/dev-env.ps1` 을 쓴다.
+
+```powershell
+powershell -ExecutionPolicy Bypass -File infra\dev-env.ps1 -DryRun   # 검사만
+powershell -ExecutionPolicy Bypass -File infra\dev-env.ps1           # 올린다
+```
+
+올리기 전에 네 가지를 막는다. 전부 **배포가 끝난 뒤에야 드러나는** 종류다.
+
+| 막는 것 | 안 막으면 |
+|---|---|
+| CR | `docker compose` 는 통과시키고 Spring 만 `Missing key encoding` 으로 죽는다. 값 끝의 CR 한 글자면 서명·PEM 이 조용히 어긋난다 |
+| BOM | 첫 키 이름이 `﻿KEY` 가 돼 아무도 못 읽는다 |
+| 필수 키 공란 | `application.yml` 이 기본값 없이 읽는 것들(`DATABASE_*`·`JWT_*`·`MEDIA_SECURE_LINK_SECRET`·`REDIS_*`). 기동에서 죽는다 |
+| 홀로 있는 `$` | compose 가 `env_file` 값도 보간한다. `pa$$w0rd` 가 `pa$w0rd` 가 돼 한 글자 사라진다 |
+
+**`IMAGE_TAG` 는 덮어쓰지 않는다.** 서버가 관리하는 값이라(`deploy.sh` 가 갱신한다) 통째로 올리면
+다음 배포가 깨진다. 스크립트가 서버 값을 읽어 끼워 넣는다.
+
+값은 **파일로만** 옮긴다. 쉘 히스토리에 남지 않는다.
+
+올린 뒤에는 컨테이너를 **다시 만들어야** 반영된다. `docker compose restart` 는 같은 컨테이너를 다시
+띄울 뿐이라 `env_file` 을 읽지 않는다.
+
+```sh
+cd /opt/gachijoopging && docker compose up -d --force-recreate backend
+```
+
+### 회전
+
+| 무엇 | 어떻게 |
+|---|---|
+| JWT 서명 키 | 새 키를 `JWT_ACTIVE_KID`·`JWT_PRIVATE_KEY_PEM`·`JWT_PUBLIC_KEY_PEM` 에, **옛 공개키를** `JWT_PREVIOUS_KID`·`JWT_PREVIOUS_PUBLIC_KEY_PEM` 에 남긴다. 그래야 이미 나간 토큰이 만료까지 산다 |
+| `REDIS_PASSWORD` · `MEDIA_SECURE_LINK_SECRET` | 새 값으로 바꾸고 `up -d --force-recreate`. 미디어 비밀을 바꾸면 **이미 나간 사진 URL 이 전부 403** 이 된다(TTL 6시간) |
+| `DOCKERHUB_TOKEN` · `SSH_PRIVATE_KEY` | Docker Hub·서버 `authorized_keys` 에서 옛 것을 지우고 새로 등록한다. 지우기 전에 새 것으로 한 번 돌려 본다 |
+| `DATABASE_PASSWORD` | Supabase 콘솔에서 바꾸고 올린다. `$` 가 들어가면 `$$` 로 적는다 |
+
+**터미널·대화·이슈에 값이 노출되면 그 값은 죽은 것으로 본다.** 지웠는지와 무관하게 회전한다.
+
 ## 감시
 
 헬스체크와 바깥에서 찌르는 것, 둘을 함께 쓴다. 서버가 통째로 꺼지면 자기 자신에게 묻는 헬스체크도 같이
@@ -295,7 +366,7 @@ done
 
 푸시(FCM)는 Firebase 프로젝트 `gachi-joopging`, Android 패키지 `site.gachijoopging.app` 으로 등록돼 있다. `google-services.json` 은 Firebase 콘솔에서 내려받는다.
 
-`.env` 를 고칠 때는 **바이너리로 다룬다.** PEM 값에 CR 이 섞이면 docker compose 는 통과시키고 Spring 만 `Missing key encoding` 으로 죽는다. Windows 편집기로 열지 않고 `dev-env.ps1` 같은 스크립트로 올린다.
+`.env` 를 고칠 때는 **바이너리로 다룬다.** PEM 값에 CR 이 섞이면 docker compose 는 통과시키고 Spring 만 `Missing key encoding` 으로 죽는다. Windows 편집기로 열지 않고 `infra/dev-env.ps1` 로 올린다(§시크릿).
 
 ## `mobile/.env` 키 (앱)
 
