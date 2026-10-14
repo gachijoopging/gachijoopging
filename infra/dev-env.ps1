@@ -102,7 +102,9 @@ echo "키     `$(grep -c '^[A-Z]' $Remote) 개"
 echo "머리   `$(od -c $Remote | head -1)"
 "@ -replace "`r", ""
 
-$check = & ssh -i $KeyFile -o BatchMode=yes $Target $remote
+# 따옴표로 묶는다. PS 5.1 의 native 인자 전달은 공백·개행에서 쪼갤 수 있고,
+# 쪼개지면 ssh 가 공백으로 다시 이어 붙여 한 줄 명령이 된다.
+$check = & ssh -i $KeyFile -o BatchMode=yes $Target "$remote"
 $check | ForEach-Object { Write-Host $_ }
 
 Write-Host ""
