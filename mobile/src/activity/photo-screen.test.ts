@@ -19,6 +19,7 @@ jest.mock('expo-network', () => ({ useNetworkState: () => ({ isConnected: true }
 const mockMutate = jest.fn();
 const mockPush = jest.fn();
 jest.mock('expo-router', () => ({ router: { push: (...a: unknown[]) => mockPush(...a), dismissTo: jest.fn(), back: jest.fn() }, useLocalSearchParams: () => ({ id: mockId }), useNavigation: () => ({ addListener: () => () => {} }), useFocusEffect: (fn: () => (() => void) | void) => require('react').useEffect(() => { const blur = fn(); if (blur) mockBlurs.push(blur); return blur; }, [fn]) }));
+jest.mock('../api/config', () => ({ apiConfig: { real: false }, createApiClient: () => jest.requireMock('../api/client').createMockClient() }));
 jest.mock('../api/client', () => ({ ApiError: class extends Error {}, createMockClient: () => ({ mutate: (...a: unknown[]) => mockMutate(...a) }) }));
 jest.mock('./store', () => ({ getStored: () => ({ session: null }) }));
 jest.mock('react-native', () => ({ View: 'View', Image: 'Image', ScrollView: 'ScrollView', Animated: { View: 'Animated.View', Value: class { setValue() {} }, spring: () => ({ start: (done: () => void) => setTimeout(done, 300) }) }, AppState: { currentState: 'active', addEventListener: () => ({ remove() {} }) } }));

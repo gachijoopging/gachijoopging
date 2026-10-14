@@ -21,7 +21,8 @@ import {
   space,
   useTheme,
 } from 'design-system/src';
-import { createMockClient, type ApiClient } from '../../../src/api/client';
+import { type ApiClient } from '../../../src/api/client';
+import { createApiClient } from '../../../src/api/config';
 import { summaryMeta, summaryMetaSpoken } from '../../../src/activity/pickup';
 import { ActivityMetrics, CategoryChips, RouteMap } from '../../../src/activity/SummaryBlocks';
 import { getStored, loadLastAccount, subscribe, updateStored, type Stored } from '../../../src/activity/store';
@@ -29,7 +30,7 @@ import { activityGoneCode, applyEndedActivity, syncOutbox } from '../../../src/a
 import { leaveForMembership } from '../../../src/feed/leave';
 import { ShareCard, useShareImage } from '../../../src/activity/ShareCard';
 
-const api: ApiClient = createMockClient({ delayMs: 300 });
+const api: ApiClient = createApiClient({ delayMs: 300 });
 
 type Phase = 'saving' | 'saved' | 'offline' | 'error';
 

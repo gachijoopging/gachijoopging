@@ -20,7 +20,8 @@ import {
   useRipple,
   useTheme,
 } from 'design-system/src';
-import { createMockClient, type ApiClient } from '../api/client';
+import { type ApiClient } from '../api/client';
+import { createApiClient } from '../api/config';
 import type { MOCKS } from '../api/mocks.generated';
 import {
   HEAT_OPACITY,
@@ -49,7 +50,7 @@ type Day = Omit<MockDay, 'items' | 'activityCount' | 'activities'> & {
 };
 type Calendar = { days: readonly Day[] };
 
-const api: ApiClient = createMockClient({ delayMs: 300 });
+const api: ApiClient = createApiClient({ delayMs: 300 });
 const WEEK = ['일', '월', '화', '수', '목', '금', '토'];
 
 /** 3-1 모이깅의 달력 탭. refreshKey 가 바뀌면 보던 달을 다시 받는다(당겨서 새로고침) */

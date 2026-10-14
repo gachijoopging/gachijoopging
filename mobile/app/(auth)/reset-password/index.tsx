@@ -3,11 +3,12 @@ import { useState } from 'react';
 import { View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { AppHeader, Banner, Button, Field, Icon, LinkText, Screen, Snackbar, Txt, space } from 'design-system/src';
-import { createMockClient, type ApiClient } from '../../../src/api/client';
+import { type ApiClient } from '../../../src/api/client';
+import { createApiClient } from '../../../src/api/config';
 import { mapResetConfirmError, resetRequestErrorMessage } from '../../../src/auth/errors';
 import { validateEmail, validatePassword } from '../../../src/auth/validators';
 
-const api: ApiClient = createMockClient({ delayMs: 300 });
+const api: ApiClient = createApiClient({ delayMs: 300 });
 
 export default function ResetPasswordScreen() {
   const params = useLocalSearchParams<{ email?: string }>();

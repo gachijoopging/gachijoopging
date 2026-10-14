@@ -11,6 +11,7 @@ jest.mock('expo-router', () => ({
   useFocusEffect: (fn: () => void) => require('react').useEffect(fn, [fn]),
 }));
 jest.mock('react-native', () => ({ View: 'View', BackHandler: { addEventListener: () => ({ remove: () => {} }) } }));
+jest.mock('../api/config', () => ({ apiConfig: { real: false }, createApiClient: () => jest.requireMock('../api/client').createMockClient() }));
 jest.mock('../api/client', () => ({ ApiError: class extends Error {}, createMockClient: () => ({ get: (k: string) => mockGet(k), mutate: jest.fn() }) }));
 jest.mock('design-system/src', () => new Proxy(
   { space: {} },

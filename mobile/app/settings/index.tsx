@@ -25,7 +25,8 @@ import {
   useRipple,
   useTheme,
 } from 'design-system/src';
-import { ApiError, createMockClient, type ApiClient } from '../../src/api/client';
+import { ApiError, type ApiClient } from '../../src/api/client';
+import { createApiClient } from '../../src/api/config';
 import { accountGate, leaveConfirm, leaveFailure } from '../../src/profile/profile';
 import { getStored, loadAccount, loadLastAccount } from '../../src/activity/store';
 import { forgetAccount, rememberAccount } from '../../src/auth/account';
@@ -54,7 +55,7 @@ type Modal =
   | { kind: 'delegate' }
   | { kind: 'checkFailed'; action: Kind };
 
-const api: ApiClient = createMockClient({ delayMs: 300 });
+const api: ApiClient = createApiClient({ delayMs: 300 });
 
 const CONFIRM: Record<Kind, { title: string; body: (crew: string, pending: boolean) => string; cancel: string; ok: string }> = {
   withdraw: {

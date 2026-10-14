@@ -31,10 +31,11 @@ import {
   useReduceMotion,
   useTheme,
 } from 'design-system/src';
-import { ApiError, createMockClient, type ApiClient } from '../../../src/api/client';
+import { ApiError, type ApiClient } from '../../../src/api/client';
+import { createApiClient } from '../../../src/api/config';
 import { getStored } from '../../../src/activity/store';
 
-const api: ApiClient = createMockClient({ delayMs: 600 });
+const api: ApiClient = createApiClient({ delayMs: 600 });
 
 type Perm = 'unknown' | 'granted' | 'denied' | 'blocked';
 type Shot = { uri: string; takenAt: string; mediaId: string; location: { lat: number; lng: number } | null };

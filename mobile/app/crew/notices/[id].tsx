@@ -22,7 +22,8 @@ import {
   Txt,
   space,
 } from 'design-system/src';
-import { ApiError, createMockClient, forget, peek, type ApiClient } from '../../../src/api/client';
+import { ApiError, forget, peek, type ApiClient } from '../../../src/api/client';
+import { createApiClient } from '../../../src/api/config';
 import type { MOCKS } from '../../../src/api/mocks.generated';
 import { clearDraft, draftFor, editDraft, requestIdFor } from '../../../src/crew/comment-draft';
 import { monthDay } from '../../../src/crew/crew';
@@ -34,7 +35,7 @@ import { useFlash } from '../../../src/ui/useFlash';
 type Detail = (typeof MOCKS)['GET /notices/{noticeId}']['data'];
 type Comment = { id: string; author: { id: string; nickname: string; photoUrl: string | null }; text: string; createdAt: string };
 
-const api: ApiClient = createMockClient({ delayMs: 300 });
+const api: ApiClient = createApiClient({ delayMs: 300 });
 
 export default function NoticeDetailScreen() {
   const { id, flash } = useLocalSearchParams<{ id: string; flash?: string }>();

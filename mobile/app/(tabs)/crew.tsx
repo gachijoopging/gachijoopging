@@ -21,7 +21,8 @@ import {
   space,
   useTheme,
 } from 'design-system/src';
-import { createMockClient, peek, type ApiClient } from '../../src/api/client';
+import { peek, type ApiClient } from '../../src/api/client';
+import { createApiClient } from '../../src/api/config';
 import type { MOCKS } from '../../src/api/mocks.generated';
 import { CalendarPanel } from '../../src/crew/CalendarPanel';
 import { NoticesPanel } from '../../src/crew/NoticesPanel';
@@ -37,7 +38,7 @@ export type Crew = Omit<CrewData, 'pinnedNotice' | 'region' | 'joinPolicy'> & {
   joinPolicy: JoinPolicy;
 };
 
-const api: ApiClient = createMockClient({ delayMs: 300 });
+const api: ApiClient = createApiClient({ delayMs: 300 });
 
 type Panel = 'calendar' | 'records' | 'notices';
 const PANELS: ReadonlyArray<{ value: Panel; label: string }> = [

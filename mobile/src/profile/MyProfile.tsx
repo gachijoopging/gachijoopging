@@ -24,7 +24,8 @@ import {
   space,
   useRipple,
 } from 'design-system/src';
-import { createMockClient, type ApiClient } from '../api/client';
+import { type ApiClient } from '../api/client';
+import { createApiClient } from '../api/config';
 import { useFlash } from '../ui/useFlash';
 import { INTRO_FOLD } from './profile';
 import { StatsTile, usePaged, type ActivityCard, type Post, type Stats } from './ProfileParts';
@@ -33,7 +34,7 @@ import { ProfileTabList } from './ProfileTabList';
 type Me = { id: string; nickname: string; intro: string; photoUrl: string | null; crew: { name: string; isLeader: boolean } | null };
 type Tab = 'records' | 'posts';
 
-const api: ApiClient = createMockClient({ delayMs: 300 });
+const api: ApiClient = createApiClient({ delayMs: 300 });
 const TABS: { value: Tab; label: string }[] = [
   { value: 'records', label: '기록' },
   { value: 'posts', label: '게시물' },

@@ -9,6 +9,7 @@ const mockNavigation = {
   },
 };
 let mockPeeked: unknown;
+jest.mock('../api/config', () => ({ apiConfig: { real: false }, createApiClient: () => jest.requireMock('../api/client').createMockClient() }));
 jest.mock('../api/client', () => ({
   ApiError: class extends Error {},
   peek: (key: string, query: unknown) => (key === 'GET /posts/{postId}' && (query as { postId: string }).postId === 'p1' ? mockPeeked : undefined),

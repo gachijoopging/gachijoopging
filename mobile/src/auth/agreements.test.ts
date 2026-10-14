@@ -16,6 +16,7 @@ jest.mock('expo-file-system', () => ({ Paths: { document: 'documents' }, File: c
 jest.mock('expo-linking', () => ({ openURL: jest.fn().mockResolvedValue(undefined) }));
 jest.mock('expo-crypto', () => ({ randomUUID: () => `uuid-${++mockUuid}` }));
 jest.mock('../api/onboarding', () => ({ onboardingApi: { get: (...args: unknown[]) => mockGet(...args), mutate: (...args: unknown[]) => mockMutate(...args) } }));
+jest.mock('../api/config', () => ({ apiConfig: { real: false }, createApiClient: () => jest.requireMock('../api/client').createMockClient() }));
 jest.mock('../api/client', () => ({ ApiError: class extends Error { code: string; fields: unknown; constructor(mockCode: string, mockFields?: unknown) { super(mockCode); this.code = mockCode; this.fields = mockFields; } }, createMockClient: () => ({ get: (...args: unknown[]) => mockGet(...args), mutate: (...args: unknown[]) => mockMutate(...args) }) }));
 const mockReset = jest.fn();
 jest.mock('expo-router', () => ({ router: { replace: jest.fn(), back: jest.fn(), dismissTo: jest.fn() }, useLocalSearchParams: () => ({}), useNavigation: () => ({ reset: (...a: unknown[]) => mockReset(...a) }), useFocusEffect: (fn: () => void) => require('react').useEffect(fn, [fn]) }));

@@ -31,14 +31,15 @@ import {
   useRipple,
   useTheme,
 } from 'design-system/src';
-import { ApiError, createMockClient, type ApiClient } from '../../src/api/client';
+import { ApiError, type ApiClient } from '../../src/api/client';
+import { createApiClient } from '../../src/api/config';
 import { usePreventBack } from '../../src/auth/usePreventBack';
 import { currentAccount, rememberAccount } from '../../src/auth/account';
 import { resolveDestination } from '../../src/auth/destination';
 import { POST_PHOTO_MAX, POST_TEXT_MAX, canPost, movePhoto, photosToUpload, readyMediaIds } from '../../src/profile/profile';
 import { changedDraft, discardPhotos, emptyDraft, keepPhoto, lastPostScope, loadDraft, rememberPostScope, saveDraft, type Draft, type Photo, type PostScope } from '../../src/profile/post-draft';
 
-const api: ApiClient = createMockClient({ delayMs: 300 });
+const api: ApiClient = createApiClient({ delayMs: 300 });
 const THUMB = size.thumbMd;
 
 export default function CreatePostScreen() {

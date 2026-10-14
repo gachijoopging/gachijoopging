@@ -34,7 +34,8 @@ import {
   useTheme,
 } from 'design-system/src';
 import { KakaoMapView } from '../../../modules/kakao-map';
-import { createMockClient, type ApiClient } from '../../../src/api/client';
+import { type ApiClient } from '../../../src/api/client';
+import { createApiClient } from '../../../src/api/config';
 import type { MOCKS } from '../../../src/api/mocks.generated';
 import { enqueue } from '../../../src/activity/outbox';
 import { endActivity } from '../../../src/activity/actions';
@@ -61,7 +62,7 @@ import { useFlash } from '../../../src/ui/useFlash';
 
 type Member = (typeof MOCKS)['GET /crew/live']['data'][number];
 
-const api: ApiClient = createMockClient({ delayMs: 300 });
+const api: ApiClient = createApiClient({ delayMs: 300 });
 const BUBBLE_MS = 3_000;
 const LOCATION_CHECK_MS = 5_000;
 
