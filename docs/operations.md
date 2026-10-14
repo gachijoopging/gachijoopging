@@ -319,8 +319,9 @@ cd /opt/gachijoopging && docker compose up -d --force-recreate backend
 
 ## 보안
 
-**열린 포트만 두 겹으로 막혀 있다** — Lightsail 방화벽과 compose 양쪽. 나머지는 한 겹이거나
-그보다 약하고, 어디가 그런지 아래에 적는다. 이 절을 읽고 다른 확인을 건너뛰지 않게 하려는 것이다.
+**두 겹인 것은 열린 포트와 DB 뿐이다** — 포트는 Lightsail 방화벽과 compose, DB 는 클라이언트 URL 과
+Supabase Enforce SSL. 나머지는 한 겹이거나 그보다 약하고, 어디가 그런지 아래에 적는다.
+이 절을 읽고 다른 확인을 건너뛰지 않게 하려는 것이다.
 
 ### 열린 포트
 
@@ -417,26 +418,26 @@ curl -sD - -o /dev/null https://www.gachijoopging.site/api/v1/crews \
 > ⚠️ 그 확인 루프는 `login:ip:` 카운터(50/10m)도 함께 쓴다. **공용 IP(SSAFY 처럼 한 NAT 뒤)에서
 > 다섯 번 돌리면 같은 망의 모든 사람이 10분간 429 를 받는다.** 핫스팟 등 개인 회선에서 돌린다.
 
-### DB 는 한 겹이다 — 확인한 사실
+### DB — 두 겹
 
-`DATABASE_URL` 에 `?sslmode=require` 가 붙어 있어 백엔드는 TLS 로 붙는다. **그게 전부다.**
+| | |
+|---|---|
+| 클라이언트 | `DATABASE_URL` 에 `?sslmode=require`. 백엔드가 TLS 로만 붙는다 |
+| 서버 | Supabase **Enforce SSL** 켜짐(2026-10-14). 평문으로 들어오는 접속을 거부한다 |
+
+둘 다 확인한 사실이다.
 
 ```sh
-# 운영 .env 에 붙어 있는지
 grep -o 'sslmode=[a-z-]*' /opt/gachijoopging/.env     # → sslmode=require
 ```
 
-Supabase 쪽 **Enforce SSL 은 꺼져 있다.** 평문 접속이 실제로 된다(2026-10-14 확인).
-
 ```
-sslmode=disable → 평문 접속 성공
+sslmode=disable → FATAL: (ESSLREQUIRED) SSL connection is required for user: postgres
+sslmode=require → 1
 ```
 
-즉 누군가 URL 에서 `?sslmode=require` 를 떨어뜨리면 **조용히 평문으로 붙는다.** pgjdbc 기본값은
-`prefer` 라 경고도 없다. 막는 길 둘:
-
-* Supabase 콘솔 → Settings → Database → **Enforce SSL on incoming connections** 켜기 (서버 쪽에서 강제)
-* `infra/.env.example` 의 예시 URL 에 `?sslmode=require` 를 박아 두기 — 떨어뜨리기 어렵게 (GAC-136 에서 함)
+> Enforce SSL 을 켜기 전에는 평문 접속이 **실제로 됐다.** URL 에서 `?sslmode=require` 를 떨어뜨리면
+> 조용히 평문으로 붙었고, pgjdbc 기본값이 `prefer` 라 경고도 없었다. 클라이언트 쪽 설정만 믿지 않는다.
 
 **네트워크 제한**(서버 IP 만 허용)은 유료 플랜 기능이라 걸지 못했다. 플랜을 올리면 §구성 의 고정 IP 를 넣는다.
 
