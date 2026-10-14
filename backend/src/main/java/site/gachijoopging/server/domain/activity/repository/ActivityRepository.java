@@ -60,4 +60,52 @@ public interface ActivityRepository extends JpaRepository<Activity, UUID> {
           "SELECT EXISTS (SELECT 1 FROM activity_photos WHERE id = :photoId AND activity_id = :activityId)",
       nativeQuery = true)
   boolean hasPhoto(@Param("activityId") UUID activityId, @Param("photoId") UUID photoId);
+
+  interface PhotoRow {
+    UUID getId();
+
+    UUID getActivityId();
+  }
+
+  @Query(
+      value = "SELECT id, activity_id AS activityId FROM activity_photos WHERE media_id = :mediaId",
+      nativeQuery = true)
+  Optional<PhotoRow> findPhotoByMedia(@Param("mediaId") UUID mediaId);
+
+  // 같은 사진의 재전송은 media_id UNIQUE 로 흡수한다. 순번은 활동 행을 잠근 뒤라 겹치지 않는다
+  @Modifying
+  @Query(
+      value =
+          """
+          INSERT INTO activity_photos (id, activity_id, media_id, point, taken_at, inference_status,
+                                       model_version, inference_ms, order_index)
+          VALUES (:id, :activityId, :mediaId,
+                  ST_SetSRID(ST_MakePoint(CAST(:lng AS double precision),
+                                          CAST(:lat AS double precision)), 4326),
+                  :takenAt, :inferenceStatus, CAST(:modelVersion AS text),
+                  CAST(:inferenceMs AS integer),
+                  (SELECT COALESCE(max(order_index) + 1, 0) FROM activity_photos
+                   WHERE activity_id = :activityId))
+          ON CONFLICT (media_id) DO NOTHING
+          """,
+      nativeQuery = true)
+  void insertPhotoIfAbsent(
+      @Param("id") UUID id,
+      @Param("activityId") UUID activityId,
+      @Param("mediaId") UUID mediaId,
+      @Param("lat") Double lat,
+      @Param("lng") Double lng,
+      @Param("takenAt") Instant takenAt,
+      @Param("inferenceStatus") String inferenceStatus,
+      @Param("modelVersion") String modelVersion,
+      @Param("inferenceMs") Integer inferenceMs);
+
+  @Query(
+      value = "SELECT EXISTS (SELECT 1 FROM activity_items WHERE photo_id = :photoId)",
+      nativeQuery = true)
+  boolean hasItemsOn(@Param("photoId") UUID photoId);
+
+  @Modifying
+  @Query(value = "DELETE FROM activity_photos WHERE id = :photoId", nativeQuery = true)
+  void deletePhoto(@Param("photoId") UUID photoId);
 }

@@ -1,25 +1,34 @@
 package site.gachijoopging.server.domain.media.facade;
 
 import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import site.gachijoopging.server.domain.activity.dto.ActivityPhotoRef;
+import site.gachijoopging.server.domain.activity.dto.NewActivityPhoto;
+import site.gachijoopging.server.domain.activity.service.ActivityService;
 import site.gachijoopging.server.domain.media.client.AiInferenceClient;
 import site.gachijoopging.server.domain.media.client.MediaStorage;
 import site.gachijoopging.server.domain.media.client.Thumbnailer;
 import site.gachijoopging.server.domain.media.dto.MediaDtos.InferenceResponse;
 import site.gachijoopging.server.domain.media.dto.MediaDtos.MediaUploadResponse;
+import site.gachijoopging.server.domain.media.dto.MediaPurpose;
 import site.gachijoopging.server.domain.media.dto.MediaSummary;
+import site.gachijoopging.server.domain.media.dto.MediaUpload;
 import site.gachijoopging.server.domain.media.service.MediaImageValidator;
 import site.gachijoopging.server.domain.media.service.MediaService;
 import site.gachijoopging.server.domain.media.service.MediaSignedUrl;
 import site.gachijoopging.server.global.error.BusinessException;
 import site.gachijoopging.server.global.error.ErrorCode;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class MediaFacade {
@@ -27,8 +36,10 @@ public class MediaFacade {
   private static final DateTimeFormatter monthFolder = DateTimeFormatter.ofPattern("yyyy/MM");
   private static final String EXTENSION = ".jpg";
   private static final String THUMBNAIL_SUFFIX = "_thumb";
+  private static final String INFERENCE_OK = "OK";
 
   private final MediaService mediaService;
+  private final ActivityService activityService;
   private final MediaImageValidator validator;
   private final MediaStorage storage;
   private final Thumbnailer thumbnailer;
@@ -36,44 +47,109 @@ public class MediaFacade {
   private final AiInferenceClient aiInferenceClient;
   private final Clock clock;
 
-  public MediaUploadResponse upload(UUID me, UUID mediaId, byte[] file) {
-    validator.validate(file);
+  public MediaUploadResponse upload(UUID me, MediaUpload upload) {
+    MediaService.requireShape(upload);
+    boolean jpeg = validator.validate(upload.file());
+    byte[] file = jpeg ? upload.file() : thumbnailer.toJpeg(upload.file());
 
-    Optional<MediaSummary> existing = mediaService.find(mediaId);
+    Optional<MediaSummary> existing = mediaService.find(upload.mediaId());
     if (existing.isPresent()) {
-      return resend(me, file, existing.get());
+      return resend(me, upload, file, existing.get());
     }
-    return fresh(me, mediaId, file);
+    return fresh(me, upload, file);
   }
 
-  private MediaUploadResponse resend(UUID me, byte[] file, MediaSummary media) {
+  /** 사용자가 버린 활동 사진을 지운다. 없는 mediaId 도 끝난 것으로 본다 — 앱 대기열이 재시도한다. */
+  public void delete(UUID me, UUID mediaId) {
+    mediaService
+        .delete(me, mediaId)
+        .ifPresent(media -> deleteFiles(media.objectKey(), media.thumbKey()));
+  }
+
+  private MediaUploadResponse resend(UUID me, MediaUpload upload, byte[] file, MediaSummary media) {
     if (!media.ownerId().equals(me)) {
       throw new BusinessException(ErrorCode.FORBIDDEN, "남의 mediaId 다");
     }
-    return response(media, aiInferenceClient.infer(file));
+    if (upload.purpose() != MediaPurpose.ACTIVITY) {
+      return response(media, null, null);
+    }
+    ActivityPhotoRef photo =
+        activityService
+            .photoOf(media.id())
+            .filter(it -> it.activityId().equals(upload.activityId()))
+            .orElseThrow(() -> new BusinessException(ErrorCode.CONFLICT, "다른 용도나 다른 활동으로 올린 사진이다"));
+    // 찾은 물체 목록은 저장하지 않으므로 실려 온 파일로 다시 추론한다 (02-conventions §8)
+    return response(media, photo.photoId(), aiInferenceClient.infer(file));
   }
 
-  private MediaUploadResponse fresh(UUID me, UUID mediaId, byte[] file) {
+  private MediaUploadResponse fresh(UUID me, MediaUpload upload, byte[] file) {
+    boolean activity = upload.purpose() == MediaPurpose.ACTIVITY;
+    if (activity) {
+      activityService.requirePhotoTarget(me, upload.activityId());
+    }
     mediaService.checkDailyQuota(me);
 
-    String objectKey = key(mediaId, "");
-    String thumbKey = key(mediaId, THUMBNAIL_SUFFIX);
-    storage.store(objectKey, file);
-    storage.store(thumbKey, thumbnailer.of(file));
-
-    InferenceResponse inference = aiInferenceClient.infer(file);
-
-    return response(mediaService.create(mediaId, me, objectKey, thumbKey), inference);
+    // 같은 mediaId 가 동시에 들어와도 서로의 파일을 덮거나 지우지 않도록 시도마다 다른 파일에 쓴다
+    String attempt = UUID.randomUUID().toString().substring(0, 8);
+    String objectKey = key(upload.mediaId(), attempt, "");
+    String thumbKey = key(upload.mediaId(), attempt, THUMBNAIL_SUFFIX);
+    InferenceResponse inference;
+    MediaService.Saved saved;
+    try {
+      storage.store(objectKey, file);
+      storage.store(thumbKey, thumbnailer.of(file));
+      inference = activity ? aiInferenceClient.infer(file) : null;
+      saved =
+          mediaService.create(
+              upload.mediaId(),
+              me,
+              objectKey,
+              thumbKey,
+              activity ? photo(upload, inference) : null);
+    } catch (RuntimeException e) {
+      deleteFiles(objectKey, thumbKey);
+      throw e;
+    }
+    if (!saved.media().objectKey().equals(objectKey)) {
+      // 같은 사람의 동시 재전송이 먼저 행을 만들었다. 이 시도의 파일은 어디서도 가리키지 않는다
+      deleteFiles(objectKey, thumbKey);
+    }
+    return response(saved.media(), saved.photoId(), inference);
   }
 
-  private String key(UUID mediaId, String suffix) {
+  private NewActivityPhoto photo(MediaUpload upload, InferenceResponse inference) {
+    Instant takenAt = upload.takenAt() == null ? clock.instant() : upload.takenAt();
+    return new NewActivityPhoto(
+        upload.activityId(),
+        upload.mediaId(),
+        takenAt,
+        upload.lat(),
+        upload.lng(),
+        INFERENCE_OK.equals(inference.status()),
+        inference.modelVersion(),
+        inference.inferenceMs());
+  }
+
+  private void deleteFiles(String... keys) {
+    for (String key : List.of(keys)) {
+      try {
+        storage.delete(key);
+      } catch (RuntimeException e) {
+        log.error("사진 파일을 지우지 못했다 — 디스크에 남아 있다: {}", key, e);
+      }
+    }
+  }
+
+  private String key(UUID mediaId, String attempt, String suffix) {
     String folder = LocalDate.ofInstant(clock.instant(), ZoneOffset.UTC).format(monthFolder);
-    return folder + "/" + mediaId + suffix + EXTENSION;
+    return folder + "/" + mediaId + "-" + attempt + suffix + EXTENSION;
   }
 
-  private MediaUploadResponse response(MediaSummary media, InferenceResponse inference) {
+  private MediaUploadResponse response(
+      MediaSummary media, UUID photoId, InferenceResponse inference) {
     return new MediaUploadResponse(
         media.id().toString(),
+        photoId == null ? null : photoId.toString(),
         signedUrl.of(media.objectKey()),
         signedUrl.of(media.thumbKey()),
         inference);

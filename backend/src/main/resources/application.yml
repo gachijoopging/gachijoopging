@@ -43,10 +43,10 @@ spring:
 
   servlet:
     multipart:
-      # 계약상 한도는 20MB 이고 그 판정은 MediaImageValidator 가 한다 (422 + 봉투).
-      # 여기를 20MB 로 맞추면 스프링이 먼저 끊어 우리 에러 봉투가 나가지 못한다 — 그래서 조금 위에 둔다.
-      max-file-size: 21MB
-      max-request-size: 22MB
+      # 계약상 한도는 10MB 이고 그 판정은 MediaImageValidator 가 한다 (413 + 봉투).
+      # 여기를 10MB 로 맞추면 스프링이 먼저 끊어 판정 사유가 흐려진다 — 그래서 조금 위에 둔다.
+      max-file-size: 11MB
+      max-request-size: 12MB
 
 app:
   jwt:

@@ -169,6 +169,7 @@ JSON 필드명은 openapi.yaml 이 정본이다 — camelCase, 철자 하나도 
   | ALREADY_IN_CREW | 409 | 이미 다른 크루 소속 |
   | JOIN_REQUEST_PENDING | 409 | 승인 대기 신청이 있는데 검색·만들기·다른 크루 가입을 함 |
   | CREW_FULL | 409 | 크루원 50명(크루장 포함)에서 더 넣으려 함 |
+  | PAYLOAD_TOO_LARGE | 413 | 사진이 10MB 를 넘음(`POST /media`). 앱은 재시도 금지 |
   | VALIDATION | 422 | 앱은 재시도 금지 |
   | RATE_LIMITED | 429 | Retry-After 헤더 필수 |
   | INTERNAL | 500 | |
@@ -229,7 +230,7 @@ native INSERT 는 영속성 컨텍스트를 우회하므로, 같은 트랜잭션
 
 - **`POST /media`** — 응답의 `inference` 는 저장하지 않는 값이라(`docs/ERD.md` media)
   기존 행을 그대로 돌려주면 채울 원천이 없다. 재전송에도 **파일이 다시 실려 오므로**,
-  media 행 INSERT 와 스토리지 업로드만 건너뛰고 **AI 추론은 매번 실행**해
+  media·activity_photos 행 INSERT 와 스토리지 업로드만 건너뛰고 **AI 추론은 매번 실행**해
   `MediaUploadResult.inference` 를 채운다. 멱등의 목적은 사진이 두 벌 생기지 않는 것이지
   추론을 아끼는 게 아니다 — 여기서 기존 값을 못 준다고 `UNAVAILABLE` 을 내려보내면
   앱은 "AI 서버 장애·재시도 금지" 로 읽어 사용자를 영구 수동 입력으로 밀어낸다.
@@ -271,7 +272,7 @@ public class MediaFacade {
   private MediaUploadResponse fresh(UUID me, UUID mediaId, byte[] file) {
     storage.store(objectKey, file);                                   // 트랜잭션 밖
     InferenceResponse inference = aiInferenceClient.infer(file);      // 트랜잭션 밖
-    return response(mediaService.create(mediaId, me, objectKey, thumbKey), inference);
+    return response(mediaService.create(mediaId, me, objectKey, thumbKey, photo), inference);
     //                ↑ 여기서 트랜잭션 시작·종료
   }
 }

@@ -11,7 +11,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import site.gachijoopging.server.domain.activity.dto.NewActivityPhoto;
+import site.gachijoopging.server.domain.activity.service.ActivityService;
+import site.gachijoopging.server.domain.media.dto.MediaPurpose;
 import site.gachijoopging.server.domain.media.dto.MediaSummary;
+import site.gachijoopging.server.domain.media.dto.MediaUpload;
 import site.gachijoopging.server.domain.media.entity.Media;
 import site.gachijoopging.server.domain.media.repository.MediaRepository;
 import site.gachijoopging.server.global.error.BusinessException;
@@ -27,6 +31,7 @@ public class MediaService {
   private static final ZoneId KST = ZoneId.of("Asia/Seoul");
 
   private final MediaRepository mediaRepository;
+  private final ActivityService activityService;
   private final Clock clock;
 
   public Optional<MediaSummary> find(UUID mediaId) {
@@ -49,21 +54,54 @@ public class MediaService {
     }
   }
 
+  public record Saved(MediaSummary media, UUID photoId) {}
+
+  public static void requireShape(MediaUpload upload) {
+    if (upload.purpose() == MediaPurpose.ACTIVITY && upload.activityId() == null) {
+      throw new BusinessException(ErrorCode.VALIDATION, "활동 사진에는 activityId 가 필요하다");
+    }
+    if ((upload.lat() == null) != (upload.lng() == null)) {
+      throw new BusinessException(ErrorCode.VALIDATION, "lat·lng 는 함께 보낸다");
+    }
+    // NaN 은 어떤 비교도 거짓이라, 범위 안에 있는지를 물어야 NaN 도 걸러진다
+    if (upload.lat() != null && !(Math.abs(upload.lat()) <= 90 && Math.abs(upload.lng()) <= 180)) {
+      throw new BusinessException(ErrorCode.VALIDATION, "lat·lng 가 범위를 벗어났다");
+    }
+  }
+
+  // 활동 사진이면 activity_photos 행을 같은 트랜잭션에서 만든다. 활동이 그사이 끝나 실패하면
+  // media 행도 함께 사라져, 어디에도 붙지 않은 사진이 남지 않는다
   @Transactional
-  public MediaSummary create(UUID mediaId, UUID ownerId, String objectKey, String thumbKey) {
-    return MediaSummary.from(
+  public Saved create(
+      UUID mediaId, UUID ownerId, String objectKey, String thumbKey, NewActivityPhoto photo) {
+    mediaRepository.insertIfAbsent(mediaId, ownerId, objectKey, thumbKey, clock.instant());
+    Media media =
         mediaRepository
             .findById(mediaId)
-            .orElseGet(
-                () ->
-                    mediaRepository.save(
-                        Media.builder()
-                            .id(mediaId)
-                            .ownerId(ownerId)
-                            .objectKey(objectKey)
-                            .thumbKey(thumbKey)
-                            .createdAt(clock.instant())
-                            .build())));
+            .orElseThrow(() -> new BusinessException(ErrorCode.INTERNAL, "넣은 사진이 없다"));
+    if (!media.getOwnerId().equals(ownerId)) {
+      throw new BusinessException(ErrorCode.FORBIDDEN, "남의 mediaId 다");
+    }
+    UUID photoId = photo == null ? null : activityService.addPhoto(ownerId, photo);
+    return new Saved(MediaSummary.from(media), photoId);
+  }
+
+  /** 지운 사진의 키를 돌려준다. 파일은 커밋 뒤에 지워야 해서 부른 쪽이 지운다. 없으면 빈 값이다. */
+  @Transactional
+  public Optional<MediaSummary> delete(UUID me, UUID mediaId) {
+    Media media = mediaRepository.findForUpdate(mediaId).orElse(null);
+    if (media == null) {
+      return Optional.empty();
+    }
+    if (!media.getOwnerId().equals(me)) {
+      throw new BusinessException(ErrorCode.FORBIDDEN, "남의 사진이다");
+    }
+    if (mediaRepository.isUsedOutsideActivities(mediaId)) {
+      throw new BusinessException(ErrorCode.CONFLICT, "프로필·크루·게시물에 쓰인 사진이다");
+    }
+    activityService.removePhoto(me, mediaId);
+    mediaRepository.delete(media);
+    return Optional.of(MediaSummary.from(media));
   }
 
   @Transactional(propagation = Propagation.REQUIRES_NEW)

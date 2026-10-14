@@ -42,6 +42,21 @@ class ThumbnailerTest {
     assertThat(썸네일[1]).isEqualTo((byte) 0xD8);
   }
 
+  @Test
+  void 투명한_PNG_는_흰_바탕의_JPEG_로_바뀐다() throws IOException {
+    BufferedImage 투명 = new BufferedImage(40, 20, BufferedImage.TYPE_INT_ARGB);
+    ByteArrayOutputStream png = new ByteArrayOutputStream();
+    ImageIO.write(투명, "png", png);
+
+    byte[] 결과 = thumbnailer.toJpeg(png.toByteArray());
+
+    assertThat(결과[0]).isEqualTo((byte) 0xFF);
+    assertThat(결과[1]).isEqualTo((byte) 0xD8);
+    BufferedImage 읽은_것 = 읽는다(결과);
+    assertThat(읽은_것.getWidth()).isEqualTo(40);
+    assertThat(new Color(읽은_것.getRGB(10, 10)).getRed()).isGreaterThan(240);
+  }
+
   private static BufferedImage 읽는다(byte[] jpeg) throws IOException {
     return ImageIO.read(new ByteArrayInputStream(jpeg));
   }

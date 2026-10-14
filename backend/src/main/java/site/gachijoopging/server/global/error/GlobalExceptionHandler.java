@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 import site.gachijoopging.server.global.web.RequestIdFilter;
 
@@ -40,6 +41,14 @@ public class GlobalExceptionHandler {
             .orElse("요청 값이 올바르지 않다");
     log.warn("{} {}", ErrorCode.VALIDATION, message);
     return toResponse(ErrorCode.VALIDATION, message);
+  }
+
+  // 멀티파트 한도는 계약 한도(10MB)를 조금 넘게 두어, 그 사이는 검증기가 봉투로 413 을 낸다.
+  // 한도마저 넘는 요청도 500 이 아니라 같은 413 이어야 앱이 한 가지로 다룬다
+  @ExceptionHandler(MaxUploadSizeExceededException.class)
+  public ResponseEntity<ErrorResponse> handleUploadTooLarge(MaxUploadSizeExceededException e) {
+    log.warn("{} {}", ErrorCode.PAYLOAD_TOO_LARGE, e.getMessage());
+    return toResponse(ErrorCode.PAYLOAD_TOO_LARGE, "사진이 10MB 를 넘는다");
   }
 
   @ExceptionHandler(HttpMessageNotReadableException.class)
