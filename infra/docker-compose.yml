@@ -38,10 +38,22 @@ services:
     image: redis:7-alpine
     restart: unless-stopped
     # 바깥에 열지 않는다. 백엔드만 compose 네트워크 안에서 붙는다.
-    volumes:
-      - redisdata:/data
+    env_file:
+      - .env
+    # 비밀번호를 compose 가 펼치지 않게 $$ 로 적는다 — 펼치면 Cmd 에까지 평문으로 박힌다.
+    # (env_file 로 들어간 값은 어차피 docker inspect 의 Env 에 보인다. DB 비밀번호·JWT 키와 같다)
+    #
+    # 스냅샷을 끈다(--save ""). 들어 있는 것은 TTL 걸린 레이트리밋 카운터뿐이고 영속 데이터는
+    # 전부 Postgres 다. 2GB 한 대에 JVM 이 같이 사는데 BGSAVE 는 fork 로 순간 RSS 를 키우고,
+    # 그때 죽는 것은 OOM Killer 기준 가장 큰 프로세스 — 즉 백엔드다.
+    command: >
+      sh -c 'exec redis-server
+      --requirepass "$$REDIS_PASSWORD"
+      --maxmemory 128mb
+      --maxmemory-policy allkeys-lru
+      --save ""'
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" --no-auth-warning ping | grep -q PONG"]
       interval: 10s
       timeout: 3s
       retries: 10
@@ -84,6 +96,5 @@ services:
       sh -c "while :; do certbot renew --webroot -w /var/www/certbot --quiet; sleep 12h & wait $${!}; done"
 
 volumes:
-  redisdata:
   certbot-conf:
   certbot-www:

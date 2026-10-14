@@ -22,6 +22,9 @@ spring:
     redis:
       host: ${REDIS_HOST}
       port: ${REDIS_PORT:6379}
+      # 운영 Redis 는 requirepass 를 건다. 로컬 compose 와 Testcontainers 는 걸지 않으므로
+      # 기본값을 비워 둔다 — 여기서 기본값을 빼면 테스트가 기동에서 죽는다.
+      password: ${REDIS_PASSWORD:}
 
   # ── 메일 (Gmail SMTP — 비밀번호 재설정 발송) ──────────────────────────
   # host 가 있어야 JavaMailSender 가 자동구성된다. 이 블록이 없으면 @Profile("prod")
