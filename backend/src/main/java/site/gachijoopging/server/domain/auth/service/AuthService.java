@@ -8,6 +8,7 @@ import java.time.Instant;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import site.gachijoopging.server.domain.activity.service.ActivityService;
 import site.gachijoopging.server.domain.auth.dto.AuthDtos.TokenPairResponse;
 import site.gachijoopging.server.domain.auth.entity.RefreshToken;
 import site.gachijoopging.server.domain.auth.repository.RefreshTokenRepository;
@@ -15,6 +16,7 @@ import site.gachijoopging.server.domain.user.dto.UserAccount;
 import site.gachijoopging.server.domain.user.service.UserService;
 import site.gachijoopging.server.global.error.BusinessException;
 import site.gachijoopging.server.global.error.ErrorCode;
+import site.gachijoopging.server.global.lock.UserLock;
 import site.gachijoopging.server.global.metrics.GachijoopgingMetrics;
 import site.gachijoopging.server.global.security.jwt.JwtIssuer;
 
@@ -27,6 +29,8 @@ public class AuthService {
   private final RefreshTokenRepository refreshTokenRepository;
   private final RefreshTokenFamilyRevoker familyRevoker;
   private final UserService userService;
+  private final ActivityService activityService;
+  private final UserLock userLock;
   private final JwtIssuer jwtIssuer;
   private final Clock clock;
 
@@ -38,12 +42,16 @@ public class AuthService {
       RefreshTokenRepository refreshTokenRepository,
       RefreshTokenFamilyRevoker familyRevoker,
       UserService userService,
+      ActivityService activityService,
+      UserLock userLock,
       JwtIssuer jwtIssuer,
       Clock clock,
       MeterRegistry meterRegistry) {
     this.refreshTokenRepository = refreshTokenRepository;
     this.familyRevoker = familyRevoker;
     this.userService = userService;
+    this.activityService = activityService;
+    this.userLock = userLock;
     this.jwtIssuer = jwtIssuer;
     this.clock = clock;
     this.loginAttempt = meterRegistry.counter(GachijoopgingMetrics.LOGIN_ATTEMPT);
@@ -115,7 +123,15 @@ public class AuthService {
     }
     refreshTokenRepository
         .findByTokenHash(OpaqueToken.hash(rawToken))
-        .ifPresent(token -> token.revoke(clock.instant()));
+        .ifPresent(
+            token -> {
+              // 로그아웃하면 진행 중 활동을 이어받을 기기가 없어진다. 활동 시작과 같은 잠금으로 엇갈림을 막는다
+              userLock.lock(token.getUserId());
+              if (activityService.hasInProgress(token.getUserId())) {
+                throw new BusinessException(ErrorCode.CONFLICT, "진행 중인 활동을 끝낸 뒤 로그아웃할 수 있다");
+              }
+              token.revoke(clock.instant());
+            });
   }
 
   @Transactional

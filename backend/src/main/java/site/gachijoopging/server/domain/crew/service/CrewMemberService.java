@@ -22,6 +22,7 @@ import site.gachijoopging.server.domain.crew.repository.CrewQueryRepository.Memb
 import site.gachijoopging.server.domain.crew.repository.CrewRepository;
 import site.gachijoopging.server.global.error.BusinessException;
 import site.gachijoopging.server.global.error.ErrorCode;
+import site.gachijoopging.server.global.lock.UserLock;
 import site.gachijoopging.server.global.security.CrewMembership;
 
 @Service
@@ -32,6 +33,7 @@ public class CrewMemberService {
   private static final ZoneId KST = ZoneId.of("Asia/Seoul");
 
   private final CrewRepository crewRepository;
+  private final UserLock userLock;
   private final CrewQueryRepository crewQueryRepository;
   private final CrewJoinRequestRepository joinRequestRepository;
   private final CrewService crewService;
@@ -92,7 +94,7 @@ public class CrewMemberService {
 
   @Transactional
   public void leave(UUID me, CrewMembership membership) {
-    crewRepository.lockUser(me);
+    userLock.lock(me);
     Crew crew = lockActive(membership);
     if (crewRepository.hasActivityInProgress(me)) {
       throw new BusinessException(ErrorCode.CONFLICT, "진행 중인 활동을 끝낸 뒤 나갈 수 있다");

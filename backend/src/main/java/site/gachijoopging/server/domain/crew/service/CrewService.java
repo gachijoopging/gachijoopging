@@ -29,6 +29,7 @@ import site.gachijoopging.server.domain.media.service.MediaService;
 import site.gachijoopging.server.domain.media.service.MediaSignedUrl;
 import site.gachijoopging.server.global.error.BusinessException;
 import site.gachijoopging.server.global.error.ErrorCode;
+import site.gachijoopging.server.global.lock.UserLock;
 import site.gachijoopging.server.global.response.CursorPage;
 import site.gachijoopging.server.global.response.Cursors;
 import site.gachijoopging.server.global.security.CrewMembership;
@@ -43,6 +44,7 @@ public class CrewService implements CrewMembershipLoader {
   private static final String WITHDRAWN_NICKNAME = "탈퇴한 크루원";
 
   private final CrewRepository crewRepository;
+  private final UserLock userLock;
   private final CrewQueryRepository crewQueryRepository;
   private final CrewJoinRequestRepository joinRequestRepository;
   private final MediaService mediaService;
@@ -61,7 +63,7 @@ public class CrewService implements CrewMembershipLoader {
   @Transactional
   public CrewResponse create(UUID me, CreateCrewRequest request) {
     String name = trimmedName(request.name());
-    crewRepository.lockUser(me);
+    userLock.lock(me);
     requireNoCrewNorPending(me);
     UUID crewId = UUID.randomUUID();
     Instant now = clock.instant();

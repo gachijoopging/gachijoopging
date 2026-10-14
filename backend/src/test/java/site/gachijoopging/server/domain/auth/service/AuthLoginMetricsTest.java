@@ -3,6 +3,7 @@ package site.gachijoopging.server.domain.auth.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import io.micrometer.core.instrument.Counter;
@@ -17,10 +18,12 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import site.gachijoopging.server.domain.activity.service.ActivityService;
 import site.gachijoopging.server.domain.auth.repository.RefreshTokenRepository;
 import site.gachijoopging.server.domain.user.dto.UserAccount;
 import site.gachijoopging.server.domain.user.service.UserService;
 import site.gachijoopging.server.global.error.BusinessException;
+import site.gachijoopging.server.global.lock.UserLock;
 import site.gachijoopging.server.global.metrics.GachijoopgingMetrics;
 import site.gachijoopging.server.global.security.jwt.JwtIssuer;
 
@@ -45,6 +48,8 @@ class AuthLoginMetricsTest {
             refreshTokenRepository,
             familyRevoker,
             userService,
+            mock(ActivityService.class),
+            mock(UserLock.class),
             jwtIssuer,
             Clock.fixed(고정_시각, ZoneOffset.UTC),
             meterRegistry);
