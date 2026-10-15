@@ -323,9 +323,9 @@ uv run python scripts/draw_boxes.py 사진.jpg   # bbox 위치를 눈으로 확�
 - **워커 1개.** GPU 하나를 여러 워커가 나눠 쓰면 VRAM만 낭비
 - **`YOLO_AUTOINSTALL=false`** (코드에서 설정). ultralytics는 `PIL.Image.open`을 몽키패치해 두고 이미지 열기가 실패하면 HEIC일 수 있다고 보고 **요청 처리 중에 `pip install pi-heif`를 실행**합니다. 깨진 업로드 하나가 서버에서 pip를 돌리는 셈이고, `uv.lock`에 없는 패키지가 생기며 요청 경로에 네트워크 의존이 붙습니다 (W1 ②에서 실제로 당했습니다)
 - **GPU 전원 관리**: 유휴 상태(14W)에서 온 첫 요청들은 클럭 램프업으로 느립니다 — 같은 사진이 138ms → 57ms로 내려갔습니다. 워밍업으로 해결되지 않는 종류라 NVIDIA 전원 관리를 최대 성능 우선으로 둬야 하는데, 이걸 처리하던 W1 ④가 폐기돼 **지금은 담당 지시 단위가 없습니다**
-- **노출 경로는 ngrok 무료 dev 도메인입니다.** 계정마다 자동 배정되는 주소라 재시작해도 같습니다 — 고정 주소가 없으면 재시작마다 Spring 설정을 고쳐야 하고, 그게 데모 사고 1순위입니다. **배포 EC2에는 아무것도 설치하지 않습니다**(백엔드에 넘길 것은 주소 한 줄). 실행 명령·무료 한도·자동 기동은 [`progress.md`](progress.md) §3.1이 정본입니다
+- **노출 경로는 ngrok 무료 dev 도메인입니다.** 계정마다 자동 배정되는 주소라 재시작해도 같습니다 — 고정 주소가 없으면 재시작마다 Spring 설정을 고쳐야 하고, 그게 데모 사고 1순위입니다. **운영 서버(Lightsail)에는 아무것도 설치하지 않습니다**(백엔드에 넘길 것은 주소 한 줄). 실행 명령·무료 한도·자동 기동은 [`progress.md`](progress.md) §3.1이 정본입니다
 - **시크릿 헤더 검증.** 외부에 노출되는 순간 없으면 누구나 GPU를 씁니다
-- ~~**자동 재시작 + 절전 해제 스크립트 2개**~~ — **W1 ④와 함께 폐기(08-02)**. `scripts/serve.ps1`(uvicorn+ngrok 한 쌍 관리, 강제 종료 시 13.5초 복구)과 `scripts/demo-prep.ps1`(작업 스케줄러 + 절전 해제)은 **삭제했습니다** — 되살리려면 `feature/ai/SH` 의 삭제 직전 커밋에서 꺼냅니다. **터널 쪽 자동 기동만 `ngrok service install` 로 되찾았습니다**(§9). uvicorn 재시작과 절전 해제는 대책이 없고, 터널이 서비스로 상주하는 만큼 **uvicorn 만 죽었을 때 빈 포트로 502 가 나가는 짝 문제는 오히려 더 잘 생깁니다** — serve.ps1 이 원래 막고 있던 것이 그것입니다
+- **터널과 서버를 따로 상주시킵니다.** 터널은 `ngrok service install` 로 Windows 서비스가 되고(부팅 시 자동), uvicorn 은 `scripts/serve.ps1` 이 감시합니다 — 죽으면 3초 뒤 다시 띄우고 `ai/serve.log` 에 남깁니다. **실측(10-13): uvicorn 을 kill 하고 `/healthz` 200 까지 9.1초.** 이 둘을 따로 두는 이유는 터널만 살아 있고 uvicorn 이 죽은 상태가 백엔드에서 502 → `UNAVAILABLE` 로 내려가 "AI 서버 다운"과 구별되지 않기 때문입니다. 등록 절차는 §9
 - **유선 연결**은 손으로 합니다. 캠퍼스 Wi-Fi 에 데모를 걸지 않습니다
 - **한글이 든 `.ps1` 은 UTF-8 BOM 이어야 합니다.** PowerShell 5.1 은 BOM 이 없으면 ANSI(cp949)로 읽어 한글이 깨지고 **파서가 무너집니다** — 실행 실패가 아니라 구문 오류로 나타나서 원인이 안 보입니다
 - TensorRT export는 이 규모에서 불필요
@@ -340,16 +340,45 @@ AI 서버가 **노트북**이라 데모 당일 리스크가 구조적으로 높�
 
 - [ ] ngrok 계정 생성 → `ngrok config add-authtoken <토큰>`
 - [ ] 대시보드에서 **배정된 dev 도메인** 확인 → `ai/.env`의 `NGROK_DOMAIN`
-- [ ] `ngrok service install --config=<경로>` → `ngrok service start`. 터널은 부팅 시 스스로 뜹니다. **uvicorn 쪽은 여전히 대책이 없습니다**(§8 자동 재시작 항목)
+- [ ] ngrok 설정 파일에 엔드포인트를 적습니다 — `ngrok config edit` 로 열어 아래를 넣습니다. v3 `endpoints` 형식입니다(`tunnels` 는 deprecated). 파일에 `version: 2` 가 남아 있으면 `tunnels.ai.domain: <NGROK_DOMAIN>` 이 맞는 키입니다
+  ```yaml
+  version: 3
+  endpoints:
+    - name: ai
+      url: https://<NGROK_DOMAIN>
+      upstream:
+        url: 8000
+  ```
+- [ ] `ngrok config check` 가 `Valid` 를 내는지 봅니다. 출력의 경로가 아래 `--config` 값입니다
+- [ ] **관리자 PowerShell** 에서 `ngrok service install --config=<위 경로>` → `ngrok service start`. 터널은 부팅 시 스스로 뜹니다
+- [ ] uvicorn 감시를 작업 스케줄러에 등록합니다(관리자 불필요). 로그온 때 뜨므로 **재부팅 뒤 손대지 않으려면 Windows 자동 로그인**을 켜 둡니다(`netplwiz`)
+  ```powershell
+  $ps1 = (Resolve-Path ai\scripts\serve.ps1).Path
+  Register-ScheduledTask -TaskName gachi-ai-serve `
+    -Trigger (New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME) `
+    -Action (New-ScheduledTaskAction -Execute powershell.exe -Argument "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$ps1`"") `
+    -Settings (New-ScheduledTaskSettingsSet -ExecutionTimeLimit 0 -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries)
+  ```
+  등록 뒤 `(Get-ScheduledTask gachi-ai-serve).Settings.ExecutionTimeLimit` 이 `PT0S`(무제한)인지 봅니다.
+  **멈출 때**는 `Stop-ScheduledTask` 만으로는 uvicorn 이 살아남아 8000 포트를 잡고 있습니다 — 다시 시작하면 bind 실패로 재시도만 돕니다
+  ```powershell
+  Stop-ScheduledTask gachi-ai-serve
+  Get-NetTCPConnection -LocalPort 8000 -State Listen |
+    Select-Object -ExpandProperty OwningProcess -Unique |
+    ForEach-Object { Get-CimInstance Win32_Process -Filter "ProcessId = $_" } |
+    Select-Object ProcessId, ExecutablePath, CommandLine
+  ```
+  출력의 `CommandLine` 에 이 저장소의 `ai\.venv\` 경로와 `app.main:app` 이 함께 있는 프로세스의 `ProcessId` 를 `$uvicornPid` 에 넣은 뒤 `taskkill /F /T /PID $uvicornPid` 로 멈춥니다. 포트를 여는 프로세스의 `ExecutablePath` 는 `python.exe` 일 수 있습니다. 이름으로 일괄 종료하면 다른 개발 서버도 함께 꺼집니다.
+- [ ] Windows 전원 설정: 전원 연결 시 **절전 안 함** · 덮개를 닫아도 **아무 것도 안 함**
 - [ ] **유선 랜** 연결, 전원 연결
 - [ ] NVIDIA 제어판 > 3D 설정 > 전원 관리 모드 = **최대 성능 우선** (GeForce는 `nvidia-smi` 전원 관리가 대체로 미지원이라 드라이버 UI에서 합니다)
 
-**발표 당일**
+**데모 당일**
 
-- [ ] 서버가 떠 있는지 — 터널은 서비스로 이미 떠 있고 **uvicorn은 손으로 띄웁니다**(`uv run uvicorn app.main:app`). **터널만 살아 있고 uvicorn이 죽은 상태**면 ngrok이 빈 포트를 터널링해 백엔드가 **깔끔한 실패가 아니라 502**를 받습니다 — `UNAVAILABLE` 폴백은 작동하지만 원인이 안 보입니다(§8)
+- [ ] 서버가 떠 있는지 — 터널은 서비스로, uvicorn 은 `serve.ps1` 로 이미 떠 있습니다. **터널만 살아 있고 uvicorn이 죽은 상태**면 백엔드가 **502**를 받으므로(§8) 반드시 터널 너머로 `/healthz` 를 찍습니다(§9.1). uvicorn 이 계속 죽으면 `ai/serve.log` 를 봅니다
 - [ ] `uv run python scripts/smoke.py --base-url <주소>` → **FAIL 0 · SKIP 0**. `SKIP` 은 통과가 아니라 **검사가 성립하지 않은 것**이고 종료 코드도 0 이 아닙니다 — 검출이 0개인 사진을 주면 항목·좌표 검사 5건이 빈 목록 위에서 통과해 버리므로, **쓰레기가 보이는 사진**을 `--image` 로 줘야 합니다
 - [ ] `ready: true, warmedUp: true` 확인 후 첫 촬영
-- [ ] **최후 안전망**: AI 서버가 죽어도 `UNAVAILABLE` → 수동 입력으로 줍깅 기록은 완주됩니다. 이 경로를 W5에 실제로 리허설해 두면 당일 사고가 데모 실패가 되지 않습니다
+- [ ] **최후 안전망**: AI 서버가 죽어도 `UNAVAILABLE` → 수동 입력으로 줍깅 기록은 완주됩니다. 이 경로를 데모 전에 실제로 리허설해 두면 당일 사고가 데모 실패가 되지 않습니다
 
 ### 9.1 터널 너머에서 모델이 떴는지 확인하기
 
@@ -365,8 +394,8 @@ curl https://<NGROK_DOMAIN>/healthz
 | `503` · `error: "FileNotFoundError: weights 가 없습니다: …"` | **그 경로에 `.pt`가 없습니다** | `git pull`로 `weights/yolo26s-1024-v1.pt`를 받습니다 |
 | `503` · `error: "RuntimeError: weights 의 클래스가 계약과 다릅니다 …"` | 파일은 있으나 7종·순서가 어긋납니다 | 학습 베이스(`yolo26s.pt`)를 잘못 지정한 경우가 대부분입니다 |
 | `503` · `error: null` · `warmedUp:false` | 아직 워밍업 중입니다 (첫 로드 약 5초) | 기다립니다 |
-| `502` — ngrok `ERR_NGROK_8012` | **터널만 살아 있고 uvicorn이 죽었습니다** | uvicorn을 띄웁니다 (§8) |
-| `404` — ngrok `ERR_NGROK_3200` | 터널 자체가 떠 있지 않습니다 | `ngrok http 8000 --url=…` |
+| `502` — ngrok `ERR_NGROK_8012` | **터널만 살아 있고 uvicorn이 죽었습니다** | `serve.ps1` 이 10초 안에 다시 띄웁니다. 계속되면 `ai/serve.log` · 작업 스케줄러의 `gachi-ai-serve` 상태를 봅니다 |
+| `404` — ngrok `ERR_NGROK_3200` | 터널 자체가 떠 있지 않습니다 | `ngrok service start` (관리자) |
 
 **`modelVersion`은 어느 파일이 로드됐는지 증명하지 않습니다.** 그 값은 파일에서 읽는 것이 아니라 `AI_MODEL_VERSION` 환경변수 문자열입니다(`app/config.py`). 실제로 로드된 파일명은 기동 로그의 `weights 로드 1.23s — yolo26s-1024-v1.pt` 한 줄에만 나옵니다 — **weights를 바꿔치기해도 `/healthz`는 같은 버전을 답합니다.**
 

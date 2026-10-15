@@ -31,3 +31,4 @@ datasets/taco/*
 !datasets/taco/substituted.txt
 runs/
 .env
+serve.log
