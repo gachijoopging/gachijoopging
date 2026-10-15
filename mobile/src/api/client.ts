@@ -248,7 +248,6 @@ export function createHttpClient({ baseUrl, fetch: send = (...args) => globalThi
       ? new URLSearchParams(Object.entries(rest).filter(([, v]) => v != null).map(([k, v]) => [k, String(v)])).toString()
       : '';
     const headers: Record<string, string> = { Accept: 'application/json' };
-    if (token) headers.Authorization = `Bearer ${token}`;
     let body: BodyInit | undefined;
     if (isForm) body = args as FormData;
     else if (method !== 'GET' && Object.keys(rest).length > 0) {
