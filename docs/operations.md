@@ -35,10 +35,32 @@ VM 한 대에 docker compose 로 컨테이너 셋을 띄운다 — 백엔드(Spr
 **그다음 서버에서**
 
 ```sh
-sh infra/provision.sh
+curl -fsSL https://raw.githubusercontent.com/gachijoopging/gachijoopging/dev/infra/provision.sh \
+  | DEPLOY_PUBKEY="ssh-ed25519 AAAA... github-actions-deploy" sh
 ```
 
-스왑·도커·디렉터리를 만든다. 여러 번 돌려도 안전하다 — 이미 돼 있으면 건너뛴다.
+스왑·도커·디렉터리·배포 키를 만든다. 여러 번 돌려도 안전하다 — 이미 돼 있으면 건너뛴다.
+
+`DEPLOY_PUBKEY` 는 CI(`deploy.yml`)가 붙는 **공개키**다(비밀이 아니다. 짝이 되는 개인키가
+`SSH_PRIVATE_KEY` 시크릿이다). 안 넣으면 배포가 안 되는데 **그 사실이 첫 머지 때까지 드러나지 않는다.**
+
+### 서버를 교체할 때
+
+ADR-0005 가 "첫 사용자 전에 한 번 새로 만들어 교체한다" 고 정했다. 교체 뒤에 또 바꾸면 그 사이 쌓인
+**사진**(디스크의 유일한 상태)을 옮겨야 하므로 한 번에 끝낸다.
+
+| | |
+|---|---|
+| 1 | 새 인스턴스 생성 + `provision.sh` (위) |
+| 2 | `infra/dev-env.ps1` 로 `.env` 올리기. 새 서버엔 `.env` 가 없으므로 `IMAGE_TAG` 는 비어서 올라간다 — 정상이다 |
+| 3 | 고정 IP 를 **새 인스턴스로 옮긴다**(콘솔 `Networking`). DNS 는 그대로다 |
+| 4 | 인증서 최초 발급(§HTTPS). **고정 IP 를 옮긴 뒤**에 한다 — Let's Encrypt 가 도메인으로 찾아오기 때문이다 |
+| 5 | 지금 떠 있는 태그로 배포 — `./deploy.sh <태그>`. 태그는 옛 서버 `.env` 의 `IMAGE_TAG` 에서 가져온다 |
+| 6 | 사진이 있으면 옮긴다 — `rsync -a` 로 `/data/uploads` 를. 소유자 10001 을 유지해야 한다 |
+| 7 | 확인 뒤 옛 인스턴스는 **스냅샷 하나 남기고** 내린다 |
+
+> ⚠️ **4번을 3번보다 먼저 하지 않는다.** 고정 IP 가 아직 옛 서버를 가리키는 동안 발급을 시도하면
+> acme 챌린지가 옛 서버로 가서 실패한다. Let's Encrypt 는 같은 도메인에 **주당 5회** 제한이 있다.
 
 ### HTTPS
 

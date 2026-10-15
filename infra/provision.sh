@@ -71,11 +71,38 @@ fi
 
 # ── 디렉터리 ───────────────────────────────────────────────────────
 log "디렉터리"
-sudo mkdir -p "$APP_DIR" "$MEDIA_DIR/deleted"
+# nginx/ 가 없으면 deploy.yml 의 scp 가 "dest open: Failure" 로 죽는다 — 첫 배포가 깨진다.
+sudo mkdir -p "$APP_DIR/nginx" "$MEDIA_DIR/deleted"
 sudo chown -R "$(id -un):$(id -gn)" "$APP_DIR"
 # 사진 디렉터리만 컨테이너 UID 소유다. 호스트 사용자로 두면 업로드가 permission denied 로 실패한다.
 sudo chown -R "$APP_UID:$APP_UID" "$MEDIA_DIR"
 echo "$APP_DIR · $MEDIA_DIR (소유자 $APP_UID)"
+
+
+# ── 배포 키 ────────────────────────────────────────────────────────
+# CI(deploy.yml)가 이 키로 붙는다. 없으면 배포가 안 되는데, 그 사실이
+# 첫 머지 때까지 드러나지 않는다. 공개키라 인자로 받아도 안전하다.
+#
+#   DEPLOY_PUBKEY="ssh-ed25519 AAAA... github-actions-deploy" sh infra/provision.sh
+log "배포 키"
+if [ -z "${DEPLOY_PUBKEY:-}" ]; then
+  echo "DEPLOY_PUBKEY 가 없다 — 건너뛴다. CI 배포를 쓰려면 나중에 넣는다"
+else
+  # 주석(세 번째 칸)은 사람마다 다르다. 키 본문으로만 비교해야 같은 키가 두 번 들어가지 않는다.
+  body=$(printf '%s' "$DEPLOY_PUBKEY" | awk '{print $2}')
+  if [ -z "$body" ]; then
+    echo "DEPLOY_PUBKEY 가 'ssh-ed25519 AAAA... [주석]' 모양이 아니다" >&2
+    exit 1
+  fi
+  if awk '{print $2}' "$HOME/.ssh/authorized_keys" 2>/dev/null | grep -qxF "$body"; then
+    echo "이미 있다"
+  else
+    mkdir -p "$HOME/.ssh" && chmod 700 "$HOME/.ssh"
+    printf '%s\n' "$DEPLOY_PUBKEY" >> "$HOME/.ssh/authorized_keys"
+    chmod 600 "$HOME/.ssh/authorized_keys"
+    echo "넣었다"
+  fi
+fi
 
 # ── 확인 ───────────────────────────────────────────────────────────
 log "결과"

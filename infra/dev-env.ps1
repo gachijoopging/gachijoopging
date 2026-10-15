@@ -67,14 +67,27 @@ foreach ($key in $values.Keys) {
 Write-Host ("읽었다: {0} — 키 {1}개 · {2}바이트 · CR 없음 · BOM 없음" -f $EnvFile, $values.Count, $bytes.Length)
 
 # ── 서버가 관리하는 값 가져오기 ───────────────────────────────────────
+# 새로 만든 서버에는 .env 가 아직 없다. 그때 sed 는 exit 2 를 내는데, 그것을
+# "붙지 못했다" 로 읽으면 첫 업로드에서 막힌다 — 붙기는 붙었다.
+$hasRemoteEnv = $true
+# 2>$null 을 붙이지 않는다. PS 5.1 은 native 명령의 stderr 를 ErrorRecord 로 감싸고,
+# $ErrorActionPreference='Stop' 이 그걸 종료 오류로 만들어 아래 검사가 돌기 전에 죽는다.
+& ssh -i $KeyFile -o BatchMode=yes $Target "test -f $Remote"
+if ($LASTEXITCODE -eq 255) { throw "서버에 붙지 못했다: $Target" }
+if ($LASTEXITCODE -ne 0) {
+    $hasRemoteEnv = $false
+    Write-Host "서버에 $Remote 이 없다 — 첫 업로드로 본다. $($serverOwned -join ', ') 는 비운다."
+}
+
 foreach ($key in $serverOwned) {
-    $remoteValue = (& ssh -i $KeyFile -o BatchMode=yes $Target "sed -n 's/^${key}=//p' $Remote") 2>$null
-    if ($LASTEXITCODE -ne 0) { throw "서버에 붙지 못했다: $Target" }
-    $remoteValue = ($remoteValue | Select-Object -First 1)
+    $remoteValue = ''
+    if ($hasRemoteEnv) {
+        $remoteValue = (& ssh -i $KeyFile -o BatchMode=yes $Target "sed -n 's/^${key}=//p' $Remote" | Select-Object -First 1)
+        Write-Host ("서버 값을 가져왔다: {0}={1}" -f $key, $(if ($remoteValue) { $remoteValue } else { '(빈 값)' }))
+    }
     $lines = $lines | ForEach-Object {
         if ($_ -match "^${key}=") { "${key}=$remoteValue" } else { $_ }
     }
-    Write-Host ("서버 값을 가져왔다: {0}={1}" -f $key, $(if ($remoteValue) { $remoteValue } else { '(빈 값)' }))
 }
 
 if ($DryRun) { Write-Host "DryRun — 올리지 않았다."; exit 0 }
