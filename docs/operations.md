@@ -513,7 +513,6 @@ sslmode=require  → 1
 |---|---|---|
 | `DOCKERHUB_USER` · `IMAGE_TAG` | 배포 스크립트 | 이미지 좌표. `IMAGE_TAG` 는 deploy.sh 가 갱신 |
 | `PUBLIC_BASE_URL` | 백엔드 | 서명 URL·메일 링크의 기준 |
-| `INVITE_BASE_URL` | 백엔드 | 초대 링크 앞부분. 카카오톡으로 공유되는 주소다 |
 | `DATABASE_URL` · `DATABASE_USER` · `DATABASE_PASSWORD` | 백엔드 | Supabase 접속. 옛 `POSTGRES_*` 는 컨테이너용이라 없어진다 |
 | `REDIS_HOST` · `REDIS_PORT` · `REDIS_PASSWORD` | 백엔드 | 레이트리밋(`global/ratelimit`). 운영은 비밀번호 필수 — 없으면 백엔드가 `NOAUTH` 를 맞고 제한이 **조용히** 꺼진다 |
 | `JWT_ACTIVE_KID` · `JWT_PRIVATE_KEY_PEM` · `JWT_PUBLIC_KEY_PEM` · `JWT_PREVIOUS_*` | 백엔드 | 토큰 서명. kid 회전용 이전 키 |
@@ -521,6 +520,7 @@ sslmode=require  → 1
 | `MEDIA_ROOT` · `MEDIA_SECURE_LINK_SECRET` | 백엔드 · Nginx | 사진 보관 경로와 서명 URL. `MEDIA_ROOT` 는 컨테이너 안 경로이고 compose 가 볼륨으로 디스크에 잇는다 |
 | `MAIL_USERNAME` · `MAIL_PASSWORD` | 백엔드 | 비밀번호 재설정 메일 |
 | `FCM_CREDENTIALS` | 백엔드 | 푸시 |
+| `DEMO_SEED_ENABLED` · `DEMO_MEMBER_EMAIL` · `DEMO_MEMBER_PASSWORD` · `DEMO_GUEST_EMAIL` · `DEMO_GUEST_PASSWORD` | 백엔드 | 데모 시드. 스테이징이 없어(ADR-0005) 운영에서 이 플래그로만 켠다. 자세한 것은 §데모 계정 |
 | `AI_BASE_URL` · `AI_SECRET` | 백엔드 | AI 서버. `ai/.env` 의 `NGROK_DOMAIN`·`AI_SECRET` 과 짝이다 — `AI_SECRET` 이 다르면 호출이 전부 401 인데 백엔드가 401 을 `UNAVAILABLE` 로 내려 "AI 서버 다운" 과 구별되지 않는다 |
 | `CERT_DOMAIN` · `CERT_EMAIL` | acme | 인증서 발급·갱신 |
 | `AGREEMENTS_VERSION` · `TERMS_URL` · `PRIVACY_URL` · `MARKETING_URL` | **아직 없음** | 현재 동의 버전과 공개 전문 URL. 계약(`openapi.yaml` `/agreements`)과 테이블(`user_agreements`)은 있지만 **백엔드가 아직 읽지 않는다** — 동의 API 를 구현할 때 들어온다. 전문 정본은 `docs/legal/`, 버전은 각 문서 머리의 값(지금 `2026-10`). 정식 주소가 서빙되기 전까지는 `https://gachijoopging.github.io/gachijoopging-legal/{terms,privacy,marketing}` 를 넣는다. 정식 주소 전환과 전문의 빈칸(문의 이메일·리전)은 GAC-80 |

@@ -91,13 +91,20 @@ try {
 }
 
 # ── 확인: 서버에서 직접 본다 ─────────────────────────────────────────
-$check = & ssh -i $KeyFile -o BatchMode=yes $Target @"
+# here-string 은 이 파일의 줄끝(CRLF)을 그대로 들고 간다. 그대로 ssh 에 넘기면
+# 원격 쉘이 CR 을 인자의 일부로 읽어 `chmod: cannot access '....env'$'\r'` 가 된다.
+# CR 을 막는 스크립트가 CR 에 당하는 자리라 한 번 더 지운다.
+$remote = @"
 chmod 600 $Remote
 echo "파일   `$(file -b $Remote)"
 echo "CR     `$(tr -dc '\015' < $Remote | wc -c) 바이트"
 echo "키     `$(grep -c '^[A-Z]' $Remote) 개"
 echo "머리   `$(od -c $Remote | head -1)"
-"@
+"@ -replace "`r", ""
+
+# 따옴표로 묶는다. PS 5.1 의 native 인자 전달은 공백·개행에서 쪼갤 수 있고,
+# 쪼개지면 ssh 가 공백으로 다시 이어 붙여 한 줄 명령이 된다.
+$check = & ssh -i $KeyFile -o BatchMode=yes $Target "$remote"
 $check | ForEach-Object { Write-Host $_ }
 
 Write-Host ""
