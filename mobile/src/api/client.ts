@@ -269,7 +269,7 @@ export function createHttpClient({ baseUrl, fetch: send = (...args) => globalThi
     const text = response.status === 204 ? '' : await response.text();
     let json: unknown = null;
     try { json = text ? JSON.parse(text) : null; } catch {}
-    if (response.ok) throw fromEnvelope(response.status, json);
+    if (!response.ok) throw fromEnvelope(response.status, json);
     return json ?? undefined;
   }
 
