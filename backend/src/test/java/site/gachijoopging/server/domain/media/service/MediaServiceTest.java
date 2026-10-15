@@ -17,6 +17,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import site.gachijoopging.server.domain.activity.service.ActivityService;
 import site.gachijoopging.server.domain.media.repository.MediaRepository;
 import site.gachijoopging.server.global.error.BusinessException;
 import site.gachijoopging.server.global.error.ErrorCode;
@@ -29,9 +30,10 @@ class MediaServiceTest {
   private static final UUID 나 = UUID.fromString("11111111-1111-1111-1111-111111111111");
 
   @Mock private MediaRepository mediaRepository;
+  @Mock private ActivityService activityService;
 
   private MediaService mediaService() {
-    return new MediaService(mediaRepository, Clock.fixed(NOW, ZoneOffset.UTC));
+    return new MediaService(mediaRepository, activityService, Clock.fixed(NOW, ZoneOffset.UTC));
   }
 
   @Test

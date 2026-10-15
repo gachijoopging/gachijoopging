@@ -10,12 +10,14 @@ import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import site.gachijoopging.server.domain.activity.dto.ActivityPhotoRef;
 import site.gachijoopging.server.domain.activity.dto.ActivityResponse;
 import site.gachijoopging.server.domain.activity.dto.ActivitySummaryResponse;
 import site.gachijoopging.server.domain.activity.dto.AddItemsRequest;
 import site.gachijoopging.server.domain.activity.dto.Bbox;
 import site.gachijoopging.server.domain.activity.dto.ItemInput;
 import site.gachijoopging.server.domain.activity.dto.ItemResponse;
+import site.gachijoopging.server.domain.activity.dto.NewActivityPhoto;
 import site.gachijoopging.server.domain.activity.dto.StartActivityRequest;
 import site.gachijoopging.server.domain.activity.dto.UpdateItemRequest;
 import site.gachijoopging.server.domain.activity.entity.Activity;
@@ -35,6 +37,8 @@ public class ActivityService {
 
   // AI 신뢰도가 이보다 낮으면 앱이 "확인 필요" 로 보인다 (feature-scope §AI 줍기)
   private static final float UNCLASSIFIED_BELOW = 0.7f;
+  private static final String INFERENCE_OK = "OK";
+  private static final String INFERENCE_UNAVAILABLE = "UNAVAILABLE";
 
   private final ActivityRepository activityRepository;
   private final ActivityItemRepository itemRepository;
@@ -134,6 +138,75 @@ public class ActivityService {
     Activity activity = lockInProgress(me, id);
     itemRepository.findByIdAndActivityId(itemId, id).ifPresent(itemRepository::delete);
     recount(activity);
+  }
+
+  /** 사진 파일을 저장하기 전에 부른다. 끝난 활동이면 앱이 4-3 으로 돌아가도록 404 다 (화면 4-4). */
+  public void requirePhotoTarget(UUID me, UUID activityId) {
+    photoTarget(me, activityRepository.findLive(activityId));
+  }
+
+  // media 의 트랜잭션에 합류해 media 행과 함께 커밋되거나 함께 사라진다
+  @Transactional
+  public UUID addPhoto(UUID me, NewActivityPhoto photo) {
+    photoTarget(me, activityRepository.findLiveForUpdate(photo.activityId()));
+    activityRepository.insertPhotoIfAbsent(
+        UUID.randomUUID(),
+        photo.activityId(),
+        photo.mediaId(),
+        photo.lat(),
+        photo.lng(),
+        photo.takenAt(),
+        photo.inferenceOk() ? INFERENCE_OK : INFERENCE_UNAVAILABLE,
+        photo.modelVersion(),
+        photo.inferenceMs());
+    ActivityRepository.PhotoRow saved =
+        activityRepository
+            .findPhotoByMedia(photo.mediaId())
+            .orElseThrow(() -> new BusinessException(ErrorCode.INTERNAL, "넣은 활동 사진이 없다"));
+    if (!saved.getActivityId().equals(photo.activityId())) {
+      throw new BusinessException(ErrorCode.CONFLICT, "다른 활동에 올린 사진이다");
+    }
+    return saved.getId();
+  }
+
+  public Optional<ActivityPhotoRef> photoOf(UUID mediaId) {
+    return activityRepository
+        .findPhotoByMedia(mediaId)
+        .map(row -> new ActivityPhotoRef(row.getId(), row.getActivityId()));
+  }
+
+  // 사용자가 버린 사진만 지운다. 줍기가 붙은 사진을 지우면 확정한 줍기까지 CASCADE 로 사라진다
+  @Transactional
+  public void removePhoto(UUID me, UUID mediaId) {
+    ActivityRepository.PhotoRow photo =
+        activityRepository
+            .findPhotoByMedia(mediaId)
+            .orElseThrow(() -> new BusinessException(ErrorCode.CONFLICT, "활동 사진이 아니다"));
+    Activity activity =
+        activityRepository
+            .findLiveForUpdate(photo.getActivityId())
+            .orElseThrow(() -> new BusinessException(ErrorCode.CONFLICT, "지워진 활동의 사진이다"));
+    if (!activity.ownedBy(me)) {
+      throw forbidden();
+    }
+    if (!activity.inProgress()) {
+      throw new BusinessException(ErrorCode.CONFLICT, "끝난 활동의 사진이다");
+    }
+    if (activityRepository.hasItemsOn(photo.getId())) {
+      throw new BusinessException(ErrorCode.CONFLICT, "줍기가 붙은 사진이다");
+    }
+    activityRepository.deletePhoto(photo.getId());
+  }
+
+  private static void photoTarget(UUID me, Optional<Activity> found) {
+    Activity activity =
+        found.orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "없는 활동이다"));
+    if (!activity.ownedBy(me)) {
+      throw forbidden();
+    }
+    if (!activity.inProgress()) {
+      throw new BusinessException(ErrorCode.NOT_FOUND, "끝난 활동이다");
+    }
   }
 
   private Activity lockInProgress(UUID me, UUID id) {
