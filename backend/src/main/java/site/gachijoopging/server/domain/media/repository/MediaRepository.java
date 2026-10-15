@@ -1,11 +1,9 @@
 package site.gachijoopging.server.domain.media.repository;
 
-import jakarta.persistence.LockModeType;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -13,13 +11,11 @@ import site.gachijoopging.server.domain.media.entity.Media;
 
 public interface MediaRepository extends JpaRepository<Media, UUID> {
 
-  long countByOwnerIdAndCreatedAtGreaterThanEqual(UUID ownerId, Instant from);
-
   boolean existsByIdAndOwnerId(UUID id, UUID ownerId);
 
-  // 지우는 동안 프로필·크루 사진으로 지정되거나 같은 삭제가 겹치지 않도록 줄 세운다
-  @Lock(LockModeType.PESSIMISTIC_WRITE)
-  @Query("SELECT m FROM Media m WHERE m.id = :id")
+  // 지우는 동안 프로필·크루 사진으로 지정되거나 같은 삭제가 겹치지 않도록 줄 세운다.
+  // PESSIMISTIC_WRITE 는 FOR NO KEY UPDATE 로 나가 그 참조의 FK 검사(KEY SHARE)를 막지 못하므로 FOR UPDATE 다
+  @Query(value = "SELECT * FROM media WHERE id = :id FOR UPDATE", nativeQuery = true)
   Optional<Media> findForUpdate(@Param("id") UUID id);
 
   @Query(value = "select count(*) from users where photo_media_id is not null", nativeQuery = true)
@@ -36,14 +32,15 @@ public interface MediaRepository extends JpaRepository<Media, UUID> {
   @Query(
       value =
           """
-          INSERT INTO media (id, owner_id, object_key, thumb_key, created_at)
-          VALUES (:id, :ownerId, :objectKey, :thumbKey, :createdAt)
+          INSERT INTO media (id, owner_id, purpose, object_key, thumb_key, created_at)
+          VALUES (:id, :ownerId, :purpose, :objectKey, :thumbKey, :createdAt)
           ON CONFLICT (id) DO NOTHING
           """,
       nativeQuery = true)
   void insertIfAbsent(
       @Param("id") UUID id,
       @Param("ownerId") UUID ownerId,
+      @Param("purpose") String purpose,
       @Param("objectKey") String objectKey,
       @Param("thumbKey") String thumbKey,
       @Param("createdAt") Instant createdAt);

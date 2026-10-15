@@ -51,6 +51,12 @@ spring:
       max-file-size: 11MB
       max-request-size: 12MB
 
+server:
+  tomcat:
+    # 한도를 넘은 본문을 Tomcat 이 기본 2MB 만 읽고 연결을 끊으면, 아직 보내는 중인 Nginx 가
+    # 413 봉투 대신 502 를 낸다. Nginx 의 client_max_body_size(22m)까지는 끝까지 읽는다
+    max-swallow-size: 22MB
+
 app:
   jwt:
     # 키는 환경변수로만 들어온다 (02-conventions §14). 이름은 infra/.env.example 을 따른다.

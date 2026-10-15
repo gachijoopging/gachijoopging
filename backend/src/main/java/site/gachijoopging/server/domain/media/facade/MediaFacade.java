@@ -6,8 +6,8 @@ import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Supplier;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -19,9 +19,9 @@ import site.gachijoopging.server.domain.media.client.MediaStorage;
 import site.gachijoopging.server.domain.media.client.Thumbnailer;
 import site.gachijoopging.server.domain.media.dto.MediaDtos.InferenceResponse;
 import site.gachijoopging.server.domain.media.dto.MediaDtos.MediaUploadResponse;
-import site.gachijoopging.server.domain.media.dto.MediaPurpose;
 import site.gachijoopging.server.domain.media.dto.MediaSummary;
 import site.gachijoopging.server.domain.media.dto.MediaUpload;
+import site.gachijoopging.server.domain.media.entity.MediaPurpose;
 import site.gachijoopging.server.domain.media.service.MediaImageValidator;
 import site.gachijoopging.server.domain.media.service.MediaService;
 import site.gachijoopging.server.domain.media.service.MediaSignedUrl;
@@ -36,7 +36,6 @@ public class MediaFacade {
   private static final DateTimeFormatter monthFolder = DateTimeFormatter.ofPattern("yyyy/MM");
   private static final String EXTENSION = ".jpg";
   private static final String THUMBNAIL_SUFFIX = "_thumb";
-  private static final String INFERENCE_OK = "OK";
 
   private final MediaService mediaService;
   private final ActivityService activityService;
@@ -50,13 +49,12 @@ public class MediaFacade {
   public MediaUploadResponse upload(UUID me, MediaUpload upload) {
     MediaService.requireShape(upload);
     boolean jpeg = validator.validate(upload.file());
-    byte[] file = jpeg ? upload.file() : thumbnailer.toJpeg(upload.file());
-
-    Optional<MediaSummary> existing = mediaService.find(upload.mediaId());
-    if (existing.isPresent()) {
-      return resend(me, upload, file, existing.get());
-    }
-    return fresh(me, upload, file);
+    // PNG·WebP 변환은 비싸므로 결과를 버릴 재전송(403·409·비활동)에서는 하지 않는다
+    Supplier<byte[]> file = () -> jpeg ? upload.file() : thumbnailer.toJpeg(upload.file());
+    return mediaService
+        .find(upload.mediaId())
+        .map(existing -> resend(me, upload, file, existing))
+        .orElseGet(() -> fresh(me, upload, file.get()));
   }
 
   /** 사용자가 버린 활동 사진을 지운다. 없는 mediaId 도 끝난 것으로 본다 — 앱 대기열이 재시도한다. */
@@ -66,10 +64,12 @@ public class MediaFacade {
         .ifPresent(media -> deleteFiles(media.objectKey(), media.thumbKey()));
   }
 
-  private MediaUploadResponse resend(UUID me, MediaUpload upload, byte[] file, MediaSummary media) {
+  private MediaUploadResponse resend(
+      UUID me, MediaUpload upload, Supplier<byte[]> file, MediaSummary media) {
     if (!media.ownerId().equals(me)) {
       throw new BusinessException(ErrorCode.FORBIDDEN, "남의 mediaId 다");
     }
+    MediaService.requireSamePurpose(media.purpose(), upload.purpose());
     if (upload.purpose() != MediaPurpose.ACTIVITY) {
       return response(media, null, null);
     }
@@ -77,9 +77,10 @@ public class MediaFacade {
         activityService
             .photoOf(media.id())
             .filter(it -> it.activityId().equals(upload.activityId()))
-            .orElseThrow(() -> new BusinessException(ErrorCode.CONFLICT, "다른 용도나 다른 활동으로 올린 사진이다"));
+            .orElseThrow(() -> new BusinessException(ErrorCode.CONFLICT, "다른 활동으로 올린 사진이다"));
+    activityService.requirePhotoTarget(me, upload.activityId());
     // 찾은 물체 목록은 저장하지 않으므로 실려 온 파일로 다시 추론한다 (02-conventions §8)
-    return response(media, photo.photoId(), aiInferenceClient.infer(file));
+    return response(media, photo.photoId(), aiInferenceClient.infer(file.get()));
   }
 
   private MediaUploadResponse fresh(UUID me, MediaUpload upload, byte[] file) {
@@ -103,6 +104,7 @@ public class MediaFacade {
           mediaService.create(
               upload.mediaId(),
               me,
+              upload.purpose(),
               objectKey,
               thumbKey,
               activity ? photo(upload, inference) : null);
@@ -125,7 +127,7 @@ public class MediaFacade {
         takenAt,
         upload.lat(),
         upload.lng(),
-        INFERENCE_OK.equals(inference.status()),
+        inference.status(),
         inference.modelVersion(),
         inference.inferenceMs());
   }

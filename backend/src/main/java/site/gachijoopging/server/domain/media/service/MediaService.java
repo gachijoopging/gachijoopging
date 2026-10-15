@@ -13,13 +13,14 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import site.gachijoopging.server.domain.activity.dto.NewActivityPhoto;
 import site.gachijoopging.server.domain.activity.service.ActivityService;
-import site.gachijoopging.server.domain.media.dto.MediaPurpose;
 import site.gachijoopging.server.domain.media.dto.MediaSummary;
 import site.gachijoopging.server.domain.media.dto.MediaUpload;
 import site.gachijoopging.server.domain.media.entity.Media;
+import site.gachijoopging.server.domain.media.entity.MediaPurpose;
 import site.gachijoopging.server.domain.media.repository.MediaRepository;
 import site.gachijoopging.server.global.error.BusinessException;
 import site.gachijoopging.server.global.error.ErrorCode;
+import site.gachijoopging.server.global.ratelimit.RateLimiter;
 
 @Service
 @RequiredArgsConstructor
@@ -32,6 +33,7 @@ public class MediaService {
 
   private final MediaRepository mediaRepository;
   private final ActivityService activityService;
+  private final RateLimiter rateLimiter;
   private final Clock clock;
 
   public Optional<MediaSummary> find(UUID mediaId) {
@@ -44,11 +46,14 @@ public class MediaService {
     }
   }
 
+  // 남은 media 행을 세면 올리고 지우기를 되풀이해 추론·디스크 상한을 피할 수 있어, 지워도 줄지 않는 시도 수를 센다
+  @Transactional(propagation = Propagation.NOT_SUPPORTED)
   public void checkDailyQuota(UUID ownerId) {
     Instant now = clock.instant();
-    long todayUploadCount =
-        mediaRepository.countByOwnerIdAndCreatedAtGreaterThanEqual(ownerId, kstMidnight(now));
-    if (todayUploadCount >= DAILY_LIMIT) {
+    LocalDate today = LocalDate.ofInstant(now, KST);
+    Duration untilMidnight = Duration.ofSeconds(secondsUntilMidnight(now));
+    if (!rateLimiter.tryAcquire(
+        "media:daily:" + ownerId + ":" + today, DAILY_LIMIT, untilMidnight)) {
       throw new BusinessException(
           ErrorCode.RATE_LIMITED, "오늘 올릴 수 있는 사진을 다 썼다", secondsUntilMidnight(now));
     }
@@ -73,8 +78,14 @@ public class MediaService {
   // media 행도 함께 사라져, 어디에도 붙지 않은 사진이 남지 않는다
   @Transactional
   public Saved create(
-      UUID mediaId, UUID ownerId, String objectKey, String thumbKey, NewActivityPhoto photo) {
-    mediaRepository.insertIfAbsent(mediaId, ownerId, objectKey, thumbKey, clock.instant());
+      UUID mediaId,
+      UUID ownerId,
+      MediaPurpose purpose,
+      String objectKey,
+      String thumbKey,
+      NewActivityPhoto photo) {
+    mediaRepository.insertIfAbsent(
+        mediaId, ownerId, purpose.name(), objectKey, thumbKey, clock.instant());
     Media media =
         mediaRepository
             .findById(mediaId)
@@ -82,8 +93,15 @@ public class MediaService {
     if (!media.getOwnerId().equals(ownerId)) {
       throw new BusinessException(ErrorCode.FORBIDDEN, "남의 mediaId 다");
     }
+    requireSamePurpose(media.getPurpose(), purpose);
     UUID photoId = photo == null ? null : activityService.addPhoto(ownerId, photo);
     return new Saved(MediaSummary.from(media), photoId);
+  }
+
+  public static void requireSamePurpose(MediaPurpose saved, MediaPurpose requested) {
+    if (saved != requested) {
+      throw new BusinessException(ErrorCode.CONFLICT, "다른 용도로 이미 올린 사진이다: " + saved);
+    }
   }
 
   /** 지운 사진의 키를 돌려준다. 파일은 커밋 뒤에 지워야 해서 부른 쪽이 지운다. 없으면 빈 값이다. */
@@ -108,10 +126,6 @@ public class MediaService {
   public void quarantine(String fromKey, String toKey) {
     mediaRepository.quarantineObjectKey(fromKey, toKey);
     mediaRepository.quarantineThumbKey(fromKey, toKey);
-  }
-
-  private static Instant kstMidnight(Instant now) {
-    return LocalDate.ofInstant(now, KST).atStartOfDay(KST).toInstant();
   }
 
   private static long secondsUntilMidnight(Instant now) {

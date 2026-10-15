@@ -1,4 +1,4 @@
-package site.gachijoopging.server.domain.media.dto;
+package site.gachijoopging.server.domain.media.entity;
 
 public enum MediaPurpose {
   ACTIVITY,

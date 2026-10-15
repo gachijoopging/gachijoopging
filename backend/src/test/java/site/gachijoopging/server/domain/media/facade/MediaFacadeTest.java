@@ -35,9 +35,9 @@ import site.gachijoopging.server.domain.media.dto.MediaDtos.BboxResponse;
 import site.gachijoopging.server.domain.media.dto.MediaDtos.InferenceItemResponse;
 import site.gachijoopging.server.domain.media.dto.MediaDtos.InferenceResponse;
 import site.gachijoopging.server.domain.media.dto.MediaDtos.MediaUploadResponse;
-import site.gachijoopging.server.domain.media.dto.MediaPurpose;
 import site.gachijoopging.server.domain.media.dto.MediaSummary;
 import site.gachijoopging.server.domain.media.dto.MediaUpload;
+import site.gachijoopging.server.domain.media.entity.MediaPurpose;
 import site.gachijoopging.server.domain.media.service.MediaImageValidator;
 import site.gachijoopging.server.domain.media.service.MediaService;
 import site.gachijoopging.server.domain.media.service.MediaSignedUrl;
@@ -101,8 +101,12 @@ class MediaFacadeTest {
   @Test
   void 활동이_아니면_추론하지_않고_사진_행도_없다() {
     when(mediaService.find(MEDIA_ID)).thenReturn(Optional.empty());
-    when(mediaService.create(eq(MEDIA_ID), eq(나), anyString(), anyString(), isNull()))
-        .thenAnswer(it -> new MediaService.Saved(받은_키(it.getArgument(2), it.getArgument(3)), null));
+    when(mediaService.create(
+            eq(MEDIA_ID), eq(나), eq(MediaPurpose.PROFILE), anyString(), anyString(), isNull()))
+        .thenAnswer(
+            it ->
+                new MediaService.Saved(
+                    받은_키(MediaPurpose.PROFILE, it.getArgument(3), it.getArgument(4)), null));
 
     MediaUploadResponse 응답 =
         mediaFacade.upload(
@@ -129,7 +133,7 @@ class MediaFacadeTest {
   void 행을_만들다_실패하면_저장한_파일을_지운다() {
     when(mediaService.find(MEDIA_ID)).thenReturn(Optional.empty());
     when(aiInferenceClient.infer(사진)).thenReturn(InferenceResponse.unavailable());
-    when(mediaService.create(any(), any(), anyString(), anyString(), any()))
+    when(mediaService.create(any(), any(), any(), anyString(), anyString(), any()))
         .thenThrow(new BusinessException(ErrorCode.NOT_FOUND, "끝난 활동이다"));
 
     assertThatThrownBy(() -> mediaFacade.upload(나, 활동_사진())).isInstanceOf(BusinessException.class);
@@ -142,7 +146,7 @@ class MediaFacadeTest {
   void 같은_사람의_동시_재전송이_먼저_행을_만들었으면_이번_시도의_파일을_지운다() {
     when(mediaService.find(MEDIA_ID)).thenReturn(Optional.empty());
     when(aiInferenceClient.infer(사진)).thenReturn(담배꽁초_하나());
-    when(mediaService.create(any(), any(), anyString(), anyString(), any()))
+    when(mediaService.create(any(), any(), any(), anyString(), anyString(), any()))
         .thenReturn(new MediaService.Saved(이미_있는_사진(나), 사진_ID));
 
     MediaUploadResponse 응답 = mediaFacade.upload(나, 활동_사진());
@@ -177,7 +181,8 @@ class MediaFacadeTest {
     MediaUploadResponse 응답 = mediaFacade.upload(나, 활동_사진());
 
     verify(storage, never()).store(anyString(), any());
-    verify(mediaService, never()).create(any(), any(), anyString(), anyString(), any());
+    verify(mediaService, never()).create(any(), any(), any(), anyString(), anyString(), any());
+    verify(activityService).requirePhotoTarget(나, 활동);
     assertThat(응답.photoId()).isEqualTo(사진_ID.toString());
     assertThat(응답.inference().status()).isEqualTo("OK");
     assertThat(응답.url()).contains("옛날/키.jpg");
@@ -192,6 +197,44 @@ class MediaFacadeTest {
         .isInstanceOf(BusinessException.class)
         .extracting(e -> ((BusinessException) e).errorCode())
         .isEqualTo(ErrorCode.FORBIDDEN);
+    verify(aiInferenceClient, never()).infer(any());
+  }
+
+  @Test
+  void 남의_mediaId_재전송은_PNG_를_JPEG_로_바꾸지도_않는다() {
+    UUID 남 = UUID.fromString("33333333-3333-3333-3333-333333333333");
+    when(validator.validate(사진)).thenReturn(false);
+    when(mediaService.find(MEDIA_ID)).thenReturn(Optional.of(이미_있는_사진(남)));
+
+    assertThatThrownBy(() -> mediaFacade.upload(나, 활동_사진())).isInstanceOf(BusinessException.class);
+
+    verify(thumbnailer, never()).toJpeg(any());
+  }
+
+  @Test
+  void 활동_사진으로_올린_mediaId_를_다른_용도로_재전송하면_409_다() {
+    when(mediaService.find(MEDIA_ID)).thenReturn(Optional.of(이미_있는_사진(나)));
+
+    assertThatThrownBy(
+            () ->
+                mediaFacade.upload(
+                    나, new MediaUpload(MEDIA_ID, 사진, MediaPurpose.PROFILE, null, null, null, null)))
+        .extracting(e -> ((BusinessException) e).errorCode())
+        .isEqualTo(ErrorCode.CONFLICT);
+  }
+
+  @Test
+  void 끝난_활동의_사진을_재전송하면_추론하지_않고_멈춘다() {
+    when(mediaService.find(MEDIA_ID)).thenReturn(Optional.of(이미_있는_사진(나)));
+    when(activityService.photoOf(MEDIA_ID))
+        .thenReturn(Optional.of(new ActivityPhotoRef(사진_ID, 활동)));
+    doThrow(new BusinessException(ErrorCode.NOT_FOUND, "끝난 활동이다"))
+        .when(activityService)
+        .requirePhotoTarget(나, 활동);
+
+    assertThatThrownBy(() -> mediaFacade.upload(나, 활동_사진()))
+        .extracting(e -> ((BusinessException) e).errorCode())
+        .isEqualTo(ErrorCode.NOT_FOUND);
     verify(aiInferenceClient, never()).infer(any());
   }
 
@@ -235,17 +278,19 @@ class MediaFacadeTest {
   }
 
   private static MediaSummary 이미_있는_사진(UUID owner) {
-    return new MediaSummary(MEDIA_ID, owner, "옛날/키.jpg", "옛날/키_thumb.jpg");
+    return new MediaSummary(MEDIA_ID, owner, MediaPurpose.ACTIVITY, "옛날/키.jpg", "옛날/키_thumb.jpg");
   }
 
   private void 받은_키로_만든다(UUID photoId) {
-    when(mediaService.create(any(), any(), anyString(), anyString(), any()))
+    when(mediaService.create(any(), any(), any(), anyString(), anyString(), any()))
         .thenAnswer(
-            it -> new MediaService.Saved(받은_키(it.getArgument(2), it.getArgument(3)), photoId));
+            it ->
+                new MediaService.Saved(
+                    받은_키(MediaPurpose.ACTIVITY, it.getArgument(3), it.getArgument(4)), photoId));
   }
 
-  private static MediaSummary 받은_키(String objectKey, String thumbKey) {
-    return new MediaSummary(MEDIA_ID, 나, objectKey, thumbKey);
+  private static MediaSummary 받은_키(MediaPurpose purpose, String objectKey, String thumbKey) {
+    return new MediaSummary(MEDIA_ID, 나, purpose, objectKey, thumbKey);
   }
 
   private static boolean 원본_키다(String key) {

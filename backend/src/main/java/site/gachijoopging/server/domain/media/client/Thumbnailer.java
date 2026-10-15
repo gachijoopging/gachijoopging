@@ -18,6 +18,11 @@ public class Thumbnailer {
   private static final int LONG_EDGE = 512;
   private static final double JPEG_QUALITY = 0.92;
 
+  static {
+    // 실행 jar 에서는 ImageIO 가 처음 쓰일 때의 클래스로더가 WebP 플러그인을 못 볼 수 있다
+    ImageIO.scanForPlugins();
+  }
+
   public byte[] of(byte[] original) {
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     try {

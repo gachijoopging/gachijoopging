@@ -37,8 +37,6 @@ public class ActivityService {
 
   // AI 신뢰도가 이보다 낮으면 앱이 "확인 필요" 로 보인다 (feature-scope §AI 줍기)
   private static final float UNCLASSIFIED_BELOW = 0.7f;
-  private static final String INFERENCE_OK = "OK";
-  private static final String INFERENCE_UNAVAILABLE = "UNAVAILABLE";
 
   private final ActivityRepository activityRepository;
   private final ActivityItemRepository itemRepository;
@@ -156,7 +154,7 @@ public class ActivityService {
         photo.lat(),
         photo.lng(),
         photo.takenAt(),
-        photo.inferenceOk() ? INFERENCE_OK : INFERENCE_UNAVAILABLE,
+        photo.inferenceStatus(),
         photo.modelVersion(),
         photo.inferenceMs());
     ActivityRepository.PhotoRow saved =

@@ -4,23 +4,25 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import site.gachijoopging.server.domain.activity.service.ActivityService;
 import site.gachijoopging.server.domain.media.repository.MediaRepository;
 import site.gachijoopging.server.global.error.BusinessException;
 import site.gachijoopging.server.global.error.ErrorCode;
+import site.gachijoopging.server.global.ratelimit.RateLimiter;
 
 @ExtendWith(MockitoExtension.class)
 class MediaServiceTest {
@@ -31,45 +33,39 @@ class MediaServiceTest {
 
   @Mock private MediaRepository mediaRepository;
   @Mock private ActivityService activityService;
+  @Mock private RateLimiter rateLimiter;
 
   private MediaService mediaService() {
-    return new MediaService(mediaRepository, activityService, Clock.fixed(NOW, ZoneOffset.UTC));
+    return new MediaService(
+        mediaRepository, activityService, rateLimiter, Clock.fixed(NOW, ZoneOffset.UTC));
   }
 
   @Test
-  void 한도_미만이면_통과한다() {
-    when(mediaRepository.countByOwnerIdAndCreatedAtGreaterThanEqual(eq(나), any())).thenReturn(299L);
+  void 한도_안이면_통과한다() {
+    when(rateLimiter.tryAcquire(anyString(), eq(300), any())).thenReturn(true);
 
     assertThatCode(() -> mediaService().checkDailyQuota(나)).doesNotThrowAnyException();
   }
 
   @Test
-  void 일일_300장을_채우면_RATE_LIMITED_다() {
-    when(mediaRepository.countByOwnerIdAndCreatedAtGreaterThanEqual(eq(나), any())).thenReturn(300L);
+  void 일일_300장을_채우면_RATE_LIMITED_이고_Retry_After_는_KST_자정까지_남은_초다() {
+    when(rateLimiter.tryAcquire(anyString(), eq(300), any())).thenReturn(false);
 
     assertThatThrownBy(() -> mediaService().checkDailyQuota(나))
         .isInstanceOf(BusinessException.class)
-        .extracting(e -> ((BusinessException) e).errorCode())
-        .isEqualTo(ErrorCode.RATE_LIMITED);
+        .satisfies(
+            e -> {
+              assertThat(((BusinessException) e).errorCode()).isEqualTo(ErrorCode.RATE_LIMITED);
+              assertThat(((BusinessException) e).retryAfterSeconds()).isEqualTo(10 * 3600L);
+            });
   }
 
   @Test
-  void KST_자정부터_센다() {
-    when(mediaRepository.countByOwnerIdAndCreatedAtGreaterThanEqual(eq(나), any())).thenReturn(0L);
+  void KST_날짜별로_세고_자정에_만료된다() {
+    when(rateLimiter.tryAcquire(anyString(), eq(300), any())).thenReturn(true);
 
     mediaService().checkDailyQuota(나);
 
-    ArgumentCaptor<Instant> 기준 = ArgumentCaptor.forClass(Instant.class);
-    verify(mediaRepository).countByOwnerIdAndCreatedAtGreaterThanEqual(eq(나), 기준.capture());
-    assertThat(기준.getValue()).isEqualTo(Instant.parse("2026-08-03T15:00:00Z"));
-  }
-
-  @Test
-  void Retry_After_는_KST_자정까지_남은_초다() {
-    when(mediaRepository.countByOwnerIdAndCreatedAtGreaterThanEqual(eq(나), any())).thenReturn(300L);
-
-    assertThatThrownBy(() -> mediaService().checkDailyQuota(나))
-        .extracting(e -> ((BusinessException) e).retryAfterSeconds())
-        .isEqualTo(10 * 3600L);
+    verify(rateLimiter).tryAcquire("media:daily:" + 나 + ":2026-08-04", 300, Duration.ofHours(10));
   }
 }

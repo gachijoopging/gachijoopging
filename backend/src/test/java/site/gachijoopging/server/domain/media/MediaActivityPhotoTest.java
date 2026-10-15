@@ -18,6 +18,8 @@ import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
@@ -27,6 +29,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 import javax.imageio.ImageIO;
+import javax.sql.DataSource;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -57,6 +60,7 @@ class MediaActivityPhotoTest extends IntegrationTest {
 
   @Autowired private MockMvc mockMvc;
   @Autowired private JdbcTemplate jdbcTemplate;
+  @Autowired private DataSource dataSource;
 
   @Value("${app.media.root}")
   private String 업로드_루트;
@@ -196,6 +200,68 @@ class MediaActivityPhotoTest extends IntegrationTest {
   }
 
   @Test
+  void 다른_용도로_재전송하면_409_고_같은_용도면_200_이다() throws Exception {
+    TestAccount 나 = 크루원이_된다("photo-purpose@test.io");
+    UUID 활동_사진 = UUID.randomUUID();
+    UUID 프로필 = UUID.randomUUID();
+    mockMvc.perform(활동_사진을_올린다(나, 활동_사진, 활동을_시작한다(나), jpeg())).andExpect(status().isOk());
+    mockMvc.perform(올린다(나, 프로필, "PROFILE", jpeg())).andExpect(status().isOk());
+
+    mockMvc.perform(올린다(나, 활동_사진, "PROFILE", jpeg())).andExpect(status().isConflict());
+    mockMvc.perform(올린다(나, 프로필, "POST", jpeg())).andExpect(status().isConflict());
+    mockMvc.perform(올린다(나, 프로필, "PROFILE", jpeg())).andExpect(status().isOk());
+
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT purpose FROM media WHERE id = ?", String.class, 프로필))
+        .isEqualTo("PROFILE");
+  }
+
+  @Test
+  void 끝난_활동의_사진을_재전송하면_404_이고_추론하지_않는다() throws Exception {
+    TestAccount 나 = 크루원이_된다("photo-resend-ended@test.io");
+    UUID 활동 = 활동을_시작한다(나);
+    UUID mediaId = UUID.randomUUID();
+    mockMvc.perform(활동_사진을_올린다(나, mediaId, 활동, jpeg())).andExpect(status().isOk());
+    jdbcTemplate.update(
+        "UPDATE activities SET status = 'ENDED', ended_at = now() WHERE id = ?", 활동);
+    int 전 = AI_호출.get();
+
+    mockMvc.perform(활동_사진을_올린다(나, mediaId, 활동, jpeg())).andExpect(status().isNotFound());
+
+    assertThat(AI_호출.get()).isEqualTo(전);
+  }
+
+  @Test
+  void 지우는_사이_프로필_사진으로_지정되면_지정을_기다렸다가_409_이고_프로필이_남는다() throws Exception {
+    TestAccount 나 = 크루원이_된다("photo-delete-race@test.io");
+    UUID mediaId = UUID.randomUUID();
+    mockMvc.perform(활동_사진을_올린다(나, mediaId, 활동을_시작한다(나), jpeg())).andExpect(status().isOk());
+    ExecutorService 손 = Executors.newSingleThreadExecutor();
+    try (Connection 지정 = dataSource.getConnection()) {
+      지정.setAutoCommit(false);
+      try (PreparedStatement 문 =
+          지정.prepareStatement("UPDATE users SET photo_media_id = ? WHERE id = ?")) {
+        문.setObject(1, mediaId);
+        문.setObject(2, 나.id());
+        문.executeUpdate();
+      }
+      Future<Integer> 삭제 =
+          손.submit(() -> mockMvc.perform(지운다(나, mediaId)).andReturn().getResponse().getStatus());
+      사진_잠금을_기다릴_때까지_본다();
+      지정.commit();
+
+      assertThat(삭제.get()).isEqualTo(409);
+    } finally {
+      손.shutdown();
+    }
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT photo_media_id FROM users WHERE id = ?", UUID.class, 나.id()))
+        .isEqualTo(mediaId);
+  }
+
+  @Test
   void 남의_활동은_403_끝난_활동은_404_activityId_가_없으면_422_이고_아무것도_남지_않는다() throws Exception {
     TestAccount 나 = 크루원이_된다("photo-target@test.io");
     TestAccount 남 = 크루원이_된다("photo-target-other@test.io");
@@ -329,6 +395,21 @@ class MediaActivityPhotoTest extends IntegrationTest {
     mockMvc.perform(지운다(남, mediaId)).andExpect(status().isForbidden());
 
     assertThat(행_수("media", "id", mediaId)).isEqualTo(1);
+  }
+
+  private void 사진_잠금을_기다릴_때까지_본다() throws InterruptedException {
+    for (int i = 0; i < 100; i++) {
+      Integer 대기 =
+          jdbcTemplate.queryForObject(
+              "SELECT count(*) FROM pg_stat_activity"
+                  + " WHERE wait_event_type = 'Lock' AND query ILIKE '%from media%'",
+              Integer.class);
+      if (대기 > 0) {
+        return;
+      }
+      Thread.sleep(50);
+    }
+    throw new AssertionError("삭제 요청이 사진 잠금을 기다리지 않는다");
   }
 
   private Integer 동시에_올린다(CountDownLatch 출발, TestAccount 계정, UUID mediaId) throws Exception {

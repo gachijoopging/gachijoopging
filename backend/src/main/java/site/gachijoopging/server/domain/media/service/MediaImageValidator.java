@@ -20,7 +20,7 @@ public class MediaImageValidator {
   private static final String JPEG = "jpeg";
   private static final Set<String> FORMATS = Set.of(JPEG, "png", "webp");
 
-  public MediaImageValidator() {
+  static {
     // 실행 jar 에서는 ImageIO 가 처음 쓰일 때의 클래스로더가 WebP 플러그인을 못 볼 수 있다
     ImageIO.scanForPlugins();
   }

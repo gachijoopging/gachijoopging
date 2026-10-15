@@ -98,7 +98,7 @@ erDiagram
 | platform | text | NOT NULL. `ANDROID`(iOS 는 이후) |
 | created_at · updated_at | timestamptz | |
 
-**media** — 옛 것 그대로(`owner_id` · `object_key` · `thumb_key`).
+**media** — 옛 것(`owner_id` · `object_key` · `thumb_key`)에 `purpose`(`ACTIVITY` · `POST` · `PROFILE` · `CREW`)를 더했다. 같은 mediaId 를 다른 용도로 다시 보내면 409 로 막으려면 첫 업로드의 용도를 알아야 해서다.
 
 ### 크루
 

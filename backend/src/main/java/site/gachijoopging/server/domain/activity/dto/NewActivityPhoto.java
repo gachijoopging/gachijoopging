@@ -9,6 +9,6 @@ public record NewActivityPhoto(
     Instant takenAt,
     Double lat,
     Double lng,
-    boolean inferenceOk,
+    String inferenceStatus,
     String modelVersion,
     Integer inferenceMs) {}
