@@ -64,8 +64,12 @@ ADR-0005 가 "첫 사용자 전에 한 번 새로 만들어 교체한다" 고 �
 
 ### HTTPS
 
-Nginx 가 443 을 잡고 `/api/v1/...` 를 백엔드로 넘긴다. 백엔드는 루트에서 서비스하는데 계약의 base 가
-`/api/v1` 이라(`openapi.yaml` servers) Nginx 가 `rewrite` 로 접두사를 뗀다.
+Nginx 가 443 을 잡고 `/api/v1/...` 를 **경로 그대로** 백엔드로 넘긴다. 백엔드가 `WebConfig` 의
+`addPathPrefix` 로 모든 컨트롤러에 `/api/v1` 을 스스로 붙이기 때문이다.
+
+> ⚠️ **여기서 접두사를 떼면 안 된다.** `rewrite` 로 떼면 백엔드가 핸들러를 찾지 못하고, 그러면
+> `anyRequest().authenticated()` 에 걸려 **API 전체가 401** 이 된다. 토큰 없는 요청과 응답이 같아
+> 드러나지 않고, `/actuator/health` 는 별도 location 이라 헬스체크도 초록으로 남는다. 사흘 걸렸다.
 
 | 주소 | |
 |---|---|
