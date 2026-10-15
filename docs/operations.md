@@ -194,12 +194,6 @@ Nginx 설정 파일은 그대로 쓰이지 않는다. 컨테이너가 `envsubst`
 | Spring `max-request-size` | 22MB | multipart 경계 포함 |
 | `MediaImageValidator` | 20MB | **계약상 한도.** 422 + 오류 봉투를 내는 유일한 곳 |
 
-### CORS 를 열지 않는다
-
-앱(React Native)은 브라우저가 아니라 Origin 검사를 받지 않는다. AI 서버도 사진 URL 을 읽지 않는다 —
-백엔드가 multipart 로 직접 보낸다(`AiInferenceClient`). 웹에서 쓸 일이 없으므로 web origin 을
-허용하지 않는다(GAC-111).
-
 ## Redis
 
 **지금 쓰는 곳은 레이트리밋 하나다**(`global/ratelimit` · `AuthFacade`). 로그인 10회/이메일,
@@ -322,6 +316,176 @@ cd /opt/gachijoopging && docker compose up -d --force-recreate backend
 | `DATABASE_PASSWORD` | Supabase 콘솔에서 바꾸고 올린다. `$` 가 들어가면 `$$` 로 적는다 |
 
 **터미널·대화·이슈에 값이 노출되면 그 값은 죽은 것으로 본다.** 지웠는지와 무관하게 회전한다.
+
+## 보안
+
+**두 겹인 것은 열린 포트와 DB 뿐이다** — 포트는 Lightsail 방화벽과 compose, DB 는 클라이언트 URL 과
+Supabase Enforce SSL. 나머지는 한 겹이거나 그보다 약하고, 어디가 그런지 아래에 적는다.
+이 절을 읽고 다른 확인을 건너뛰지 않게 하려는 것이다.
+
+### 열린 포트
+
+바깥에 보이는 것은 **22·80·443 뿐**이다.
+
+| | |
+|---|---|
+| 백엔드 8080 | **호스트에 내지 않는다.** Nginx 가 compose 네트워크로 `backend:8080` 에 붙고, healthcheck 는 컨테이너 안에서 `localhost` 를 본다. 되살리면 Nginx 를 우회해 **`/actuator/prometheus` 가 인증 없이** 열리고, **`X-Real-IP` 를 위조**해 `login:ip:` 카운터를 피할 수 있다 |
+| Redis 6379 | 같다. `--requirepass` 까지 걸려 있다(§Redis) |
+| AI · DB | 이 서버에 없다. AI 는 담당자 노트북, DB 는 Supabase |
+
+서버 안에서:
+
+```sh
+sudo ss -tlnp | grep 8080          # 아무것도 안 나와야 한다
+```
+
+compose 가 8080 을 publish 하지 않으므로 **무언가 보이면 누가 `ports:` 를 되살린 것이다.**
+
+밖에서는 전 포트를 센다. 주소는 §구성 의 공개 주소를 쓴다 — 서버를 새로 만들면 IP 가 바뀐다.
+
+```sh
+nmap -Pn -p- www.gachijoopging.site
+```
+
+`nmap` 이 없으면 아래로 대신하되 **범위를 좁힌다.** 위 표가 닫혀 있어야 한다고 적은 8080·6379 를
+반드시 포함한다 — 빼면 누가 `ports:` 를 되살려도 이 확인이 그냥 통과한다.
+
+```sh
+H=www.gachijoopging.site
+p() { timeout 3 bash -c "echo > /dev/tcp/$H/$1" 2>/dev/null && echo "$1"; }
+export H; export -f p
+{ seq 1 1024; echo 6379; echo 8080; } | xargs -P 100 -I{} bash -c 'p {}' | sort -n
+# → 22 · 80 · 443 (약 40초)
+```
+
+> ⚠️ **전 범위(1-65535)를 이 루프로 돌리지 않는다.** 팀 전원 Windows 인데 Git Bash 의 `fork` 가 매우
+> 느려, `-P 600` 으로 돌렸다가 `fork: retry: Resource temporarily unavailable` 로 죽고 그 사이
+> 노트북이 멈췄다. 전 범위가 필요하면 `nmap` 을 쓴다.
+>
+> 병렬을 더 올리거나 타임아웃을 줄이지 않는다. `-P 200`·`timeout 1` 로 돌렸더니 **열려 있는 22 가
+> 누락됐다** — 부하에 밀려 시간초과한 것을 "닫힘" 으로 읽는다.
+>
+> `export -f p H` 로 쓰지 않는다. `-f` 는 **이름 전부를 함수로 취급**해 `H` 는 export 되지 않고,
+> 자식 bash 에서 `$H` 가 비어 `/dev/tcp//22` 가 된다 — 아무 포트도 안 나오는데 원인이 안 보인다.
+
+> 닫힌 것만 나오면 **방법을 먼저 의심한다.** 사내망이 바깥 포트를 막고 있으면 전부 닫힌 것으로 보인다.
+> 22·80·443 이 열린 것으로 나와야 측정이 유효하다.
+
+### SSH
+
+키만 받는다. 서버 기본값이 이미 그렇고, 바꾸지 않았다.
+
+```
+passwordauthentication no
+kbdinteractiveauthentication no
+permitemptypasswords no
+permitrootlogin without-password     # 키로만. 비밀번호로는 못 들어온다
+```
+
+CI 는 **배포 전용 키**로 붙는다. Lightsail 기본 키와 다른 것이라 CI 접근만 따로 끊을 수 있다(§시크릿).
+
+### CORS 를 열지 않는다
+
+**설정이 없는 것이 맞는 상태다.** `SecurityConfig` 에 `.cors(...)` 가 없어 `Access-Control-Allow-*`
+헤더가 아예 나가지 않고, 브라우저가 알아서 교차 출처 읽기를 막는다. 막는 곳은 이 한 겹뿐이다 —
+`.cors(...)` 를 누가 넣는 순간 사라진다.
+
+```sh
+curl -sD - -o /dev/null https://www.gachijoopging.site/api/v1/crews \
+  -H 'Origin: https://evil.example.com' | grep -i 'access-control' || echo "CORS 헤더 없음"
+```
+
+열 이유가 없다 — 앱(React Native)은 브라우저가 아니라 Origin 검사를 받지 않고, 관리자 웹·크루 웹은
+범위 밖이며(`feature-scope.md`), AI 서버는 사진 URL 을 읽지 않는다(백엔드가 multipart 로 직접 보낸다).
+**웹에서 쓸 일이 생기면 그때 Origin 을 하나씩 허용한다.** 미리 열어 두지 않는다.
+
+### rate limit 운영값
+
+**제한이 걸린 곳은 둘뿐이다** — 로그인(`POST /auth/login`)과 재설정 메일 요청(`POST /auth/password-reset`).
+`AuthFacade` 가 `RateLimiter` 를 거는 자리가 그 둘이다.
+
+아래 **인증 경로에는 제한이 없다.** `SecurityConfig` 가 `/api/v1/auth/**` 를 `permitAll` 하므로
+인증도 없다 — 이 표를 보고 "auth 는 막혀 있다" 고 읽지 않는다.
+
+```
+POST /auth/signup                 가입. 무제한
+POST /auth/kakao · /auth/google   소셜. 무제한 (토큰 검증은 외부 호출이다)
+POST /auth/refresh                무제한
+POST /auth/logout                 무제한
+```
+
+`POST /auth/password-reset/confirm` 은 `RateLimiter` 가 아니라 **코드 5회 오답이면 폐기**로 막는다
+(`app.password-reset.max-attempts`). 종류가 다르다.
+
+백엔드 설정이고 `.env` 로 주입하지 않는다 — 환경마다 다를 값이 아니다. 정본은 `application.yml`.
+
+| 키 | 지금 값 | 거는 곳 | 왜 |
+|---|---|---|---|
+| `app.login-rate-limit.window` · `.per-email` · `.per-ip` | 10m · 10 · 50 | `/auth/login` | 이메일 기준은 한 계정 대입, IP 기준은 여러 계정 대입을 막는다 |
+| `app.password-reset.resend-interval` | 60s | `/auth/password-reset` | 같은 이메일로 메일을 연타하지 못하게 |
+| `app.password-reset.per-ip-limit` · `.per-ip-window` | 10 · 1h | `/auth/password-reset` | 한 IP 가 여러 이메일로 메일을 뿌리는 것을 막는다 |
+| `app.password-reset.max-attempts` | 5 | `/auth/password-reset/confirm` | 코드 오답 5회면 폐기. RateLimiter 가 아니다 |
+
+위치 전송(`/app/crew/live`)에도 제한을 두지 않는다. 5초마다 보내는 것이 정상 동작이고(`realtime.md`),
+여기에 제한을 걸면 **정상 사용자가 먼저 막힌다.**
+
+**IP 기준 제한은 위조할 수 있다.** `AuthController.clientIp()` 가 `X-Real-IP` 를 검증 없이 믿는다.
+지금은 Nginx 만 그 헤더를 쓰고 8080 이 바깥에 없어 닿지 못하지만, 그 전제가 깨지면(위 표 "백엔드 8080")
+IP 카운터는 의미가 없어진다.
+
+**제한은 0겹이 될 수 있다.** `RateLimiter` 는 fail-open 이라 Redis 에 못 붙으면 로그인은 되고 제한만
+사라진다. 확인 방법은 §Redis 에 있다 — 여기 옮겨 적지 않는다.
+
+> ⚠️ 그 확인 루프는 `login:ip:` 카운터(50/10m)도 함께 쓴다. **공용 IP(SSAFY 처럼 한 NAT 뒤)에서
+> 다섯 번 돌리면 같은 망의 모든 사람이 10분간 429 를 받는다.** 핫스팟 등 개인 회선에서 돌린다.
+
+### DB — 두 겹
+
+| | |
+|---|---|
+| 클라이언트 | `DATABASE_URL` 에 `?sslmode=require`. 백엔드가 TLS 가 아니면 붙지 않는다 |
+| 서버 | Supabase **Enforce SSL**. 평문으로 들어오는 접속을 거부한다 |
+
+둘 다 확인한다. **서버 쪽은 상태가 바뀔 수 있으니 결과만 믿지 말고 다시 돌린다.**
+
+```sh
+# ① 클라이언트 겹 — 운영 .env 에 붙어 있나
+grep -o 'sslmode=[a-z-]*' /opt/gachijoopging/.env
+
+# ② 서버 겹 — 평문이 거부되나. disable 이 실패해야 켜져 있는 것이다
+#
+# mktemp 는 처음부터 0600 으로 만든다. `> /tmp/e` 는 umask(보통 0644)로 먼저 만들어져
+# chmod 전까지 남에게 읽히고, 중간에 끊기면 비밀번호가 든 평문 파일이 그대로 남는다.
+# trap 을 거는 이유도 그것이다.
+E=$(mktemp) && trap 'rm -f "$E"' EXIT
+sed 's/\$\$/$/g' /opt/gachijoopging/.env > "$E"
+
+# 호스트는 백엔드가 실제로 붙는 곳에서 꺼낸다. 박아 두면 프로젝트를 옮겼을 때
+# 백엔드와 다른 엔드포인트를 검사하고도 통과한다.
+H=$(sed -n 's|^DATABASE_URL=jdbc:postgresql://||p' "$E" | sed 's|[:/].*||')
+
+for m in disable prefer require; do
+  printf 'sslmode=%-8s → ' "$m"
+  docker run --rm --env-file "$E" postgres:16-alpine sh -c \
+    "PGPASSWORD=\$DATABASE_PASSWORD psql \"host=$H port=5432 user=\$DATABASE_USER dbname=postgres sslmode=$m\" -tAc 'select 1'" 2>&1 | tail -1
+done
+```
+
+`.env` 를 그대로 `--env-file` 로 넘기지 않고 `$$` 를 먼저 푸는 이유는 §배포 에 있다.
+
+2026-10-14 결과:
+
+```
+sslmode=disable  → FATAL: (ESSLREQUIRED) SSL connection is required for user: postgres
+sslmode=prefer   → 1
+sslmode=require  → 1
+```
+
+> **`?sslmode=require` 를 떨어뜨려도 평문이 되지는 않는다.** pgjdbc 기본값 `prefer` 는 TLS 를 먼저
+> 시도하고, 서버가 거부할 때만 평문으로 떨어진다. 잃는 것은 평문이 아니라 **보장**이다 — 그리고 그 떨어짐은
+> 조용하다. 그래서 두 겹을 둔다. Enforce SSL 을 켜기 전에는 `sslmode=disable` 로 평문 접속이 실제로 됐다.
+
+**네트워크 제한**(서버 IP 만 허용)은 유료 플랜 기능이라 걸지 못했다. 플랜을 올리면 §구성 의 고정 IP 를 넣는다.
 
 ## 감시
 
