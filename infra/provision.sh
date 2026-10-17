@@ -78,7 +78,6 @@ sudo chown -R "$(id -un):$(id -gn)" "$APP_DIR"
 sudo chown -R "$APP_UID:$APP_UID" "$MEDIA_DIR"
 echo "$APP_DIR · $MEDIA_DIR (소유자 $APP_UID)"
 
-
 # ── 배포 키 ────────────────────────────────────────────────────────
 # CI(deploy.yml)가 이 키로 붙는다. 없으면 배포가 안 되는데, 그 사실이
 # 첫 머지 때까지 드러나지 않는다. 공개키라 인자로 받아도 안전하다.

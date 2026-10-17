@@ -83,6 +83,9 @@ foreach ($key in $serverOwned) {
     $remoteValue = ''
     if ($hasRemoteEnv) {
         $remoteValue = (& ssh -i $KeyFile -o BatchMode=yes $Target "sed -n 's/^${key}=//p' $Remote" | Select-Object -First 1)
+        # 여기서 멈추지 않으면 읽기 실패가 빈 값으로 둔갑해 서버의 $key 를 지운다.
+        # test -f 가 통과한 뒤에도 이 ssh 는 따로 실패할 수 있다.
+        if ($LASTEXITCODE -ne 0) { throw "서버 값을 읽지 못했다($key): $Target" }
         Write-Host ("서버 값을 가져왔다: {0}={1}" -f $key, $(if ($remoteValue) { $remoteValue } else { '(빈 값)' }))
     }
     $lines = $lines | ForEach-Object {

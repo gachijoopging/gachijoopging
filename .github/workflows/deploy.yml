@@ -57,7 +57,8 @@ jobs:
           printf '%s\n' "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           # keyscan 으로 그때그때 받으면 아무 키나 믿는다는 뜻이다. 호스트 키는 공개 값이라 박아 둔다.
-          echo '13.125.10.7 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOeOHFjZ0ZK/FXfxqeIib8YEXg9iQ9Gbz2yyHwBFVKl4' > ~/.ssh/known_hosts
+          # 서버를 교체하면 이 값도 바꿔야 한다 — 안 바꾸면 다음 배포가 Host key verification failed 로 멈춘다.
+          echo '13.125.10.7 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINIQ8CPGdkpe6QKCzeL4j5x33ngaX5nzme5n0iyUPgt+' > ~/.ssh/known_hosts
 
       # 설정도 같이 올린다. 서버에 저장소를 두지 않으므로 이 파일들이 유일한 사본이다.
       - name: 설정 올리기

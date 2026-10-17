@@ -57,25 +57,48 @@ ADR-0005 가 "첫 사용자 전에 한 번 새로 만들어 교체한다" 고 �
 | 1 | 새 인스턴스 생성 + `provision.sh` (위) | 콘솔 → 서버 |
 | 2 | `infra/dev-env.ps1 -Target ubuntu@<임시 IP>` 로 `.env` 올리기. 새 서버엔 `.env` 가 없으므로 `IMAGE_TAG` 는 비어서 올라간다 — 정상이다 | 로컬 |
 | 3 | `docker-compose.yml`·`deploy.sh`·`nginx/nginx.conf` 를 올린다(`deploy.yml` 이 보내는 것과 같다) | 로컬 |
-| 4 | `IMAGE_TAG` 를 옛 서버 값으로 적고 **`redis`·`backend` 만** 띄워 healthy 를 본다 | 서버 |
-| 5 | 고정 IP 를 **새 인스턴스로 옮긴다**(콘솔 `Networking` → `분리` → `연결`). 새로 만들지 않는다 | 콘솔 |
-| 6 | 인증서 최초 발급(§HTTPS) | 서버 |
-| 7 | `docker compose up -d` — 이제 `nginx`·`certbot` 까지 올라온다 | 서버 |
-| 8 | 옛 인스턴스를 **중지**하고, 아래 ⚠️ 대로 남은 세션을 끊은 뒤 백엔드를 다시 만든다 | 콘솔 → 서버 |
-| 9 | 사진이 있으면 옮긴다 — `rsync -a` 로 `/data/uploads` 를. 소유자 10001 을 유지해야 한다 | 서버 |
-| 10 | 확인 뒤 옛 인스턴스는 **스냅샷 하나 남기고 삭제**한다. 중지만 하면 과금이 계속된다 | 콘솔 |
+| 4 | `IMAGE_TAG` 를 옛 서버 값으로 적고 **`redis`·`backend` 만** 띄워 healthy 를 본다. 풀을 줄여서 띄운다(아래) | 서버 |
+| 5 | `.github/workflows/deploy.yml` 의 `known_hosts` 를 **새 호스트 키로 바꾼다**(아래) | 로컬 |
+| 6 | 고정 IP 를 **새 인스턴스로 옮긴다**(콘솔 `Networking` → `분리` → `연결`). 새로 만들지 않는다 | 콘솔 |
+| 7 | 인증서 최초 발급(§HTTPS) | 서버 |
+| 8 | `docker compose up -d` — 이제 `nginx`·`certbot` 까지 올라온다 | 서버 |
+| 9 | 옛 인스턴스를 **중지**하고, 아래 ⚠️ 대로 남은 세션을 끊은 뒤 백엔드를 다시 만든다 | 콘솔 → 서버 |
+| 10 | 사진이 있으면 옮긴다 — `rsync -a` 로 `/data/uploads` 를. 소유자 10001 을 유지해야 한다 | 서버 |
+| 11 | 확인 뒤 옛 인스턴스는 **스냅샷 하나 남기고 삭제**한다. 중지만 하면 과금이 계속된다 | 콘솔 |
 
 **4번이 순서의 핵심이다.** 도메인을 옮기기 전에 백엔드가 뜨는 것을 봐 두면, 새 IP 에서 DB·Redis 에
 닿는지를 사이트가 내려간 상태에서 디버깅하지 않아도 된다. 8080 은 외부에 열려 있지 않으므로
 (§열린 포트) 컨테이너 망 안에서 확인한다.
 
 ```sh
+# 옛 백엔드가 아직 커넥션을 쥐고 있다. 기본 풀(10)로 띄우면 상한 15 를 넘는다 — 아래 ⚠️ 와 같은 사고다.
+SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE=3 docker compose up -d redis backend
+
 docker run --rm --network gachijoopging_default curlimages/curl \
   -sS -o /dev/null -w '%{http_code}\n' http://backend:8080/actuator/health
 ```
 
-> ⚠️ **6번을 5번보다 먼저 하지 않는다.** 고정 IP 가 아직 옛 서버를 가리키는 동안 발급을 시도하면
-> acme 챌린지가 옛 서버로 가서 실패한다. Let's Encrypt 는 같은 도메인에 **주당 5회** 제한이 있다.
+> ⚠️ **4번의 healthy 를 그대로 믿지 않는다.** Hikari 는 기동에 커넥션 하나만 열어 보고 통과시킨 뒤
+> 나머지를 뒤에서 채운다. 그래서 풀을 안 줄이고 띄우면 **healthy 가 먼저 뜨고 몇 분 뒤에 죽는다.**
+> 교체 때 실제로 그랬다 — 4번이 15초 만에 healthy 였고, 8분 뒤 운영이 503 이 됐다.
+> 풀을 줄여 띄웠다면 9번 뒤에 `--force-recreate` 로 기본값으로 되돌린다.
+
+**5번을 빠뜨리면 다음 `main` 머지가 깨진다.** `deploy.yml` 은 호스트 키를 박아 두는데(keyscan 은 아무
+키나 믿는다는 뜻이라 안 쓴다), 인스턴스를 바꾸면 그 키가 바뀐다. 고정 IP 를 옮겨도 키는 새 기계 것이다.
+
+```sh
+ssh ubuntu@<새 서버> 'cat /etc/ssh/ssh_host_ed25519_key.pub'   # 이 값이 정본
+ssh-keyscan -t ed25519 13.125.10.7                             # 둘이 같아야 중간자가 아니다
+ssh-keygen -R 13.125.10.7                                      # 로컬 known_hosts 도 지운다
+```
+
+로컬에서 `REMOTE HOST IDENTIFICATION HAS CHANGED` 경고가 뜨는 것은 **정상이다.** 같은 IP 가 다른
+기계를 가리키게 됐으니 경고가 맞다. 위 두 값을 대조해 같으면 지우고 다시 받는다.
+
+> ⚠️ **7번을 6번보다 먼저 하지 않는다.** 고정 IP 가 아직 옛 서버를 가리키는 동안 발급을 시도하면
+> acme 챌린지가 옛 서버로 가서 실패한다. 걸리는 제한은 둘이고 성격이 다르다 —
+> **실패한 검증**은 호스트명당 **시간당 5회**(여기 먼저 걸린다), **같은 이름 조합의 재발급**은
+> **주당 5회**다. 교체로 다시 받는 것은 뒤쪽에 들어가므로, 시행착오로 앞쪽을 태우면 한 시간을 기다린다.
 
 > ⚠️ **옛 서버를 끈다고 DB 커넥션이 돌아오지 않는다.** Supabase pooler 는 session mode(5432)라
 > 클라이언트 하나가 커넥션 하나를 끝까지 쥐는데, 호스트가 갑자기 죽으면 pooler 는 TCP 타임아웃까지
@@ -88,8 +111,10 @@ docker run --rm --network gachijoopging_default curlimages/curl \
 > ```sh
 > PW=$(sed -n 's/^DATABASE_PASSWORD=//p' .env | sed 's/\$\$/$/g')   # $$ 를 푸는 이유는 §배포
 > U=$(sed -n 's/^DATABASE_USER=//p' .env)
+> # 호스트를 박아 두면 리전을 옮겼을 때 엉뚱한 곳을 보고도 통과한다. §DB 와 같은 이유다.
+> H=$(sed -n 's|^DATABASE_URL=jdbc:postgresql://||p' .env | sed 's|[:/].*||')
 > docker run --rm -e PGPASSWORD="$PW" postgres:17-alpine \
->   psql -h aws-0-ap-northeast-2.pooler.supabase.com -p 6543 -U "$U" -d postgres -c \
+>   psql -h "$H" -p 6543 -U "$U" -d postgres -c \
 >   "select pg_terminate_backend(pid) from pg_stat_activity
 >    where usename='postgres' and application_name='PostgreSQL JDBC Driver' and state='idle';"
 > docker compose up -d --force-recreate backend
