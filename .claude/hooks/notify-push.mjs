@@ -85,11 +85,16 @@ let hook;
 try { hook = parseEnv(readFileSync(join(root, '.env'), 'utf8')).MM_WEBHOOK_URL; } catch { process.exit(0); }
 if (!hook) process.exit(0);
 
-try {
-  let text = null;
-  if (/\bgit\s+push\b/.test(command)) text = devOrMainPush();
-  else if (/\bgh\s+pr\s+create\b/.test(command)) text = prOpened(input);
-  else if (/\bgh\s+pr\s+merge\b/.test(command)) text = prMerged(input);
-
-  if (text) await send(hook, text);
-} catch { /* 네트워크·gh 호출 실패로 작업을 막지 않는다 */ }
+// `git push && gh pr create` 처럼 한 명령에 여럿이 묶여 와도 각각 본다
+const checks = [
+  [/\bgit\s+push\b/, () => devOrMainPush()],
+  [/\bgh\s+pr\s+create\b/, () => prOpened(input)],
+  [/\bgh\s+pr\s+merge\b/, () => prMerged(input)],
+];
+for (const [pattern, compose] of checks) {
+  if (!pattern.test(command)) continue;
+  try {
+    const text = compose();
+    if (text) await send(hook, text);
+  } catch { /* 네트워크·gh 호출 실패로 작업을 막지 않는다 */ }
+}
