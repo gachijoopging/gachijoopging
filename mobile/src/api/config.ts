@@ -35,6 +35,11 @@ export function createApiClient(options: MockOptions = {}): ApiClient {
     get(key, query) {
       // ponytail: 서버에 동의 API 가 없다. 목 example(complete:false)을 그대로 주면 로그인마다 1-5 로 돌아간다. 동의 API 가 생기면 REAL_KEYS 로 옮기고 지운다
       if (key === 'GET /users/me/agreements') return Promise.resolve(MOCKS['PUT /users/me/agreements'] as ApiResponse<typeof key>);
+      // ponytail: 서버에 홈 통계 API 가 없어 2-1 숫자는 목이다. 방금 가입한 크루와 다른 이름이 머리에 보이지 않게 크루만 실서버 값으로 바꾼다. 통계 API 가 생기면 REAL_KEYS 로 옮기고 지운다
+      if (key === 'GET /crew/home') {
+        return Promise.all([mock.get(key, query), http.get('GET /crew')])
+          .then(([home, crew]) => ({ data: { ...home.data, crew: { id: crew.data.id, name: crew.data.name } } }) as ApiResponse<typeof key>);
+      }
       return REAL_KEYS.has(key) ? http.get(key, query) : mock.get(key, query);
     },
     mutate: (key, body) => (REAL_KEYS.has(key) ? http.mutate(key, body) : mock.mutate(key, body)),

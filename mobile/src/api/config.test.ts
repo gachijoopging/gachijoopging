@@ -16,7 +16,8 @@ import { MOCKS } from './mocks.generated';
 process.env.EXPO_PUBLIC_API_MODE = 'real';
 const { apiConfig, createApiClient } = require('./config') as typeof import('./config');
 
-const fetch = jest.fn(async (_url: string) => ({ ok: true, status: 200, text: async () => JSON.stringify({ data: { ok: true } }) }));
+const fetch = jest.fn(async (url: string) => ({ ok: true, status: 200, text: async () =>
+  JSON.stringify({ data: url.endsWith('/crew') ? { id: 'c9', name: '방금가입한크루' } : { ok: true } }) }));
 beforeEach(() => {
   fetch.mockClear();
   globalThis.fetch = fetch as unknown as typeof globalThis.fetch;
@@ -35,6 +36,12 @@ test('실 모드에서도 백엔드에 없는 경로는 목 응답을 준다', a
   await expect(api.get('GET /crew/posts', { scope: 'CREW' })).resolves.toEqual(await createMockClient().get('GET /crew/posts', { scope: 'CREW' }));
   await expect(api.mutate('POST /activities', { id: 'a1' })).resolves.toBe(MOCKS['POST /activities']);
   expect(fetch).not.toHaveBeenCalled();
+});
+
+test('홈 통계는 목이어도 머리의 크루는 실서버의 내 크루다', async () => {
+  const { data } = await createApiClient().get('GET /crew/home');
+  expect(data.crew).toEqual({ id: 'c9', name: '방금가입한크루' });
+  expect(data.last7d).toEqual(MOCKS['GET /crew/home'].data.last7d);
 });
 
 test('서버에 동의 API 가 없는 동안 동의는 완료로 본다 — 로그인마다 1-5 로 돌아가지 않게', async () => {
