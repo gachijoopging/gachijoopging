@@ -1,0 +1,66 @@
+# 바깥에서 공개 주소를 찌른다. 감시 두 겹 중 바깥쪽이다.
+#
+# 서버 안의 watch.sh 는 서버가 통째로 꺼지면 같이 죽어서 아무 말도 못 한다.
+# 전원·네트워크가 나간 것을 잡으려면 우리 서버 밖에서 도는 것이 하나 있어야 하고,
+# 이미 쓰는 GitHub Actions 가 그 조건을 만족한다(공개 레포라 분은 무료다).
+#
+# 외부 감시 서비스(UptimeRobot 등)를 쓰지 않는 이유는 가입에 이메일이 필요해서다.
+# 정확도는 그쪽이 낫지만 5분 단위 지연은 3명 팀이 감당할 수 있다.
+#
+# 스케줄은 밀린다 — GitHub 가 큐를 뒤로 미루면 10~20분이 될 수 있다. 분 단위 정확도가
+# 필요해지면 그때 외부 서비스로 옮긴다.
+name: watch
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch: {}   # 수동 실행 — 완료 조건 검증용
+
+permissions:
+  contents: read
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: 공개 주소와 인증서
+        env:
+          HOOK: ${{ secrets.MM_WEBHOOK_URL }}
+          BASE: https://www.gachijoopging.site
+          CERT_WARN_DAYS: '30'
+        run: |
+          set -euo pipefail
+
+          # username override 는 이 워크스페이스에서 꺼져 있어 무시된다. 머리말 이모지로 구별한다.
+          say() {
+            jq -nc --arg t "$1" '{text:$t}' \
+              | curl -sS -f -X POST -H 'Content-Type: application/json' -d @- "$HOOK" >/dev/null
+          }
+
+          # 한 번 실패했다고 바로 알리지 않는다. 배포 중 재기동과 구분이 안 되기 때문이다.
+          # 여기는 상태를 들고 있을 수 없으므로(실행마다 새 러너) 그 자리에서 다시 본다.
+          code=000
+          for _ in 1 2 3; do
+            code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 15 "$BASE/actuator/health" || echo 000)
+            [ "$code" = 200 ] && break
+            sleep 20
+          done
+
+          if [ "$code" != 200 ]; then
+            say ":rotating_light: **바깥에서 안 보인다** — \`$BASE/actuator/health\` 가 3회 연속 HTTP $code. 서버 전원·네트워크·Nginx 를 본다."
+            exit 1
+          fi
+          echo "health 200"
+
+          # 인증서는 Let's Encrypt 가 만료를 알려 주지 않으므로(2025-06-04 발송 중단) 직접 센다.
+          # 자동 갱신이 조용히 실패하면 만료일에 브라우저가 사이트를 막는다.
+          end=$(echo | openssl s_client -servername www.gachijoopging.site \
+                -connect www.gachijoopging.site:443 2>/dev/null \
+                | openssl x509 -noout -enddate | cut -d= -f2)
+          left=$(( ( $(date -u -d "$end" +%s) - $(date -u +%s) ) / 86400 ))
+          echo "인증서 ${left}일 남음 ($end)"
+
+          if [ "$left" -le "$CERT_WARN_DAYS" ]; then
+            say ":warning: **인증서 ${left}일 남음** ($end). 자동 갱신이 멈춘 것인지 본다 — \`docker compose logs certbot\`."
+          fi

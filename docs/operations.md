@@ -609,15 +609,74 @@ sslmode=require  → 1
 헬스체크와 바깥에서 찌르는 것, 둘을 함께 쓴다. 서버가 통째로 꺼지면 자기 자신에게 묻는 헬스체크도 같이
 죽어서 아무도 모르기 때문이다.
 
-| 층 | 무엇 | 잡는 것 |
-|---|---|---|
-| 서버 안 | `/actuator/health`(readiness·liveness) | 백엔드 프로세스·DB 연결 |
-| 바깥 | 외부 모니터링이 공개 주소를 주기적으로 호출 | 전원·네트워크·인증서 만료 |
-| 알림 | `node infra/notify.mjs` 로 Mattermost | — |
+| 층 | 무엇 | 주기 | 잡는 것 |
+|---|---|---|---|
+| 서버 안 | `infra/watch.sh` (cron) | 5분 | 백엔드·Redis·소켓·AI 가 죽음 |
+| 서버 안 | `infra/watch.sh --limits` (cron) | 하루 1회 | ADR-0005 재검토 조건(디스크·DB) |
+| 바깥 | `.github/workflows/watch.yml` | 5분 | **전원·네트워크가 통째로 나감** · 인증서 만료 |
+| 알림 | 둘 다 Mattermost 수신 웹훅 | — | — |
+
+바깥쪽이 따로 있는 이유가 핵심이다. **서버가 꺼지면 `watch.sh` 도 같이 죽어서 아무 말도 못 한다.**
+그러면 조용한 것이 정상처럼 보인다. 그래서 우리 서버 밖에서 도는 것이 하나 있어야 한다.
+
+외부 감시 서비스(UptimeRobot 등) 대신 GitHub Actions 를 쓴다 — 가입에 이메일이 필요 없고 공개 레포라
+분(minute)이 무료다. 대신 스케줄이 밀려 5분이 10~20분이 될 수 있다. 분 단위 정확도가 필요해지면 그때 옮긴다.
+
+> ⚠️ **스케줄 워크플로는 기본 브랜치(`dev`)에서만 돈다.** 브랜치에 올려 둔 것만으로는 아무 일도 일어나지
+> 않고, `workflow_dispatch` 로 손으로 돌리는 것도 안 된다.
+
+### 알림 규칙
+
+**연속 2회 실패에 1번, 복구에 1번. 그 사이 반복은 없다.**
+
+| | |
+|---|---|
+| 1회로 알리면 | 배포 중 재기동(약 25초)마다 울린다 |
+| 죽어 있는 동안 계속 알리면 | 알림을 무시하는 습관이 생긴다 — **그러면 감시가 없는 것보다 나쁘다.** 있다고 믿는데 안 보기 때문이다 |
+
+상태는 `/opt/gachijoopging/.watch-state` 에 "이름 연속실패횟수" 로 남는다. 바뀌는 순간에만 보낸다.
+
+소켓은 토큰 없이 **401 이면 정상**이다 — Spring 까지 닿았다는 뜻이다. 백엔드가 죽으면 Nginx 가 502 를,
+네트워크가 끊기면 000 을 준다. AI 는 `AI_BASE_URL` 이 비어 있으면 건너뛴다. 아직 연결 전이라는 것을
+5분마다 쏘면 그게 소음이다.
+
+`watch.sh` 는 백엔드를 따로 찌르지 않는다. compose 가 이미 10초마다 healthcheck 를 돌리므로
+`docker inspect` 로 그 결과를 읽는다 — 같은 일을 두 번 하지 않는다.
+
+> Mattermost 의 username override 는 이 워크스페이스에서 꺼져 있다. 보낸 사람은 웹훅 주인 이름으로
+> 나가고, 구별은 머리말 이모지(🚨 다운 · ✅ 복구 · ⚠️ 한계)로 한다.
 
 **Prometheus·Grafana 는 되살리지 않는다.** 옛 구성에 있었고 `application.yml` 에 아직
 `/actuator/prometheus` 노출이 남아 있지만, 3명이 쓰는 규모에서 그래프를 보는 사람이 없다. 수집기만
 나중에 붙이면 되도록 노출은 그대로 둔다.
+
+## 장애 대응
+
+알림이 왔을 때 무엇부터 보는지. **먼저 고치지 말고 먼저 본다** — 되돌릴 수 없는 것부터 피한다.
+
+| 알림 | 먼저 볼 것 |
+|---|---|
+| 🚨 백엔드 응답 없음 | `docker compose logs --tail 50 backend`. DB·Redis 자격이나 Flyway 에서 죽는 일이 많다 |
+| 🚨 소켓 `HTTP 502` | 백엔드가 죽은 것이다. 위와 같다 — 소켓만 따로 깨지는 경우는 드물다 |
+| 🚨 소켓 `HTTP 401` 아닌 4xx | Nginx 설정이 바뀌었다. **`/api/v1` 접두사를 떼지 않았는지** 본다(§HTTPS) |
+| 🚨 바깥에서 안 보인다 | 서버 전원·Lightsail 방화벽·DNS. `ssh` 가 되는지부터 본다 |
+| 🚨 Redis 응답 없음 | `REDIS_PASSWORD` 불일치가 가장 흔하다(§Redis). rate limit 이 조용히 열린 상태다 |
+| ⚠️ 인증서 N일 남음 | `docker compose logs certbot`. 갱신이 멈춘 것이다 |
+| ⚠️ 디스크·DB 한계 | 장애가 아니라 **신호**다. ADR-0005 를 다시 연다 |
+
+```sh
+ssh ubuntu@13.125.10.7
+cd /opt/gachijoopging
+docker compose ps                      # 뭐가 죽었나
+docker compose logs --tail 50 backend  # 왜 죽었나
+./watch.sh                             # 지금도 죽어 있나
+tail -50 /var/log/gachijoopging-watch.log
+```
+
+되돌리는 것은 `./deploy.sh` (인자 없이) 로 직전 태그로 간다 — §롤백.
+
+> ⚠️ **호스트가 통째로 죽었다 살아났으면 DB 커넥션이 안 돌아온다.** Supabase pooler 가 죽은 세션을
+> 쥔 채로 상한을 채운다. 끊는 방법은 §서버를 교체할 때 의 ⚠️ 에 있다.
 
 ## `.env` 키
 
@@ -630,6 +689,7 @@ sslmode=require  → 1
 |---|---|---|
 | `DOCKERHUB_USER` · `IMAGE_TAG` | 배포 스크립트 | 이미지 좌표. `IMAGE_TAG` 는 deploy.sh 가 갱신 |
 | `PUBLIC_BASE_URL` | 백엔드 | 서명 URL·메일 링크의 기준 |
+| `MM_WEBHOOK_URL` | `watch.sh` | 서버가 죽은 것을 알릴 Mattermost 수신 웹훅. 루트 `.env` 의 같은 이름과 값이 같아도 되지만 역할이 다르다 — 그쪽은 각자의 로컬 알림이고 이쪽은 **서버가 스스로** 보내는 것이다. 비면 감시는 돌되 알리지 못한다 |
 | `DATABASE_URL` · `DATABASE_USER` · `DATABASE_PASSWORD` | 백엔드 | Supabase 접속. 옛 `POSTGRES_*` 는 컨테이너용이라 없어진다 |
 | `REDIS_HOST` · `REDIS_PORT` · `REDIS_PASSWORD` | 백엔드 | 레이트리밋(`global/ratelimit`). 운영은 비밀번호 필수 — 없으면 백엔드가 `NOAUTH` 를 맞고 제한이 **조용히** 꺼진다 |
 | `JWT_ACTIVE_KID` · `JWT_PRIVATE_KEY_PEM` · `JWT_PUBLIC_KEY_PEM` · `JWT_PREVIOUS_*` | 백엔드 | 토큰 서명. kid 회전용 이전 키 |
