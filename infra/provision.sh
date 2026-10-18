@@ -7,7 +7,8 @@
 # 여러 번 돌려도 안전하다 — 이미 돼 있으면 건너뛴다.
 #
 #   ssh -i <키>.pem ubuntu@<고정 IP>
-#   curl -fsSL https://raw.githubusercontent.com/gachijoopging/gachijoopging/dev/infra/provision.sh | sh
+#   curl -fsSL -o provision.sh https://raw.githubusercontent.com/gachijoopging/gachijoopging/dev/infra/provision.sh \
+#     && sh provision.sh
 #   (또는 저장소를 받아서) sh infra/provision.sh
 #
 # 고정 IP 와 방화벽(22·80·443)은 Lightsail 콘솔 작업이라 여기서 하지 못한다.

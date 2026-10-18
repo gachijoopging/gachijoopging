@@ -74,7 +74,9 @@ ADR-0005 가 "첫 사용자 전에 한 번 새로 만들어 교체한다" 고 �
 
 ```sh
 # 새 서버에서. 옛 서버 키는 로컬의 Lightsail 키를 잠깐 올려 쓰고 끝나면 지운다
-sudo rsync -a -e "ssh -i ~/old-key.pem" --rsync-path="sudo rsync" \
+# 키는 절대 경로로 쓴다. sudo 아래의 ssh 는 ~ 를 root 의 홈(/root)으로 펼친다.
+# root 의 known_hosts 에는 옛 서버가 없어서 처음에 호스트 키를 묻는다 — 콘솔의 옛 서버 IP 가 맞으면 yes.
+sudo rsync -a -e "ssh -i /home/ubuntu/old-key.pem" --rsync-path="sudo rsync" \
   ubuntu@<옛 서버 임시 IP>:/data/uploads/ /data/uploads/
 sudo find /data/uploads ! -uid 10001 | head    # 아무것도 안 나와야 한다
 ```
