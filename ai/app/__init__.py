@@ -4,7 +4,7 @@
 - `infer` — 모델 로드·워밍업·추론. GPU 작업은 전용 스레드 1개에서만 돈다
 - `preprocess` — EXIF 정방향 보정 (전처리의 전부)
 - `classes` — 7종 카테고리와 W1 임시 COCO 매핑
-- `calibrate` — confidence 보정 (W4 ⑯ 에서 채운다)
+- `calibrate` — confidence 보정. 항등 함수 (⑯ 은 범위 밖으로 닫혔다)
 - `config` — 환경 설정. import 시점에 시크릿·임계값을 검증한다
 """
 
