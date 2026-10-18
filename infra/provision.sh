@@ -19,6 +19,7 @@ SWAP_SIZE=2G
 SWAP_FILE=/swapfile
 APP_DIR=/opt/gachijoopging
 MEDIA_DIR=/data/uploads
+WATCH_LOG=/var/log/gachijoopging-watch.log
 # backend/Dockerfile 이 만드는 비루트 사용자. 호스트 쪽 소유자를 맞추지 않으면 업로드가 전부 막힌다.
 APP_UID=10001
 
@@ -104,6 +105,27 @@ else
     echo "넣었다"
   fi
 fi
+
+# ── 감시 ───────────────────────────────────────────────────────────
+# watch.sh 는 deploy.yml 이 올린다. 여기서는 그것을 부를 cron 과 로그 자리만 만든다.
+# 이것이 빠지면 새 서버에서 감시가 조용히 사라지는데, 감시가 없어진 것은
+# 아무도 알려 주지 않으므로 가장 늦게 발견된다.
+log "감시 cron"
+# 로그는 ubuntu 가 써야 한다. /var/log 는 root 소유라 미리 만들어 주지 않으면 cron 이 조용히 실패한다.
+# 이미 있으면 건드리지 않는다 — install 은 있는 파일을 비워서, 장애를 조사하던 중에 다시 돌리면
+# 증거가 사라진다.
+if [ -f "$WATCH_LOG" ]; then
+  echo "로그 이미 있다: $WATCH_LOG"
+else
+  sudo install -o "$(id -un)" -g "$(id -gn)" -m 644 /dev/null "$WATCH_LOG"
+  echo "로그 만들었다: $WATCH_LOG"
+fi
+( crontab -l 2>/dev/null | grep -v 'watch\.sh' || true
+  printf '%s\n' \
+    "*/5 * * * * cd $APP_DIR && ./watch.sh >> $WATCH_LOG 2>&1" \
+    "10 0 * * * cd $APP_DIR && ./watch.sh --limits >> $WATCH_LOG 2>&1"
+) | crontab -
+crontab -l | grep 'watch\.sh'
 
 # ── 확인 ───────────────────────────────────────────────────────────
 log "결과"
