@@ -212,6 +212,19 @@ class MediaFacadeTest {
   }
 
   @Test
+  void 하루_상한을_넘은_새_업로드는_PNG_를_JPEG_로_바꾸지_않는다() {
+    when(validator.validate(사진)).thenReturn(false);
+    when(mediaService.find(MEDIA_ID)).thenReturn(Optional.empty());
+    doThrow(new BusinessException(ErrorCode.RATE_LIMITED, "오늘 올릴 수 있는 사진을 다 썼다"))
+        .when(mediaService)
+        .checkDailyQuota(나);
+
+    assertThatThrownBy(() -> mediaFacade.upload(나, 활동_사진())).isInstanceOf(BusinessException.class);
+
+    verify(thumbnailer, never()).toJpeg(any());
+  }
+
+  @Test
   void 활동_사진으로_올린_mediaId_를_다른_용도로_재전송하면_409_다() {
     when(mediaService.find(MEDIA_ID)).thenReturn(Optional.of(이미_있는_사진(나)));
 

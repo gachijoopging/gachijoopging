@@ -48,13 +48,15 @@ public class MediaFacade {
 
   public MediaUploadResponse upload(UUID me, MediaUpload upload) {
     MediaService.requireShape(upload);
+    // 계약의 takenAt 기본값은 서버가 받은 시각이라, 저장·추론을 기다리기 전에 잡아 둔다
+    Instant received = clock.instant();
     boolean jpeg = validator.validate(upload.file());
-    // PNG·WebP 변환은 비싸므로 결과를 버릴 재전송(403·409·비활동)에서는 하지 않는다
+    // PNG·WebP 변환은 비싸므로 거절하거나 결과를 버릴 요청(403·404·409·429·비활동 재전송)에서는 하지 않는다
     Supplier<byte[]> file = () -> jpeg ? upload.file() : thumbnailer.toJpeg(upload.file());
     return mediaService
         .find(upload.mediaId())
         .map(existing -> resend(me, upload, file, existing))
-        .orElseGet(() -> fresh(me, upload, file.get()));
+        .orElseGet(() -> fresh(me, upload, file, received));
   }
 
   /** 사용자가 버린 활동 사진을 지운다. 없는 mediaId 도 끝난 것으로 본다 — 앱 대기열이 재시도한다. */
@@ -83,12 +85,14 @@ public class MediaFacade {
     return response(media, photo.photoId(), aiInferenceClient.infer(file.get()));
   }
 
-  private MediaUploadResponse fresh(UUID me, MediaUpload upload, byte[] file) {
+  private MediaUploadResponse fresh(
+      UUID me, MediaUpload upload, Supplier<byte[]> converted, Instant received) {
     boolean activity = upload.purpose() == MediaPurpose.ACTIVITY;
     if (activity) {
       activityService.requirePhotoTarget(me, upload.activityId());
     }
     mediaService.checkDailyQuota(me);
+    byte[] file = converted.get();
 
     // 같은 mediaId 가 동시에 들어와도 서로의 파일을 덮거나 지우지 않도록 시도마다 다른 파일에 쓴다
     String attempt = UUID.randomUUID().toString().substring(0, 8);
@@ -107,7 +111,7 @@ public class MediaFacade {
               upload.purpose(),
               objectKey,
               thumbKey,
-              activity ? photo(upload, inference) : null);
+              activity ? photo(upload, inference, received) : null);
     } catch (RuntimeException e) {
       deleteFiles(objectKey, thumbKey);
       throw e;
@@ -119,8 +123,9 @@ public class MediaFacade {
     return response(saved.media(), saved.photoId(), inference);
   }
 
-  private NewActivityPhoto photo(MediaUpload upload, InferenceResponse inference) {
-    Instant takenAt = upload.takenAt() == null ? clock.instant() : upload.takenAt();
+  private NewActivityPhoto photo(
+      MediaUpload upload, InferenceResponse inference, Instant received) {
+    Instant takenAt = upload.takenAt() == null ? received : upload.takenAt();
     return new NewActivityPhoto(
         upload.activityId(),
         upload.mediaId(),

@@ -30,6 +30,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 import javax.imageio.ImageIO;
 import javax.sql.DataSource;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -75,6 +76,11 @@ class MediaActivityPhotoTest extends IntegrationTest {
       return new AiProperties(
           "http://127.0.0.1:" + AI.getAddress().getPort(), "test-secret", Duration.ofSeconds(3));
     }
+  }
+
+  @AfterAll
+  static void AI_서버를_내린다() {
+    AI.stop(0);
   }
 
   @BeforeEach

@@ -160,8 +160,8 @@ cd /opt/gachijoopging && ./deploy.sh <태그>      # 특정 태그로
 
 | | |
 |---|---|
-| 저장 경로 | `/data/uploads/<yyyy>/<MM>/<mediaId>.jpg` · 섬네일은 `_thumb` 접미사 |
-| 공개 경로 | `https://www.gachijoopging.site/media/<yyyy>/<MM>/<mediaId>.jpg?s=<서명>&e=<만료>` |
+| 저장 경로 | `/data/uploads/<yyyy>/<MM>/<mediaId>-<attempt>.jpg` · `<attempt>` 는 시도마다 다른 8자 · 섬네일은 `_thumb` 접미사 |
+| 공개 경로 | `https://www.gachijoopging.site/media/<yyyy>/<MM>/<mediaId>-<attempt>.jpg?s=<서명>&e=<만료>` |
 | 유지 | compose 가 호스트 `${MEDIA_ROOT}` 를 바인드한다. 컨테이너를 다시 만들어도 남는다 |
 | 소유자 | 호스트 쪽이 **UID 10001** — `backend/Dockerfile` 의 비루트 사용자다. 안 맞으면 업로드가 전부 permission denied |
 | 격리 | `/media/deleted/` 는 서명이 맞아도 403. 신고로 내린 사진이 URL 하나로 다시 살아나지 않게 |
