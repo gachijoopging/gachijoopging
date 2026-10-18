@@ -35,15 +35,128 @@ VM 한 대에 docker compose 로 컨테이너 셋을 띄운다 — 백엔드(Spr
 **그다음 서버에서**
 
 ```sh
-sh infra/provision.sh
+curl -fsSL https://raw.githubusercontent.com/gachijoopging/gachijoopging/dev/infra/provision.sh \
+  | DEPLOY_PUBKEY="ssh-ed25519 AAAA... github-actions-deploy" sh
 ```
 
-스왑·도커·디렉터리를 만든다. 여러 번 돌려도 안전하다 — 이미 돼 있으면 건너뛴다.
+스왑·도커·디렉터리·배포 키를 만든다. 여러 번 돌려도 안전하다 — 이미 돼 있으면 건너뛴다.
+
+`DEPLOY_PUBKEY` 는 CI(`deploy.yml`)가 붙는 **공개키**다(비밀이 아니다. 짝이 되는 개인키가
+`SSH_PRIVATE_KEY` 시크릿이다). 안 넣으면 배포가 안 되는데 **그 사실이 첫 머지 때까지 드러나지 않는다.**
+
+### 서버를 교체할 때
+
+ADR-0005 가 "첫 사용자 전에 한 번 새로 만들어 교체한다" 고 정했다. 교체 뒤에 또 바꾸면 그 사이 쌓인
+**사진**(디스크의 유일한 상태)을 옮겨야 하므로 한 번에 끝낸다.
+
+도메인이 옛 서버를 보는 동안 새 서버를 끝까지 세워 두고, **옮기는 것을 마지막에 몰아서** 끊기는 시간을
+줄인다. 아래 순서가 그렇게 짜여 있다.
+
+| | | 어디서 |
+|---|---|---|
+| 1 | 새 인스턴스 생성 + `provision.sh` (위) | 콘솔 → 서버 |
+| 2 | `infra/dev-env.ps1 -Target ubuntu@<임시 IP>` 로 `.env` 올리기. 새 서버엔 `.env` 가 없으므로 `IMAGE_TAG` 는 비어서 올라간다 — 정상이다 | 로컬 |
+| 3 | `docker-compose.yml`·`deploy.sh`·`nginx/nginx.conf` 를 올린다(`deploy.yml` 이 보내는 것과 같다) | 로컬 |
+| 4 | `IMAGE_TAG` 를 옛 서버 값으로 적고 **`redis`·`backend` 만** 띄워 healthy 를 본다. 풀을 줄여서 띄운다(아래) | 서버 |
+| 5 | 새 서버의 호스트 키를 읽어 `.github/workflows/deploy.yml` 의 `known_hosts` 를 바꾼다(아래) | 서버 → 로컬 |
+| 6 | 고정 IP 를 **새 인스턴스로 옮긴다**(콘솔 `Networking` → `분리` → `연결`). 새로 만들지 않는다 | 콘솔 |
+| 7 | 바깥에서 keyscan 해 5번 값과 대조하고, 로컬 `known_hosts` 를 지운다(아래) | 로컬 |
+| 8 | 인증서 최초 발급(§HTTPS) | 서버 |
+| 9 | `docker compose up -d` — 이제 `nginx`·`certbot` 까지 올라온다 | 서버 |
+| 10 | 옛 인스턴스를 **중지**하고, 아래 ⚠️ 대로 남은 세션을 끊은 뒤 백엔드를 다시 만든다. 4번의 풀 제한도 여기서 지운다 | 콘솔 → 서버 |
+| 11 | 사진이 있으면 옮긴다 — `rsync -a` 로 `/data/uploads` 를. 소유자 10001 을 유지해야 한다 | 서버 |
+| 12 | 확인 뒤 옛 인스턴스는 **스냅샷 하나 남기고 삭제**한다. 중지만 하면 과금이 계속된다 | 콘솔 |
+
+**4번이 순서의 핵심이다.** 도메인을 옮기기 전에 백엔드가 뜨는 것을 봐 두면, 새 IP 에서 DB·Redis 에
+닿는지를 사이트가 내려간 상태에서 디버깅하지 않아도 된다. 8080 은 외부에 열려 있지 않으므로
+(§열린 포트) 컨테이너 망 안에서 확인한다.
+
+```sh
+# 옛 백엔드가 아직 커넥션을 쥐고 있다. 기본 풀(10)로 띄우면 상한 15 를 넘는다 — 아래 ⚠️ 와 같은 사고다.
+# 셸에 붙여 주면 안 된다. 그것은 compose 가 ${...} 를 채울 때만 쓰이고 컨테이너까지 가지 않는다
+# (backend 에는 env_file 만 있고 environment: 가 없다). .env 에 적어야 닿는다.
+#
+# 앞에 \n 을 붙이는 것은 .env 가 줄바꿈 없이 끝나는 경우를 막기 위해서다. 그러면 이 줄이 마지막 키
+# 뒤에 그대로 붙어 그 키의 값이 깨지고, 풀 제한도 안 걸린다.
+printf '\nSPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE=3\n' >> .env
+docker compose up -d redis backend
+
+docker run --rm --network gachijoopging_default curlimages/curl \
+  -sS -o /dev/null -w '%{http_code}\n' http://backend:8080/actuator/health
+```
+
+이 줄은 교체 중에만 쓴다. **10번에서 지운다** — 남겨 두면 운영이 커넥션 3개로 돈다.
+세션을 끊기 전에 지워 두면 백엔드를 한 번만 다시 만들면 된다.
+
+```sh
+sed -i '/^SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE=/d' .env
+#   ... 여기서 아래 ⚠️ 의 pg_terminate_backend ...
+docker compose up -d --force-recreate backend
+```
+
+사이에 `dev-env.ps1` 로 `.env` 를 다시 올리면 이 줄은 사라진다. 교체 중에만 쓰는 값이라 그래도 된다.
+
+> ⚠️ **4번의 healthy 를 그대로 믿지 않는다.** Hikari 는 기동에 커넥션 하나만 열어 보고 통과시킨 뒤
+> 나머지를 뒤에서 채운다. 그래서 풀을 안 줄이고 띄우면 **healthy 가 먼저 뜨고 몇 분 뒤에 죽는다.**
+> 교체 때 실제로 그랬다 — 4번이 15초 만에 healthy 였고, 8분 뒤 운영이 503 이 됐다.
+
+**5번을 빠뜨리면 다음 `main` 머지가 깨진다.** `deploy.yml` 은 호스트 키를 박아 두는데(keyscan 은 아무
+키나 믿는다는 뜻이라 안 쓴다), 인스턴스를 바꾸면 그 키가 바뀐다. 고정 IP 를 옮겨도 키는 새 기계 것이다.
+
+5번에서는 **새 서버에 직접 물어본다.** 이때 고정 IP 는 아직 옛 서버를 가리키므로 그쪽으로 keyscan 하면
+당연히 다른 값이 나온다 — 대조는 7번에서 한다.
+
+```sh
+# 5번 — 임시 IP 로 붙어서 읽는다. 이 값을 deploy.yml 에 적는다
+ssh ubuntu@<새 서버 임시 IP> 'cat /etc/ssh/ssh_host_ed25519_key.pub'
+
+# 7번 — 고정 IP 를 옮긴 뒤. 5번 값과 같아야 중간자가 아니다
+ssh-keyscan -t ed25519 13.125.10.7
+ssh-keygen -R 13.125.10.7      # 로컬 known_hosts 의 옛 항목을 지운다
+```
+
+7번에서 `REMOTE HOST IDENTIFICATION HAS CHANGED` 경고가 뜨는 것은 **정상이다.** 같은 IP 가 다른 기계를
+가리키게 됐으니 경고가 맞다. 위 두 값이 같은 것을 확인하고 지운다.
+
+> ⚠️ **`deploy.yml` 변경은 `main` 에 들어가야 효과가 난다.** 배포 워크플로는 `main` 의 파일로 돈다.
+> 교체 PR 을 `dev` 에만 머지해 두고 `main` 반영을 미루면, 그 사이 배포가 옛 키로 시도돼 실패한다.
+
+> ⚠️ **8번(인증서)을 6번(고정 IP 이동)보다 먼저 하지 않는다.** 고정 IP 가 아직 옛 서버를 가리키는 동안 발급을 시도하면
+> acme 챌린지가 옛 서버로 가서 실패한다. 걸리는 제한은 둘이고 성격이 다르다 —
+> **실패한 검증**은 호스트명당 **시간당 5회**(여기 먼저 걸린다), **같은 이름 조합의 재발급**은
+> **주당 5회**다. 교체로 다시 받는 것은 뒤쪽에 들어가므로, 시행착오로 앞쪽을 태우면 한 시간을 기다린다.
+
+> ⚠️ **옛 서버를 끈다고 DB 커넥션이 돌아오지 않는다.** Supabase pooler 는 session mode(5432)라
+> 클라이언트 하나가 커넥션 하나를 끝까지 쥐는데, 호스트가 갑자기 죽으면 pooler 는 TCP 타임아웃까지
+> 그것을 모른다. 상한이 **15** 라 옛 백엔드의 커넥션만으로 다 차고, 새 백엔드는 Flyway 단계에서
+> `(EMAXCONNSESSION) max clients reached in session mode` 로 죽는다. 교체 때 실제로 13분을 잡아먹었다.
+>
+> 직결(`db.<ref>.supabase.co`)은 **IPv6 전용**이라 닿지 않는다. transaction mode(**6543**)로 들어가
+> 남은 세션을 끊는다 — 이쪽은 상한이 따로다.
+>
+> ```sh
+> PW=$(sed -n 's/^DATABASE_PASSWORD=//p' .env | sed 's/\$\$/$/g')   # $$ 를 푸는 이유는 §배포
+> U=$(sed -n 's/^DATABASE_USER=//p' .env)
+> # 호스트를 박아 두면 리전을 옮겼을 때 엉뚱한 곳을 보고도 통과한다. §DB 와 같은 이유다.
+> H=$(sed -n 's|^DATABASE_URL=jdbc:postgresql://||p' .env | sed 's|[:/].*||')
+> docker run --rm -e PGPASSWORD="$PW" postgres:17-alpine \
+>   psql -h "$H" -p 6543 -U "$U" -d postgres -c \
+>   "select pg_terminate_backend(pid) from pg_stat_activity
+>    where usename='postgres' and application_name='PostgreSQL JDBC Driver' and state='idle';"
+> docker compose up -d --force-recreate backend    # 교체 중이면 풀 제한을 먼저 지우고 여기서 한 번만
+> ```
+>
+> 평소 배포는 이 문제를 겪지 않는다. 컨테이너가 정상 종료하면서 커넥션을 닫기 때문이다.
+> **호스트가 통째로 죽거나 멈출 때만** 나온다 — 즉 장애 복구 때 다시 만난다.
 
 ### HTTPS
 
-Nginx 가 443 을 잡고 `/api/v1/...` 를 백엔드로 넘긴다. 백엔드는 루트에서 서비스하는데 계약의 base 가
-`/api/v1` 이라(`openapi.yaml` servers) Nginx 가 `rewrite` 로 접두사를 뗀다.
+Nginx 가 443 을 잡고 `/api/v1/...` 를 **경로 그대로** 백엔드로 넘긴다. 백엔드가 `WebConfig` 의
+`addPathPrefix` 로 모든 컨트롤러에 `/api/v1` 을 스스로 붙이기 때문이다.
+
+> ⚠️ **여기서 접두사를 떼면 안 된다.** `rewrite` 로 떼면 백엔드가 핸들러를 찾지 못하고, 그러면
+> `anyRequest().authenticated()` 에 걸려 **API 전체가 401** 이 된다. 토큰 없는 요청과 응답이 같아
+> 드러나지 않고, `/actuator/health` 는 별도 location 이라 헬스체크도 초록으로 남는다. 사흘 걸렸다.
 
 | 주소 | |
 |---|---|
@@ -64,14 +177,18 @@ sudo docker run --rm -p 80:80 \
   -v gachijoopging_certbot-conf:/etc/letsencrypt -v gachijoopging_certbot-www:/var/www/certbot \
   certbot/certbot certonly --standalone \
   -d www.gachijoopging.site -d gachijoopging.site \
-  --email "$CERT_EMAIL" --agree-tos --no-eff-email
+  --register-unsafely-without-email --agree-tos --no-eff-email
 ```
 
 그다음부터는 compose 의 `certbot` 컨테이너가 12시간마다 webroot 로 갱신하고, `nginx` 가 6시간마다
 설정을 다시 읽는다. 인증서가 갱신돼도 Nginx 는 스스로 알지 못하기 때문이다.
 
-> ⚠️ 지금 인증서는 **이메일 없이**(`--register-unsafely-without-email`) 발급돼 있어 만료 경고 메일이
-> 오지 않는다. `CERT_EMAIL` 을 정하면 위 명령으로 다시 받는다.
+**이메일을 등록하지 않는다.** Let's Encrypt 는 2025-06-04 로 만료 경고 메일 발송을 끝냈고 보관하던
+주소도 지웠다([공지](https://letsencrypt.org/2025/06/26/expiration-notification-service-has-ended.html)).
+주소를 넣어도 받는 것이 없으므로 넣지 않는다 — 플래그 이름이 `unsafely` 인 것은 알림이 있던 시절의 흔적이다.
+
+> ⚠️ 그래서 **만료를 알려 주는 외부 장치가 없다.** 자동 갱신이 조용히 실패하면 만료일에 브라우저가
+> 사이트를 막는다. 남은 날짜를 직접 재서 알리는 것은 §감시 쪽 일이다.
 
 ## 로컬 기동
 
@@ -522,7 +639,6 @@ sslmode=require  → 1
 | `FCM_CREDENTIALS` | 백엔드 | 푸시 |
 | `DEMO_SEED_ENABLED` · `DEMO_MEMBER_EMAIL` · `DEMO_MEMBER_PASSWORD` · `DEMO_GUEST_EMAIL` · `DEMO_GUEST_PASSWORD` | 백엔드 | 데모 시드. 스테이징이 없어(ADR-0005) 운영에서 이 플래그로만 켠다. 자세한 것은 §데모 계정 |
 | `AI_BASE_URL` · `AI_SECRET` | 백엔드 | AI 서버. `ai/.env` 의 `NGROK_DOMAIN`·`AI_SECRET` 과 짝이다 — `AI_SECRET` 이 다르면 호출이 전부 401 인데 백엔드가 401 을 `UNAVAILABLE` 로 내려 "AI 서버 다운" 과 구별되지 않는다 |
-| `CERT_DOMAIN` · `CERT_EMAIL` | acme | 인증서 발급·갱신 |
 | `AGREEMENTS_VERSION` · `TERMS_URL` · `PRIVACY_URL` · `MARKETING_URL` | **아직 없음** | 현재 동의 버전과 공개 전문 URL. 계약(`openapi.yaml` `/agreements`)과 테이블(`user_agreements`)은 있지만 **백엔드가 아직 읽지 않는다** — 동의 API 를 구현할 때 들어온다. 전문 정본은 `docs/legal/`, 버전은 각 문서 머리의 값(지금 `2026-10`). 정식 주소가 서빙되기 전까지는 `https://gachijoopging.github.io/gachijoopging-legal/{terms,privacy,marketing}` 를 넣는다. 정식 주소 전환과 전문의 빈칸(문의 이메일·리전)은 GAC-80 |
 
 없어지는 키: `LIVEKIT_*` · `GRAFANA_ADMIN_PASSWORD` · `ADMIN_WEB_TAG` · `POSTGRES_*` ·
