@@ -16,8 +16,8 @@ uv run ruff check .
 
 `smoke.py` 는 **FAIL 0 · SKIP 0** 이라야 통과다. `SKIP` 이 남으면 `--image` 를 주지 않은 것이다.
 
-의존성은 `uv` 로만 넣는다. `torch`·`torchvision` 은 PyTorch CUDA 인덱스에서 받는다 —
-PyPI 휠은 Windows 에서 CPU 전용이라 `torch.cuda.is_available()` 가 False 가 된다.
+의존성은 `uv` 로만 넣는다. `torch`·`torchvision` 은 Windows·Linux 에서 PyTorch CUDA 인덱스로 받는다 —
+PyPI 휠은 Windows 에서 CPU 전용이라 `torch.cuda.is_available()` 가 False 가 된다. macOS(서빙 맥)는 PyPI 휠의 MPS 다.
 인덱스를 바꾸면 `uv.lock` 을 다시 만들어야 한다.
 
 ## 경계

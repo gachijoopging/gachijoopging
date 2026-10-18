@@ -32,3 +32,4 @@ datasets/taco/*
 runs/
 .env
 serve.log
+ngrok.log

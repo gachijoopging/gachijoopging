@@ -17,12 +17,13 @@ dependencies = [
 [dependency-groups]
 dev = ["ruff"]
 
-# torch·torchvision은 PyPI 대신 PyTorch 공식 CUDA 인덱스에서 받는다.
+# torch·torchvision은 Windows·Linux에서 PyPI 대신 PyTorch 공식 CUDA 인덱스에서 받는다.
 # PyPI 휠은 Windows에서 CPU 전용이라 그대로 설치하면 torch.cuda.is_available()가 False가 된다.
-# cu130 = 서빙 노트북 드라이버(591.44 / CUDA 13.1) 기준. 바꾸면 uv.lock 재생성 필요.
+# cu130 = 학습 서버·옛 서빙 노트북 드라이버(591.44 / CUDA 13.1) 기준. 바꾸면 uv.lock 재생성 필요.
+# macOS는 CUDA 인덱스에 휠이 없다. 서빙 맥은 PyPI 휠의 MPS 로 돈다(README §8).
 [tool.uv.sources]
-torch = [{ index = "pytorch-cu130" }]
-torchvision = [{ index = "pytorch-cu130" }]
+torch = [{ index = "pytorch-cu130", marker = "sys_platform != 'darwin'" }]
+torchvision = [{ index = "pytorch-cu130", marker = "sys_platform != 'darwin'" }]
 
 [[tool.uv.index]]
 name = "pytorch-cu130"
