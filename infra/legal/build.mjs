@@ -7,7 +7,7 @@
 // 전문을 고치면 이 스크립트를 돌려 결과물을 같이 커밋한다 — CI 가 대조한다.
 //
 // 이 세 문서가 쓰는 문법만 다룬다(제목·표·목록·강조·인라인 코드). 범용 변환기가 아니다.
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -64,8 +64,12 @@ function toBody(md) {
       while (i < lines.length) {
         const m = pick(lines[i]);
         if (!m) break;
-        out.push(`<li>${inline(m[1])}</li>`);
         i++;
+        // 들여쓴 '- ' 줄은 바로 위 항목의 하위 목록이다.
+        const sub = [];
+        while (i < lines.length && /^ +[-*] +/.test(lines[i])) sub.push(lines[i++].replace(/^ +[-*] +/, ''));
+        const nested = sub.length ? '<ul>' + sub.map((t) => `<li>${inline(t)}</li>`).join('') + '</ul>' : '';
+        out.push(`<li>${inline(m[1])}${nested}</li>`);
       }
       out.push(`</${tag}>`);
       continue;
@@ -77,6 +81,8 @@ function toBody(md) {
       para.push(lines[i].trim());
       i++;
     }
+    // '**강조**'·'---' 처럼 위 어느 갈래에도 안 걸리는 줄은 그 자체로 문단이다. 이게 없으면 i 가 멈춰 끝나지 않는다.
+    if (!para.length) para.push(lines[i++].trim());
     out.push(`<p>${inline(para.join(' '))}</p>`);
   }
   return out.join('\n');
@@ -110,7 +116,6 @@ ${body}
 const check = process.argv.includes('--check');
 let stale = [];
 
-mkdirSync(HERE, { recursive: true });
 for (const name of PAGES) {
   const md = readFileSync(join(ROOT, 'docs', 'legal', `${name}.md`), 'utf8');
   const title = (md.match(/^# +(.*)$/m) ?? [, name])[1];
