@@ -322,10 +322,10 @@ uv run python scripts/draw_boxes.py 사진.jpg   # bbox 위치를 눈으로 확�
 - FP16 지정은 **`predict(quantize=16)`** 입니다 — `half=True`는 8.4.112에서 deprecated. 4070에서 **FP16이 지연을 줄이지는 않았습니다**(실측). VRAM 8GB에서 동시 요청 여유를 확보하는 용도로만 유지합니다
 - **워커 1개.** GPU 하나를 여러 워커가 나눠 쓰면 VRAM만 낭비
 - **`YOLO_AUTOINSTALL=false`** (코드에서 설정). ultralytics는 `PIL.Image.open`을 몽키패치해 두고 이미지 열기가 실패하면 HEIC일 수 있다고 보고 **요청 처리 중에 `pip install pi-heif`를 실행**합니다. 깨진 업로드 하나가 서버에서 pip를 돌리는 셈이고, `uv.lock`에 없는 패키지가 생기며 요청 경로에 네트워크 의존이 붙습니다 (W1 ②에서 실제로 당했습니다)
-- **GPU 전원 관리**: 유휴 상태(14W)에서 온 첫 요청들은 클럭 램프업으로 느립니다 — 같은 사진이 138ms → 57ms로 내려갔습니다. 워밍업으로 해결되지 않는 종류라 NVIDIA 전원 관리를 최대 성능 우선으로 둬야 하는데, 이걸 처리하던 W1 ④가 폐기돼 **지금은 담당 지시 단위가 없습니다**
+- **GPU 전원 관리**: 유휴 상태(14W)에서 온 첫 요청들은 클럭 램프업으로 느립니다 — 같은 사진이 138ms → 57ms로 내려갔습니다. 워밍업으로 해결되지 않는 종류라 NVIDIA 전원 관리를 최대 성능 우선으로 둬야 합니다. W1 ④가 폐기된 뒤로는 ㉔ 가 맡아 §9 체크리스트에서 드라이버 UI 로 설정합니다
 - **노출 경로는 ngrok 무료 dev 도메인입니다.** 계정마다 자동 배정되는 주소라 재시작해도 같습니다 — 고정 주소가 없으면 재시작마다 Spring 설정을 고쳐야 하고, 그게 데모 사고 1순위입니다. **운영 서버(Lightsail)에는 아무것도 설치하지 않습니다**(백엔드에 넘길 것은 주소 한 줄). 실행 명령·무료 한도·자동 기동은 [`progress.md`](progress.md) §3.1이 정본입니다
 - **시크릿 헤더 검증.** 외부에 노출되는 순간 없으면 누구나 GPU를 씁니다
-- **터널과 서버를 따로 상주시킵니다.** 터널은 `ngrok service install` 로 Windows 서비스가 되고(부팅 시 자동), uvicorn 은 `scripts/serve.ps1` 이 감시합니다 — 죽으면 3초 뒤 다시 띄우고 `ai/serve.log` 에 남깁니다. **실측(10-13): uvicorn 을 kill 하고 `/healthz` 200 까지 9.1초.** 이 둘을 따로 두는 이유는 터널만 살아 있고 uvicorn 이 죽은 상태가 백엔드에서 502 → `UNAVAILABLE` 로 내려가 "AI 서버 다운"과 구별되지 않기 때문입니다. 등록 절차는 §9
+- **터널과 서버를 따로 상주시킵니다.** 터널은 `ngrok service install` 로 Windows 서비스가 되고(부팅 시 자동), uvicorn 은 `scripts/serve.ps1` 이 감시합니다 — 죽으면 3초 뒤 다시 띄우고 `ai/serve.log` 에 남깁니다. 30초를 못 버티고 다시 죽으면 간격을 60초까지 두 배씩 늘리고, 8000 포트를 다른 프로세스가 잡고 있으면 띄우지 않고 기다립니다(uvicorn 은 bind 전에 모델을 올리므로, 그냥 띄우면 매번 GPU 워밍업을 하고 bind 에서 죽습니다). **실측(10-13): uvicorn 을 kill 하고 `/healthz` 200 까지 9.1초** — 서빙 노트북이 아닌 개발 PC 에서 `127.0.0.1` 로 잰 값입니다. 터널 너머 값은 서빙 노트북에서 다시 잽니다. 이 둘을 따로 두는 이유는 터널만 살아 있고 uvicorn 이 죽은 상태가 백엔드에서 502 → `UNAVAILABLE` 로 내려가 "AI 서버 다운"과 구별되지 않기 때문입니다. 등록 절차는 §9
 - **유선 연결**은 손으로 합니다. 캠퍼스 Wi-Fi 에 데모를 걸지 않습니다
 - **한글이 든 `.ps1` 은 UTF-8 BOM 이어야 합니다.** PowerShell 5.1 은 BOM 이 없으면 ANSI(cp949)로 읽어 한글이 깨지고 **파서가 무너집니다** — 실행 실패가 아니라 구문 오류로 나타나서 원인이 안 보입니다
 - TensorRT export는 이 규모에서 불필요
@@ -340,18 +340,28 @@ AI 서버가 **노트북**이라 데모 당일 리스크가 구조적으로 높�
 
 - [ ] ngrok 계정 생성 → `ngrok config add-authtoken <토큰>`
 - [ ] 대시보드에서 **배정된 dev 도메인** 확인 → `ai/.env`의 `NGROK_DOMAIN`
-- [ ] ngrok 설정 파일에 엔드포인트를 적습니다 — `ngrok config edit` 로 열어 아래를 넣습니다. v3 `endpoints` 형식입니다(`tunnels` 는 deprecated). 파일에 `version: 2` 가 남아 있으면 `tunnels.ai.domain: <NGROK_DOMAIN>` 이 맞는 키입니다
+- [ ] ngrok 설정 파일에 엔드포인트를 적습니다 — `ngrok config edit` 로 엽니다. **파일을 통째로 바꾸지 않습니다.** 위에서 넣은 authtoken 이 이 파일에 있어서, 지우면 에이전트가 인증하지 못해 뜨지 않습니다. 기존 줄은 그대로 두고 `endpoints:` 만 추가합니다. v3 `endpoints` 형식입니다(`tunnels` 는 deprecated)
   ```yaml
-  version: 3
+  version: "3"
+  agent:
+    authtoken: <이미 들어 있는 값 — 손대지 않습니다>
   endpoints:
     - name: ai
       url: https://<NGROK_DOMAIN>
       upstream:
         url: 8000
   ```
+  파일 첫 줄이 `version: "2"` 이면 authtoken 이 맨 위 `authtoken:` 줄에 있습니다. 그 줄은 두고 아래만 추가합니다
+  ```yaml
+  tunnels:
+    ai:
+      proto: http
+      addr: 8000
+      domain: <NGROK_DOMAIN>
+  ```
 - [ ] `ngrok config check` 가 `Valid` 를 내는지 봅니다. 출력의 경로가 아래 `--config` 값입니다
 - [ ] **관리자 PowerShell** 에서 `ngrok service install --config=<위 경로>` → `ngrok service start`. 터널은 부팅 시 스스로 뜹니다
-- [ ] uvicorn 감시를 작업 스케줄러에 등록합니다(관리자 불필요). 로그온 때 뜨므로 **재부팅 뒤 손대지 않으려면 Windows 자동 로그인**을 켜 둡니다(`netplwiz`)
+- [ ] uvicorn 감시를 작업 스케줄러에 등록합니다(관리자 불필요). 로그온 때 뜨므로 **재부팅 뒤 손대지 않으려면 Windows 자동 로그인**을 켜 둡니다. Windows 11 기본 설정에서는 `netplwiz` 에 "사용자 이름과 암호를 입력해야 이 컴퓨터를 사용할 수 있음" 체크박스가 보이지 않습니다. 먼저 설정 > 계정 > 로그인 옵션에서 "Microsoft 계정에 Windows Hello 로그인만 허용" 항목을 끄고, 그다음 `netplwiz` 에서 그 체크를 풉니다
   ```powershell
   $ps1 = (Resolve-Path ai\scripts\serve.ps1).Path
   Register-ScheduledTask -TaskName gachi-ai-serve `
@@ -360,7 +370,7 @@ AI 서버가 **노트북**이라 데모 당일 리스크가 구조적으로 높�
     -Settings (New-ScheduledTaskSettingsSet -ExecutionTimeLimit 0 -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries)
   ```
   등록 뒤 `(Get-ScheduledTask gachi-ai-serve).Settings.ExecutionTimeLimit` 이 `PT0S`(무제한)인지 봅니다.
-  **멈출 때**는 `Stop-ScheduledTask` 만으로는 uvicorn 이 살아남아 8000 포트를 잡고 있습니다 — 다시 시작하면 bind 실패로 재시도만 돕니다
+  **멈출 때**는 `Stop-ScheduledTask` 만으로는 uvicorn 이 살아남아 8000 포트를 잡고 있습니다 — 다시 시작하면 `serve.ps1` 이 포트가 비기를 기다리기만 합니다
   ```powershell
   Stop-ScheduledTask gachi-ai-serve
   Get-NetTCPConnection -LocalPort 8000 -State Listen |
@@ -394,7 +404,7 @@ curl https://<NGROK_DOMAIN>/healthz
 | `503` · `error: "FileNotFoundError: weights 가 없습니다: …"` | **그 경로에 `.pt`가 없습니다** | `git pull`로 `weights/yolo26s-1024-v1.pt`를 받습니다 |
 | `503` · `error: "RuntimeError: weights 의 클래스가 계약과 다릅니다 …"` | 파일은 있으나 7종·순서가 어긋납니다 | 학습 베이스(`yolo26s.pt`)를 잘못 지정한 경우가 대부분입니다 |
 | `503` · `error: null` · `warmedUp:false` | 아직 워밍업 중입니다 (첫 로드 약 5초) | 기다립니다 |
-| `502` — ngrok `ERR_NGROK_8012` | **터널만 살아 있고 uvicorn이 죽었습니다** | `serve.ps1` 이 10초 안에 다시 띄웁니다. 계속되면 `ai/serve.log` · 작업 스케줄러의 `gachi-ai-serve` 상태를 봅니다 |
+| `502` — ngrok `ERR_NGROK_8012` | **터널만 살아 있고 uvicorn이 죽었습니다** | `serve.ps1` 이 다시 띄웁니다(개발 PC `127.0.0.1` 실측 9.1초). 계속되면 기동 직후 죽는 것이라 간격이 60초까지 늘어납니다 — `ai/serve.log` · 작업 스케줄러의 `gachi-ai-serve` 상태를 봅니다 |
 | `404` — ngrok `ERR_NGROK_3200` | 터널 자체가 떠 있지 않습니다 | `ngrok service start` (관리자) |
 
 **`modelVersion`은 어느 파일이 로드됐는지 증명하지 않습니다.** 그 값은 파일에서 읽는 것이 아니라 `AI_MODEL_VERSION` 환경변수 문자열입니다(`app/config.py`). 실제로 로드된 파일명은 기동 로그의 `weights 로드 1.23s — yolo26s-1024-v1.pt` 한 줄에만 나옵니다 — **weights를 바꿔치기해도 `/healthz`는 같은 버전을 답합니다.**
@@ -438,7 +448,7 @@ git clone <저장소> && cd <저장소>/ai && git switch dev
 cp .env.example .env
 #    AI_SECRET 을 채웁니다. 저장소에 없으므로 팀에서 받습니다.
 #    배포 백엔드(infra/.env)의 AI_SECRET 과 같은 값이어야 합니다. 다르면 전부 401 입니다.
-#    NGROK_DOMAIN 에는 배정받은 도메인을 적습니다(코드가 읽지는 않고, 아래 7번에 손으로 넘깁니다).
+#    NGROK_DOMAIN 에는 배정받은 도메인을 적습니다(코드가 읽지는 않고, 아래 6번에 손으로 넘깁니다).
 
 # 3. weights — 따로 받을 것이 없습니다. git 이 갖고 옵니다(§8)
 ls weights/yolo26s-1024-v1.pt        # 20,350,405 bytes
@@ -450,13 +460,14 @@ uv run python -c "import torch; print(torch.cuda.get_device_name(0))"   # GPU �
 # 5. ngrok 인증 — **주소를 유지하는 지점입니다.** 그 도메인을 배정받은 계정의 토큰이어야 합니다
 ngrok config add-authtoken <토큰>
 
-# 6. 서버 (워커 1개)
-uv run uvicorn app.main:app
+# 6. 서버·터널 상주 — §9 "한 번만 하는 설정" 을 이 노트북에서 그대로 합니다:
+#    ngrok 설정 파일의 endpoints · `ngrok service install` · serve.ps1 작업 스케줄러 등록 · 자동 로그인.
+#    재부팅 뒤에도 살아나는 것은 이 경로뿐입니다. 옛 기기의 ngrok 서비스는 먼저 멈춥니다(②).
+#    상주 없이 잠깐 확인만 할 때는 손으로 띄웁니다. 서비스가 떠 있으면 ERR_NGROK_334 로 거부되므로 둘 중 하나만 씁니다:
+#      uv run uvicorn app.main:app                      # 워커 1개
+#      ngrok http 8000 --url=https://<NGROK_DOMAIN>    # 다른 창에서. --domain 은 deprecated
 
-# 7. 터널 — 다른 창에서. `--domain` 은 deprecated 이므로 `--url` 을 씁니다
-ngrok http 8000 --url=https://<NGROK_DOMAIN>
-
-# 8. 확인 — §9.1
+# 7. 확인 — §9.1
 curl https://<NGROK_DOMAIN>/healthz
 uv run python scripts/smoke.py --base-url https://<NGROK_DOMAIN> --image <쓰레기가 보이는 사진>
 ```
