@@ -59,7 +59,12 @@ jobs:
           # 러너는 매번 새로 뜨므로 상태를 들고 있을 수 없다. 직전 실행의 성패를 상태로 쓴다.
           # 이게 없으면 서버가 꺼져 있는 동안 5분마다 같은 알림이 간다 — watch.sh 가
           # 피하려고 만든 "알림을 무시하는 습관" 을 바깥쪽이 그대로 만든다.
-          prev=$(gh run list --repo "$REPO" -w watch.yml -L 2 --json conclusion -q '.[1].conclusion' || echo '')
+          # 끝난 실행 중 성공·실패만 본다. 지금 도는 실행은 conclusion 이 비어 자연히 빠지고,
+          # concurrency 가 대기 중이던 실행을 취소해 남긴 cancelled 도 빠진다 —
+          # 그걸 직전으로 읽으면 다운 중에 🚨 를 또 보내거나, 더 나쁘게는 복구 ✅ 를 영영 안 보낸다.
+          prev=$(gh run list --repo "$REPO" -w watch.yml -L 10 --json conclusion \
+                 -q '[.[] | select(.conclusion == "success" or .conclusion == "failure")][0].conclusion' \
+                 || echo '')
           echo "직전 실행: ${prev:-없음} · 지금 HTTP $code"
 
           if [ "$code" != 200 ]; then
