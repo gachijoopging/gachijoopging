@@ -75,6 +75,8 @@ services:
       - .env
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf.template:ro
+      # 약관 전문. 바뀌는 일이 드물고 백엔드를 거칠 이유가 없어 Nginx 가 직접 보낸다.
+      - ./legal:/srv/legal:ro
       - certbot-conf:/etc/letsencrypt:ro
       - certbot-www:/var/www/certbot:ro
       # 사진을 백엔드를 거치지 않고 직접 보낸다. 쓰지는 않으므로 읽기 전용이다.

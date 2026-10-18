@@ -270,6 +270,29 @@ cd /opt/gachijoopging && ./deploy.sh <태그>      # 특정 태그로
 
 필요한 GitHub Secret 은 §시크릿 에 있다. 여기 옮겨 적지 않는다 — 한쪽이 반드시 낡는다.
 
+## 약관 전문
+
+| 주소 | |
+|---|---|
+| `/terms` · `/privacy` · `/marketing` | Nginx 가 디스크에서 직접 보낸다. 백엔드를 거치지 않는다 |
+
+앱 1-3 가입 화면이 `GET /agreements` 가 주는 `url` 을 `Linking.openURL` 로 연다. 전문이 안 열리면
+**동의를 받을 수 없다.** 그래서 백엔드·DB 와 무관하게 서는 경로에 뒀고, 페이지도 외부 폰트·스크립트를
+쓰지 않는다.
+
+**정본은 `docs/legal/*.md` 이고 서빙되는 HTML 은 파생물이다.** 전문을 고치면 변환기를 돌려 결과물을
+같이 커밋한다. 손으로 HTML 만 고치면 전문과 갈라지는데, 갈라진 쪽이 사용자에게 보이는 쪽이다.
+
+```sh
+node infra/legal/build.mjs            # docs/legal/*.md → infra/legal/*.html
+node infra/legal/build.mjs --check    # 어긋나면 1 로 끝난다 — legal.yml 이 매 PR 에서 돌린다
+```
+
+배포 때 변환하지 않는다. 변환이 깨지면 배포가 통째로 막히기 때문이다. `deploy.yml` 은 만들어진 HTML 을
+`/opt/gachijoopging/legal/` 로 올리기만 하고, compose 가 그 디렉터리를 `nginx` 에 읽기 전용으로 물린다.
+
+> 전문의 빈칸(문의 이메일·리전)은 채워져 있다. 국외 이전 범위는 `docs/legal/privacy.md` §4 가 정본이다.
+
 ## 미디어
 
 사진은 오브젝트 스토리지가 아니라 **VM 로컬 디스크**에 두고 Nginx 가 직접 보낸다(결정 33·ADR-0005).
@@ -639,7 +662,7 @@ sslmode=require  → 1
 | `FCM_CREDENTIALS` | 백엔드 | 푸시 |
 | `DEMO_SEED_ENABLED` · `DEMO_MEMBER_EMAIL` · `DEMO_MEMBER_PASSWORD` · `DEMO_GUEST_EMAIL` · `DEMO_GUEST_PASSWORD` | 백엔드 | 데모 시드. 스테이징이 없어(ADR-0005) 운영에서 이 플래그로만 켠다. 자세한 것은 §데모 계정 |
 | `AI_BASE_URL` · `AI_SECRET` | 백엔드 | AI 서버. `ai/.env` 의 `NGROK_DOMAIN`·`AI_SECRET` 과 짝이다 — `AI_SECRET` 이 다르면 호출이 전부 401 인데 백엔드가 401 을 `UNAVAILABLE` 로 내려 "AI 서버 다운" 과 구별되지 않는다 |
-| `AGREEMENTS_VERSION` · `TERMS_URL` · `PRIVACY_URL` · `MARKETING_URL` | **아직 없음** | 현재 동의 버전과 공개 전문 URL. 계약(`openapi.yaml` `/agreements`)과 테이블(`user_agreements`)은 있지만 **백엔드가 아직 읽지 않는다** — 동의 API 를 구현할 때 들어온다. 전문 정본은 `docs/legal/`, 버전은 각 문서 머리의 값(지금 `2026-10`). 정식 주소가 서빙되기 전까지는 `https://gachijoopging.github.io/gachijoopging-legal/{terms,privacy,marketing}` 를 넣는다. 정식 주소 전환과 전문의 빈칸(문의 이메일·리전)은 GAC-80 |
+| `AGREEMENTS_VERSION` · `TERMS_URL` · `PRIVACY_URL` · `MARKETING_URL` | **아직 없음** | 현재 동의 버전과 공개 전문 URL. 계약(`openapi.yaml` `/agreements`)과 테이블(`user_agreements`)은 있지만 **백엔드가 아직 읽지 않는다** — 동의 API 를 구현할 때 들어온다. 전문 정본은 `docs/legal/`, 버전은 각 문서 머리의 값(지금 `2026-10`). 주소는 `https://www.gachijoopging.site/{terms,privacy,marketing}` 이고 Nginx 가 직접 보낸다 — §약관 전문 |
 
 없어지는 키: `LIVEKIT_*` · `GRAFANA_ADMIN_PASSWORD` · `ADMIN_WEB_TAG` · `POSTGRES_*` ·
 `KAKAO_REST_API_KEY`(auth 를 계약 기준으로 다시 쓰면서 카카오 좌표 조회가 빠졌다).
