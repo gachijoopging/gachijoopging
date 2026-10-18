@@ -110,7 +110,14 @@ fi
 # 아무도 알려 주지 않으므로 가장 늦게 발견된다.
 log "감시 cron"
 # 로그는 ubuntu 가 써야 한다. /var/log 는 root 소유라 미리 만들어 주지 않으면 cron 이 조용히 실패한다.
-sudo install -o "$(id -un)" -g "$(id -gn)" -m 644 /dev/null "$WATCH_LOG"
+# 이미 있으면 건드리지 않는다 — install 은 있는 파일을 비워서, 장애를 조사하던 중에 다시 돌리면
+# 증거가 사라진다.
+if [ -f "$WATCH_LOG" ]; then
+  echo "로그 이미 있다: $WATCH_LOG"
+else
+  sudo install -o "$(id -un)" -g "$(id -gn)" -m 644 /dev/null "$WATCH_LOG"
+  echo "로그 만들었다: $WATCH_LOG"
+fi
 ( crontab -l 2>/dev/null | grep -v 'watch\.sh' || true
   printf '%s\n' \
     "*/5 * * * * cd $APP_DIR && ./watch.sh >> $WATCH_LOG 2>&1" \
