@@ -1,7 +1,7 @@
 # 서버는 Lightsail VM 한 대에 docker compose 로 올린다
 
 AWS Lightsail 서울 2GB 번들 한 대에 백엔드·Redis·Nginx 를 컨테이너로 띄운다. DB 는 Supabase(ADR-0001),
-AI 는 담당자 GPU 노트북과 터널(`ai/README.md` §8)이라 서버에 올리지 않는다.
+AI 는 담당자 개인 기기(지금은 M4 Mac mini)와 터널(`ai/README.md` §8)이라 서버에 올리지 않는다.
 
 서버리스를 쓸 수 없다. 사진을 오브젝트 스토리지가 아니라 로컬 디스크에 두고 Nginx 가 직접 서빙하기로 했고,
 Redis 가 상주해야 하며, 채팅·위치가 STOMP 소켓이라 WebSocket 을 종단해야 한다.
