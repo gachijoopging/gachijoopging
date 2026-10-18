@@ -183,6 +183,7 @@ class MediaFacadeTest {
     verify(storage, never()).store(anyString(), any());
     verify(mediaService, never()).create(any(), any(), any(), anyString(), anyString(), any());
     verify(activityService).requirePhotoTarget(나, 활동);
+    verify(mediaService).checkDailyQuota(나);
     assertThat(응답.photoId()).isEqualTo(사진_ID.toString());
     assertThat(응답.inference().status()).isEqualTo("OK");
     assertThat(응답.url()).contains("옛날/키.jpg");

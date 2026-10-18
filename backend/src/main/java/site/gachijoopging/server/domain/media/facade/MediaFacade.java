@@ -81,6 +81,8 @@ public class MediaFacade {
             .filter(it -> it.activityId().equals(upload.activityId()))
             .orElseThrow(() -> new BusinessException(ErrorCode.CONFLICT, "다른 활동으로 올린 사진이다"));
     activityService.requirePhotoTarget(me, upload.activityId());
+    // 재전송도 매번 추론하므로 세지 않으면 같은 mediaId 로 추론을 끝없이 부를 수 있다
+    mediaService.checkDailyQuota(me);
     // 찾은 물체 목록은 저장하지 않으므로 실려 온 파일로 다시 추론한다 (02-conventions §8)
     return response(media, photo.photoId(), aiInferenceClient.infer(file.get()));
   }
