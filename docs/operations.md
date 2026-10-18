@@ -703,7 +703,8 @@ tail -50 /var/log/gachijoopging-watch.log
 
 ## `.env` 키
 
-실물은 서버의 `/opt/gachijoopging/infra/.env` 한 곳. 저장소에는 `infra/.env.example` 만.
+실물은 서버의 `/opt/gachijoopging/.env` 한 곳. 저장소에는 `infra/.env.example` 만.
+(`deploy.sh`·`watch.sh`·`dev-env.ps1` 이 모두 이 경로를 쓴다. 서버에 `infra/` 디렉터리는 없다.)
 
 **이 표 · `infra/.env.example` · 백엔드가 `${...}` 로 읽는 이름 셋이 1:1 이어야 한다.** 어긋나면 기동에서
 죽는다. 읽는 쪽(백엔드)에 없는 키를 표에 두지 않고, 표에 없는 키를 백엔드가 읽지 않게 한다.

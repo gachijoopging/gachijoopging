@@ -80,11 +80,21 @@ if [ "${1:-}" = "--limits" ]; then
   U=$(read_env DATABASE_USER)
   H=$(read_env DATABASE_URL | sed 's|^jdbc:postgresql://||; s|[:/].*||')
   # session mode(5432)는 상한 15 라 백엔드가 거의 다 쓴다. 상한이 따로인 6543 으로 들어간다.
+  #
+  # 실패를 0 으로 대신하지 않는다. 비밀번호가 바뀌었거나 pooler 에 못 닿으면 "0MB" 가 되고,
+  # 한계 검사는 영원히 통과하며, 아무도 그것을 모른다 — 이 파일 머리가 경고한 바로 그 모양이다.
   mb=$(docker run --rm -e PGPASSWORD="$PW" postgres:17-alpine psql -h "$H" -p 6543 -U "$U" \
-       -d postgres -tAc "select (pg_database_size('postgres')/1024/1024)::int" 2>/dev/null || echo 0)
-  echo "DB ${mb}MB / 한계 400MB"
-  if [ "$mb" -ge 400 ]; then
-    notify ":warning: **DB ${mb}MB** — ADR-0005 재검토 조건(400MB)을 넘었다"
+       -d postgres -tAc "select (pg_database_size('postgres')/1024/1024)::int" 2>/dev/null || true)
+  mb=$(printf '%s' "$mb" | tr -dc '0-9')
+
+  if [ -z "$mb" ]; then
+    echo "DB 크기를 읽지 못했다" >&2
+    notify ":warning: **DB 크기를 읽지 못했다** — 자격이나 pooler 를 본다. 한계 검사가 돌지 않는다."
+  else
+    echo "DB ${mb}MB / 한계 400MB"
+    if [ "$mb" -ge 400 ]; then
+      notify ":warning: **DB ${mb}MB** — ADR-0005 재검토 조건(400MB)을 넘었다"
+    fi
   fi
   exit 0
 fi
@@ -93,15 +103,23 @@ fi
 echo "점검 $(date -Is)"
 
 # compose 가 10초마다 돌리는 healthcheck 결과를 읽는다. 따로 찌르면 같은 일을 두 번 한다.
-health() { docker inspect -f '{{.State.Health.Status}}' "$1" 2>/dev/null || echo none; }
+# 컨테이너 이름을 박지 않는다 — compose 의 이름 규칙이 바뀌면 조용히 none 이 된다(deploy.sh 와 같은 방식).
+health() {
+  id=$(docker compose ps -q "$1" 2>/dev/null)
+  if [ -z "$id" ]; then echo none; else
+    docker inspect -f '{{.State.Health.Status}}' "$id" 2>/dev/null || echo none
+  fi
+}
 
-if [ "$(health gachijoopging-backend-1)" = healthy ]; then
+if [ "$(health backend)" = healthy ]; then
   record backend yes "백엔드"
+  backend_ok=yes
 else
   record backend no "백엔드"
+  backend_ok=no
 fi
 
-if [ "$(health gachijoopging-redis-1)" = healthy ]; then
+if [ "$(health redis)" = healthy ]; then
   record redis yes "Redis"
 else
   record redis no "Redis"
@@ -114,6 +132,11 @@ code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 10 \
   -H 'Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==' "$PUBLIC/api/v1/ws" 2>/dev/null || echo 000)
 if [ "$code" = 401 ]; then
   record socket yes "소켓"
+elif [ "$backend_ok" = no ] && [ "$code" = 502 ]; then
+  # 백엔드가 죽어서 생긴 502 다. 원인이 하나인데 알림이 둘 가면 읽는 사람이 둘 다 흘려 보게 된다.
+  # 상태는 그대로 넘겨 복구 때 중복 알림도 생기지 않게 한다.
+  prev=$(prev_fails socket); printf 'socket %s\n' "${prev:-0}" >> "$NEW_STATE"
+  echo "  socket   SKIP (백엔드가 죽어서 생긴 502)"
 else
   record socket no "소켓(HTTP $code)"
 fi
