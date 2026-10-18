@@ -35,8 +35,9 @@ VM 한 대에 docker compose 로 컨테이너 셋을 띄운다 — 백엔드(Spr
 **그다음 서버에서**
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/gachijoopging/gachijoopging/dev/infra/provision.sh \
-  | DEPLOY_PUBKEY="ssh-ed25519 AAAA... github-actions-deploy" sh
+# 받기와 실행을 나눈다. curl | sh 로 이으면 받기가 실패해도 sh 가 빈 입력을 받고 성공으로 끝난다.
+curl -fsSL -o provision.sh https://raw.githubusercontent.com/gachijoopging/gachijoopging/dev/infra/provision.sh \
+  && DEPLOY_PUBKEY="ssh-ed25519 AAAA... github-actions-deploy" sh provision.sh
 ```
 
 스왑·도커·디렉터리·배포 키를 만든다. 여러 번 돌려도 안전하다 — 이미 돼 있으면 건너뛴다.
@@ -63,9 +64,22 @@ ADR-0005 가 "첫 사용자 전에 한 번 새로 만들어 교체한다" 고 �
 | 7 | 바깥에서 keyscan 해 5번 값과 대조하고, 로컬 `known_hosts` 를 지운다(아래) | 로컬 |
 | 8 | 인증서 최초 발급(§HTTPS) | 서버 |
 | 9 | `docker compose up -d` — 이제 `nginx`·`certbot` 까지 올라온다 | 서버 |
-| 10 | 옛 인스턴스를 **중지**하고, 아래 ⚠️ 대로 남은 세션을 끊은 뒤 백엔드를 다시 만든다. 4번의 풀 제한도 여기서 지운다 | 콘솔 → 서버 |
-| 11 | 사진이 있으면 옮긴다 — `rsync -a` 로 `/data/uploads` 를. 소유자 10001 을 유지해야 한다 | 서버 |
+| 10 | 사진이 있으면 옛 서버에서 받아 온다(아래). 6번 뒤라 새 업로드는 이미 새 서버로 온다 | 서버 |
+| 11 | 옛 인스턴스를 **중지**하고, 아래 ⚠️ 대로 남은 세션을 끊은 뒤 백엔드를 다시 만든다. 4번의 풀 제한도 여기서 지운다 | 콘솔 → 서버 |
 | 12 | 확인 뒤 옛 인스턴스는 **스냅샷 하나 남기고 삭제**한다. 중지만 하면 과금이 계속된다 | 콘솔 |
+
+**10번 사진은 옛 서버를 끄기 전에 옮긴다.** 고정 IP 를 뗀 옛 서버에는 콘솔에 새로 뜨는 임시 IP 로 붙는다.
+받는 쪽 `/data/uploads` 는 백엔드(UID 10001) 소유라 ubuntu 로는 쓸 수 없고, `rsync -a` 의 소유자 유지는
+받는 쪽이 root 일 때만 된다. 그래서 양쪽 모두 `sudo` 로 돈다.
+
+```sh
+# 새 서버에서. 옛 서버 키는 로컬의 Lightsail 키를 잠깐 올려 쓰고 끝나면 지운다
+# 키는 절대 경로로 쓴다. sudo 아래의 ssh 는 ~ 를 root 의 홈(/root)으로 펼친다.
+# root 의 known_hosts 에는 옛 서버가 없어서 처음에 호스트 키를 묻는다 — 콘솔의 옛 서버 IP 가 맞으면 yes.
+sudo rsync -a -e "ssh -i /home/ubuntu/old-key.pem" --rsync-path="sudo rsync" \
+  ubuntu@<옛 서버 임시 IP>:/data/uploads/ /data/uploads/
+sudo find /data/uploads ! -uid 10001 | head    # 아무것도 안 나와야 한다
+```
 
 **4번이 순서의 핵심이다.** 도메인을 옮기기 전에 백엔드가 뜨는 것을 봐 두면, 새 IP 에서 DB·Redis 에
 닿는지를 사이트가 내려간 상태에서 디버깅하지 않아도 된다. 8080 은 외부에 열려 있지 않으므로
@@ -85,7 +99,7 @@ docker run --rm --network gachijoopging_default curlimages/curl \
   -sS -o /dev/null -w '%{http_code}\n' http://backend:8080/actuator/health
 ```
 
-이 줄은 교체 중에만 쓴다. **10번에서 지운다** — 남겨 두면 운영이 커넥션 3개로 돈다.
+이 줄은 교체 중에만 쓴다. **11번에서 지운다** — 남겨 두면 운영이 커넥션 3개로 돈다.
 세션을 끊기 전에 지워 두면 백엔드를 한 번만 다시 만들면 된다.
 
 ```sh
