@@ -75,17 +75,22 @@ ADR-0005 가 "첫 사용자 전에 한 번 새로 만들어 교체한다" 고 �
 # 옛 백엔드가 아직 커넥션을 쥐고 있다. 기본 풀(10)로 띄우면 상한 15 를 넘는다 — 아래 ⚠️ 와 같은 사고다.
 # 셸에 붙여 주면 안 된다. 그것은 compose 가 ${...} 를 채울 때만 쓰이고 컨테이너까지 가지 않는다
 # (backend 에는 env_file 만 있고 environment: 가 없다). .env 에 적어야 닿는다.
-echo 'SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE=3' >> .env
+#
+# 앞에 \n 을 붙이는 것은 .env 가 줄바꿈 없이 끝나는 경우를 막기 위해서다. 그러면 이 줄이 마지막 키
+# 뒤에 그대로 붙어 그 키의 값이 깨지고, 풀 제한도 안 걸린다.
+printf '\nSPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE=3\n' >> .env
 docker compose up -d redis backend
 
 docker run --rm --network gachijoopging_default curlimages/curl \
   -sS -o /dev/null -w '%{http_code}\n' http://backend:8080/actuator/health
 ```
 
-이 줄은 교체 중에만 쓴다. 10번에서 지운다 — 남겨 두면 운영이 커넥션 3개로 돈다.
+이 줄은 교체 중에만 쓴다. **10번에서 지운다** — 남겨 두면 운영이 커넥션 3개로 돈다.
+세션을 끊기 전에 지워 두면 백엔드를 한 번만 다시 만들면 된다.
 
 ```sh
 sed -i '/^SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE=/d' .env
+#   ... 여기서 아래 ⚠️ 의 pg_terminate_backend ...
 docker compose up -d --force-recreate backend
 ```
 
@@ -138,7 +143,7 @@ ssh-keygen -R 13.125.10.7      # 로컬 known_hosts 의 옛 항목을 지운다
 >   psql -h "$H" -p 6543 -U "$U" -d postgres -c \
 >   "select pg_terminate_backend(pid) from pg_stat_activity
 >    where usename='postgres' and application_name='PostgreSQL JDBC Driver' and state='idle';"
-> docker compose up -d --force-recreate backend
+> docker compose up -d --force-recreate backend    # 교체 중이면 풀 제한을 먼저 지우고 여기서 한 번만
 > ```
 >
 > 평소 배포는 이 문제를 겪지 않는다. 컨테이너가 정상 종료하면서 커넥션을 닫기 때문이다.
