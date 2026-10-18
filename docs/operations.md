@@ -1,6 +1,6 @@
 # 운영
 
-Lightsail VM 한 대 + Supabase Postgres + 담당자 노트북의 AI 서버.
+Lightsail VM 한 대 + Supabase Postgres + 담당자 맥의 AI 서버.
 
 ## 구성
 
@@ -16,7 +16,7 @@ VM 한 대에 docker compose 로 컨테이너 셋을 띄운다 — 백엔드(Spr
 | 공개 주소 | `www.gachijoopging.site`(apex 는 301 이라 쓰지 않는다) |
 | 입구 | Nginx 가 443 을 잡고 `/api/v1/...` 를 백엔드로, 사진을 디스크에서 직접 보낸다. 채팅·위치가 STOMP 소켓(`realtime.md`)이라 WebSocket 업그레이드를 통과시킨다 |
 | DB | Supabase Postgres(PostGIS) · 서울 (ADR-0001). **PostgreSQL 17.11 · PostGIS 3.3** |
-| AI | 담당자 GPU 노트북 + 터널. 서버에 올리지 않는다 (`ai/README.md` §8) |
+| AI | 담당자 M4 Mac mini(MPS) + ngrok 터널. 서버에 올리지 않는다 (`ai/README.md` §8) |
 
 ### 서버를 새로 만들 때
 
@@ -489,7 +489,7 @@ Supabase Enforce SSL. 나머지는 한 겹이거나 그보다 약하고, 어디�
 |---|---|
 | 백엔드 8080 | **호스트에 내지 않는다.** Nginx 가 compose 네트워크로 `backend:8080` 에 붙고, healthcheck 는 컨테이너 안에서 `localhost` 를 본다. 되살리면 Nginx 를 우회해 **`/actuator/prometheus` 가 인증 없이** 열리고, **`X-Real-IP` 를 위조**해 `login:ip:` 카운터를 피할 수 있다 |
 | Redis 6379 | 같다. `--requirepass` 까지 걸려 있다(§Redis) |
-| AI · DB | 이 서버에 없다. AI 는 담당자 노트북, DB 는 Supabase |
+| AI · DB | 이 서버에 없다. AI 는 담당자 맥, DB 는 Supabase |
 
 서버 안에서:
 

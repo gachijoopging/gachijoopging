@@ -27,13 +27,13 @@ IMGSZ = 1024
 SECRET = os.environ.get("AI_SECRET", "").strip()
 WEIGHTS = Path(os.environ.get("AI_WEIGHTS") or AI_DIR / "weights" / "yolo26s-1024-v1.pt")
 # 파일명과 같은 값을 쓴다 — 응답의 버전만 보고 어느 weights 였는지 되찾을 수 있다.
-# **weights 가 그대로여도 보정 맵이 바뀌면 올린다** (app/calibrate.py) — 다음은 ⑯.
+# **weights 가 그대로여도 보정 맵이 바뀌면 올린다** (app/calibrate.py).
 MODEL_VERSION = os.environ.get("AI_MODEL_VERSION", "yolo26s-1024-v1")
 
 _device = os.environ.get("AI_DEVICE", "0").strip()
 DEVICE: int | str = int(_device) if _device.isdigit() else _device
 
-# CONF_MIN 미만은 items 에 넣지 않는다. **실측값은 W4 ⑰**이고 지금은 임시다.
+# CONF_MIN 미만은 items 에 넣지 않는다. 데모는 0.25 그대로 간다(실측은 범위 밖, progress.md §2 W4).
 # 0.25 = Ultralytics 기본값. 근거 없는 숫자를 새로 만들지 않기 위해 기본값을 쓴다
 # (progress.md §3 "미정 항목을 추측으로 채우지 않는다").
 CONF_MIN = float(os.environ.get("AI_CONF_MIN", "0.25"))
