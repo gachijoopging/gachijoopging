@@ -33,12 +33,11 @@ function webUrl(branch) {
 }
 
 async function send(hook, text) {
-  const res = await fetch(hook, {
+  await fetch(hook, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ text }),
   });
-  if (!res.ok) process.exit(0); // 실패해도 작업을 막지 않는다
 }
 
 // 직접 git push 로 dev/main 에 반영됐을 때
@@ -70,7 +69,8 @@ function prMerged(input) {
   const idFromCmd = input.tool_input.command.match(/\bgh\s+pr\s+merge\s+(\S+)/)?.[1];
   const id = idFromCmd && !idFromCmd.startsWith('-') ? idFromCmd : responseText(input).match(/#(\d+)/)?.[1];
   if (!id) return null;
-  const pr = JSON.parse(gh('pr', 'view', id, '--json', 'number,title,url,baseRefName'));
+  const pr = JSON.parse(gh('pr', 'view', id, '--json', 'number,title,url,baseRefName,state'));
+  if (pr.state !== 'MERGED') return null;
   if (pr.baseRefName !== 'dev' && pr.baseRefName !== 'main') return null;
   return pr.baseRefName === 'main'
     ? `:rocket: **main 배포** — ${pr.title}\n[${pr.url}](${pr.url})`
