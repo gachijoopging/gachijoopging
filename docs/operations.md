@@ -291,8 +291,7 @@ node infra/legal/build.mjs --check    # 어긋나면 1 로 끝난다 — legal.y
 배포 때 변환하지 않는다. 변환이 깨지면 배포가 통째로 막히기 때문이다. `deploy.yml` 은 만들어진 HTML 을
 `/opt/gachijoopging/legal/` 로 올리기만 하고, compose 가 그 디렉터리를 `nginx` 에 읽기 전용으로 물린다.
 
-> 전문의 빈칸(문의 이메일·리전)은 채워져 있다. 문의 주소는 프로젝트 공용 계정이고, Supabase·Lightsail
-> 둘 다 서울이라 국외 이전은 Google LLC(푸시·소셜 로그인) 한 곳뿐이다.
+> 전문의 빈칸(문의 이메일·리전)은 채워져 있다. 국외 이전 범위는 `docs/legal/privacy.md` §4 가 정본이다.
 
 ## 미디어
 
