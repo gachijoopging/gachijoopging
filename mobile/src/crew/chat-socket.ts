@@ -3,8 +3,9 @@ import { reconnectDelayMs, type ChatMessage } from './chat';
 /** 구독 `/user/queue/crew` 중 채팅 화면이 쓰는 두 가지 (docs/realtime.md) */
 export type ChatSocketEvent = { type: 'CHAT'; data: ChatMessage } | { type: 'CHAT_DELETED'; data: { seq: number } };
 /**
- * closed 는 소켓이 스스로 다시 붙지 않는 끊김이다.
- * 4401 토큰 만료 → 갱신 뒤 reconnect · 4403 소속 없음 → 소속 상태를 다시 본다
+ * closed 는 소켓이 스스로 다시 붙지 않는 끊김이다. 화면은 사유만 보고 이동한다.
+ * 4401 로그인 필요 — 소켓이 토큰 갱신까지 해 보고 실패해 이미 로그아웃했다. 화면은 다시 갱신하지 않고 로그인으로 보낸다
+ * 4403 소속 없음 → 소속 상태를 다시 본다
  */
 export type ChatSocketStatus = 'connecting' | 'open' | { closed: 4401 | 4403 };
 
@@ -14,7 +15,6 @@ export type ChatSocket = {
   subscribe(onEvent: (event: ChatSocketEvent) => void): () => void;
   /** 등록 즉시 현재 상태를 한 번 알린다 */
   onStatus(listener: (status: ChatSocketStatus) => void): () => void;
-  reconnect(): void;
   close(): void;
 };
 
@@ -96,15 +96,6 @@ export function createMockChatSocket({
       listeners.add(listener);
       listener(status);
       return () => listeners.delete(listener);
-    },
-    reconnect() {
-      cancelReconnect?.();
-      setStatus('connecting');
-      const timer = setTimeout(() => {
-        timers.delete(timer);
-        setStatus('open');
-      }, 0);
-      timers.add(timer);
     },
     simulateDrop(code) {
       cancelReconnect?.();

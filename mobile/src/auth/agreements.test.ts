@@ -16,6 +16,7 @@ jest.mock('expo-file-system', () => ({ Paths: { document: 'documents' }, File: c
 jest.mock('expo-linking', () => ({ openURL: jest.fn().mockResolvedValue(undefined) }));
 jest.mock('expo-crypto', () => ({ randomUUID: () => `uuid-${++mockUuid}` }));
 jest.mock('../api/onboarding', () => ({ onboardingApi: { get: (...args: unknown[]) => mockGet(...args), mutate: (...args: unknown[]) => mockMutate(...args) } }));
+jest.mock('../api/config', () => ({ apiConfig: { real: false }, createApiClient: () => jest.requireMock('../api/client').createMockClient() }));
 jest.mock('../api/client', () => ({ ApiError: class extends Error { code: string; fields: unknown; constructor(mockCode: string, mockFields?: unknown) { super(mockCode); this.code = mockCode; this.fields = mockFields; } }, createMockClient: () => ({ get: (...args: unknown[]) => mockGet(...args), mutate: (...args: unknown[]) => mockMutate(...args) }) }));
 const mockReset = jest.fn();
 jest.mock('expo-router', () => ({ router: { replace: jest.fn(), back: jest.fn(), dismissTo: jest.fn() }, useLocalSearchParams: () => ({}), useNavigation: () => ({ reset: (...a: unknown[]) => mockReset(...a) }), useFocusEffect: (fn: () => void) => require('react').useEffect(fn, [fn]) }));
@@ -82,6 +83,15 @@ test('version refresh preserves nickname and unchanged-version choice but clears
   const boxes = tree.root.findAllByType('Checkbox' as never);
   expect(boxes[0].props.checked).toBe(false); expect(boxes[1].props.checked).toBe(true);
   expect(mockReset).not.toHaveBeenCalled();
+});
+
+test('failed profile load hides the agreement spinner until retry succeeds', async () => {
+  mockGet.mockImplementationOnce(() => Promise.reject(new Error('offline')));
+  await mount(Nickname);
+  expect(tree.root.findAllByType('Loading' as never)).toHaveLength(0);
+  expect(tree.root.findAllByType('Checkbox' as never)).toHaveLength(0);
+  await press('다시 시도');
+  expect(tree.root.findAllByType('Checkbox' as never)).toHaveLength(3);
 });
 
 test('missing catalogue exposes retry and prevents signup', async () => {

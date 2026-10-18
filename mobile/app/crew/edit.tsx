@@ -24,7 +24,8 @@ import {
   Txt,
   space,
 } from 'design-system/src';
-import { ApiError, createMockClient, type ApiClient } from '../../src/api/client';
+import { ApiError, type ApiClient } from '../../src/api/client';
+import { createApiClient } from '../../src/api/config';
 import { CREW_INTRO_MAX, CREW_NAME_MAX, crewChanged, crewFormErrors, crewPatch, openingOverflows, opensCrew, type CrewForm } from '../../src/crew/crew-edit';
 import { REGIONS, regionName, type JoinPolicy, type Region } from '../../src/crew/region';
 import { usePreventBack } from '../../src/auth/usePreventBack';
@@ -45,7 +46,7 @@ const POLICIES: { value: JoinPolicy; title: string; subtitle: string }[] = [
   { value: 'APPROVAL', title: '비공개', subtitle: '크루장이 승인해야 가입' },
 ];
 
-const api: ApiClient = createMockClient({ delayMs: 300 });
+const api: ApiClient = createApiClient({ delayMs: 300 });
 
 export default function EditCrewScreen() {
   const navigation = useNavigation();

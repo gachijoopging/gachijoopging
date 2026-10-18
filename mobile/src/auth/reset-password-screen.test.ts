@@ -5,6 +5,7 @@ const { act, create } = require('react-test-renderer');
 const mockMutate = jest.fn();
 const mockReplace = jest.fn();
 const mockPush = jest.fn();
+jest.mock('../api/config', () => ({ apiConfig: { real: false }, createApiClient: () => jest.requireMock('../api/client').createMockClient() }));
 jest.mock('../api/client', () => ({
   ApiError: class extends Error {
     code: string;

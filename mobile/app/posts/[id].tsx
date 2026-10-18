@@ -25,7 +25,8 @@ import {
   useRipple,
   characterEmpty,
 } from 'design-system/src';
-import { ApiError, createMockClient, forget, peek, type ApiClient, type ApiResponse } from '../../src/api/client';
+import { ApiError, forget, peek, type ApiClient, type ApiResponse } from '../../src/api/client';
+import { createApiClient } from '../../src/api/config';
 import { clearDraft, draftFor, editDraft, requestIdFor } from '../../src/crew/comment-draft';
 import { COMMENT_MAX, canSendComment } from '../../src/crew/notice';
 import { PhotoPager } from '../../src/feed/PhotoPager';
@@ -38,7 +39,7 @@ import { useFlash } from '../../src/ui/useFlash';
 type Detail = Post & { comments: Comment[]; commentsNextCursor?: string | null };
 type Pending = { id: string; text: string };
 
-const api: ApiClient = createMockClient({ delayMs: 300 });
+const api: ApiClient = createApiClient({ delayMs: 300 });
 /** 남은 글자는 이 수를 넘긴 뒤부터 보인다 (5-2 입력) */
 const COUNT_FROM = 400;
 

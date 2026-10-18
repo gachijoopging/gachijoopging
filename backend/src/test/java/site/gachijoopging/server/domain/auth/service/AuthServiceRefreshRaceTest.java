@@ -15,10 +15,12 @@ import java.time.ZoneOffset;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
+import site.gachijoopging.server.domain.activity.service.ActivityService;
 import site.gachijoopging.server.domain.auth.entity.RefreshToken;
 import site.gachijoopging.server.domain.auth.repository.RefreshTokenRepository;
 import site.gachijoopging.server.domain.user.service.UserService;
 import site.gachijoopging.server.global.error.BusinessException;
+import site.gachijoopging.server.global.lock.UserLock;
 import site.gachijoopging.server.global.security.jwt.JwtIssuer;
 
 class AuthServiceRefreshRaceTest {
@@ -35,6 +37,8 @@ class AuthServiceRefreshRaceTest {
           refreshTokenRepository,
           familyRevoker,
           mock(UserService.class),
+          mock(ActivityService.class),
+          mock(UserLock.class),
           jwtIssuer,
           Clock.fixed(지금, ZoneOffset.UTC),
           new SimpleMeterRegistry());

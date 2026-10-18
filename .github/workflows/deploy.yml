@@ -57,17 +57,20 @@ jobs:
           printf '%s\n' "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           # keyscan 으로 그때그때 받으면 아무 키나 믿는다는 뜻이다. 호스트 키는 공개 값이라 박아 둔다.
-          echo '13.125.10.7 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOeOHFjZ0ZK/FXfxqeIib8YEXg9iQ9Gbz2yyHwBFVKl4' > ~/.ssh/known_hosts
+          # 서버를 교체하면 이 값도 바꿔야 한다 — 안 바꾸면 다음 배포가 Host key verification failed 로 멈춘다.
+          echo '13.125.10.7 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINIQ8CPGdkpe6QKCzeL4j5x33ngaX5nzme5n0iyUPgt+' > ~/.ssh/known_hosts
 
       # 설정도 같이 올린다. 서버에 저장소를 두지 않으므로 이 파일들이 유일한 사본이다.
       - name: 설정 올리기
         run: |
           set -euo pipefail
-          scp infra/docker-compose.yml infra/deploy.sh "$HOST:/opt/gachijoopging/"
+          scp infra/docker-compose.yml infra/deploy.sh infra/watch.sh "$HOST:/opt/gachijoopging/"
           scp infra/nginx/nginx.conf "$HOST:/opt/gachijoopging/nginx/"
+          ssh "$HOST" 'mkdir -p /opt/gachijoopging/legal'
+          scp infra/legal/*.html "$HOST:/opt/gachijoopging/legal/"
 
       - name: 배포
-        run: ssh "$HOST" "chmod +x /opt/gachijoopging/deploy.sh && /opt/gachijoopging/deploy.sh ${{ steps.tag.outputs.tag }}"
+        run: ssh "$HOST" "chmod +x /opt/gachijoopging/deploy.sh /opt/gachijoopging/watch.sh && /opt/gachijoopging/deploy.sh ${{ steps.tag.outputs.tag }}"
 
       - name: 바깥에서 확인
         run: curl -fsS --retry 5 --retry-delay 5 https://www.gachijoopging.site/actuator/health

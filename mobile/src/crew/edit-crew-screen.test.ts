@@ -7,6 +7,7 @@ const mockMutate = jest.fn();
 const mockPush = jest.fn();
 const mockDismiss = jest.fn();
 jest.mock('expo/src/winter/fetch', () => ({ fetch: jest.fn() }));
+jest.mock('../api/config', () => ({ apiConfig: { real: false }, createApiClient: () => jest.requireMock('../api/client').createMockClient() }));
 jest.mock('../api/client', () => ({
   ApiError: class extends Error {
     code: string;

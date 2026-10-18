@@ -13,7 +13,8 @@ import {
   Snackbar,
   space,
 } from 'design-system/src';
-import { ApiError, createMockClient, type ApiClient } from '../../../src/api/client';
+import { ApiError, type ApiClient } from '../../../src/api/client';
+import { createApiClient } from '../../../src/api/config';
 import { usePreventBack } from '../../../src/auth/usePreventBack';
 import {
   NOTICE_BODY_MAX,
@@ -29,7 +30,7 @@ import {
   type NoticeForm,
 } from '../../../src/crew/notice-edit';
 
-const api: ApiClient = createMockClient({ delayMs: 300 });
+const api: ApiClient = createApiClient({ delayMs: 300 });
 
 export default function EditNoticeScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>();

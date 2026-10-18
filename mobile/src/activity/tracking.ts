@@ -3,7 +3,8 @@ import * as Network from 'expo-network';
 import { File } from 'expo-file-system';
 import * as TaskManager from 'expo-task-manager';
 import { updateTrackingNotification } from '../../modules/tracking-notification';
-import { ApiError, createMockClient, type ApiClient } from '../api/client';
+import { ApiError, type ApiClient } from '../api/client';
+import { createApiClient } from '../api/config';
 import { healthConnect } from './health-connect';
 import { flush, type Op } from './outbox';
 import { fixLogLine } from './fix-log';
@@ -16,7 +17,7 @@ export const TRACKING_TASK = 'gachi-activity-tracking';
 const LIVE_EVERY_MS = 5_000;
 
 // ponytail: 실 API·소켓(/app/crew/live)은 W3. 그 전까지 배경 보고 경로만 목으로 부른다
-const api: ApiClient = createMockClient({ activityTotals: () => getStored().session });
+const api: ApiClient = createApiClient({ activityTotals: () => getStored().session });
 
 let lastLiveAt = 0;
 

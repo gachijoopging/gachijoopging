@@ -2,13 +2,14 @@ import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 import { Banner, Button, Card, EmptyState, ErrorState, Icon, ListRow, Loading, Txt, space } from 'design-system/src';
-import { createMockClient, type ApiClient } from '../api/client';
+import { type ApiClient } from '../api/client';
+import { createApiClient } from '../api/config';
 import type { MOCKS } from '../api/mocks.generated';
 import { monthDay } from './crew';
 
 type Notice = (typeof MOCKS)['GET /crew/notices']['data']['items'][number];
 
-const api: ApiClient = createMockClient({ delayMs: 300 });
+const api: ApiClient = createApiClient({ delayMs: 300 });
 
 /** 모이깅의 공지 패널(3-5). 쓰기는 크루장만 */
 export function NoticesPanel({ isLeader, refreshKey }: { isLeader: boolean; refreshKey: number }) {

@@ -9,14 +9,13 @@ import { onboardingApi as api } from '../../src/api/onboarding';
 import { completeSignIn } from '../../src/auth/complete-sign-in';
 import type { OnboardingNavigation } from '../../src/auth/navigation';
 import { usePreventBack } from '../../src/auth/usePreventBack';
+import { providerToken, type Provider } from '../../src/auth/social';
 
 const bg = require('../../../design-system/assets/legacy/start-bg.png');
 const wordmark = require('../../../design-system/assets/logo-wordmark.png');
 
 /** 워드마크 뒤 광원 지름. 워드마크(270)보다 넉넉히 커야 은은하게 번지는 것처럼 보인다 */
 const GLOW_SIZE = size.wordmarkGlow;
-
-type Provider = 'kakao' | 'google';
 
 export default function StartScreen() {
   const { colors } = useTheme();
@@ -36,10 +35,10 @@ export default function StartScreen() {
     try {
       if (authenticated.current !== provider) {
         authenticated.current = null;
-        // 제공자 SDK 연동은 별도 작업이다. 여기서는 토큰을 받아 온 뒤라고 가정하고 이어간다.
-        await api.mutate(provider === 'kakao' ? 'POST /auth/kakao' : 'POST /auth/google', {
-          token: 'mock-provider-token',
-        });
+        const token = await providerToken(provider);
+        // 제공자 창을 닫은 것은 실패가 아니다 — 안내 없이 처음 화면으로 돌아간다
+        if (token == null) return setLoadingProvider(null);
+        await api.mutate(provider === 'kakao' ? 'POST /auth/kakao' : 'POST /auth/google', { token });
         authenticated.current = provider;
       }
       await completeSignIn(api, navigation);
@@ -59,7 +58,7 @@ export default function StartScreen() {
         style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
       />
       <Screen edges={['top', 'bottom', 'left', 'right']} scroll contentStyle={{ flexGrow: 1 }} style={{ backgroundColor: colors.transparent }}>
-        <View style={{ flex: 1, minHeight: '100%', justifyContent: 'space-between' }}>
+        <View style={{ flex: 1, justifyContent: 'space-between' }}>
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: space.lg }}>
             <View style={{ alignItems: 'center', justifyContent: 'center' }}>
               <View

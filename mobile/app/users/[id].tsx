@@ -22,7 +22,8 @@ import {
   Txt,
   space,
 } from 'design-system/src';
-import { ApiError, createMockClient, forget, peek, type ApiClient } from '../../src/api/client';
+import { ApiError, forget, peek, type ApiClient } from '../../src/api/client';
+import { createApiClient } from '../../src/api/config';
 import type { MOCKS } from '../../src/api/mocks.generated';
 import { ActivityCalendar, StatsTile, usePaged, type ActivityCard, type Post } from '../../src/profile/ProfileParts';
 import { ProfileTabList } from '../../src/profile/ProfileTabList';
@@ -38,7 +39,7 @@ type Profile = Omit<(typeof MOCKS)['GET /crew/members/{userId}']['data'], 'isLea
 type Tab = 'records' | 'posts';
 type Confirm = 'block' | 'kick' | 'delegate';
 
-const api: ApiClient = createMockClient({ delayMs: 300 });
+const api: ApiClient = createApiClient({ delayMs: 300 });
 const TABS: { value: Tab; label: string }[] = [
   { value: 'records', label: '기록' },
   { value: 'posts', label: '게시물' },

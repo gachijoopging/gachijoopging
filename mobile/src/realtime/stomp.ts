@@ -35,10 +35,7 @@ export type StompSocketOptions = {
   getToken: () => Promise<string | null>;
   /** 공유 refresh (api/client 의 POST /auth/refresh). 실패하면 reject */
   refresh: () => Promise<unknown>;
-  /**
-   * 로그아웃 상태로. refresh 뒤에도 4401 이면 부른 다음 closed 4401 을 알린다.
-   * 채팅 화면은 closed 4401 에 refresh 를 다시 해 보는데, 토큰이 없으니 실패해 로그인으로 간다
-   */
+  /** 로그아웃 상태로. refresh 가 거절되거나 refresh 뒤에도 4401 이면 부른 다음 closed 4401(로그인 필요)을 알린다 */
   signOut: () => Promise<unknown>;
   /** 소켓이 닫혀 있을 때 위치를 올리는 길. OS 가 배경에서 소켓을 끊어도 위치는 끊기지 않아야 한다 */
   postLive: (body: LiveBody) => Promise<unknown>;
@@ -197,13 +194,6 @@ export function createStompSocket({ url, getToken, refresh, signOut, postLive, c
       listeners.add(listener);
       listener(status);
       return () => listeners.delete(listener);
-    },
-    /** 화면이 refresh 를 마친 뒤 부른다. 여기서 또 4401 이면 다시 refresh 하지 않고 닫힘을 알린다 */
-    reconnect() {
-      refreshed = true;
-      client?.deactivate();
-      client = null;
-      connectNow();
     },
     close() {
       closed = true;

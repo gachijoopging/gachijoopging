@@ -4,13 +4,14 @@ import { Image, RefreshControl, View } from 'react-native';
 import { Banner, Button, Card, Chip, ErrorState, Loading, MetricSplit, Screen, Snackbar, Txt, characterEmpty, size, space } from 'design-system/src';
 import { getStored, loadLastAccount, subscribe, type Stored } from '../../src/activity/store';
 import { syncOutbox } from '../../src/activity/tracking';
-import { createMockClient, type Activity, type ApiClient } from '../../src/api/client';
+import { type Activity, type ApiClient } from '../../src/api/client';
+import { createApiClient } from '../../src/api/config';
 import { usePloggingLauncher } from '../../src/plogging/PloggingLauncher';
 import { readyView } from '../../src/plogging/ready';
 import { activityMetrics, activitySummaryLabel } from '../../src/plogging/start';
 import { useFlash } from '../../src/ui/useFlash';
 
-const api: ApiClient = createMockClient({ delayMs: 300 });
+const api: ApiClient = createApiClient({ delayMs: 300 });
 
 
 /** 4-1. 줍깅 버튼은 이 화면을 거치지 않고 시트를 띄운다. 설정·빈 기록의 "줍깅 시작" 링크가 닿는 자리다 */

@@ -47,7 +47,7 @@ export const lineHeight = {
 
 /**
  * 자간(px). 크기마다 다르다. 큰 글자는 글자 사이가 벌어져 보여 좁히고, 12 크기는 조금 띄워 읽기 쉽게 한다.
- * 본문은 Pretendard 기본값 그대로 둔다. code 는 초대 코드처럼 한 글자씩 읽는 문자열이다
+ * 본문은 Pretendard 기본값 그대로 둔다. code 는 비밀번호 재설정 6자리 코드처럼 한 글자씩 읽는 문자열이다
  */
 export const tracking = {
   counter: -0.8,

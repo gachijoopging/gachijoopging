@@ -7,7 +7,8 @@
 # 여러 번 돌려도 안전하다 — 이미 돼 있으면 건너뛴다.
 #
 #   ssh -i <키>.pem ubuntu@<고정 IP>
-#   curl -fsSL https://raw.githubusercontent.com/gachijoopging/gachijoopging/dev/infra/provision.sh | sh
+#   curl -fsSL -o provision.sh https://raw.githubusercontent.com/gachijoopging/gachijoopging/dev/infra/provision.sh \
+#     && sh provision.sh
 #   (또는 저장소를 받아서) sh infra/provision.sh
 #
 # 고정 IP 와 방화벽(22·80·443)은 Lightsail 콘솔 작업이라 여기서 하지 못한다.
@@ -18,6 +19,7 @@ SWAP_SIZE=2G
 SWAP_FILE=/swapfile
 APP_DIR=/opt/gachijoopging
 MEDIA_DIR=/data/uploads
+WATCH_LOG=/var/log/gachijoopging-watch.log
 # backend/Dockerfile 이 만드는 비루트 사용자. 호스트 쪽 소유자를 맞추지 않으면 업로드가 전부 막힌다.
 APP_UID=10001
 
@@ -71,11 +73,59 @@ fi
 
 # ── 디렉터리 ───────────────────────────────────────────────────────
 log "디렉터리"
-sudo mkdir -p "$APP_DIR" "$MEDIA_DIR/deleted"
+# nginx/ 가 없으면 deploy.yml 의 scp 가 "dest open: Failure" 로 죽는다 — 첫 배포가 깨진다.
+sudo mkdir -p "$APP_DIR/nginx" "$MEDIA_DIR/deleted"
 sudo chown -R "$(id -un):$(id -gn)" "$APP_DIR"
 # 사진 디렉터리만 컨테이너 UID 소유다. 호스트 사용자로 두면 업로드가 permission denied 로 실패한다.
 sudo chown -R "$APP_UID:$APP_UID" "$MEDIA_DIR"
 echo "$APP_DIR · $MEDIA_DIR (소유자 $APP_UID)"
+
+# ── 배포 키 ────────────────────────────────────────────────────────
+# CI(deploy.yml)가 이 키로 붙는다. 없으면 배포가 안 되는데, 그 사실이
+# 첫 머지 때까지 드러나지 않는다. 공개키라 인자로 받아도 안전하다.
+#
+#   DEPLOY_PUBKEY="ssh-ed25519 AAAA... github-actions-deploy" sh infra/provision.sh
+log "배포 키"
+if [ -z "${DEPLOY_PUBKEY:-}" ]; then
+  echo "DEPLOY_PUBKEY 가 없다 — 건너뛴다. CI 배포를 쓰려면 나중에 넣는다"
+else
+  # 칸 수만 보면 개인키를 잘못 붙여 넣어도 통과해 authorized_keys 에 기록된다. ssh-keygen 이 읽어야 공개키다.
+  # 지문으로 비교하면 주석이 다르거나 앞에 옵션(no-pty ...)이 붙은 기존 줄도 같은 키로 알아본다.
+  fp=$(printf '%s\n' "$DEPLOY_PUBKEY" | ssh-keygen -lf - 2>/dev/null | awk '{print $2}')
+  if [ -z "$fp" ]; then
+    echo "DEPLOY_PUBKEY 가 공개키가 아니다 — 'ssh-ed25519 AAAA... [주석]' 를 넣는다" >&2
+    exit 1
+  fi
+  if ssh-keygen -lf "$HOME/.ssh/authorized_keys" 2>/dev/null | awk '{print $2}' | grep -qxF "$fp"; then
+    echo "이미 있다"
+  else
+    mkdir -p "$HOME/.ssh" && chmod 700 "$HOME/.ssh"
+    printf '%s\n' "$DEPLOY_PUBKEY" >> "$HOME/.ssh/authorized_keys"
+    chmod 600 "$HOME/.ssh/authorized_keys"
+    echo "넣었다"
+  fi
+fi
+
+# ── 감시 ───────────────────────────────────────────────────────────
+# watch.sh 는 deploy.yml 이 올린다. 여기서는 그것을 부를 cron 과 로그 자리만 만든다.
+# 이것이 빠지면 새 서버에서 감시가 조용히 사라지는데, 감시가 없어진 것은
+# 아무도 알려 주지 않으므로 가장 늦게 발견된다.
+log "감시 cron"
+# 로그는 ubuntu 가 써야 한다. /var/log 는 root 소유라 미리 만들어 주지 않으면 cron 이 조용히 실패한다.
+# 이미 있으면 건드리지 않는다 — install 은 있는 파일을 비워서, 장애를 조사하던 중에 다시 돌리면
+# 증거가 사라진다.
+if [ -f "$WATCH_LOG" ]; then
+  echo "로그 이미 있다: $WATCH_LOG"
+else
+  sudo install -o "$(id -un)" -g "$(id -gn)" -m 644 /dev/null "$WATCH_LOG"
+  echo "로그 만들었다: $WATCH_LOG"
+fi
+( crontab -l 2>/dev/null | grep -v 'watch\.sh' || true
+  printf '%s\n' \
+    "*/5 * * * * cd $APP_DIR && ./watch.sh >> $WATCH_LOG 2>&1" \
+    "10 0 * * * cd $APP_DIR && ./watch.sh --limits >> $WATCH_LOG 2>&1"
+) | crontab -
+crontab -l | grep 'watch\.sh'
 
 # ── 확인 ───────────────────────────────────────────────────────────
 log "결과"

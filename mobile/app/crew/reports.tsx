@@ -21,7 +21,8 @@ import {
   space,
   useRipple,
 } from 'design-system/src';
-import { ApiError, createMockClient, type ApiClient } from '../../src/api/client';
+import { ApiError, type ApiClient } from '../../src/api/client';
+import { createApiClient } from '../../src/api/config';
 import type { MOCKS } from '../../src/api/mocks.generated';
 import { monthDay } from '../../src/crew/crew';
 import { memberActionOutcome } from '../../src/crew/manage';
@@ -29,7 +30,7 @@ import { reasonLabel, reportActions, resolveOutcome, targetLabel, withoutKickedU
 
 type Report = (typeof MOCKS)['GET /crew/reports']['data']['items'][number];
 
-const api: ApiClient = createMockClient({ delayMs: 300 });
+const api: ApiClient = createApiClient({ delayMs: 300 });
 
 const CONFIRM: Record<ReportAction, { title: (r: Report) => string; body: string; label: string }> = {
   DISMISS: { title: () => '이 신고를 기각할까요?', body: '대상은 그대로 유지되고 신고만 처리돼요.', label: '기각' },

@@ -7,6 +7,7 @@ const { act, create } = require('react-test-renderer');
 const mockGet = jest.fn();
 const mockMutate = jest.fn();
 const mockDismiss = jest.fn();
+const mockRandomUUID = jest.fn();
 let mockBeforeRemove: ((event: { preventDefault: () => void }) => void) | null = null;
 let mockParams: { targetType?: string; targetId?: string } = { targetType: 'POST', targetId: 'p1' };
 const mockNavigation = {
@@ -16,7 +17,7 @@ const mockNavigation = {
     return () => { if (mockBeforeRemove === callback) mockBeforeRemove = null; };
   },
 };
-jest.mock('expo-crypto', () => ({ randomUUID: () => 'request-id' }));
+jest.mock('expo-crypto', () => ({ randomUUID: () => mockRandomUUID() }));
 jest.mock('../api/client', () => ({
   ApiError: class extends Error {
     code: string;
@@ -41,6 +42,7 @@ beforeEach(() => {
   mockGet.mockReset().mockResolvedValue(me());
   mockMutate.mockReset().mockResolvedValue(undefined);
   mockDismiss.mockReset();
+  mockRandomUUID.mockReset().mockReturnValueOnce('request-id').mockReturnValue('changed-request-id');
   mockParams = { targetType: 'POST', targetId: 'p1' };
   mockBeforeRemove = null;
   clearReportDraft('u1', 'POST', 'p1');
@@ -82,13 +84,17 @@ test('계정을 바꾸어 진입하면 이전 신고 메모를 화면에 복원�
 test('크루장 직접 진입과 권한 조회 실패는 신고 폼을 열지 않는다', async () => {
   mockGet.mockResolvedValue(me('u1', true));
   await mount();
-  expect(rendered.root.findByType('ErrorState').props.title).toBe('크루원만 신고할 수 있어요.');
+  expect(rendered.root.findByType('ErrorState').props.title).toBe('크루원만 신고할 수 있어요');
+  expect(rendered.root.findByType('ErrorState').props.description).toBe('크루장과 크루에 가입하지 않은 사용자는 신고할 수 없어요.');
   expect(rendered.root.findAllByType('SelectRow').length).toBe(0);
   await act(async () => rendered.unmount());
   mockGet.mockRejectedValue(new Error('offline'));
   await mount();
   expect(rendered.root.findByType('ErrorState').props.title).toBe('신고 권한을 확인하지 못했어요');
   expect(mockMutate).not.toHaveBeenCalled();
+  mockGet.mockResolvedValue(me());
+  await act(async () => rendered.root.findByType('ErrorState').props.onRetry());
+  expect(rendered.root.findAllByType('SelectRow').length).toBe(5);
 });
 
 test('권한이 바뀌어 제출이 거부되면 메모를 보존하고 재제출을 막는다', async () => {
@@ -96,7 +102,8 @@ test('권한이 바뀌어 제출이 거부되면 메모를 보존하고 재제�
   await chooseSpam();
   mockMutate.mockRejectedValue(new ApiError('FORBIDDEN'));
   await act(async () => submitButton().props.onPress());
-  expect(rendered.root.findByType('ErrorState').props.title).toBe('크루원만 신고할 수 있어요.');
+  expect(rendered.root.findByType('ErrorState').props.title).toBe('크루원만 신고할 수 있어요');
+  expect(rendered.root.findByType('ErrorState').props.description).toBe('크루장과 크루에 가입하지 않은 사용자는 신고할 수 없어요.');
   expect(reportDraftFor('u1', 'POST', 'p1').reason).toBe('SPAM');
   expect(mockDismiss).not.toHaveBeenCalled();
 });
@@ -104,7 +111,8 @@ test('권한이 바뀌어 제출이 거부되면 메모를 보존하고 재제�
 test('잘못된 링크의 대상 유형 또는 누락 id는 조회·제출 전에 거부한다', async () => {
   mockParams = { targetType: 'UNKNOWN', targetId: 'p1' };
   await mount();
-  expect(rendered.root.findByType('ErrorState').props.title).toBe('신고 대상을 확인할 수 없어요.');
+  expect(rendered.root.findByType('ErrorState').props.title).toBe('신고 대상을 확인할 수 없어요');
+  expect(rendered.root.findByType('ErrorState').props.description).toBe('잘못된 링크예요. 진입한 화면에서 다시 열어 주세요.');
   expect(mockGet).not.toHaveBeenCalled();
   expect(mockMutate).not.toHaveBeenCalled();
 });
@@ -129,4 +137,34 @@ test('다른 사유를 골랐다가 기타로 돌아오면 칸을 다시 떠나�
   await pick('스팸·도배');
   await pick('기타');
   expect(memo().props.error).toBeUndefined();
+});
+
+test.each(['MOCK_FAILURE', 'OFFLINE'])('신고 제출 %s 뒤 사유·메모와 요청 id를 보존하고 재시도한다', async (code) => {
+  editReportDraft('u1', 'POST', 'p1', { reason: 'OTHER', memo: '광고 링크를 반복해서 올려요' });
+  await mount();
+  mockMutate.mockRejectedValueOnce(new ApiError(code)).mockResolvedValueOnce(undefined);
+  await act(async () => submitButton().props.onPress());
+  expect(rendered.root.findByType('Banner').props.children).toBe('신고를 접수하지 못했어요. 다시 시도해 주세요.');
+  expect(rendered.root.findByType('Field').props.value).toBe('광고 링크를 반복해서 올려요');
+  expect(submitButton().props.disabled).toBe(false);
+  expect(mockDismiss).not.toHaveBeenCalled();
+  const firstRequest = mockMutate.mock.calls[0];
+  await act(async () => submitButton().props.onPress());
+  expect(mockMutate.mock.calls[1]).toEqual(firstRequest);
+  expect(mockRandomUUID).toHaveBeenCalledTimes(1);
+  expect(mockDismiss).toHaveBeenCalledTimes(1);
+  expect(reportDraftFor('u1', 'POST', 'p1').memo).toBe('');
+});
+
+test('중복 신고 응답은 입력을 보존하고 재제출 버튼 대신 돌아가기를 제공한다', async () => {
+  await mount();
+  await chooseSpam();
+  mockMutate.mockRejectedValue(new ApiError('CONFLICT'));
+  await act(async () => submitButton().props.onPress());
+  expect(rendered.root.findByType('Banner').props.children).toBe('이미 신고한 대상이에요.');
+  expect(submitButton()).toBeUndefined();
+  expect(rendered.root.findAllByType('Button').some((button: any) => button.props.label === '돌아가기')).toBe(true);
+  expect(reportDraftFor('u1', 'POST', 'p1').reason).toBe('SPAM');
+  expect(mockMutate).toHaveBeenCalledTimes(1);
+  expect(mockDismiss).not.toHaveBeenCalled();
 });

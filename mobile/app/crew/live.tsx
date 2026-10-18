@@ -23,7 +23,8 @@ import {
   space,
 } from 'design-system/src';
 import { KakaoMapView } from '../../modules/kakao-map';
-import { createMockClient, type ApiClient } from '../../src/api/client';
+import { type ApiClient } from '../../src/api/client';
+import { createApiClient } from '../../src/api/config';
 import { MOCKS } from '../../src/api/mocks.generated';
 import { spokenDistance } from '../../src/crew/records';
 import { formatDistance, formatElapsed } from '../../src/format';
@@ -32,7 +33,7 @@ import { useBlockedUsers } from '../../src/profile/blocked-users';
 
 type Member = (typeof MOCKS)['GET /crew/live']['data'][number];
 
-const api: ApiClient = createMockClient({ delayMs: 300 });
+const api: ApiClient = createApiClient({ delayMs: 300 });
 
 const progress = (m: Member) => `${formatDistance(m.distanceM)} · ${formatElapsed(m.elapsedSec)} · ${m.itemCount}개`;
 const spokenRow = (m: Member) =>

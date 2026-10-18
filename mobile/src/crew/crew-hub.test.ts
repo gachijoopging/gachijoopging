@@ -3,11 +3,13 @@ import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 
 const mockGet = jest.fn();
 const mockPush = jest.fn();
+jest.mock('../api/config', () => ({ apiConfig: { real: false }, createApiClient: () => jest.requireMock('../api/client').createMockClient() }));
 jest.mock('../api/client', () => ({ peek: () => undefined, forget: () => {}, ApiError: class extends Error {}, createMockClient: () => ({ get: (...args: unknown[]) => mockGet(...args), mutate: jest.fn() }) }));
 jest.mock('expo/src/winter/fetch', () => ({ fetch: jest.fn() }));
 jest.mock('expo-clipboard', () => ({ setStringAsync: jest.fn() }));
 jest.mock('expo-file-system', () => ({ File: class {}, Paths: {} }));
 jest.mock('expo-sharing', () => ({ shareAsync: jest.fn() }));
+jest.mock('expo-network', () => ({ useNetworkState: () => ({ isConnected: true }) }));
 jest.mock('expo-router', () => ({ router: { push: (...a: unknown[]) => mockPush(...a), canGoBack: () => true, back: jest.fn(), replace: jest.fn(), dismissTo: jest.fn() }, useLocalSearchParams: () => ({}), useFocusEffect: (fn: () => void) => require('react').useEffect(fn, [fn]) }));
 jest.mock('react-native', () => ({ View: 'View', Pressable: 'Pressable', ActivityIndicator: 'ActivityIndicator', RefreshControl: 'RefreshControl', Share: { share: jest.fn(async () => ({})) } }));
 jest.mock('design-system/src', () => new Proxy(

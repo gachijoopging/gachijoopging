@@ -1,4 +1,5 @@
 import { ApiError, createMockClient, type ApiClient, type ApiResponse, type JoinResult, type MockOptions } from './client';
+import { apiConfig, createApiClient } from './config';
 import { MOCKS } from './mocks.generated';
 import type { MembershipStatus, Rejection } from '../auth/destination';
 import { CREW_CAPACITY } from '../crew/region';
@@ -78,4 +79,4 @@ export function createOnboardingMockClient(options: MockOptions = {}): ApiClient
   };
 }
 
-export const onboardingApi = createOnboardingMockClient({ delayMs: 300 });
+export const onboardingApi = apiConfig.real ? createApiClient() : createOnboardingMockClient({ delayMs: 300 });

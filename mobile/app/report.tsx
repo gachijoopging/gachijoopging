@@ -18,7 +18,8 @@ import {
   Txt,
   space,
 } from 'design-system/src';
-import { ApiError, createMockClient, type ApiClient } from '../src/api/client';
+import { ApiError, type ApiClient } from '../src/api/client';
+import { createApiClient } from '../src/api/config';
 import { usePreventBack } from '../src/auth/usePreventBack';
 import {
   MEMO_MAX,
@@ -34,7 +35,7 @@ import {
   type ReportReason,
 } from '../src/report/report';
 
-const api: ApiClient = createMockClient({ delayMs: 300 });
+const api: ApiClient = createApiClient({ delayMs: 300 });
 
 type Params = {
   targetType: string;
@@ -54,6 +55,7 @@ export default function ReportScreen() {
   const [accountId, setAccountId] = useState<string | null>(null);
   const [denied, setDenied] = useState(false);
   const [loadFailed, setLoadFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
   const [sending, setSending] = useState(false);
   const [banner, setBanner] = useState<{ message: string; duplicate: boolean } | null>(null);
   const navigation = useNavigation();
@@ -80,7 +82,7 @@ export default function ReportScreen() {
       setAccountId(data.id);
     }).catch(() => { if (!cancelled) setLoadFailed(true); });
     return () => { cancelled = true; };
-  }, [targetType, targetId, validTarget]);
+  }, [targetType, targetId, validTarget, attempt]);
 
   const edit = (next: { reason: ReportReason | null; memo: string }) => {
     if (!accountId || busy.current || denied || !validTarget) return;
@@ -134,8 +136,10 @@ export default function ReportScreen() {
   const quote = targetType !== 'USER' && !(targetType === 'POST' && thumbUrl) && text ? `"${text}"` : null;
   const submittable = canSubmitReport(reason, memo);
 
-  if (!validTarget || denied) return <Screen><AppHeader title="신고하기" onBack={back} /><ErrorState title={denied ? '크루원만 신고할 수 있어요.' : '신고 대상을 확인할 수 없어요.'} actionLabel="돌아가기" onRetry={back} /></Screen>;
-  if (!accountId) return <Screen><AppHeader title="신고하기" onBack={back} />{loadFailed ? <ErrorState title="신고 권한을 확인하지 못했어요" actionLabel="돌아가기" onRetry={back} /> : <Loading label="신고 권한을 확인하는 중" />}</Screen>;
+  if (!validTarget || denied) return <Screen><AppHeader title="신고하기" onBack={back} />{denied
+    ? <ErrorState title="크루원만 신고할 수 있어요" description="크루장과 크루에 가입하지 않은 사용자는 신고할 수 없어요." icon="account-cancel-outline" actionLabel="돌아가기" onRetry={back} />
+    : <ErrorState title="신고 대상을 확인할 수 없어요" description="잘못된 링크예요. 진입한 화면에서 다시 열어 주세요." icon="link-variant-off" actionLabel="돌아가기" onRetry={back} />}</Screen>;
+  if (!accountId) return <Screen><AppHeader title="신고하기" onBack={back} />{loadFailed ? <ErrorState title="신고 권한을 확인하지 못했어요" onRetry={() => setAttempt(attempt + 1)} /> : <Loading label="신고 권한을 확인하는 중" />}</Screen>;
 
   return (
     <Screen scroll>

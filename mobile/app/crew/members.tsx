@@ -21,9 +21,11 @@ import {
   space,
   useTheme,
 } from 'design-system/src';
-import { createMockClient, peek, type ApiClient } from '../../src/api/client';
+import { peek, type ApiClient } from '../../src/api/client';
+import { createApiClient } from '../../src/api/config';
 import type { MOCKS } from '../../src/api/mocks.generated';
 import { ExportSheet } from '../../src/crew/ExportSheet';
+import { LeaveCrew } from '../../src/crew/LeaveCrew';
 import { CREW_CAPACITY, JOIN_POLICY_LABEL, regionName } from '../../src/crew/region';
 import { memberActionOutcome, memberMenu, type MemberAction } from '../../src/crew/manage';
 import { useFlash } from '../../src/ui/useFlash';
@@ -31,7 +33,7 @@ import type { Crew } from '../(tabs)/crew';
 
 type Member = (typeof MOCKS)['GET /crew/members']['data'][number];
 
-const api: ApiClient = createMockClient({ delayMs: 300 });
+const api: ApiClient = createApiClient({ delayMs: 300 });
 
 function joinedLabel(iso: string): string {
   const d = new Date(Date.parse(iso) + 9 * 60 * 60 * 1000);
@@ -209,6 +211,8 @@ export default function ManageCrewMembersScreen() {
               );
             })}
           </View>
+          {/* 크루 나가기는 크루 화면에서만 한다. 설정(5-7)은 계정만 다룬다 */}
+          {crew && me ? <LeaveCrew api={api} crewName={crew.name} isLeader={me.isLeader} /> : null}
         </>
       )}
 

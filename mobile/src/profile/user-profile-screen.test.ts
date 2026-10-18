@@ -1,5 +1,6 @@
 const mockGet = jest.fn();
 let mockPeeked: unknown;
+jest.mock('../api/config', () => ({ apiConfig: { real: false }, createApiClient: () => jest.requireMock('../api/client').createMockClient() }));
 jest.mock('../api/client', () => ({
   ApiError: class extends Error {},
   peek: (key: string) => (key === 'GET /crew/members/{userId}' ? mockPeeked : undefined),

@@ -43,11 +43,16 @@ export function Snackbar({
   useEffect(() => {
     if (!visible) setHeld(false);
   }, [visible]);
+  // 부르는 쪽은 대개 매 렌더 새 화살표를 넘긴다. 그걸 의존하면 매초 다시 그리는 화면에서 타이머가 끝나지 않는다.
+  // 문구가 바뀌면 새 알림이므로 시간을 처음부터 다시 잰다
+  const dismiss = useRef(onDismiss);
+  dismiss.current = onDismiss;
+  const dismissible = !!onDismiss;
   useEffect(() => {
-    if (!visible || !onDismiss || held) return;
-    const t = setTimeout(onDismiss, duration);
+    if (!visible || !dismissible || held) return;
+    const t = setTimeout(() => dismiss.current?.(), duration);
     return () => clearTimeout(t);
-  }, [visible, duration, onDismiss, held]);
+  }, [visible, message, duration, dismissible, held]);
 
   useEffect(() => {
     if (visible) AccessibilityInfo.announceForAccessibility(message);

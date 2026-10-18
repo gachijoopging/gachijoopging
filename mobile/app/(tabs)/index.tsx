@@ -25,14 +25,15 @@ import {
   characterStageNames,
   characterStages,
 } from 'design-system/src';
-import { createMockClient, peek, type ApiClient } from '../../src/api/client';
+import { peek, type ApiClient } from '../../src/api/client';
+import { createApiClient } from '../../src/api/config';
 import { MOCKS } from '../../src/api/mocks.generated';
 import { characterBubble, myCategorySummary } from '../../src/home/home';
 import { useFlash } from '../../src/ui/useFlash';
 
 type Home = (typeof MOCKS)['GET /crew/home']['data'];
 
-const api: ApiClient = createMockClient({ delayMs: 300 });
+const api: ApiClient = createApiClient({ delayMs: 300 });
 const wordmark = require('../../../design-system/assets/logo-wordmark.png');
 const wordmarkDark = require('../../../design-system/assets/logo-wordmark-dark.png');
 const BUBBLE_MS = 3000;

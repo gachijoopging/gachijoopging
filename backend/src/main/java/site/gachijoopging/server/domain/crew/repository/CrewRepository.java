@@ -20,9 +20,9 @@ public interface CrewRepository extends JpaRepository<Crew, UUID> {
   @Query("SELECT c FROM Crew c WHERE c.id = :id AND c.deletedAt IS NULL")
   Optional<Crew> findActiveForUpdate(@Param("id") UUID id);
 
-  boolean existsByName(String name);
+  boolean existsByNameAndDeletedAtIsNull(String name);
 
-  boolean existsByNameAndIdNot(String name, UUID id);
+  boolean existsByNameAndIdNotAndDeletedAtIsNull(String name, UUID id);
 
   @Modifying
   @Query(
@@ -73,19 +73,48 @@ public interface CrewRepository extends JpaRepository<Crew, UUID> {
       nativeQuery = true)
   int countPendingJoinRequests(@Param("crewId") UUID crewId);
 
-  // 소속·대기 신청은 사람 단위 불변식이라 한 사람의 가입·신청·만들기를 줄 세운다. 크루 잠금보다 먼저 잡는다.
-  // users 는 user 도메인 테이블이라 행 잠금 대신 advisory lock 을 쓴다
-  @Query(
-      value =
-          "SELECT 1 FROM (SELECT pg_advisory_xact_lock(hashtextextended(CAST(:userId AS text), 0))) l",
-      nativeQuery = true)
-  int lockUser(@Param("userId") UUID userId);
-
   @Query(
       value =
           "SELECT EXISTS (SELECT 1 FROM crew_expulsions WHERE crew_id = :crewId AND user_id = :userId)",
       nativeQuery = true)
   boolean wasExpelled(@Param("crewId") UUID crewId, @Param("userId") UUID userId);
+
+  @Query(
+      value =
+          "SELECT EXISTS (SELECT 1 FROM crew_members WHERE crew_id = :crewId AND user_id = :userId)",
+      nativeQuery = true)
+  boolean isMember(@Param("crewId") UUID crewId, @Param("userId") UUID userId);
+
+  @Modifying
+  @Query(
+      value = "DELETE FROM crew_members WHERE crew_id = :crewId AND user_id = :userId",
+      nativeQuery = true)
+  int deleteMember(@Param("crewId") UUID crewId, @Param("userId") UUID userId);
+
+  @Modifying
+  @Query(
+      value =
+          """
+          INSERT INTO crew_expulsions (crew_id, user_id, expelled_by, expelled_at)
+          VALUES (:crewId, :userId, :expelledBy, :now)
+          ON CONFLICT (crew_id, user_id)
+          DO UPDATE SET expelled_by = EXCLUDED.expelled_by, expelled_at = EXCLUDED.expelled_at
+          """,
+      nativeQuery = true)
+  void recordExpulsion(
+      @Param("crewId") UUID crewId,
+      @Param("userId") UUID userId,
+      @Param("expelledBy") UUID expelledBy,
+      @Param("now") Instant now);
+
+  @Query(
+      value =
+          """
+          SELECT EXISTS (SELECT 1 FROM activities
+                         WHERE user_id = :userId AND status = 'IN_PROGRESS' AND deleted_at IS NULL)
+          """,
+      nativeQuery = true)
+  boolean hasActivityInProgress(@Param("userId") UUID userId);
 
   interface MembershipRow {
     UUID getCrewId();

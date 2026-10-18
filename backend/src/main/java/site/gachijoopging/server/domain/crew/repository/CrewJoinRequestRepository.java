@@ -126,6 +126,16 @@ public interface CrewJoinRequestRepository extends JpaRepository<CrewJoinRequest
     UUID getUserId();
   }
 
+  @Modifying
+  @Query(
+      value =
+          """
+          UPDATE crew_join_requests SET status = 'CANCELED', decided_at = :now
+          WHERE crew_id = :crewId AND status = 'PENDING'
+          """,
+      nativeQuery = true)
+  int cancelPendingForCrew(@Param("crewId") UUID crewId, @Param("now") Instant now);
+
   // 크루장 화면은 먼저 신청한 순이라 다른 목록과 달리 오름차순 keyset 이다
   @Query(
       value =
