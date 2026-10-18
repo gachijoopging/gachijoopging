@@ -87,13 +87,14 @@ log "배포 키"
 if [ -z "${DEPLOY_PUBKEY:-}" ]; then
   echo "DEPLOY_PUBKEY 가 없다 — 건너뛴다. CI 배포를 쓰려면 나중에 넣는다"
 else
-  # 주석(세 번째 칸)은 사람마다 다르다. 키 본문으로만 비교해야 같은 키가 두 번 들어가지 않는다.
-  body=$(printf '%s' "$DEPLOY_PUBKEY" | awk '{print $2}')
-  if [ -z "$body" ]; then
-    echo "DEPLOY_PUBKEY 가 'ssh-ed25519 AAAA... [주석]' 모양이 아니다" >&2
+  # 칸 수만 보면 개인키를 잘못 붙여 넣어도 통과해 authorized_keys 에 기록된다. ssh-keygen 이 읽어야 공개키다.
+  # 지문으로 비교하면 주석이 다르거나 앞에 옵션(no-pty ...)이 붙은 기존 줄도 같은 키로 알아본다.
+  fp=$(printf '%s\n' "$DEPLOY_PUBKEY" | ssh-keygen -lf - 2>/dev/null | awk '{print $2}')
+  if [ -z "$fp" ]; then
+    echo "DEPLOY_PUBKEY 가 공개키가 아니다 — 'ssh-ed25519 AAAA... [주석]' 를 넣는다" >&2
     exit 1
   fi
-  if awk '{print $2}' "$HOME/.ssh/authorized_keys" 2>/dev/null | grep -qxF "$body"; then
+  if ssh-keygen -lf "$HOME/.ssh/authorized_keys" 2>/dev/null | awk '{print $2}' | grep -qxF "$fp"; then
     echo "이미 있다"
   else
     mkdir -p "$HOME/.ssh" && chmod 700 "$HOME/.ssh"
