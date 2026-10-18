@@ -1,0 +1,24 @@
+# 약관 전문(docs/legal/*.md)과 서빙되는 HTML(infra/legal/*.html)이 어긋나지 않았는지 본다.
+# HTML 은 파생물이라 손으로 고치면 전문과 갈라지는데, 갈라진 쪽이 사용자에게 보이는 쪽이다.
+#
+# paths 필터를 쓰지 않는다 — contract.yml 주석과 같은 이유다. 그리고 이 검사는 의존성 없이
+# 1초 안에 끝나므로 걸러낼 이유도 없다.
+name: legal
+
+on:
+  pull_request:
+  push:
+    branches: [dev, main]
+
+permissions:
+  contents: read
+
+jobs:
+  legal-sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node infra/legal/build.mjs --check
