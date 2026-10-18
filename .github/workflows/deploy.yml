@@ -66,6 +66,8 @@ jobs:
           set -euo pipefail
           scp infra/docker-compose.yml infra/deploy.sh "$HOST:/opt/gachijoopging/"
           scp infra/nginx/nginx.conf "$HOST:/opt/gachijoopging/nginx/"
+          ssh "$HOST" 'mkdir -p /opt/gachijoopging/legal'
+          scp infra/legal/*.html "$HOST:/opt/gachijoopging/legal/"
 
       - name: 배포
         run: ssh "$HOST" "chmod +x /opt/gachijoopging/deploy.sh && /opt/gachijoopging/deploy.sh ${{ steps.tag.outputs.tag }}"
