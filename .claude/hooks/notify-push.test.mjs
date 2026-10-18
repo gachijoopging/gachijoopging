@@ -60,6 +60,12 @@ test('PR 본문에 열린 PR 의 머지 명령이 적혀 있어도 머지 알림
   assert.equal(mergeNotices(texts).length, 0);
 });
 
+test('이미 머지된 PR 의 머지 명령이 PR 본문에만 있으면 알리지 않는다', async () => {
+  const body = `$(cat <<'EOF'\n"따옴표" 와 it's 가 든 본문\n\ngh pr merge 93 --squash\nEOF\n)`;
+  const texts = await run(`gh pr create --base dev --title t --body "${body}"`);
+  assert.equal(mergeNotices(texts).length, 0);
+});
+
 test('실제로 머지된 PR 은 반영 알림을 한 번 보낸다', async () => {
   const texts = await run('gh pr merge 93 --squash --delete-branch');
   assert.equal(mergeNotices(texts).length, 1);

@@ -66,7 +66,7 @@ function prOpened(input) {
 
 // gh pr merge 로 dev/main 에 반영됐을 때
 function prMerged(input) {
-  const idFromCmd = input.tool_input.command.match(/\bgh\s+pr\s+merge\s+(\S+)/)?.[1];
+  const idFromCmd = command.match(/\bgh\s+pr\s+merge\s+(\S+)/)?.[1];
   const id = idFromCmd && !idFromCmd.startsWith('-') ? idFromCmd : responseText(input).match(/#(\d+)/)?.[1];
   if (!id) return null;
   const pr = JSON.parse(gh('pr', 'view', id, '--json', 'number,title,url,baseRefName,state'));
@@ -78,7 +78,10 @@ function prMerged(input) {
 }
 
 const input = readStdin();
-const command = input?.tool_input?.command ?? '';
+// heredoc·따옴표 안은 PR 본문·커밋 메시지라 명령이 아니다
+const command = (input?.tool_input?.command ?? '')
+  .replace(/<<-?\s*(['"]?)(\w+)\1[\s\S]*?\n\s*\2\b/g, '')
+  .replace(/"(?:\\.|[^"\\])*"|'[^']*'/g, '');
 if (input?.tool_name !== 'Bash') process.exit(0);
 
 let hook;
