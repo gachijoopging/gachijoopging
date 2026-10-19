@@ -11,10 +11,22 @@
 
 name: gachijoopging
 
+# 로그는 호스트 journald 로 간다. 보존 기간(90일)은 journald 가 지킨다 — provision.sh §로그 보존.
+# 컨테이너를 다시 만들어도 남으므로 재배포 직전 로그를 볼 수 있다. Nginx 접속 로그도 stdout 이라 여기로 온다.
+x-logging: &logging
+  driver: journald
+  options:
+    tag: "{{.Name}}"
+
 services:
   backend:
     image: ${DOCKERHUB_USER}/gachijoopging-backend:${IMAGE_TAG}
     restart: unless-stopped
+    logging: *logging
+    # 오류 응답의 requestId 로 그 요청의 로그 줄을 찾으려면 줄마다 그 값이 찍혀야 한다.
+    # Spring 기본 패턴은 MDC 를 찍지 않는다.
+    environment:
+      LOGGING_PATTERN_LEVEL: "%5p [%X{requestId:-}]"
     # 호스트에 포트를 열지 않는다. Nginx 가 compose 네트워크 안에서 backend:8080 으로 붙고,
     # healthcheck 는 컨테이너 안에서 localhost 를 본다 — 바깥에 낼 이유가 없다.
     #
@@ -43,6 +55,7 @@ services:
   redis:
     image: redis:7-alpine
     restart: unless-stopped
+    logging: *logging
     # 바깥에 열지 않는다. 백엔드만 compose 네트워크 안에서 붙는다.
     env_file:
       - .env
@@ -68,6 +81,7 @@ services:
   nginx:
     image: nginx:1.27-alpine
     restart: unless-stopped
+    logging: *logging
     ports:
       - "80:80"
       - "443:443"
@@ -97,6 +111,7 @@ services:
   certbot:
     image: certbot/certbot:latest
     restart: unless-stopped
+    logging: *logging
     volumes:
       - certbot-conf:/etc/letsencrypt
       - certbot-www:/var/www/certbot
