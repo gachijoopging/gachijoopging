@@ -646,6 +646,62 @@ sslmode=require  → 1
 
 **네트워크 제한**(서버 IP 만 허용)은 유료 플랜 기능이라 걸지 못했다. 플랜을 올리면 §구성 의 고정 IP 를 넣는다.
 
+## AI 서버 연결
+
+AI(FastAPI)는 서버에 없다. **담당자 GPU 노트북 + ngrok 터널**이다(ADR-0005 · `ai/README.md` §8).
+운영 백엔드는 `AI_BASE_URL`·`AI_SECRET` 으로 그것을 부른다.
+
+| | |
+|---|---|
+| 주소 | `AI_BASE_URL` = `https://<ai/.env 의 NGROK_DOMAIN>`. **끝에 `/` 를 넣지 않는다** — `//healthz` 가 된다 |
+| 인증 | `AI_SECRET`. 백엔드가 `X-AI-Secret` 헤더로 보낸다 |
+| 경로 | 추론 `POST {base}/internal/infer` · 헬스 `GET {base}/healthz` |
+| 막는 것 | ngrok 주소는 **공개 URL 이다.** 가리는 것은 `AI_SECRET` 하나뿐이다 |
+
+> ⚠️ **`AI_SECRET` 이 어긋나면 "AI 서버가 꺼졌다" 와 구별되지 않는다.** AI 는 401 을 주는데 백엔드가
+> 그것을 `UNAVAILABLE` 로 내리기 때문이다. 주소가 바뀔 때마다 **둘을 함께** 받는다.
+
+### 확인 절차
+
+주소가 바뀌면(ngrok 재시작) `infra/.env` 를 고치고 `dev-env.ps1` 로 올린 뒤 **컨테이너를 다시 만든다** —
+`restart` 는 `env_file` 을 다시 읽지 않는다.
+
+```sh
+# ① 백엔드 컨테이너가 AI 에 닿나. 호스트에서 되는 것으로 갈음하지 않는다 — 나가는 경로가 다르다
+docker compose exec -T backend sh -c 'curl -sS $AI_BASE_URL/healthz'
+#   {"ready":true,"modelVersion":"...","warmedUp":true,"error":null}
+#   ready:false 는 워밍업 중이다. 그동안 백엔드는 UNAVAILABLE 로 떨어진다(정상)
+
+# ② 시크릿이 맞나. 틀린 값과 비교해야 "맞다" 가 증명된다 — 올바른 값만 보면 둘 다 거절일 때를 못 가린다
+S=$(sed -n 's/^AI_SECRET=//p' .env | sed 's/\$\$/$/g')
+U=$(sed -n 's/^AI_BASE_URL=//p' .env)
+curl -sS -o /dev/null -w '%{http_code}\n' -X POST -H "X-AI-Secret: $S"      -d '{}' "$U/internal/infer"  # 422
+curl -sS -o /dev/null -w '%{http_code}\n' -X POST -H "X-AI-Secret: wrong"   -d '{}' "$U/internal/infer"  # 401
+```
+
+**422 가 정상이다.** 빈 본문을 보냈으니 거절당하는 것이 맞고, 중요한 것은 **401 이 아니라는 것** —
+인증을 통과해 검증 단계까지 갔다는 뜻이다.
+
+계약 전체는 `ai/scripts/smoke.py` 가 본다. `uv run` 을 그냥 쓰면 torch·ultralytics 를 받으므로
+클라이언트 의존성만 넣어 돌린다.
+
+```sh
+# 로컬에서. AI_SECRET 은 smoke.py 가 ai/.env 에서 스스로 읽는다 — 손으로 치면 쉘 히스토리에 남는다.
+cd ai && uv run --no-project --with requests --with pillow python scripts/smoke.py \
+  --base-url "https://$(sed -n 's/^NGROK_DOMAIN=//p' .env)" --image docs/labeling-examples/CAN-1.jpg
+```
+
+> 사진을 지정하지 않으면 ultralytics 내장 샘플(버스)로 떨어져 검출이 0개가 되고, 항목 검사 5건이
+> 빈 목록 위에서 통과해 **아무것도 뜻하지 않는다.** 그래서 쓰레기가 찍힌 사진을 준다.
+
+### AI 가 죽어도 업로드는 성공해야 한다
+
+백엔드는 AI 가 없거나 느리면 `inference.status=UNAVAILABLE` 로 떨어지고 업로드 자체는 200 이다
+(GAC-89). 노트북이 꺼져 있는 시간이 정상 범위이므로 이 폴백이 서비스의 기본 동작이다.
+
+`AI_BASE_URL` 이 **비어 있어도** 같은 폴백이 돈다 — 백엔드가 아예 호출하지 않는다. 그래서 주소를
+모르는 동안에도 배포가 막히지 않는다.
+
 ## 감시
 
 헬스체크와 바깥에서 찌르는 것, 둘을 함께 쓴다. 서버가 통째로 꺼지면 자기 자신에게 묻는 헬스체크도 같이
@@ -741,7 +797,7 @@ tail -50 /var/log/gachijoopging-watch.log
 | `MAIL_USERNAME` · `MAIL_PASSWORD` | 백엔드 | 비밀번호 재설정 메일 |
 | `FCM_CREDENTIALS` | 백엔드 | 푸시 |
 | `DEMO_SEED_ENABLED` · `DEMO_MEMBER_EMAIL` · `DEMO_MEMBER_PASSWORD` · `DEMO_GUEST_EMAIL` · `DEMO_GUEST_PASSWORD` | 백엔드 | 데모 시드. 스테이징이 없어(ADR-0005) 운영에서 이 플래그로만 켠다. 자세한 것은 §데모 계정 |
-| `AI_BASE_URL` · `AI_SECRET` | 백엔드 | AI 서버. `ai/.env` 의 `NGROK_DOMAIN`·`AI_SECRET` 과 짝이다 — `AI_SECRET` 이 다르면 호출이 전부 401 인데 백엔드가 401 을 `UNAVAILABLE` 로 내려 "AI 서버 다운" 과 구별되지 않는다 |
+| `AI_BASE_URL` · `AI_SECRET` | 백엔드 | AI 서버. `ai/.env` 의 `NGROK_DOMAIN`·`AI_SECRET` 과 짝이다 — `AI_SECRET` 이 다르면 호출이 전부 401 인데 백엔드가 401 을 `UNAVAILABLE` 로 내려 "AI 서버 다운" 과 구별되지 않는다. 확인 절차는 §AI 서버 연결 |
 | `AGREEMENTS_VERSION` · `TERMS_URL` · `PRIVACY_URL` · `MARKETING_URL` | **아직 없음** | 현재 동의 버전과 공개 전문 URL. 계약(`openapi.yaml` `/agreements`)과 테이블(`user_agreements`)은 있지만 **백엔드가 아직 읽지 않는다** — 동의 API 를 구현할 때 들어온다. 전문 정본은 `docs/legal/`, 버전은 각 문서 머리의 값(지금 `2026-10`). 주소는 `https://www.gachijoopging.site/{terms,privacy,marketing}` 이고 Nginx 가 직접 보낸다 — §약관 전문 |
 
 없어지는 키: `LIVEKIT_*` · `GRAFANA_ADMIN_PASSWORD` · `ADMIN_WEB_TAG` · `POSTGRES_*` ·
