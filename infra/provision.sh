@@ -79,14 +79,12 @@ fi
 # 용량 상한은 디스크를 지키는 안전판이다. 지금 양으로는 90일보다 먼저 닿지 않는다.
 log "로그 보존"
 JOURNAL_CONF=/etc/systemd/journald.conf.d/gachijoopging.conf
-JOURNAL_WANT=$(printf '%s
-' '[Journal]' 'Storage=persistent' 'MaxRetentionSec=90day' 'MaxFileSec=1day' 'SystemMaxUse=4G')
+JOURNAL_WANT=$(printf '%s\n' '[Journal]' 'Storage=persistent' 'MaxRetentionSec=90day' 'MaxFileSec=1day' 'SystemMaxUse=4G')
 if [ "$(cat "$JOURNAL_CONF" 2>/dev/null)" = "$JOURNAL_WANT" ]; then
   echo "이미 있다: $JOURNAL_CONF"
 else
   sudo mkdir -p "$(dirname "$JOURNAL_CONF")"
-  printf '%s
-' "$JOURNAL_WANT" | sudo tee "$JOURNAL_CONF" >/dev/null
+  printf '%s\n' "$JOURNAL_WANT" | sudo tee "$JOURNAL_CONF" >/dev/null
   sudo systemctl restart systemd-journald
   echo "넣었다: $JOURNAL_CONF (90일 · 하루 단위 · 상한 4G)"
 fi

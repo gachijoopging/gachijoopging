@@ -720,10 +720,12 @@ sudo journalctl --disk-usage
 sudo journalctl -t gachijoopging-backend-1 --since -1d | grep <requestId>
 ```
 
-**로그에 토큰·이메일·좌표를 남기지 않는다**(§개인정보). 레이트리밋 키는 이메일을 해시해 넣고, 재설정 코드를
-찍는 `LoggingPasswordResetMailSender` 는 `prod` 에서 꺼진다. 접속 로그에 남는 쿼리스트링에도 좌표·토큰이 없다
-(`openapi.yaml` 의 query 파라미터는 범위·커서·검색어뿐).
-**어긋난 곳이 하나 있다** — `SmtpPasswordResetMailSender` 가 발송 실패 때 받는 사람 이메일을 평문으로 찍는다. backend 쪽에서 고친다.
+**로그에 토큰·이메일·좌표를 남기지 않는다**(§개인정보).
+
+- 접속 로그는 **쿼리스트링을 찍지 않는다**(`nginx.conf` 의 `log_format noquery`). 소켓은 `?token=` 에 액세스 토큰을,
+  사진은 `?md5=&expires=` 에 서명을 싣는다. 쿼리에 무엇이 새로 실려도 로그로 새지 않는다
+- 레이트리밋 키는 이메일을 해시해 넣고, 재설정 코드를 찍는 `LoggingPasswordResetMailSender` 는 `prod` 에서 꺼진다
+- **어긋난 곳이 하나 있다** — `SmtpPasswordResetMailSender` 가 발송 실패 때 받는 사람 이메일을 평문으로 찍는다(GAC-169)
 
 ## 장애 대응
 
