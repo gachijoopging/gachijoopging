@@ -94,4 +94,14 @@ class MediaStorageTest {
     assertThatThrownBy(() -> mediaStorage.move("없는/사진.jpg", "deleted/없는/사진.jpg"))
         .isInstanceOf(UncheckedIOException.class);
   }
+
+  @Test
+  void 지우면_파일이_없고_없는_키를_지워도_괜찮다() throws IOException {
+    mediaStorage.store("2026/08/사진.jpg", "내용".getBytes(StandardCharsets.UTF_8));
+
+    mediaStorage.delete("2026/08/사진.jpg");
+    mediaStorage.delete("2026/08/사진.jpg");
+
+    assertThat(root.resolve("2026/08/사진.jpg")).doesNotExist();
+  }
 }

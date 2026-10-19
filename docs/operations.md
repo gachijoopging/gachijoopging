@@ -318,8 +318,8 @@ node infra/legal/build.mjs --check    # 어긋나면 1 로 끝난다 — legal.y
 
 | | |
 |---|---|
-| 저장 경로 | `/data/uploads/<yyyy>/<MM>/<mediaId>.jpg` · 섬네일은 `_thumb` 접미사 |
-| 공개 경로 | `https://www.gachijoopging.site/media/<yyyy>/<MM>/<mediaId>.jpg?s=<서명>&e=<만료>` |
+| 저장 경로 | `/data/uploads/<yyyy>/<MM>/<mediaId>-<attempt>.jpg` · `<attempt>` 는 시도마다 다른 8자 · 섬네일은 `_thumb` 접미사 |
+| 공개 경로 | `https://www.gachijoopging.site/media/<yyyy>/<MM>/<mediaId>-<attempt>.jpg?s=<서명>&e=<만료>` |
 | 유지 | compose 가 호스트 `${MEDIA_ROOT}` 를 바인드한다. 컨테이너를 다시 만들어도 남는다 |
 | 소유자 | 호스트 쪽이 **UID 10001** — `backend/Dockerfile` 의 비루트 사용자다. 안 맞으면 업로드가 전부 permission denied |
 | 격리 | `/media/deleted/` 는 서명이 맞아도 403. 신고로 내린 사진이 URL 하나로 다시 살아나지 않게 |
@@ -348,9 +348,10 @@ Nginx 설정 파일은 그대로 쓰이지 않는다. 컨테이너가 `envsubst`
 
 | | 값 | 왜 |
 |---|---|---|
-| Nginx `client_max_body_size` | 22m | 여기가 작으면 Nginx 가 먼저 끊어 422 봉투가 못 나간다 |
-| Spring `max-request-size` | 22MB | multipart 경계 포함 |
-| `MediaImageValidator` | 20MB | **계약상 한도.** 422 + 오류 봉투를 내는 유일한 곳 |
+| Nginx `client_max_body_size` | 22m | 여기가 작으면 Nginx 가 먼저 끊어 413 봉투가 못 나간다 |
+| Tomcat `max-swallow-size` | 22MB | Nginx 한도까지 본문을 끝까지 읽는다. 작으면 연결을 끊어 Nginx 가 502 를 낸다 |
+| Spring `max-file-size`·`max-request-size` | 11MB·12MB | 넘으면 `MaxUploadSizeExceededException` → 413 봉투 |
+| `MediaImageValidator` | 10MB | **계약상 한도.** 413 `PAYLOAD_TOO_LARGE` |
 
 ## Redis
 

@@ -361,7 +361,7 @@ class ActivityApiTest extends IntegrationTest {
     UUID 미디어 = UUID.randomUUID();
     UUID 사진 = UUID.randomUUID();
     jdbcTemplate.update(
-        "INSERT INTO media (id, owner_id, object_key, thumb_key) VALUES (?, ?, 'o', 't')",
+        "INSERT INTO media (id, owner_id, purpose, object_key, thumb_key) VALUES (?, ?, 'ACTIVITY', 'o', 't')",
         미디어,
         주인.id());
     jdbcTemplate.update(

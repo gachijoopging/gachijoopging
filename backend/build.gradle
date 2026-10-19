@@ -60,6 +60,8 @@ dependencies {
     // /media 썸네일. EXIF Orientation 을 기본으로 적용해 준다 (0.4.3+) — ImageIO 는 EXIF 를 읽지
     // 않아 세로로 찍은 사진의 썸네일이 눕는다. 의존성 없는 단일 jar 다.
     implementation 'net.coobird:thumbnailator:0.4.20'
+    // 계약이 받는 WebP 를 ImageIO 로 읽기 위한 플러그인이다. JDK ImageIO 에는 WebP 리더가 없다
+    implementation 'com.twelvemonkeys.imageio:imageio-webp:3.12.0'
 
     // 조합 조회와 도메인 간 읽기 JOIN 은 QueryDSL 이다 (backend/CLAUDE.md, 02-conventions §3).
     // 차단·공개범위처럼 여러 조회가 공유하는 조건을 BooleanExpression 한 벌로 두기 위한 것이라,

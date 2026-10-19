@@ -46,7 +46,9 @@ class MediaRepositoryTest extends IntegrationTest {
   private UUID 미디어를_만든다(UUID 주인) {
     UUID id = UUID.randomUUID();
     jdbc.update(
-        "INSERT INTO media (id, owner_id, object_key, thumb_key) VALUES (?, ?, 'o', 't')", id, 주인);
+        "INSERT INTO media (id, owner_id, purpose, object_key, thumb_key) VALUES (?, ?, 'POST', 'o', 't')",
+        id,
+        주인);
     return id;
   }
 }

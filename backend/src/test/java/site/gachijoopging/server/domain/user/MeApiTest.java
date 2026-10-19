@@ -188,7 +188,7 @@ class MeApiTest extends IntegrationTest {
   private UUID 사진을_만든다(UUID 주인) {
     UUID id = UUID.randomUUID();
     jdbcTemplate.update(
-        "INSERT INTO media (id, owner_id, object_key, thumb_key) VALUES (?, ?, ?, ?)",
+        "INSERT INTO media (id, owner_id, purpose, object_key, thumb_key) VALUES (?, ?, 'PROFILE', ?, ?)",
         id,
         주인,
         "o/" + id,

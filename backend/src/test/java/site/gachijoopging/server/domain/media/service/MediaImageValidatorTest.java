@@ -8,6 +8,7 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import javax.imageio.ImageIO;
 import org.junit.jupiter.api.Test;
 import site.gachijoopging.server.global.error.BusinessException;
@@ -17,9 +18,23 @@ class MediaImageValidatorTest {
 
   private final MediaImageValidator validator = new MediaImageValidator();
 
+  // 1×1 무손실 WebP. 테스트 쪽에는 WebP 를 쓰는 인코더가 없어 바이트로 둔다
+  private static final byte[] WEBP =
+      Base64.getDecoder().decode("UklGRhoAAABXRUJQVlA4TA0AAAAvAAAAEAcQERGIiP4HAA==");
+
   @Test
-  void 정상_사진은_통과한다() throws IOException {
-    assertThatCode(() -> validator.validate(jpeg(2048, 1536))).doesNotThrowAnyException();
+  void 정상_사진은_통과하고_JPEG_라고_알린다() throws IOException {
+    assertThat(validator.validate(jpeg(2048, 1536))).isTrue();
+  }
+
+  @Test
+  void PNG_는_받고_JPEG_가_아니라고_알린다() throws IOException {
+    assertThat(validator.validate(이미지(100, 100, "png"))).isFalse();
+  }
+
+  @Test
+  void WebP_는_받고_JPEG_가_아니라고_알린다() {
+    assertThat(validator.validate(WEBP)).isFalse();
   }
 
   @Test
@@ -40,11 +55,13 @@ class MediaImageValidatorTest {
   }
 
   @Test
-  void _20MB를_넘으면_422() {
-    byte[] 큰_파일 = new byte[20 * 1024 * 1024 + 1];
+  void _10MB를_넘으면_413() {
+    byte[] 큰_파일 = new byte[10 * 1024 * 1024 + 1];
 
     assertThatThrownBy(() -> validator.validate(큰_파일))
-        .satisfies(MediaImageValidatorTest::사용자_입력_오류다);
+        .isInstanceOf(BusinessException.class)
+        .extracting(e -> ((BusinessException) e).errorCode())
+        .isEqualTo(ErrorCode.PAYLOAD_TOO_LARGE);
   }
 
   @Test
@@ -56,11 +73,8 @@ class MediaImageValidatorTest {
   }
 
   @Test
-  void JPEG가_아니면_422() throws IOException {
-    ByteArrayOutputStream out = new ByteArrayOutputStream();
-    ImageIO.write(new BufferedImage(100, 100, BufferedImage.TYPE_INT_RGB), "png", out);
-
-    assertThatThrownBy(() -> validator.validate(out.toByteArray()))
+  void JPEG_PNG_WebP_가_아니면_422() throws IOException {
+    assertThatThrownBy(() -> validator.validate(이미지(100, 100, "bmp")))
         .satisfies(MediaImageValidatorTest::사용자_입력_오류다);
   }
 
@@ -70,8 +84,12 @@ class MediaImageValidatorTest {
   }
 
   private static byte[] jpeg(int 너비, int 높이) throws IOException {
+    return 이미지(너비, 높이, "jpg");
+  }
+
+  private static byte[] 이미지(int 너비, int 높이, String 형식) throws IOException {
     ByteArrayOutputStream out = new ByteArrayOutputStream();
-    ImageIO.write(new BufferedImage(너비, 높이, BufferedImage.TYPE_INT_RGB), "jpg", out);
+    ImageIO.write(new BufferedImage(너비, 높이, BufferedImage.TYPE_INT_RGB), 형식, out);
     return out.toByteArray();
   }
 }

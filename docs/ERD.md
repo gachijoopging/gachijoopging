@@ -98,7 +98,7 @@ erDiagram
 | platform | text | NOT NULL. `ANDROID`(iOS 는 이후) |
 | created_at · updated_at | timestamptz | |
 
-**media** — 옛 것 그대로(`owner_id` · `object_key` · `thumb_key`).
+**media** — 옛 것(`owner_id` · `object_key` · `thumb_key`)에 `purpose`(`ACTIVITY` · `POST` · `PROFILE` · `CREW`)를 더했다. 같은 mediaId 를 다른 용도로 다시 보내면 409 로 막으려면 첫 업로드의 용도를 알아야 해서다.
 
 ### 크루
 
@@ -201,7 +201,7 @@ PENDING 이 있는 사람의 크루 만들기·다른 크루 가입·신청은 4
 | created_at · deleted_at | timestamptz | |
 | | | 부분 UNIQUE (user_id) WHERE status = 'IN_PROGRESS' |
 
-**activity_photos** — `POST /media` 의 `purpose=ACTIVITY` 가 만든다. 옛 `hood_code` · `sido/sigungu/dong` 은 없다.
+**activity_photos** — `POST /media` 의 `purpose=ACTIVITY` 가 `media` 행과 같은 트랜잭션에서 만든다. 옛 `hood_code` · `sido/sigungu/dong` 은 없다. 사용자가 4-4·4-5 에서 버리면 `DELETE /media/{mediaId}` 가 이 행과 `media` 행·파일을 함께 지운다 — 줍기가 붙었거나 활동이 끝났으면 지우지 않는다(`feature-scope.md` "버린 활동 사진").
 
 | 컬럼 | 타입 | 제약 |
 |---|---|---|
@@ -413,4 +413,5 @@ meets · meet_members · meet_invites · meet_join_requests · friendships · ne
 | `deleted_at` 이 찍힌 콘텐츠 행 (`activities`·`posts`·`comments`·`notices`·`chat_messages`) | 매일 04:00 KST | `deleted_at` 이 29일 지난 행과 그 행에 딸린 행(댓글·좋아요·사진 연결 등)을 물리 삭제. 사진 파일은 `deleted/` 에서 함께 지운다 | 구현 전 |
 | `deleted_at` 이 찍힌 `users`·`crews` | — | 물리 삭제하지 않는다. 탈퇴한 `users` 는 개인정보를 지운 빈 행으로 남아 "탈퇴한 크루원" 게시물·댓글이 가리키고, 해산한 `crews` 는 개인 활동 기록·`crew_daily_stats` 가 가리킨다 | 해당 없음 |
 | 서버 접속 로그 | 3개월 | 3개월 지난 로그 삭제 | infra 담당 (GAC-109). DB 행이 아니다 |
-| 줍기에 연결되지 않은 활동 사진 | — | — | **미결** (`feature-scope.md` §미결) |
+| 사용자가 버린 활동 사진 | 버릴 때 (`DELETE /media/{mediaId}`) | `activity_photos`·`media` 행을 지우고 커밋 뒤 원본·썸네일 파일을 지운다. `deleted/` 를 거치지 않는다 | 있음 (GAC-89) |
+| 버리지 않았는데 줍기에 연결되지 않고 남은 활동 사진 | — | — | **미결** (`feature-scope.md` §미결) |

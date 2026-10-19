@@ -67,8 +67,8 @@ class MediaUploadTest extends IntegrationTest {
 
     올린다(토큰, mediaId);
 
-    assertThat(업로드된_파일(mediaId + ".jpg")).exists();
-    assertThat(업로드된_파일(mediaId + "_thumb.jpg")).exists();
+    assertThat(업로드된_파일(mediaId, false)).exists();
+    assertThat(업로드된_파일(mediaId, true)).exists();
   }
 
   @Test
@@ -86,13 +86,14 @@ class MediaUploadTest extends IntegrationTest {
   }
 
   @Test
-  void AI가_없어도_200_이고_inference만_UNAVAILABLE_이다() throws Exception {
-    String 토큰 = 가입하고_토큰을_받는다("media-noai@test.io");
+  void 활동_사진이_아니면_photoId_와_inference_가_null_이다() throws Exception {
+    String 토큰 = 가입하고_토큰을_받는다("media-post@test.io");
 
     mockMvc
         .perform(업로드(토큰, UUID.randomUUID(), 사진()))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.data.inference.status").value("UNAVAILABLE"))
+        .andExpect(jsonPath("$.data.photoId").isEmpty())
+        .andExpect(jsonPath("$.data.inference").isEmpty())
         .andExpect(jsonPath("$.data.url").isNotEmpty());
   }
 
@@ -102,7 +103,8 @@ class MediaUploadTest extends IntegrationTest {
         .perform(
             multipart("/api/v1/media")
                 .file(new MockMultipartFile("file", "photo.jpg", "image/jpeg", 사진()))
-                .param("mediaId", UUID.randomUUID().toString()))
+                .param("mediaId", UUID.randomUUID().toString())
+                .param("purpose", "POST"))
         .andExpect(status().isUnauthorized());
   }
 
@@ -145,14 +147,20 @@ class MediaUploadTest extends IntegrationTest {
     return multipart("/api/v1/media")
         .file(new MockMultipartFile("file", "photo.jpg", "image/jpeg", 파일))
         .param("mediaId", mediaId.toString())
+        .param("purpose", "POST")
         .header(HttpHeaders.AUTHORIZATION, "Bearer " + 토큰);
   }
 
-  private Path 업로드된_파일(String 파일명) throws IOException {
+  // 파일 이름은 {mediaId}-{시도}.jpg · {mediaId}-{시도}_thumb.jpg 다
+  private Path 업로드된_파일(UUID mediaId, boolean 썸네일) throws IOException {
     try (var 경로들 = Files.walk(Path.of(업로드_루트))) {
-      return 경로들.filter(it -> it.getFileName().toString().equals(파일명))
+      return 경로들.filter(
+              it -> {
+                String 이름 = it.getFileName().toString();
+                return 이름.startsWith(mediaId + "-") && 이름.endsWith("_thumb.jpg") == 썸네일;
+              })
           .findFirst()
-          .orElse(Path.of(업로드_루트, "없음", 파일명));
+          .orElse(Path.of(업로드_루트, "없음", mediaId + ".jpg"));
     }
   }
 
