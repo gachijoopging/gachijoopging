@@ -1,8 +1,8 @@
 # 백엔드 단위 테스트. Java 21 · Gradle Wrapper (정본은 backend/build.gradle 과
 # gradle-wrapper.properties 다 — 여기에 버전을 또 적지 않는다).
 #
-# dockerTest 는 돌리지 않는다. @Tag("docker") 통합 테스트는 build.gradle 이 이미 test 에서
-# 빼 두었고(Testcontainers 로 DB·Redis 를 띄운다), 1차에 회수가 안 된다. 넣을 때는 별도 잡이다.
+# @Tag("docker") 통합 테스트(계약 테스트 포함)는 backend-docker-test 잡이 따로 돈다. 필수 체크가
+# 아니다 — 계약 테스트가 전 경로 초록이 되기 전에 걸면 모든 PR 이 막힌다.
 #
 # paths 필터를 쓰지 않는 이유는 contract.yml 과 같다.
 name: backend
@@ -18,13 +18,15 @@ permissions:
 jobs:
   backend-test:
     runs-on: ubuntu-latest
+    outputs:
+      run: ${{ steps.scope.outputs.run }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
       - id: scope
-        name: backend 가 바뀌었나
+        name: backend 나 이 워크플로가 바뀌었나
         env:
           BASE: ${{ github.base_ref }}
         run: |
@@ -33,11 +35,11 @@ jobs:
             echo "run=true" >> "$GITHUB_OUTPUT"; exit 0
           fi
           git fetch --quiet origin "$BASE"
-          if git diff --name-only "$(git rev-parse FETCH_HEAD)...HEAD" | grep -q '^backend/'; then
+          if git diff --name-only "$(git rev-parse FETCH_HEAD)...HEAD" | grep -qE '^backend/|^\.github/workflows/backend\.yml$'; then
             echo "run=true" >> "$GITHUB_OUTPUT"
           else
             echo "run=false" >> "$GITHUB_OUTPUT"
-            echo "backend 가 바뀌지 않았다 — 건너뛴다."
+            echo "backend 도 이 워크플로도 바뀌지 않았다 — 건너뛴다."
           fi
 
       - uses: actions/setup-java@v4
@@ -51,3 +53,22 @@ jobs:
         if: steps.scope.outputs.run == 'true'
         working-directory: backend
         run: ./gradlew test --no-daemon
+
+  # 러너의 Docker 로 Testcontainers 가 PostGIS·Redis 를 띄운다.
+  backend-docker-test:
+    needs: backend-test
+    if: needs.backend-test.outputs.run == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+
+      - name: gradlew dockerTest
+        working-directory: backend
+        run: ./gradlew dockerTest --no-daemon

@@ -64,7 +64,7 @@ chore(infra): 모니터링 컨테이너 제거
 - **`dev`** 는 통합 브랜치이자 기본 브랜치. 작업은 `dev` 에서 잘라 `dev` 로 돌아간다
 - 이슈 브랜치 → `dev` 는 **squash merge**(PR 하나 = 커밋 하나). `dev → main` 은 **merge commit**(이슈별 배포 이력 보존)
 - `dev` 는 승인 없이 셀프 머지 가능. `main` 은 승인 1명 필수 — 배포 직전 관문은 셋뿐이라도 예외 없이 지킨다
-- 브랜치 보호: `main`·`dev` 모두 force push 금지·직접 push 금지. PR 만. CI 필수 체크는 CI 가 들어온 뒤에 건다
+- 브랜치 보호: `main`·`dev` 모두 force push 금지·직접 push 금지. PR 만. 필수 체크는 양쪽 다 `contract-lint`·`backend-test`·`design-system-test`·`legal-sync`. `backend-docker-test` 는 계약 테스트가 전 경로 초록이 된 뒤에 더한다
 
 **동기화는 두 번.** 시작할 때 `origin/dev` 에서 잘라내고, PR 올리기 직전 `git merge origin/dev` 로 내 브랜치에서 충돌을 푼다. `rebase` 는 쓰지 않는다 — `--force push` 가 남의 커밋을 날린다. 머지 뒤 `git fetch --prune`.
 
@@ -146,12 +146,13 @@ CI 실패도 안 보낸다 — PR 에 이미 보인다.
 
 ### CI
 
-`.github/workflows/` 에 있다. 검사 셋은 PR 과 `dev`·`main` 푸시에 돌고, 배포 둘과 알림 하나가 따로 있다.
+`.github/workflows/` 에 있다. 검사 넷은 PR 과 `dev`·`main` 푸시에 돌고, 배포 둘과 알림 하나가 따로 있다.
 
 | 워크플로 | 언제 | 무엇 |
 |---|---|---|
 | `contract` | PR · `dev`·`main` 푸시 (`docs/openapi.yaml`·`redocly.yaml` 이 바뀌었을 때만 lint) | `redocly lint`. 설정은 `redocly.yaml` — 경고 0 이라야 새 경고가 신호가 된다. 버전은 워크플로에 고정 |
-| `backend` | PR · `dev`·`main` 푸시 | `./gradlew test` (Java 21). `@Tag("docker")` 통합 테스트는 돌리지 않는다 |
+| `backend` | PR · `dev`·`main` 푸시 | `./gradlew test` (Java 21). backend 가 바뀐 PR 이면 이어서 `./gradlew dockerTest`(`@Tag("docker")` 통합·계약 테스트, Testcontainers) — 필수 체크가 아니다 |
+| `legal` | PR · `dev`·`main` 푸시 | `node infra/legal/build.mjs --check`. 약관 HTML 이 `docs/legal/*.md` 와 같은지 |
 | `design-system` | PR · `dev`·`main` 푸시 | `npm test`. `node:test` 와 타입 스트리핑만 써서 설치가 필요 없다 |
 | `build` | `dev` 푸시 | 백엔드 이미지를 만들어 레지스트리에 올린다. 배포하지 않는다 |
 | `deploy` | `main` 푸시 · 수동 | `build` 가 올린 이미지를 운영에 배포. 수동 실행으로 롤백 |
