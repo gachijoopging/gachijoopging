@@ -92,7 +92,7 @@ sudo find /data/uploads ! -uid 10001 | head    # 아무것도 안 나와야 한�
 ```sh
 # 옛 백엔드가 아직 커넥션을 쥐고 있다. 기본 풀(10)로 띄우면 상한 15 를 넘는다 — 아래 ⚠️ 와 같은 사고다.
 # 셸에 붙여 주면 안 된다. 그것은 compose 가 ${...} 를 채울 때만 쓰이고 컨테이너까지 가지 않는다
-# (backend 에는 env_file 만 있고 environment: 가 없다). .env 에 적어야 닿는다.
+# (backend 의 environment: 에는 로그 패턴 하나뿐이다). .env 에 적어야 닿는다.
 #
 # 앞에 \n 을 붙이는 것은 .env 가 줄바꿈 없이 끝나는 경우를 막기 위해서다. 그러면 이 줄이 마지막 키
 # 뒤에 그대로 붙어 그 키의 값이 깨지고, 풀 제한도 안 걸린다.
@@ -691,6 +691,40 @@ sslmode=require  → 1
 `/actuator/prometheus` 노출이 남아 있지만, 3명이 쓰는 규모에서 그래프를 보는 사람이 없다. 수집기만
 나중에 붙이면 되도록 노출은 그대로 둔다.
 
+## 로그
+
+컨테이너 로그는 전부 호스트 **journald** 로 간다(`docker-compose.yml` 의 `x-logging`). Nginx 접속 로그도
+stdout 이라 같은 곳에 쌓인다. 수집 서비스(Loki·CloudWatch)는 넣지 않는다 — 필요해지면 ADR.
+
+| 보존 | 값 | 어디에 |
+|---|---|---|
+| 기간 | **90일** 뒤 지운다 — 개인정보처리방침 §2 "접속 로그 3개월" | `/etc/systemd/journald.conf.d/gachijoopging.conf` `MaxRetentionSec=90day` |
+| 단위 | 하루. 기본(한 달)이면 넉 달까지 남는다 | 같은 파일 `MaxFileSec=1day` |
+| 용량 | 4G 상한. 디스크를 지키는 안전판이고 지금 양으로는 90일보다 먼저 닿지 않는다 | 같은 파일 `SystemMaxUse=4G` |
+
+설정 파일은 `provision.sh` §로그 보존이 만든다. 이미 있는 서버에는 `provision.sh` 를 한 번 더 돌린다 — 여러 번 돌려도 안전하다.
+compose 의 `logging` 은 배포 때 컨테이너를 다시 만들어야 걸린다.
+
+```sh
+docker compose logs --tail 100 backend                            # 지금 컨테이너
+sudo journalctl -t gachijoopging-backend-1 --since "2026-10-19 14:00"   # 재배포 전 컨테이너까지
+sudo journalctl -t gachijoopging-nginx-1 --since -1h               # 접속 로그
+docker inspect -f '{{.HostConfig.LogConfig}}' gachijoopging-backend-1  # {journald map[tag:...]}
+sudo journalctl --disk-usage
+```
+
+**앱 오류의 `requestId` 로 찾기.** 오류 봉투의 `requestId` 가 백엔드 로그 줄마다 `[...]` 로 찍힌다
+(compose 의 `LOGGING_PATTERN_LEVEL`). 4xx 는 `GlobalExceptionHandler` 가 WARN 한 줄을 남긴다.
+
+```sh
+sudo journalctl -t gachijoopging-backend-1 --since -1d | grep <requestId>
+```
+
+**로그에 토큰·이메일·좌표를 남기지 않는다**(§개인정보). 레이트리밋 키는 이메일을 해시해 넣고, 재설정 코드를
+찍는 `LoggingPasswordResetMailSender` 는 `prod` 에서 꺼진다. 접속 로그에 남는 쿼리스트링에도 좌표·토큰이 없다
+(`openapi.yaml` 의 query 파라미터는 범위·커서·검색어뿐).
+**어긋난 곳이 하나 있다** — `SmtpPasswordResetMailSender` 가 발송 실패 때 받는 사람 이메일을 평문으로 찍는다. backend 쪽에서 고친다.
+
 ## 장애 대응
 
 알림이 왔을 때 무엇부터 보는지. **먼저 고치지 말고 먼저 본다** — 되돌릴 수 없는 것부터 피한다.
@@ -710,6 +744,7 @@ ssh ubuntu@13.125.10.7
 cd /opt/gachijoopging
 docker compose ps                      # 뭐가 죽었나
 docker compose logs --tail 50 backend  # 왜 죽었나
+sudo journalctl -t gachijoopging-backend-1 --since -2h | tail -50  # 재배포로 바뀌기 전 컨테이너까지 — §로그
 ./watch.sh                             # 지금도 죽어 있나
 tail -50 /var/log/gachijoopging-watch.log
 ```

@@ -71,6 +71,26 @@ else
   echo "넣었다 — 다시 로그인해야 sudo 없이 docker 를 쓴다"
 fi
 
+# ── 로그 보존 ──────────────────────────────────────────────────────
+# 컨테이너 로그는 journald 로 보낸다(docker-compose.yml 의 logging). 개인정보처리방침 §2 가
+# 접속 로그를 "3개월 보관한 뒤 지운다" 고 약속했는데, 도커 기본(json-file)은 크기로만 잘라
+# 기간을 지키지 못하고 컨테이너를 다시 만들면 로그가 통째로 사라진다.
+# 파일을 하루 단위로 끊어야 90일이 하루 오차로 지켜진다 — 기본(한 달)이면 넉 달까지 남는다.
+# 용량 상한은 디스크를 지키는 안전판이다. 지금 양으로는 90일보다 먼저 닿지 않는다.
+log "로그 보존"
+JOURNAL_CONF=/etc/systemd/journald.conf.d/gachijoopging.conf
+JOURNAL_WANT=$(printf '%s
+' '[Journal]' 'Storage=persistent' 'MaxRetentionSec=90day' 'MaxFileSec=1day' 'SystemMaxUse=4G')
+if [ "$(cat "$JOURNAL_CONF" 2>/dev/null)" = "$JOURNAL_WANT" ]; then
+  echo "이미 있다: $JOURNAL_CONF"
+else
+  sudo mkdir -p "$(dirname "$JOURNAL_CONF")"
+  printf '%s
+' "$JOURNAL_WANT" | sudo tee "$JOURNAL_CONF" >/dev/null
+  sudo systemctl restart systemd-journald
+  echo "넣었다: $JOURNAL_CONF (90일 · 하루 단위 · 상한 4G)"
+fi
+
 # ── 디렉터리 ───────────────────────────────────────────────────────
 log "디렉터리"
 # nginx/ 가 없으면 deploy.yml 의 scp 가 "dest open: Failure" 로 죽는다 — 첫 배포가 깨진다.
