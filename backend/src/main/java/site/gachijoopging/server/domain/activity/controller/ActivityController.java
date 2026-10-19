@@ -1,6 +1,8 @@
 package site.gachijoopging.server.domain.activity.controller;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -11,15 +13,19 @@ import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import site.gachijoopging.server.domain.activity.dto.ActivityCardResponse;
 import site.gachijoopging.server.domain.activity.dto.ActivityResponse;
 import site.gachijoopging.server.domain.activity.dto.ActivitySummaryResponse;
 import site.gachijoopging.server.domain.activity.dto.AddItemsRequest;
+import site.gachijoopging.server.domain.activity.dto.EndActivityRequest;
 import site.gachijoopging.server.domain.activity.dto.StartActivityRequest;
 import site.gachijoopging.server.domain.activity.dto.UpdateItemRequest;
 import site.gachijoopging.server.domain.activity.service.ActivityService;
 import site.gachijoopging.server.global.response.ApiResponse;
+import site.gachijoopging.server.global.response.CursorPage;
 import site.gachijoopging.server.global.security.CurrentUser;
 
 @RestController
@@ -72,5 +78,30 @@ public class ActivityController {
   @ResponseStatus(HttpStatus.NO_CONTENT)
   public void deleteItem(@CurrentUser UUID me, @PathVariable UUID id, @PathVariable UUID itemId) {
     activityService.deleteItem(me, id, itemId);
+  }
+
+  @PostMapping("/activities/{id}/end")
+  public ApiResponse<ActivityResponse> end(
+      @CurrentUser UUID me, @PathVariable UUID id, @Valid @RequestBody EndActivityRequest request) {
+    return ApiResponse.of(activityService.end(me, id, request));
+  }
+
+  @GetMapping("/activities/{id}")
+  public ApiResponse<ActivityResponse> detail(@CurrentUser UUID me, @PathVariable UUID id) {
+    return ApiResponse.of(activityService.detail(me, id));
+  }
+
+  @DeleteMapping("/activities/{id}")
+  @ResponseStatus(HttpStatus.NO_CONTENT)
+  public void delete(@CurrentUser UUID me, @PathVariable UUID id) {
+    activityService.delete(me, id);
+  }
+
+  @GetMapping("/users/me/activities")
+  public ApiResponse<CursorPage<ActivityCardResponse>> mine(
+      @CurrentUser UUID me,
+      @RequestParam(required = false) String cursor,
+      @RequestParam(defaultValue = "20") @Min(1) @Max(50) int limit) {
+    return ApiResponse.of(activityService.mine(me, cursor, limit));
   }
 }

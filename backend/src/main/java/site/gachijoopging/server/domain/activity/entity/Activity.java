@@ -97,6 +97,22 @@ public class Activity {
     pausedAt = null;
   }
 
+  // 거리·시간·걸음수는 앱이 필터와 일시정지를 반영해 계산한 값이다 (feature-scope §위치 품질)
+  public void end(Instant endedAt, int durationSec, int pausedSec, int distanceM, Integer steps) {
+    this.status = ActivityStatus.ENDED;
+    this.endedAt = endedAt;
+    this.durationSec = durationSec;
+    this.pausedSec = pausedSec;
+    this.distanceM = distanceM;
+    this.steps = steps;
+    this.paused = false;
+    this.pausedAt = null;
+  }
+
+  public void delete(Instant now) {
+    this.deletedAt = now;
+  }
+
   public void recount(List<ActivityItem> items) {
     Map<String, Integer> counts = new TreeMap<>();
     items.forEach(
