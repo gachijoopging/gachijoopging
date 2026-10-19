@@ -151,7 +151,7 @@ CI 실패도 안 보낸다 — PR 에 이미 보인다.
 | 워크플로 | 언제 | 무엇 |
 |---|---|---|
 | `contract` | PR · `dev`·`main` 푸시 (`docs/openapi.yaml`·`redocly.yaml` 이 바뀌었을 때만 lint) | `redocly lint`. 설정은 `redocly.yaml` — 경고 0 이라야 새 경고가 신호가 된다. 버전은 워크플로에 고정 |
-| `backend` | PR · `dev`·`main` 푸시 | `./gradlew test` (Java 21). backend 가 바뀐 PR 이면 이어서 `./gradlew dockerTest`(`@Tag("docker")` 통합·계약 테스트, Testcontainers) — 필수 체크가 아니다 |
+| `backend` | PR · `dev`·`main` 푸시 | `./gradlew test` (Java 21). backend 가 바뀐 PR 에서만 이어서 `./gradlew dockerTest`(`@Tag("docker")` 통합·계약 테스트, Testcontainers) — 필수 체크가 아니다 |
 | `legal` | PR · `dev`·`main` 푸시 | `node infra/legal/build.mjs --check`. 약관 HTML 이 `docs/legal/*.md` 와 같은지 |
 | `design-system` | PR · `dev`·`main` 푸시 | `npm test`. `node:test` 와 타입 스트리핑만 써서 설치가 필요 없다 |
 | `build` | `dev` 푸시 | 백엔드 이미지를 만들어 레지스트리에 올린다. 배포하지 않는다 |

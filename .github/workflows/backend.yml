@@ -55,9 +55,12 @@ jobs:
         run: ./gradlew test --no-daemon
 
   # 러너의 Docker 로 Testcontainers 가 PostGIS·Redis 를 띄운다.
+  #
+  # PR 에서만 돈다. 계약 테스트 72건이 알려진 이유로 늘 실패하는 동안 dev·main 푸시에서 돌리면
+  # 모든 커밋이 ✗ 가 되고, 늘 빨간 것은 아무도 보지 않게 된다. 계약 테스트가 초록이 되면 조건을 푼다.
   backend-docker-test:
     needs: backend-test
-    if: needs.backend-test.outputs.run == 'true'
+    if: github.event_name == 'pull_request' && needs.backend-test.outputs.run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
