@@ -100,26 +100,50 @@ class ActivityRecordApiTest extends IntegrationTest {
     종료한다(나, 활동, "[[126.93,37.52],[181,37.52]]", "null").andExpect(status().isUnprocessableEntity());
     종료한다(나, 활동, "[[126.93,37.52],[1e400,37.52]]", "null")
         .andExpect(status().isUnprocessableEntity());
-    mockMvc
-        .perform(
-            post("/api/v1/activities/{id}/end", 활동)
-                .header(HttpHeaders.AUTHORIZATION, 나.bearer())
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(
-                    "{\"endedAt\":\"2026-10-13T08:59:59Z\",\"durationSec\":10,\"pausedSec\":0,"
-                        + "\"distanceM\":0,\"route\":[]}"))
+    값으로_종료한다(나, 활동, "2026-10-13T08:59:59Z", 10, 0, 0).andExpect(status().isUnprocessableEntity());
+    값으로_종료한다(나, 활동, "2026-10-13T09:42:00Z", 10, 0, -1).andExpect(status().isUnprocessableEntity());
+
+    assertThat(상태(활동)).isEqualTo("IN_PROGRESS");
+  }
+
+  @Test
+  void 시작_종료_사이보다_긴_시간_시간에_비해_긴_거리_미래의_종료는_422_이고_합산에_더하지_않는다() throws Exception {
+    TestAccount 나 = 크루원이_된다("rec-bounds@test.io");
+    UUID 활동 = 진행_중_활동(나, true);
+
+    값으로_종료한다(나, 활동, "2026-10-13T09:10:00Z", 600, 120, 100)
         .andExpect(status().isUnprocessableEntity());
-    mockMvc
-        .perform(
-            post("/api/v1/activities/{id}/end", 활동)
-                .header(HttpHeaders.AUTHORIZATION, 나.bearer())
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(
-                    "{\"endedAt\":\"2026-10-13T09:42:00Z\",\"durationSec\":10,\"pausedSec\":0,"
-                        + "\"distanceM\":-1,\"route\":[]}"))
+    값으로_종료한다(나, 활동, "2026-10-13T09:10:00Z", 600, 0, 2_000_000_000)
+        .andExpect(status().isUnprocessableEntity());
+    값으로_종료한다(나, 활동, "2099-01-01T00:00:00Z", 600, 0, 100)
         .andExpect(status().isUnprocessableEntity());
 
     assertThat(상태(활동)).isEqualTo("IN_PROGRESS");
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM crew_daily_stats s JOIN activities a ON a.crew_id = s.crew_id"
+                    + " WHERE a.id = ?",
+                Integer.class,
+                활동))
+        .isZero();
+  }
+
+  @Test
+  void 자정_전후로_UTC_와_KST_날짜가_갈려도_KST_로_시작한_날에_적립한다() throws Exception {
+    TestAccount 나 = 크루원이_된다("rec-kst@test.io");
+    UUID 활동 = 시작한다(나, "2026-10-12T15:30:00Z", true);
+
+    종료한다(나, 활동, 경로, "null").andExpect(status().isOk());
+
+    assertThat(크루_합산(활동, "2026-10-13")).containsEntry("activity_count", 1);
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM crew_daily_stats s JOIN activities a ON a.crew_id = s.crew_id"
+                    + " WHERE a.id = ? AND s.date <> CAST(? AS date)",
+                Integer.class,
+                활동,
+                "2026-10-13"))
+        .isZero();
   }
 
   @Test
@@ -350,6 +374,17 @@ class ActivityRecordApiTest extends IntegrationTest {
     return 활동;
   }
 
+  private ResultActions 값으로_종료한다(TestAccount 계정, UUID 활동, String 종료, int 시간, int 일시정지, int 거리)
+      throws Exception {
+    return mockMvc.perform(
+        post("/api/v1/activities/{id}/end", 활동)
+            .header(HttpHeaders.AUTHORIZATION, 계정.bearer())
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(
+                "{\"endedAt\":\"%s\",\"durationSec\":%d,\"pausedSec\":%d,\"distanceM\":%d,\"route\":[]}"
+                    .formatted(종료, 시간, 일시정지, 거리)));
+  }
+
   private ResultActions 종료한다(TestAccount 계정, UUID 활동, String 경로, String 걸음수) throws Exception {
     return mockMvc.perform(
         post("/api/v1/activities/{id}/end", 활동)
@@ -428,6 +463,10 @@ class ActivityRecordApiTest extends IntegrationTest {
   }
 
   private Map<String, Object> 크루_합산(UUID 활동) {
+    return 크루_합산(활동, 날짜);
+  }
+
+  private Map<String, Object> 크루_합산(UUID 활동, String 날짜) {
     return jdbcTemplate.queryForMap(
         "SELECT s.activity_count, s.duration_sec, s.distance_m, s.item_count,"
             + " CAST(s.by_category AS text) AS by_category"

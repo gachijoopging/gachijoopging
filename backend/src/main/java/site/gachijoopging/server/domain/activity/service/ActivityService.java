@@ -2,6 +2,8 @@ package site.gachijoopging.server.domain.activity.service;
 
 import java.math.BigDecimal;
 import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -55,6 +57,12 @@ public class ActivityService {
   private static final float UNCLASSIFIED_BELOW = 0.7f;
 
   private static final String WITHDRAWN_NICKNAME = "탈퇴한 크루원";
+
+  // 앱 기기 시계와 서버 시계의 차이, 앱이 초를 반올림하는 오차를 받아 준다
+  private static final Duration CLOCK_SKEW = Duration.ofMinutes(1);
+
+  // feature-scope §위치 품질의 "초속 5m 초과 버림" 과 같은 기준이다
+  private static final int MAX_SPEED_MPS = 5;
 
   private final ActivityRepository activityRepository;
   private final ActivityItemRepository itemRepository;
@@ -368,9 +376,23 @@ public class ActivityService {
     }
   }
 
-  private static void requireEndable(Activity activity, EndActivityRequest request) {
-    if (request.endedAt().isBefore(activity.getStartedAt())) {
+  // 받은 값이 크루 하루 합산(int)에 그대로 더해진다. 터무니없는 값 하나가 그날 크루 전원의 종료를
+  // 넘침으로 막지 않도록, 시작·종료 시각과 위치 필터(초속 5m 초과 버림) 안에 드는 값만 받는다
+  private void requireEndable(Activity activity, EndActivityRequest request) {
+    Instant startedAt = activity.getStartedAt();
+    Instant endedAt = request.endedAt();
+    if (endedAt.isBefore(startedAt)) {
       throw new BusinessException(ErrorCode.VALIDATION, "endedAt 이 startedAt 보다 이르다");
+    }
+    if (endedAt.isAfter(clock.instant().plus(CLOCK_SKEW))) {
+      throw new BusinessException(ErrorCode.VALIDATION, "endedAt 이 미래다");
+    }
+    long elapsedSec = Duration.between(startedAt, endedAt).plus(CLOCK_SKEW).toSeconds();
+    if ((long) request.durationSec() + request.pausedSec() > elapsedSec) {
+      throw new BusinessException(ErrorCode.VALIDATION, "시간이 시작·종료 시각 사이보다 길다");
+    }
+    if (request.distanceM() > (long) request.durationSec() * MAX_SPEED_MPS) {
+      throw new BusinessException(ErrorCode.VALIDATION, "거리가 시간에 비해 길다");
     }
     // NaN·무한대는 어떤 비교도 거짓이라, 범위 안에 있는지를 물어야 함께 걸러진다
     for (List<Double> point : request.route()) {
