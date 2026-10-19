@@ -685,8 +685,9 @@ curl -sS -o /dev/null -w '%{http_code}\n' -X POST -H "X-AI-Secret: wrong"   -d '
 클라이언트 의존성만 넣어 돌린다.
 
 ```sh
-cd ai && AI_SECRET=<값> uv run --no-project --with requests --with pillow \
-  python scripts/smoke.py --base-url "$AI_BASE_URL" --image docs/labeling-examples/CAN-1.jpg
+# 로컬에서. AI_SECRET 은 smoke.py 가 ai/.env 에서 스스로 읽는다 — 손으로 치면 쉘 히스토리에 남는다.
+cd ai && uv run --no-project --with requests --with pillow python scripts/smoke.py \
+  --base-url "https://$(sed -n 's/^NGROK_DOMAIN=//p' .env)" --image docs/labeling-examples/CAN-1.jpg
 ```
 
 > 사진을 지정하지 않으면 ultralytics 내장 샘플(버스)로 떨어져 검출이 0개가 되고, 항목 검사 5건이
