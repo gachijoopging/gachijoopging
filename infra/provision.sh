@@ -20,6 +20,8 @@ SWAP_FILE=/swapfile
 APP_DIR=/opt/gachijoopging
 MEDIA_DIR=/data/uploads
 WATCH_LOG=/var/log/gachijoopging-watch.log
+BACKUP_DIR=/data/backups
+BACKUP_LOG=/var/log/gachijoopging-backup.log
 # backend/Dockerfile 이 만드는 비루트 사용자. 호스트 쪽 소유자를 맞추지 않으면 업로드가 전부 막힌다.
 APP_UID=10001
 
@@ -79,6 +81,9 @@ sudo chown -R "$(id -un):$(id -gn)" "$APP_DIR"
 # 사진 디렉터리만 컨테이너 UID 소유다. 호스트 사용자로 두면 업로드가 permission denied 로 실패한다.
 sudo chown -R "$APP_UID:$APP_UID" "$MEDIA_DIR"
 echo "$APP_DIR · $MEDIA_DIR (소유자 $APP_UID)"
+# DB 덤프. 개인정보가 들어 있으니 서버 사용자만 읽는다.
+sudo install -d -o "$(id -un)" -g "$(id -gn)" -m 700 "$BACKUP_DIR"
+echo "$BACKUP_DIR (700)"
 
 # ── 배포 키 ────────────────────────────────────────────────────────
 # CI(deploy.yml)가 이 키로 붙는다. 없으면 배포가 안 되는데, 그 사실이
@@ -110,22 +115,26 @@ fi
 # watch.sh 는 deploy.yml 이 올린다. 여기서는 그것을 부를 cron 과 로그 자리만 만든다.
 # 이것이 빠지면 새 서버에서 감시가 조용히 사라지는데, 감시가 없어진 것은
 # 아무도 알려 주지 않으므로 가장 늦게 발견된다.
-log "감시 cron"
+log "감시·백업 cron"
 # 로그는 ubuntu 가 써야 한다. /var/log 는 root 소유라 미리 만들어 주지 않으면 cron 이 조용히 실패한다.
 # 이미 있으면 건드리지 않는다 — install 은 있는 파일을 비워서, 장애를 조사하던 중에 다시 돌리면
 # 증거가 사라진다.
-if [ -f "$WATCH_LOG" ]; then
-  echo "로그 이미 있다: $WATCH_LOG"
-else
-  sudo install -o "$(id -un)" -g "$(id -gn)" -m 644 /dev/null "$WATCH_LOG"
-  echo "로그 만들었다: $WATCH_LOG"
-fi
-( crontab -l 2>/dev/null | grep -v 'watch\.sh' || true
+for f in "$WATCH_LOG" "$BACKUP_LOG"; do
+  if [ -f "$f" ]; then
+    echo "로그 이미 있다: $f"
+  else
+    sudo install -o "$(id -un)" -g "$(id -gn)" -m 644 /dev/null "$f"
+    echo "로그 만들었다: $f"
+  fi
+done
+# 덤프(03:30)에서 한계 검사(다음 00:10)까지 21시간이다. 그래서 "하루 안의 덤프가 없다" 는 실패만 가리킨다.
+( crontab -l 2>/dev/null | grep -v 'watch\.sh\|backup\.sh' || true
   printf '%s\n' \
     "*/5 * * * * cd $APP_DIR && ./watch.sh >> $WATCH_LOG 2>&1" \
-    "10 0 * * * cd $APP_DIR && ./watch.sh --limits >> $WATCH_LOG 2>&1"
+    "10 0 * * * cd $APP_DIR && ./watch.sh --limits >> $WATCH_LOG 2>&1" \
+    "30 3 * * * cd $APP_DIR && ./backup.sh >> $BACKUP_LOG 2>&1"
 ) | crontab -
-crontab -l | grep 'watch\.sh'
+crontab -l | grep 'watch\.sh\|backup\.sh'
 
 # ── 확인 ───────────────────────────────────────────────────────────
 log "결과"

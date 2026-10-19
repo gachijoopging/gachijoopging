@@ -692,6 +692,47 @@ sslmode=require  → 1
 `/actuator/prometheus` 노출이 남아 있지만, 3명이 쓰는 규모에서 그래프를 보는 사람이 없다. 수집기만
 나중에 붙이면 되도록 노출은 그대로 둔다.
 
+## 백업·복구
+
+Supabase **Free 플랜은 내려받을 수 있는 백업이 없다.** 그래서 서버가 하루 한 번 직접 뜬다(`infra/backup.sh`).
+
+| 무엇 | 값 |
+|---|---|
+| 언제 | 매일 03:30 (서버 cron, `provision.sh` 가 건다) |
+| 무엇을 | `public` 스키마 + `postgis` 확장. Supabase 가 관리하는 `auth`·`storage` 는 우리 것이 아니라 뺀다 |
+| 어디에 | 서버 `/data/backups/db-YYYY-MM-DD.dump` (700, `pg_dump -Fc`). DB(Supabase)와 다른 곳이다 |
+| 얼마나 | **30일.** 개인정보처리방침 §6 "백업에 남은 사본은 30일 안에 함께 지운다" |
+| 실패하면 | `watch.sh --limits` 가 하루 안의 덤프가 없을 때 알린다. cron 이 아예 안 돈 경우까지 잡는다 |
+
+> ⚠️ 서버와 DB 가 **함께** 사라지는 경우는 막지 못한다. 덤프를 서버 밖으로 옮기는 것은 하지 않았다 —
+> 개인정보가 든 파일을 한 곳 더 두는 대가가 있다. 필요해지면 그때 정한다.
+
+**복원 리허설.** 덤프를 서버 안의 빈 PostGIS 컨테이너에 복원하고 원본과 대조한 뒤 컨테이너를 지운다.
+운영 데이터를 개인 PC 로 내려받지 않는다.
+
+```sh
+cd /opt/gachijoopging
+./backup.sh                # 지금 하나 뜬다
+./backup.sh --verify       # 가장 최근 덤프로. 파일을 주면 그것으로
+# 원본 | 복원본
+# flyway   <버전> <설명>      <버전> <설명>
+# postgis  <Supabase 의 판>   <이미지의 판>   ← 다를 수 있다 (판 번호는 이미지가 정한다 — 있는지만 본다)
+# rows:activities  ...
+# 복원 N초
+# 통과 — flyway·표 목록 일치, postgis 있음
+```
+
+판정은 **flyway 마지막 버전과 표 목록**이다. 행 수는 덤프 뒤에 원본이 바뀐 만큼 다를 수 있어 보기만 한다.
+
+**실제로 복원할 때** (DB 를 잃었을 때). 새 Supabase 프로젝트를 만들고 `DATABASE_*` 를 바꾼 뒤:
+
+```sh
+docker run --rm -i -e PGPASSWORD=<새 비밀번호> postgres:17-alpine \
+  pg_restore -h <새 호스트> -p 5432 -U <새 사용자> -d postgres --no-owner --no-acl < /data/backups/db-<날짜>.dump
+```
+
+백엔드를 띄우면 Flyway 가 `flyway_schema_history` 를 보고 이미 적용된 것을 건너뛴다.
+
 ## 장애 대응
 
 알림이 왔을 때 무엇부터 보는지. **먼저 고치지 말고 먼저 본다** — 되돌릴 수 없는 것부터 피한다.
