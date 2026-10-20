@@ -405,7 +405,7 @@ meets · meet_members · meet_invites · meet_join_requests · friendships · ne
 |---|---|---|---|
 | `refresh_tokens` | 로그아웃·탈퇴 때 | 로그아웃은 그 토큰 행, 탈퇴는 그 사람의 모든 행을 삭제 | 구현 전 (로그아웃 GAC-140 · 탈퇴 GAC-73). 지금 로그아웃은 revoke 만 한다 |
 | `refresh_tokens` | 매일 04:00 KST | 만료된 행 삭제 (`RefreshTokenCleanupJob`) | 있음. 지금은 만료 후 30일 지난 행만 지운다 — 만료 즉시로 바꾼다 |
-| 삭제된 콘텐츠의 사진 | 삭제 커밋 뒤 | 스토리지에서 `deleted/` 경로로 옮긴다 (`MediaQuarantineListener`) | 리스너만 있음. 발행은 각 도메인이 삭제를 만들 때 |
+| 삭제된 콘텐츠의 사진 | 삭제 커밋 뒤 | 스토리지에서 `deleted/` 경로로 옮긴다 (`MediaQuarantineListener`) | 활동 삭제가 발행한다 (GAC-88). 나머지 도메인은 삭제를 만들 때 발행한다 |
 | `live_locations` | 활동 종료 때 | 그 사람의 행 삭제 | 구현 전 |
 | 종료 없이 끊긴 `live_locations` | 5분마다 | `updated_at` 이 25분 넘게 지난 행 삭제 — 늦어도 30분 안에 지워진다. 활동이 이어지면 다음 갱신이 행을 다시 만든다 | 구현 전 |
 | `password_reset_tokens` | 사용·폐기 때 · 매일 04:00 KST | 사용·재발급·오답 한도로 폐기되는 행은 그때 삭제, 쓰지 않고 만료된 행은 매일 삭제 | 구현 전 — 지금은 `used_at` 만 찍고 쌓인다 |
@@ -414,4 +414,4 @@ meets · meet_members · meet_invites · meet_join_requests · friendships · ne
 | `deleted_at` 이 찍힌 `users`·`crews` | — | 물리 삭제하지 않는다. 탈퇴한 `users` 는 개인정보를 지운 빈 행으로 남아 "탈퇴한 크루원" 게시물·댓글이 가리키고, 해산한 `crews` 는 개인 활동 기록·`crew_daily_stats` 가 가리킨다 | 해당 없음 |
 | 서버 접속 로그 | 3개월 | 3개월 지난 로그 삭제 | infra 담당 (GAC-109). DB 행이 아니다 |
 | 사용자가 버린 활동 사진 | 버릴 때 (`DELETE /media/{mediaId}`) | `activity_photos`·`media` 행을 지우고 커밋 뒤 원본·썸네일 파일을 지운다. `deleted/` 를 거치지 않는다 | 있음 (GAC-89) |
-| 버리지 않았는데 줍기에 연결되지 않고 남은 활동 사진 | — | — | **미결** (`feature-scope.md` §미결) |
+| 버리지 않았는데 줍기에 연결되지 않고 남은 활동 사진 | 활동 삭제 때 | 활동의 다른 사진과 같다 — 기록의 일부로 남는다 (`feature-scope.md` "줍기 없이 남은 활동 사진") | 있음 (GAC-88) |
