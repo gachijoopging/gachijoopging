@@ -109,6 +109,9 @@ out="$DIR/db-$(date +%F).dump"
 docker run --rm --user "$(id -u):$(id -g)" -e PGPASSWORD="$PW" -v "$DIR:/out" "$CLIENT_IMAGE" \
   pg_dump -h "$H" -p 5432 -U "$U" -d postgres -n public -e postgis -Fc -f "/out/$(basename "$out").tmp"
 mv "$out.tmp" "$out"
+# 위의 umask 는 컨테이너 안 프로세스에 걸리지 않아 덤프가 644 로 나온다. 디렉터리가 700 이라
+# 당장 새지는 않지만, 개인정보가 든 파일이 디렉터리 권한 하나에만 기대게 두지 않는다.
+chmod 600 "$out"
 echo "$(date '+%F %T') 덤프 $(du -h "$out" | cut -f1) $out"
 
 find "$DIR" -name 'db-*.dump' -mtime +$((KEEP_DAYS - 1)) -print -delete
