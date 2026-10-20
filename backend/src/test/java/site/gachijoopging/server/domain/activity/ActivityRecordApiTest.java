@@ -13,6 +13,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jayway.jsonpath.JsonPath;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -107,15 +110,13 @@ class ActivityRecordApiTest extends IntegrationTest {
   }
 
   @Test
-  void 시작_종료_사이보다_긴_시간_시간에_비해_긴_거리_미래의_종료는_422_이고_합산에_더하지_않는다() throws Exception {
+  void 시작_종료_사이보다_긴_시간과_시간에_비해_긴_거리는_422_이고_합산에_더하지_않는다() throws Exception {
     TestAccount 나 = 크루원이_된다("rec-bounds@test.io");
     UUID 활동 = 진행_중_활동(나, true);
 
     값으로_종료한다(나, 활동, "2026-10-13T09:10:00Z", 600, 120, 100)
         .andExpect(status().isUnprocessableEntity());
     값으로_종료한다(나, 활동, "2026-10-13T09:10:00Z", 600, 0, 2_000_000_000)
-        .andExpect(status().isUnprocessableEntity());
-    값으로_종료한다(나, 활동, "2099-01-01T00:00:00Z", 600, 0, 100)
         .andExpect(status().isUnprocessableEntity());
 
     assertThat(상태(활동)).isEqualTo("IN_PROGRESS");
@@ -126,6 +127,37 @@ class ActivityRecordApiTest extends IntegrationTest {
                 Integer.class,
                 활동))
         .isZero();
+  }
+
+  @Test
+  void 기기_시계가_서버보다_빨라_종료_시각이_미래여도_그대로_저장한다() throws Exception {
+    TestAccount 나 = 크루원이_된다("rec-fast-clock@test.io");
+    Instant 서버_지금 = Instant.now().truncatedTo(ChronoUnit.SECONDS);
+    UUID 활동 = 시작한다(나, 서버_지금.minus(Duration.ofMinutes(20)).toString(), true);
+    String 종료 = 서버_지금.plus(Duration.ofMinutes(10)).toString();
+
+    값으로_종료한다(나, 활동, 종료, 1500, 300, 3000)
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.endedAt").value(종료))
+        .andExpect(jsonPath("$.data.durationSec").value(1500));
+  }
+
+  @Test
+  void 활동이_24시간을_넘으면_24시간_시점으로_잘라_저장하고_합산도_그만큼만_더한다() throws Exception {
+    TestAccount 나 = 크루원이_된다("rec-over-day@test.io");
+    UUID 활동 = 진행_중_활동(나, true);
+
+    값으로_종료한다(나, 활동, "2099-01-01T00:00:00Z", 200_000, 50_000, 900_000)
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.status").value("ENDED"))
+        .andExpect(jsonPath("$.data.endedAt").value("2026-10-14T09:00:00Z"))
+        .andExpect(jsonPath("$.data.durationSec").value(86_400))
+        .andExpect(jsonPath("$.data.pausedSec").value(0))
+        .andExpect(jsonPath("$.data.distanceM").value(432_000));
+    assertThat(크루_합산(활동))
+        .containsEntry("activity_count", 1)
+        .containsEntry("duration_sec", 86_400)
+        .containsEntry("distance_m", 432_000);
   }
 
   @Test

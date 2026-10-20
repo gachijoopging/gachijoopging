@@ -58,11 +58,15 @@ public class ActivityService {
 
   private static final String WITHDRAWN_NICKNAME = "탈퇴한 크루원";
 
-  // 앱 기기 시계와 서버 시계의 차이, 앱이 초를 반올림하는 오차를 받아 준다
+  // 앱이 초를 반올림하는 오차, 활동 중 기기 시계가 보정되는 차이를 받아 준다
   private static final Duration CLOCK_SKEW = Duration.ofMinutes(1);
 
   // feature-scope §위치 품질의 "초속 5m 초과 버림" 과 같은 기준이다
   private static final int MAX_SPEED_MPS = 5;
+
+  // feature-scope §활동 최대 시간. 넘친 값을 거절하면 활동이 진행 중으로 남아 다음 시작·로그아웃을
+  // 막으므로, 자동 종료가 없는 앱이나 시계가 어긋난 기기가 보낸 값도 받아서 24시간 시점으로 자른다
+  private static final Duration MAX_ACTIVITY = Duration.ofHours(24);
 
   private final ActivityRepository activityRepository;
   private final ActivityItemRepository itemRepository;
@@ -177,11 +181,14 @@ public class ActivityService {
     Activity activity = lockOwn(me, id);
     if (activity.inProgress()) {
       requireEndable(activity, request);
+      Instant lastEndedAt = activity.getStartedAt().plus(MAX_ACTIVITY);
+      int maxSec = (int) MAX_ACTIVITY.toSeconds();
+      int durationSec = Math.min(request.durationSec(), maxSec);
       activity.end(
-          request.endedAt(),
-          request.durationSec(),
-          request.pausedSec(),
-          request.distanceM(),
+          request.endedAt().isAfter(lastEndedAt) ? lastEndedAt : request.endedAt(),
+          durationSec,
+          Math.min(request.pausedSec(), maxSec - durationSec),
+          Math.min(request.distanceM(), durationSec * MAX_SPEED_MPS),
           request.steps());
       // 점이 둘 미만이면 선이 되지 않는다. 짧은 활동도 저장해야 하므로 경로만 비워 둔다
       if (request.route().size() >= 2) {
@@ -376,16 +383,13 @@ public class ActivityService {
     }
   }
 
-  // 받은 값이 크루 하루 합산(int)에 그대로 더해진다. 터무니없는 값 하나가 그날 크루 전원의 종료를
+  // 받은 값이 크루 하루 합산(int)에 더해진다. 터무니없는 값 하나가 그날 크루 전원의 종료를
   // 넘침으로 막지 않도록, 시작·종료 시각과 위치 필터(초속 5m 초과 버림) 안에 드는 값만 받는다
-  private void requireEndable(Activity activity, EndActivityRequest request) {
+  private static void requireEndable(Activity activity, EndActivityRequest request) {
     Instant startedAt = activity.getStartedAt();
     Instant endedAt = request.endedAt();
     if (endedAt.isBefore(startedAt)) {
       throw new BusinessException(ErrorCode.VALIDATION, "endedAt 이 startedAt 보다 이르다");
-    }
-    if (endedAt.isAfter(clock.instant().plus(CLOCK_SKEW))) {
-      throw new BusinessException(ErrorCode.VALIDATION, "endedAt 이 미래다");
     }
     long elapsedSec = Duration.between(startedAt, endedAt).plus(CLOCK_SKEW).toSeconds();
     if ((long) request.durationSec() + request.pausedSec() > elapsedSec) {
