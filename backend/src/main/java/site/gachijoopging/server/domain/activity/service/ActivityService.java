@@ -38,6 +38,7 @@ import site.gachijoopging.server.domain.activity.repository.ActivityItemReposito
 import site.gachijoopging.server.domain.activity.repository.ActivityQueryRepository;
 import site.gachijoopging.server.domain.activity.repository.ActivityRepository;
 import site.gachijoopging.server.domain.crew.dto.UserBriefResponse;
+import site.gachijoopging.server.domain.live.service.LiveService;
 import site.gachijoopging.server.domain.media.event.MediaQuarantineEvent;
 import site.gachijoopging.server.domain.media.service.MediaSignedUrl;
 import site.gachijoopging.server.domain.stats.dto.StatsDelta;
@@ -72,6 +73,7 @@ public class ActivityService {
   private final ActivityItemRepository itemRepository;
   private final ActivityQueryRepository queryRepository;
   private final StatsService statsService;
+  private final LiveService liveService;
   private final MediaSignedUrl signedUrl;
   private final ApplicationEventPublisher events;
   private final UserLock userLock;
@@ -105,6 +107,7 @@ public class ActivityService {
       }
       throw new BusinessException(ErrorCode.CONFLICT, "진행 중인 활동이 있다");
     }
+    liveService.started(me, request.id(), crewId);
     return new Started(true, response(activityRepository.findById(request.id()).orElseThrow()));
   }
 
@@ -195,6 +198,7 @@ public class ActivityService {
         activityRepository.updateRoute(id, lineString(request.route()));
       }
       statsService.add(activity.getCrewId(), activity.getStartedAt(), totals(activity));
+      liveService.ended(me, id, activity.getCrewId());
     }
     return response(activity, true);
   }

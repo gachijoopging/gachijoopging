@@ -46,6 +46,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     // Redis 는 rate limit 과 STOMP 브로커 릴레이·채팅 pub/sub 용이다. 활동 중 위치는 테이블이다 (01-구조 §2, ERD §설계 근거)
     implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+    implementation 'org.springframework.boot:spring-boot-starter-websocket'
 
     // 앱 accessToken 은 RS256 + 헤더 kid 다 (결정 9). 발급은 JwtIssuer, 검증은 JwtVerifier.
     implementation 'com.auth0:java-jwt:4.5.1'
