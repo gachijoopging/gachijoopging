@@ -124,9 +124,14 @@ public class LiveLocationRepository {
         .list();
   }
 
-  public boolean exists(UUID userId) {
-    return jdbc.sql("SELECT EXISTS (SELECT 1 FROM live_locations WHERE user_id = :userId)")
+  public boolean exists(UUID userId, UUID activityId) {
+    return jdbc.sql(
+            """
+            SELECT EXISTS (SELECT 1 FROM live_locations
+                           WHERE user_id = :userId AND activity_id = :activityId)
+            """)
         .param("userId", userId)
+        .param("activityId", activityId)
         .query(Boolean.class)
         .single();
   }
@@ -143,6 +148,7 @@ public class LiveLocationRepository {
             """
             SELECT m.user_id FROM crew_members m
             WHERE m.crew_id = :crewId
+              AND m.user_id <> :sender
               AND NOT EXISTS (SELECT 1 FROM blocks b
                               WHERE b.blocker_id = m.user_id AND b.blocked_id = :sender)
             """)

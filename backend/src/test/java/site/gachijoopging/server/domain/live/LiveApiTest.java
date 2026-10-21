@@ -44,6 +44,7 @@ import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.client.standard.StandardWebSocketClient;
 import org.springframework.web.socket.handler.AbstractWebSocketHandler;
 import org.springframework.web.socket.messaging.WebSocketStompClient;
+import site.gachijoopging.server.domain.live.dto.LiveUpdateResponse;
 import site.gachijoopging.server.domain.live.service.LiveBroadcaster;
 import site.gachijoopging.server.global.security.jwt.JwtIssuer;
 import site.gachijoopging.server.global.security.jwt.JwtProperties;
@@ -107,6 +108,7 @@ class LiveApiTest extends IntegrationTest {
     TestAccount 남 = 크루원이_된다("live-flow-other@test.io");
     BlockingQueue<Map<String, Object>> 크루원_수신 = 구독한다(크루원);
     BlockingQueue<Map<String, Object>> 남_수신 = 구독한다(남);
+    BlockingQueue<Map<String, Object>> 내_수신 = 구독한다(나);
 
     UUID 활동 = 시작한다(나, true);
     Map<String, Object> 시작 = 받는다(크루원_수신, "LIVE_STARTED");
@@ -130,6 +132,29 @@ class LiveApiTest extends IntegrationTest {
     mockMvc.perform(활동_중(크루원)).andExpect(jsonPath("$.data.length()").value(0));
 
     assertThat(남_수신.poll(500, TimeUnit.MILLISECONDS)).isNull();
+    assertThat(내_수신.poll(500, TimeUnit.MILLISECONDS)).isNull();
+  }
+
+  @Test
+  void 종료보다_늦게_묶인_이전_활동의_갱신은_곧바로_시작한_다음_활동으로_나가지_않는다() throws Exception {
+    TestAccount 나 = 크루원이_된다("live-stale@test.io");
+    TestAccount 크루원 = 같은_크루에_넣는다(나, "live-stale-mate@test.io");
+    BlockingQueue<Map<String, Object>> 크루원_수신 = 구독한다(크루원);
+    UUID 크루 =
+        jdbcTemplate.queryForObject(
+            "SELECT crew_id FROM crew_members WHERE user_id = ?", UUID.class, 나.id());
+
+    UUID 이전_활동 = 시작한다(나, true);
+    끝낸다(나, 이전_활동);
+    시작한다(나, true);
+    broadcaster.update(
+        크루, 나.id(), 이전_활동, new LiveUpdateResponse(나.id().toString(), true, null, 999, 0, 0, false));
+    broadcaster.flush();
+
+    받는다(크루원_수신, "LIVE_STARTED");
+    받는다(크루원_수신, "LIVE_ENDED");
+    받는다(크루원_수신, "LIVE_STARTED");
+    assertThat(크루원_수신.poll(500, TimeUnit.MILLISECONDS)).isNull();
   }
 
   @Test

@@ -67,6 +67,7 @@ public class LiveService {
         new LiveUpdatedEvent(
             activity.crewId(),
             me,
+            activityId,
             new LiveUpdateResponse(
                 me.toString(),
                 activity.locationShared(),

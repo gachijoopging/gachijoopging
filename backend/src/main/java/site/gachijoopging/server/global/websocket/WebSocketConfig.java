@@ -1,8 +1,9 @@
 package site.gachijoopging.server.global.websocket;
 
-import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.MessagingException;
@@ -11,6 +12,7 @@ import org.springframework.messaging.simp.config.MessageBrokerRegistry;
 import org.springframework.messaging.simp.stomp.StompCommand;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.messaging.support.ChannelInterceptor;
+import org.springframework.scheduling.TaskScheduler;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
@@ -21,7 +23,6 @@ import site.gachijoopging.server.global.security.jwt.JwtVerifier;
 
 @Configuration
 @EnableWebSocketMessageBroker
-@RequiredArgsConstructor
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
   public static final String ENDPOINT = WebConfig.API_BASE_PATH + "/ws";
@@ -34,6 +35,17 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
   private final JwtVerifier jwtVerifier;
   private final ObjectProvider<CrewMembershipLoader> crewMembershipLoader;
+  private final TaskScheduler heartbeatScheduler;
+
+  // 브로커 스케줄러는 이 설정을 받아 만들어지는 빈이라 바로 주입하면 순환한다
+  public WebSocketConfig(
+      JwtVerifier jwtVerifier,
+      ObjectProvider<CrewMembershipLoader> crewMembershipLoader,
+      @Lazy @Qualifier("messageBrokerTaskScheduler") TaskScheduler heartbeatScheduler) {
+    this.jwtVerifier = jwtVerifier;
+    this.crewMembershipLoader = crewMembershipLoader;
+    this.heartbeatScheduler = heartbeatScheduler;
+  }
 
   @Override
   public void registerStompEndpoints(StompEndpointRegistry registry) {
@@ -44,10 +56,15 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         .setAllowedOriginPatterns("*");
   }
 
-  // 서버가 한 대(ADR-0005)라 simple broker 다. 인스턴스를 늘리면 브로커를 바꾼다
+  // 서버가 한 대(ADR-0005)라 simple broker 다. 인스턴스를 늘리면 브로커를 바꾼다.
+  // 모바일은 망이 바뀌면 반쯤 열린 연결이 남는다. heartbeat 로 걷어 내고, 받기만 하는 연결이
+  // nginx proxy_read_timeout 에 끊기지 않게 한다. 값은 앱 @stomp/stompjs 기본값(10초)과 같다
   @Override
   public void configureMessageBroker(MessageBrokerRegistry registry) {
-    registry.enableSimpleBroker("/queue");
+    registry
+        .enableSimpleBroker("/queue")
+        .setHeartbeatValue(new long[] {10_000, 10_000})
+        .setTaskScheduler(heartbeatScheduler);
     registry.setApplicationDestinationPrefixes(APP_PREFIX);
   }
 

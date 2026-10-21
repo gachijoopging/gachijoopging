@@ -24,7 +24,7 @@ public class LiveEventListener {
 
   @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
   public void onUpdated(LiveUpdatedEvent event) {
-    broadcaster.update(event.crewId(), event.userId(), event.update());
+    broadcaster.update(event.crewId(), event.userId(), event.activityId(), event.update());
   }
 
   @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)

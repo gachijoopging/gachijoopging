@@ -20,14 +20,14 @@ import site.gachijoopging.server.global.websocket.WebSocketConfig;
 @RequiredArgsConstructor
 public class LiveBroadcaster {
 
-  private record Pending(UUID crewId, LiveUpdateResponse update) {}
+  private record Pending(UUID crewId, UUID activityId, LiveUpdateResponse update) {}
 
   private final LiveLocationRepository repository;
   private final SimpMessagingTemplate messaging;
   private final Map<UUID, Pending> pending = new ConcurrentHashMap<>();
 
-  public void update(UUID crewId, UUID userId, LiveUpdateResponse update) {
-    pending.put(userId, new Pending(crewId, update));
+  public void update(UUID crewId, UUID userId, UUID activityId, LiveUpdateResponse update) {
+    pending.put(userId, new Pending(crewId, activityId, update));
   }
 
   public void started(UUID crewId, UUID userId, LiveMemberResponse member) {
@@ -50,8 +50,9 @@ public class LiveBroadcaster {
   public synchronized void flush() {
     for (UUID userId : pending.keySet()) {
       Pending next = pending.remove(userId);
-      // 종료가 커밋된 뒤 남은 갱신이 나가면 앱 목록에 끝난 사람이 다시 생긴다
-      if (next != null && repository.exists(userId)) {
+      // 종료가 커밋된 뒤 남은 갱신이 나가면 앱 목록에 끝난 사람이 다시 생긴다.
+      // 곧바로 다음 활동을 시작했으면 사용자만으로는 못 가려 이전 활동 값이 새 활동으로 나간다
+      if (next != null && repository.exists(userId, next.activityId())) {
         send(next.crewId(), userId, "LIVE_UPDATE", next.update());
       }
     }
