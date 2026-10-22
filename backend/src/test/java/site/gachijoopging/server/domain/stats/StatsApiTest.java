@@ -91,6 +91,23 @@ class StatsApiTest extends IntegrationTest {
   }
 
   @Test
+  void 기간_안에_활동이_없는_크루원도_0개로_함께_맨_뒤에_선다() throws Exception {
+    TestAccount 크루장 = 계정();
+    String 크루 = 공개_크루를_만든다(크루장);
+    TestAccount 둘째 = 계정();
+    TestAccount 셋째 = 계정();
+    들어간다(둘째, 크루);
+    들어간다(셋째, 크루);
+    끝낸다(크루장, "2026-10-13T01:00:00Z", Map.of("CAN", 2));
+
+    조회(크루장, "/crew/stats", "range", "WEEK")
+        .andExpect(jsonPath("$.data.ranking[*].rank", contains(1, 2, 2)))
+        .andExpect(jsonPath("$.data.ranking[0].user.id").value(크루장.id().toString()))
+        .andExpect(jsonPath("$.data.ranking[*].items", contains(2, 0, 0)))
+        .andExpect(jsonPath("$.data.ranking[*].distanceM", contains(1000, 0, 0)));
+  }
+
+  @Test
   void WEEK_는_KST_월요일_00시부터_세고_MONTH_는_이번_달_1일부터다() throws Exception {
     TestAccount 나 = 계정();
     공개_크루를_만든다(나);
@@ -256,8 +273,9 @@ class StatsApiTest extends IntegrationTest {
     조회(크루장, "/crew/stats", "range", "WEEK")
         .andExpect(jsonPath("$.data.totals.items").value(1))
         .andExpect(jsonPath("$.data.totals.activities").value(1))
-        .andExpect(jsonPath("$.data.ranking.length()").value(1))
-        .andExpect(jsonPath("$.data.ranking[0].user.id").value(크루장.id().toString()));
+        .andExpect(jsonPath("$.data.ranking.length()").value(2))
+        .andExpect(jsonPath("$.data.ranking[0].user.id").value(크루장.id().toString()))
+        .andExpect(jsonPath("$.data.ranking[1].items").value(0));
     조회(크루장, "/crew/home").andExpect(jsonPath("$.data.last7d.crewItems").value(1));
   }
 

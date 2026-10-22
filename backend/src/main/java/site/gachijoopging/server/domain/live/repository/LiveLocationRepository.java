@@ -148,7 +148,6 @@ public class LiveLocationRepository {
             """
             SELECT m.user_id FROM crew_members m
             WHERE m.crew_id = :crewId
-              AND m.user_id <> :sender
               AND NOT EXISTS (SELECT 1 FROM blocks b
                               WHERE b.blocker_id = m.user_id AND b.blocked_id = :sender)
             """)

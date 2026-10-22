@@ -22,10 +22,6 @@ public class StatsQueryRepository {
 
   private static final String ENDED_ACTIVITY = "a.status = 'ENDED' AND a.deleted_at IS NULL";
 
-  private static final String FROM_KST =
-      "(CAST(:from AS date) IS NULL"
-          + " OR a.started_at >= CAST(CAST(:from AS date) AS timestamp) AT TIME ZONE 'Asia/Seoul')";
-
   private final JdbcClient jdbc;
 
   // firstDay 는 ALL 추이의 첫 달이다. 크루가 생기기 전 날짜에 시작한 활동도 빠뜨리지 않는다
@@ -125,8 +121,9 @@ public class StatsQueryRepository {
                    coalesce(sum(duration_sec), 0) AS duration,
                    coalesce(sum(activity_count), 0) AS activities
             FROM crew_daily_stats
-            WHERE crew_id = :crewId AND (CAST(:from AS date) IS NULL OR date >= CAST(:from AS date))
-            """)
+            WHERE crew_id = :crewId %s
+            """
+                .formatted(dateFrom("date", from)))
         .param("crewId", crewId)
         .param("from", from)
         .query(
@@ -145,11 +142,11 @@ public class StatsQueryRepository {
                 """
                 SELECT e.key, sum(e.value::int) AS quantity
                 FROM crew_daily_stats s, jsonb_each_text(s.by_category) e
-                WHERE s.crew_id = :crewId
-                  AND (CAST(:from AS date) IS NULL OR s.date >= CAST(:from AS date))
+                WHERE s.crew_id = :crewId %s
                 GROUP BY e.key
                 HAVING sum(e.value::int) <> 0
-                """)
+                """
+                    .formatted(dateFrom("s.date", from)))
             .param("crewId", crewId)
             .param("from", from));
   }
@@ -160,32 +157,33 @@ public class StatsQueryRepository {
                 """
                 SELECT e.key, sum(e.value::int) AS quantity
                 FROM activities a, jsonb_each_text(a.by_category) e
-                WHERE a.crew_id = :crewId AND a.user_id = :userId AND %s AND %s
+                WHERE a.crew_id = :crewId AND a.user_id = :userId AND %s %s
                 GROUP BY e.key
                 HAVING sum(e.value::int) <> 0
                 """
-                    .formatted(ENDED_ACTIVITY, FROM_KST))
+                    .formatted(ENDED_ACTIVITY, startedFrom(from)))
             .param("crewId", crewId)
             .param("userId", userId)
             .param("from", from));
   }
 
-  // 순위는 지금 크루원만 — 나간 사람의 기록은 합계에는 남지만 순위에는 올리지 않는다
+  // 순위는 지금 크루원 전원이다. 기간 안에 활동이 없으면 0개로 함께 맨 뒤에 선다.
+  // 나간 사람의 기록은 합계에는 남지만 순위에는 올리지 않는다
   public List<RankRow> ranking(UUID crewId, LocalDate from) {
     return jdbc.sql(
             """
-            SELECT CAST(rank() OVER (ORDER BY sum(a.item_count) DESC) AS int) AS rank,
+            SELECT CAST(rank() OVER (ORDER BY coalesce(sum(a.item_count), 0) DESC) AS int) AS rank,
                    u.id, u.nickname, u.status, m.object_key AS photo_key,
-                   sum(a.item_count) AS items, sum(a.distance_m) AS distance
-            FROM activities a
-            JOIN crew_members cm ON cm.crew_id = a.crew_id AND cm.user_id = a.user_id
-            JOIN users u ON u.id = a.user_id
+                   coalesce(sum(a.item_count), 0) AS items, coalesce(sum(a.distance_m), 0) AS distance
+            FROM crew_members cm
+            JOIN users u ON u.id = cm.user_id
             LEFT JOIN media m ON m.id = u.photo_media_id
-            WHERE a.crew_id = :crewId AND %s AND %s
+            LEFT JOIN activities a ON a.crew_id = cm.crew_id AND a.user_id = cm.user_id AND %s %s
+            WHERE cm.crew_id = :crewId
             GROUP BY u.id, u.nickname, u.status, m.object_key
             ORDER BY rank, u.id
             """
-                .formatted(ENDED_ACTIVITY, FROM_KST))
+                .formatted(ENDED_ACTIVITY, startedFrom(from)))
         .param("crewId", crewId)
         .param("from", from)
         .query(
@@ -205,11 +203,11 @@ public class StatsQueryRepository {
             FROM activities a
             JOIN users u ON u.id = a.user_id
             LEFT JOIN media m ON m.id = u.photo_media_id
-            WHERE a.crew_id = :crewId AND %s AND %s
+            WHERE a.crew_id = :crewId AND %s %s
               AND a.started_at < CAST(CAST(:to AS date) + 1 AS timestamp) AT TIME ZONE 'Asia/Seoul'
             ORDER BY a.started_at, a.id
             """
-                .formatted(ENDED_ACTIVITY, FROM_KST))
+                .formatted(ENDED_ACTIVITY, startedFrom(from)))
         .param("crewId", crewId)
         .param("from", from)
         .param("to", to)
@@ -251,10 +249,10 @@ public class StatsQueryRepository {
             """
             SELECT DISTINCT CAST(a.started_at AT TIME ZONE 'Asia/Seoul' AS date) AS day
             FROM activities a
-            WHERE a.user_id = :userId AND %s AND %s
+            WHERE a.user_id = :userId AND %s %s
             ORDER BY day DESC
             """
-                .formatted(ENDED_ACTIVITY, FROM_KST))
+                .formatted(ENDED_ACTIVITY, startedFrom(from)))
         .param("userId", userId)
         .param("from", from)
         .query((rs, i) -> rs.getObject("day", LocalDate.class))
@@ -318,6 +316,18 @@ public class StatsQueryRepository {
   }
 
   public record CardCursor(Instant startedAt, UUID id) {}
+
+  // from 이 없을 때 "IS NULL OR" 로 묶지 않고 조건을 빼는 것은, 서버 prepared statement 의 generic plan 이
+  // 그 OR 때문에 started_at·date 인덱스를 못 탈 수 있어서다
+  private static String startedFrom(LocalDate from) {
+    return from == null
+        ? ""
+        : "AND a.started_at >= CAST(CAST(:from AS date) AS timestamp) AT TIME ZONE 'Asia/Seoul'";
+  }
+
+  private static String dateFrom(String column, LocalDate from) {
+    return from == null ? "" : "AND " + column + " >= CAST(:from AS date)";
+  }
 
   private static DayRow day(ResultSet rs, int rowNum) throws SQLException {
     return new DayRow(
