@@ -9,7 +9,11 @@ public final class MediaDtos {
   private MediaDtos() {}
 
   public record MediaUploadResponse(
-      String mediaId, String url, String thumbUrl, InferenceResponse inference) {}
+      String mediaId,
+      @Schema(nullable = true) String photoId,
+      String url,
+      String thumbUrl,
+      @Schema(nullable = true) InferenceResponse inference) {}
 
   public record InferenceResponse(
       @Schema(allowableValues = {"OK", "UNAVAILABLE"}) String status,

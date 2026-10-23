@@ -6,10 +6,10 @@
 
 - 담당: AI 서버(FastAPI) 서빙 + 모델 학습. Spring·앱은 다른 팀원
 - 기간: 6주 (2026-07-29 ~ 09-08) · 구현 1명, **라벨링은 팀 전체 투입**
-- 자원: RTX 4070 Laptop(서빙) · 클라우드 학습 GPU · ngrok 무료 dev 도메인 (유료 전제 폐기 — progress.md §3.1, 확정 08-04)
+- 자원: M4 Mac mini(서빙, MPS — 10-18 부터. 그 전은 RTX 4070 Laptop) · 클라우드 학습 GPU · ngrok 무료 dev 도메인 (유료 전제 폐기 — progress.md §3.1, 확정 08-04)
 
 ```
-앱 ──사진──▶ Spring ──원본 그대로──▶ FastAPI (ngrok) ──▶ YOLO26s @ 4070
+앱 ──사진──▶ Spring ──원본 그대로──▶ FastAPI (ngrok) ──▶ YOLO26s @ M4
              │                      EXIF 회전 + 추론          │
              ◀──────── items ────────────────────────────────┘
 앱 ◀── url, thumbUrl, inference ──┘
@@ -29,10 +29,12 @@
 W1  계약을 만족하는 서버 (COCO 사전학습, 정확도 무관)  ← 팀 전체가 풀린다
 W2  데이터 기반 (클래스 매핑 + 라벨링 가이드 + 검증셋)
 W3  첫 실전 모델 + 평가 체계
-W4  confidence 보정 + 임계값 실측 확정
-W5  정확도 밀어붙이기 + 장애 주입
+W4  confidence 보정 + 임계값 실측 확정     ← 범위 밖으로 닫음 (10-12)
+W5  정확도 밀어붙이기 + 장애 주입          ← 정확도 쪽은 범위 밖 (10-12)
 W6  프리즈 + 데모 대비
 ```
+
+7/29~9/8 의 원래 순서입니다. 지금 일정의 정본은 [`progress.md`](progress.md) §2 입니다.
 
 W1 끝에는 **정확도만 낮고 나머지는 전부 진짜인 서버**가 고정 도메인에 떠 있습니다.
 
@@ -84,7 +86,7 @@ GET /healthz → { "ready": true, "modelVersion": "…", "warmedUp": true, "erro
 
 **이 `503 AI_UNAVAILABLE`은 내부 계약입니다.** 백엔드가 이걸 받아 앱에게는 `POST /media` 응답의 `inference.status: "UNAVAILABLE"`로 바꿔 전달합니다 — 앱은 503을 보지 않습니다(`docs/openapi.yaml`의 `/media`).
 
-`/healthz`가 있는 이유: ① 백엔드가 2~3초 타임아웃을 기다리지 않고 즉시 `UNAVAILABLE`을 판정할 수 있고 ② 데모 직전에 노트북·ngrok·모델 상태를 curl 한 번으로 확인할 수 있습니다.
+`/healthz`가 있는 이유: ① 백엔드가 2~3초 타임아웃을 기다리지 않고 즉시 `UNAVAILABLE`을 판정할 수 있고 ② 데모 직전에 서빙 맥·ngrok·모델 상태를 curl 한 번으로 확인할 수 있습니다.
 
 `inferenceMs`는 JPEG 디코딩·EXIF 회전·letterbox·추론·좌표 변환을 포함하고 **네트워크를 제외**합니다.
 
@@ -146,7 +148,7 @@ for (x1, y1, x2, y2), cls, conf in zip(b.xyxyn.cpu().numpy(),
 
 | 값 | 역할 | 결정 시점 |
 |---|---|---|
-| `CONF_MIN` | 이 값 미만은 `items`에 넣지 않음 | W4 실측 |
+| `CONF_MIN` | 이 값 미만은 `items`에 넣지 않음 | **0.25 로 확정** (데모 값. 실측은 10-12 범위 밖) |
 | `0.7` | `unclassified` — 사용자 확인 요구 | API 계약. 유지 |
 
 모델은 사진 한 장마다 후보 박스를 **300개 고정으로** 뱉습니다(NMS-free). 대부분 confidence 0.01짜리라 어딘가에서 잘라야 합니다.
@@ -161,7 +163,7 @@ for (x1, y1, x2, y2), cls, conf in zip(b.xyxyn.cpu().numpy(),
 - Ultralytics 기본값 0.25를 쓰면 사진마다 오탐이 5~6개 → **25장 활동에서 삭제 버튼을 100번 넘게 누릅니다**
 - `CONF_MIN`을 0.7로 잡으면 모든 항목이 0.7 이상이라 **`unclassified`가 영원히 false** → API의 사용자 확인 플로우 전체가 죽은 코드가 됩니다
 
-그래서 `CONF_MIN < 0.7`이어야 하고, W4 reliability diagram에서 **정밀도가 대략 50%가 되는 지점**을 시작점으로 잡습니다.
+그래서 `CONF_MIN < 0.7`이어야 합니다. W4 reliability diagram에서 **정밀도가 대략 50%가 되는 지점**을 잡으려던 실측은 범위 밖으로 닫았고, 데모는 0.25 그대로 갑니다([`progress.md`](progress.md) §2 W4).
 
 ---
 
@@ -264,6 +266,8 @@ mAP만 보지 말고 **confusion matrix**를 봅니다. ⑫에서 실제로 읽�
 
 ## 6. confidence 보정
 
+> **범위 밖으로 닫았습니다 (10-12).** 발표가 없어져 이 일의 이유가 사라졌습니다 — `calibrate()` 는 항등 함수 그대로이고 `aiConfidence` 는 모델이 뱉은 raw 값입니다. 아래는 다시 열 때를 위한 설계로 남깁니다([`progress.md`](progress.md) §2 W4).
+
 `unclassified` 판정이 `aiConfidence < 0.7`인데 딥러닝 모델은 기본적으로 과신합니다. 실제 정확도 60%인데 0.95를 뱉으면 임계값이 무의미해지고 틀린 결과가 사용자 확인 없이 통과합니다.
 
 **temperature scaling은 softmax 분류기용 기법이라 탐지 모델에 그대로 맞지 않습니다.** 탐지에서는 예측이 정답인지 아닌지 자체가 IoU 매칭으로 결정되기 때문입니다. 실제로 필요한 것:
@@ -283,6 +287,8 @@ mAP만 보지 말고 **confusion matrix**를 봅니다. ⑫에서 실제로 읽�
 
 세부 체크리스트와 완료 여부는 [`progress.md`](progress.md) §2.
 
+7/29~9/8 의 원래 계획입니다. **W4 전체와 W5 의 2차 학습, W6 의 발표 지표 정리는 10-12 에 범위 밖으로 닫았습니다**(발표 없음). W5 의 부하 테스트·장애 주입은 ⑳㉑㉒ 로 남아 새 저장소 W4(10/19~10/25)로 옮겼습니다.
+
 | 주 | 목표 | 새로 배우는 것 |
 |---|---|---|
 | **W1** 7/29~8/4 | **계약을 만족하는 서버가 고정 도메인에 떠 있다.** COCO 사전학습으로 추론 → 서버·시크릿·워밍업·ngrok → **세로 사진 bbox 실물 검증** | Ultralytics predict, `xyxyn`, EXIF transpose, FP16·워밍업 |
@@ -300,7 +306,7 @@ mAP만 보지 말고 **confusion matrix**를 봅니다. ⑫에서 실제로 읽�
 
 - Python **3.11** 고정(`.python-version`). ML 도구 체인이 최신 파이썬을 늦게 따라옵니다
 - 의존성은 `pyproject.toml`. 포맷터는 **ruff** (`ruff check`)
-- `.gitignore`가 `*.pt`·`datasets/`·`runs/`를 차단합니다. **예외는 서빙 weights 하나뿐입니다** — `weights/yolo26s-1024-v1.pt`만 추적해, 서빙 노트북이 `git pull`만으로 모델을 갖게 합니다. 데이터셋과 나머지 체크포인트는 여전히 커밋하지 않습니다. **다음 버전에서 예외를 늘리지 않습니다** — 체크포인트가 쌓이면 clone 비용이 계속 커지므로 그때 LFS나 릴리스 첨부로 옮깁니다
+- `.gitignore`가 `*.pt`·`datasets/`·`runs/`를 차단합니다. **예외는 서빙 weights 하나뿐입니다** — `weights/yolo26s-1024-v1.pt`만 추적해, 서빙 맥이 `git pull`만으로 모델을 갖게 합니다. 데이터셋과 나머지 체크포인트는 여전히 커밋하지 않습니다. **다음 버전에서 예외를 늘리지 않습니다** — 체크포인트가 쌓이면 clone 비용이 계속 커지므로 그때 LFS나 릴리스 첨부로 옮깁니다
 - `ai/`는 CI 경로 트리거에서 제외돼 있습니다(담당자 영역)
 
 ```
@@ -319,37 +325,39 @@ uv run python scripts/draw_boxes.py 사진.jpg   # bbox 위치를 눈으로 확�
 **운영**
 
 - **FP16 로드 + 프로세스 시작 시 워밍업 1회.** 첫 추론 **2~4초 → 2회차 43ms**(실측). 워밍업이 없으면 첫 사용자에게 타임아웃으로 나갑니다. 워밍업 전에는 `/healthz`가 `ready: false`(503)
-- FP16 지정은 **`predict(quantize=16)`** 입니다 — `half=True`는 8.4.112에서 deprecated. 4070에서 **FP16이 지연을 줄이지는 않았습니다**(실측). VRAM 8GB에서 동시 요청 여유를 확보하는 용도로만 유지합니다
+- FP16 지정은 **`predict(quantize=16)`** 입니다 — `half=True`는 8.4.112에서 deprecated. 4070에서 **FP16이 지연을 줄이지는 않았습니다**(실측). VRAM 8GB에서 동시 요청 여유를 확보하는 용도로만 유지합니다. MPS 에서도 그대로 돕니다(10-18 smoke 통과)
 - **워커 1개.** GPU 하나를 여러 워커가 나눠 쓰면 VRAM만 낭비
 - **`YOLO_AUTOINSTALL=false`** (코드에서 설정). ultralytics는 `PIL.Image.open`을 몽키패치해 두고 이미지 열기가 실패하면 HEIC일 수 있다고 보고 **요청 처리 중에 `pip install pi-heif`를 실행**합니다. 깨진 업로드 하나가 서버에서 pip를 돌리는 셈이고, `uv.lock`에 없는 패키지가 생기며 요청 경로에 네트워크 의존이 붙습니다 (W1 ②에서 실제로 당했습니다)
-- **GPU 전원 관리**: 유휴 상태(14W)에서 온 첫 요청들은 클럭 램프업으로 느립니다 — 같은 사진이 138ms → 57ms로 내려갔습니다. 워밍업으로 해결되지 않는 종류라 NVIDIA 전원 관리를 최대 성능 우선으로 둬야 하는데, 이걸 처리하던 W1 ④가 폐기돼 **지금은 담당 지시 단위가 없습니다**
-- **노출 경로는 ngrok 무료 dev 도메인입니다.** 계정마다 자동 배정되는 주소라 재시작해도 같습니다 — 고정 주소가 없으면 재시작마다 Spring 설정을 고쳐야 하고, 그게 데모 사고 1순위입니다. **배포 EC2에는 아무것도 설치하지 않습니다**(백엔드에 넘길 것은 주소 한 줄). 실행 명령·무료 한도·자동 기동은 [`progress.md`](progress.md) §3.1이 정본입니다
+- **GPU 전원 관리**: 4070 에서는 유휴(14W) 뒤 첫 요청이 클럭 램프업으로 느렸습니다(138ms → 57ms). 서빙 맥(M4)에는 그런 드라이버 설정이 없고, 대신 **잠자기를 끕니다**(§9)
+- **노출 경로는 ngrok 무료 dev 도메인입니다.** 계정마다 자동 배정되는 주소라 재시작해도 같습니다 — 고정 주소가 없으면 재시작마다 Spring 설정을 고쳐야 하고, 그게 데모 사고 1순위입니다. **운영 서버(Lightsail)에는 아무것도 설치하지 않습니다**(백엔드에 넘길 것은 주소 한 줄). 실행 명령·무료 한도·자동 기동은 [`progress.md`](progress.md) §3.1이 정본입니다
 - **시크릿 헤더 검증.** 외부에 노출되는 순간 없으면 누구나 GPU를 씁니다
-- ~~**자동 재시작 + 절전 해제 스크립트 2개**~~ — **W1 ④와 함께 폐기(08-02)**. `scripts/serve.ps1`(uvicorn+ngrok 한 쌍 관리, 강제 종료 시 13.5초 복구)과 `scripts/demo-prep.ps1`(작업 스케줄러 + 절전 해제)은 **삭제했습니다** — 되살리려면 `feature/ai/SH` 의 삭제 직전 커밋에서 꺼냅니다. **터널 쪽 자동 기동만 `ngrok service install` 로 되찾았습니다**(§9). uvicorn 재시작과 절전 해제는 대책이 없고, 터널이 서비스로 상주하는 만큼 **uvicorn 만 죽었을 때 빈 포트로 502 가 나가는 짝 문제는 오히려 더 잘 생깁니다** — serve.ps1 이 원래 막고 있던 것이 그것입니다
+- **터널과 서버를 따로 상주시킵니다.** 둘 다 launchd 에이전트(`scripts/launchd-install.sh`)라 로그인하면 뜨고, 죽으면 uvicorn 은 3초 · ngrok 은 5초 뒤 다시 뜹니다(`ThrottleInterval`). 로그는 `ai/serve.log` · `ai/ngrok.log`. **실측(10-18, 서빙 맥, 터널 너머): uvicorn 을 `kill -9` 하고 `/healthz` 200 까지 1.4~1.9초**(세 번), ngrok 을 kill 하면 0.6초. 직전 기동 3초 안에 다시 죽으면 launchd 가 기다린 몫이 붙습니다(3.7초 실측). 이 둘을 따로 두는 이유는 터널만 살아 있고 uvicorn 이 죽은 상태가 백엔드에서 502 → `UNAVAILABLE` 로 내려가 "AI 서버 다운"과 구별되지 않기 때문입니다. **8000 포트를 다른 프로세스가 잡고 있으면** uvicorn 은 모델을 올린 뒤 bind 에서 죽기를 3초마다 되풀이합니다 — 손으로 띄운 uvicorn 을 먼저 끕니다. 등록 절차는 §9
 - **유선 연결**은 손으로 합니다. 캠퍼스 Wi-Fi 에 데모를 걸지 않습니다
-- **한글이 든 `.ps1` 은 UTF-8 BOM 이어야 합니다.** PowerShell 5.1 은 BOM 이 없으면 ANSI(cp949)로 읽어 한글이 깨지고 **파서가 무너집니다** — 실행 실패가 아니라 구문 오류로 나타나서 원인이 안 보입니다
 - TensorRT export는 이 규모에서 불필요
 
 ---
 
 ## 9. 데모 환경 체크리스트
 
-AI 서버가 **노트북**이라 데모 당일 리스크가 구조적으로 높습니다. 기술이 아니라 운영에서 터집니다.
+AI 서버가 **담당자 개인 맥**이라 데모 당일 리스크가 구조적으로 높습니다. 기술이 아니라 운영에서 터집니다.
 
-**한 번만 하는 설정**
+**한 번만 하는 설정** (서빙 맥)
 
-- [ ] ngrok 계정 생성 → `ngrok config add-authtoken <토큰>`
-- [ ] 대시보드에서 **배정된 dev 도메인** 확인 → `ai/.env`의 `NGROK_DOMAIN`
-- [ ] `ngrok service install --config=<경로>` → `ngrok service start`. 터널은 부팅 시 스스로 뜹니다. **uvicorn 쪽은 여전히 대책이 없습니다**(§8 자동 재시작 항목)
+- [ ] `brew install ngrok` → ngrok 계정 생성 → `ngrok config add-authtoken <토큰>`
+- [ ] 대시보드에서 **배정된 dev 도메인** 확인 → `ai/.env`의 `NGROK_DOMAIN`. 같은 파일에 `AI_DEVICE=mps` 도 넣습니다 — 기본값 `0` 은 CUDA 0번이라 맥에서는 모델이 올라가지 않습니다
+- [ ] `sh scripts/launchd-install.sh` — `uv sync --frozen` 뒤 uvicorn·ngrok 에이전트를 `~/Library/LaunchAgents` 에 쓰고 띄웁니다. 주소는 명령줄 `--url` 로 넘기므로 authtoken 이 든 ngrok 설정 파일은 고치지 않습니다. 저장소 위치나 `NGROK_DOMAIN` 을 바꾸면 다시 돌립니다. 손으로 띄운 uvicorn·ngrok 이 있으면 먼저 끕니다 — 8000 포트 충돌, `ERR_NGROK_334`
+  `launchctl list | grep gachijoopging` 에 둘 다 PID 가 있으면 떠 있는 것입니다.
+  **멈출 때**는 `launchctl bootout gui/$(id -u)/site.gachijoopging.ai-serve` (터널은 `ai-ngrok`). `kill` 은 launchd 가 다시 띄웁니다
+- [ ] **재부팅 뒤 로그인 한 번.** 에이전트는 로그인해야 뜹니다. FileVault 가 켜져 있으면 자동 로그인을 쓸 수 없어 **재부팅 뒤 누군가 암호를 한 번 넣어야** 합니다. FileVault 는 끄지 않습니다 — `ai/.env` 의 시크릿이 디스크에 평문으로 있습니다
+- [ ] 잠자기 끄기 `sudo pmset -a sleep 0` · 정전 뒤 자동 켜짐 `sudo pmset -a autorestart 1`. 잠들면 터널과 uvicorn 이 함께 멈춥니다
 - [ ] **유선 랜** 연결, 전원 연결
-- [ ] NVIDIA 제어판 > 3D 설정 > 전원 관리 모드 = **최대 성능 우선** (GeForce는 `nvidia-smi` 전원 관리가 대체로 미지원이라 드라이버 UI에서 합니다)
 
-**발표 당일**
+**데모 당일**
 
-- [ ] 서버가 떠 있는지 — 터널은 서비스로 이미 떠 있고 **uvicorn은 손으로 띄웁니다**(`uv run uvicorn app.main:app`). **터널만 살아 있고 uvicorn이 죽은 상태**면 ngrok이 빈 포트를 터널링해 백엔드가 **깔끔한 실패가 아니라 502**를 받습니다 — `UNAVAILABLE` 폴백은 작동하지만 원인이 안 보입니다(§8)
+- [ ] 서버가 떠 있는지 — 터널과 uvicorn 은 launchd 로 이미 떠 있습니다. **터널만 살아 있고 uvicorn이 죽은 상태**면 백엔드가 **502**를 받으므로(§8) 반드시 터널 너머로 `/healthz` 를 찍습니다(§9.1). uvicorn 이 계속 죽으면 `ai/serve.log` 를 봅니다
 - [ ] `uv run python scripts/smoke.py --base-url <주소>` → **FAIL 0 · SKIP 0**. `SKIP` 은 통과가 아니라 **검사가 성립하지 않은 것**이고 종료 코드도 0 이 아닙니다 — 검출이 0개인 사진을 주면 항목·좌표 검사 5건이 빈 목록 위에서 통과해 버리므로, **쓰레기가 보이는 사진**을 `--image` 로 줘야 합니다
 - [ ] `ready: true, warmedUp: true` 확인 후 첫 촬영
-- [ ] **최후 안전망**: AI 서버가 죽어도 `UNAVAILABLE` → 수동 입력으로 줍깅 기록은 완주됩니다. 이 경로를 W5에 실제로 리허설해 두면 당일 사고가 데모 실패가 되지 않습니다
+- [ ] **최후 안전망**: AI 서버가 죽어도 `UNAVAILABLE` → 수동 입력으로 줍깅 기록은 완주됩니다. 이 경로를 데모 전에 실제로 리허설해 두면 당일 사고가 데모 실패가 되지 않습니다
 
 ### 9.1 터널 너머에서 모델이 떴는지 확인하기
 
@@ -365,8 +373,8 @@ curl https://<NGROK_DOMAIN>/healthz
 | `503` · `error: "FileNotFoundError: weights 가 없습니다: …"` | **그 경로에 `.pt`가 없습니다** | `git pull`로 `weights/yolo26s-1024-v1.pt`를 받습니다 |
 | `503` · `error: "RuntimeError: weights 의 클래스가 계약과 다릅니다 …"` | 파일은 있으나 7종·순서가 어긋납니다 | 학습 베이스(`yolo26s.pt`)를 잘못 지정한 경우가 대부분입니다 |
 | `503` · `error: null` · `warmedUp:false` | 아직 워밍업 중입니다 (첫 로드 약 5초) | 기다립니다 |
-| `502` — ngrok `ERR_NGROK_8012` | **터널만 살아 있고 uvicorn이 죽었습니다** | uvicorn을 띄웁니다 (§8) |
-| `404` — ngrok `ERR_NGROK_3200` | 터널 자체가 떠 있지 않습니다 | `ngrok http 8000 --url=…` |
+| `502` — ngrok `ERR_NGROK_8012` | **터널만 살아 있고 uvicorn이 죽었습니다** | launchd 가 다시 띄웁니다(서빙 맥 터널 너머 실측 1.4~1.9초). 계속되면 기동 직후 죽는 것입니다 — `ai/serve.log` 와 `launchctl list | grep gachijoopging` 의 종료 코드를 봅니다 |
+| `404` — ngrok `ERR_NGROK_3200` | 터널 자체가 떠 있지 않습니다 | `ai/ngrok.log` 를 봅니다. 에이전트가 없으면 `sh scripts/launchd-install.sh` |
 
 **`modelVersion`은 어느 파일이 로드됐는지 증명하지 않습니다.** 그 값은 파일에서 읽는 것이 아니라 `AI_MODEL_VERSION` 환경변수 문자열입니다(`app/config.py`). 실제로 로드된 파일명은 기동 로그의 `weights 로드 1.23s — yolo26s-1024-v1.pt` 한 줄에만 나옵니다 — **weights를 바꿔치기해도 `/healthz`는 같은 버전을 답합니다.**
 
@@ -391,13 +399,13 @@ uv run python scripts/smoke.py --base-url https://<NGROK_DOMAIN> --image <쓰레
 
 `AI_SECRET`도 두 파일이 같은 값이어야 합니다. 어긋나면 401인데, 위와 같은 이유로 증상이 구별되지 않습니다.
 
-### 9.3 다른 노트북에서 서빙을 띄우기 — **주소를 유지한 채로**
+### 9.3 다른 기기에서 서빙을 띄우기 — **주소를 유지한 채로**
 
 먼저 이 두 가지를 알고 시작합니다. 모르면 주소가 바뀌거나 기동이 거부됩니다.
 
 **① 주소는 ngrok 계정에 묶여 있습니다.** 무료 플랜은 **계정마다 dev 도메인 하나가 자동 배정**되고(동시 엔드포인트 3개까지), 그 계정의 authtoken을 넣은 에이전트만 그 주소로 뜹니다. 다른 계정으로 로그인하면 **주소가 달라지고**, 그러면 `infra/.env`의 `AI_BASE_URL`까지 고쳐 백엔드를 재배포해야 합니다. **주소를 그대로 쓰려면 옮길 것은 노트북이 아니라 authtoken입니다.**
 
-**② 같은 주소로 두 번 띄울 수 없습니다.** 그 도메인에 이미 에이전트가 붙어 있으면 `ERR_NGROK_334`로 거부됩니다. 기기를 옮기는 것이라면 **옛 기기의 에이전트를 먼저 끊습니다** (`ngrok service stop`, 또는 띄워 둔 창을 닫습니다).
+**② 같은 주소로 두 번 띄울 수 없습니다.** 그 도메인에 이미 에이전트가 붙어 있으면 `ERR_NGROK_334`로 거부됩니다. 기기를 옮기는 것이라면 **옛 기기의 에이전트를 먼저 끊습니다** (`launchctl bootout gui/$(id -u)/site.gachijoopging.ai-ngrok`, 또는 띄워 둔 창을 닫습니다).
 
 **③ 터널과 서버는 같은 기기여야 합니다.** ngrok 에이전트는 **자기 기기의** `localhost:8000`으로 넘깁니다. 노트북 A에서 터널을, B에서 uvicorn을 띄우면 A는 자기 8000에 아무것도 없어 `ERR_NGROK_8012`(502)를 냅니다.
 
@@ -409,30 +417,32 @@ git clone <저장소> && cd <저장소>/ai && git switch dev
 cp .env.example .env
 #    AI_SECRET 을 채웁니다. 저장소에 없으므로 팀에서 받습니다.
 #    배포 백엔드(infra/.env)의 AI_SECRET 과 같은 값이어야 합니다. 다르면 전부 401 입니다.
-#    NGROK_DOMAIN 에는 배정받은 도메인을 적습니다(코드가 읽지는 않고, 아래 7번에 손으로 넘깁니다).
+#    NGROK_DOMAIN 에는 배정받은 도메인을 적습니다(6번의 launchd-install.sh 가 읽습니다).
+#    맥이면 AI_DEVICE=mps 를 넣습니다.
 
 # 3. weights — 따로 받을 것이 없습니다. git 이 갖고 옵니다(§8)
 ls weights/yolo26s-1024-v1.pt        # 20,350,405 bytes
 
 # 4. 의존성
 uv sync
-uv run python -c "import torch; print(torch.cuda.get_device_name(0))"   # GPU 확인
+uv run python -c "import torch; print(torch.backends.mps.is_available())"   # 맥: True 여야 합니다
 
 # 5. ngrok 인증 — **주소를 유지하는 지점입니다.** 그 도메인을 배정받은 계정의 토큰이어야 합니다
 ngrok config add-authtoken <토큰>
 
-# 6. 서버 (워커 1개)
-uv run uvicorn app.main:app
+# 6. 서버·터널 상주 — §9 "한 번만 하는 설정" 을 이 맥에서 그대로 합니다:
+#    AI_DEVICE=mps · `sh scripts/launchd-install.sh` · 잠자기 끄기.
+#    재부팅 뒤에도 살아나는 것은 이 경로뿐입니다. 옛 기기의 ngrok 에이전트는 먼저 멈춥니다(②).
+#    상주 없이 잠깐 확인만 할 때는 손으로 띄웁니다. 에이전트가 떠 있으면 ERR_NGROK_334 로 거부되므로 둘 중 하나만 씁니다:
+#      uv run uvicorn app.main:app                      # 워커 1개
+#      ngrok http 8000 --url=https://<NGROK_DOMAIN>    # 다른 창에서. --domain 은 deprecated
 
-# 7. 터널 — 다른 창에서. `--domain` 은 deprecated 이므로 `--url` 을 씁니다
-ngrok http 8000 --url=https://<NGROK_DOMAIN>
-
-# 8. 확인 — §9.1
+# 7. 확인 — §9.1
 curl https://<NGROK_DOMAIN>/healthz
 uv run python scripts/smoke.py --base-url https://<NGROK_DOMAIN> --image <쓰레기가 보이는 사진>
 ```
 
-**4번에서 GPU 이름이 안 나오면 거기서 멈춥니다.** `pyproject.toml`이 torch를 **cu130 인덱스**에 고정해 두었고(서빙 노트북 드라이버 기준), 그보다 낮은 CUDA 드라이버에서는 GPU를 잡지 못합니다. 그 노트북에 맞는 인덱스로 바꾸고 `uv.lock`을 다시 만들어야 합니다 — CPU로 떨어진 채로 진행하면 추론이 수십 배 느려지고 데모에서 타임아웃이 됩니다.
+**4번에서 `True` 가 안 나오면 거기서 멈춥니다.** `pyproject.toml` 이 macOS 는 PyPI 휠(MPS)을, Windows·Linux 는 **cu130 인덱스**(CUDA)를 받게 나눠 둡니다. Windows 노트북이면 `torch.cuda.get_device_name(0)` 로 확인하고, cu130 보다 낮은 CUDA 드라이버면 인덱스를 바꾸고 `uv.lock`을 다시 만들어야 합니다 — CPU로 떨어진 채로 진행하면 추론이 수십 배 느려지고 데모에서 타임아웃이 됩니다.
 
 **백엔드는 손댈 필요가 없습니다.** 주소를 유지하는 한 `infra/.env`도 재배포도 그대로입니다 — 앱이 보는 것은 백엔드 주소뿐이고, 터널 주소는 백엔드만 압니다(§9.2).
 
@@ -454,7 +464,7 @@ uv run python scripts/smoke.py --base-url https://<NGROK_DOMAIN> --image <쓰레
 | 검증셋에 스튜디오 사진 혼입 | 지표가 거짓말을 시작해 이후 모든 판단이 오염. W2에 확정하고 동결 |
 | 학습·서빙 전처리 불일치 | `to_upright` 한 함수로 축소. 리사이즈는 Ultralytics에 위임 |
 | bbox 좌표계 오류 | `xyxyn` 사용으로 원천 차단 + W1에 세로 사진 실물 검증 |
-| 데모 당일 노트북·ngrok 사고 | 고정 도메인 + 유선 + 절전 해제 + 수동 입력 폴백 리허설 |
+| 데모 당일 서빙 맥·ngrok 사고 | 고정 도메인 + 유선 + 잠자기 끔 + 수동 입력 폴백 리허설 |
 | 담배꽁초 성능 미달 | 가장 어려운 클래스. W4 confusion matrix 확인 후 타깃 보강 |
 
 ---

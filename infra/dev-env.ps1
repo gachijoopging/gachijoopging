@@ -67,14 +67,36 @@ foreach ($key in $values.Keys) {
 Write-Host ("읽었다: {0} — 키 {1}개 · {2}바이트 · CR 없음 · BOM 없음" -f $EnvFile, $values.Count, $bytes.Length)
 
 # ── 서버가 관리하는 값 가져오기 ───────────────────────────────────────
+# 새로 만든 서버에는 .env 가 아직 없다. 그때 sed 는 exit 2 를 내는데, 그것을
+# "붙지 못했다" 로 읽으면 첫 업로드에서 막힌다 — 붙기는 붙었다.
+$hasRemoteEnv = $true
+# 2>$null 을 붙이지 않는다. PS 5.1 은 native 명령의 stderr 를 ErrorRecord 로 감싸고,
+# $ErrorActionPreference='Stop' 이 그걸 종료 오류로 만들어 아래 검사가 돌기 전에 죽는다.
+& ssh -i $KeyFile -o BatchMode=yes $Target "test -f $Remote"
+if ($LASTEXITCODE -eq 255) { throw "서버에 붙지 못했다: $Target" }
+# 1 만 "없다" 로 본다. 원격 셸 오류(126·127 등)까지 첫 업로드로 읽으면 서버의 IMAGE_TAG 를 비운다.
+if ($LASTEXITCODE -eq 1) {
+    $hasRemoteEnv = $false
+    Write-Host "서버에 $Remote 이 없다 — 첫 업로드로 본다. $($serverOwned -join ', ') 는 비운다."
+} elseif ($LASTEXITCODE -ne 0) {
+    throw "서버에서 $Remote 를 확인하지 못했다(exit $LASTEXITCODE): $Target"
+}
+
 foreach ($key in $serverOwned) {
-    $remoteValue = (& ssh -i $KeyFile -o BatchMode=yes $Target "sed -n 's/^${key}=//p' $Remote") 2>$null
-    if ($LASTEXITCODE -ne 0) { throw "서버에 붙지 못했다: $Target" }
-    $remoteValue = ($remoteValue | Select-Object -First 1)
+    $remoteValue = ''
+    if ($hasRemoteEnv) {
+        # 파이프로 Select-Object -First 1 에 바로 넘기면 PS 5.1 이 ssh 를 중간에 끊어 $LASTEXITCODE 가 -1 로 남는다.
+        # 출력을 다 받고 종료 코드를 본 뒤에 첫 줄을 고른다.
+        $out = & ssh -i $KeyFile -o BatchMode=yes $Target "sed -n 's/^${key}=//p' $Remote"
+        # 여기서 멈추지 않으면 읽기 실패가 빈 값으로 둔갑해 서버의 $key 를 지운다.
+        # test -f 가 통과한 뒤에도 이 ssh 는 따로 실패할 수 있다.
+        if ($LASTEXITCODE -ne 0) { throw "서버 값을 읽지 못했다($key): $Target" }
+        $remoteValue = $out | Select-Object -First 1
+        Write-Host ("서버 값을 가져왔다: {0}={1}" -f $key, $(if ($remoteValue) { $remoteValue } else { '(빈 값)' }))
+    }
     $lines = $lines | ForEach-Object {
         if ($_ -match "^${key}=") { "${key}=$remoteValue" } else { $_ }
     }
-    Write-Host ("서버 값을 가져왔다: {0}={1}" -f $key, $(if ($remoteValue) { $remoteValue } else { '(빈 값)' }))
 }
 
 if ($DryRun) { Write-Host "DryRun — 올리지 않았다."; exit 0 }

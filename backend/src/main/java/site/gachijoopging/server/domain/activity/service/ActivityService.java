@@ -1,21 +1,33 @@
 package site.gachijoopging.server.domain.activity.service;
 
+import java.math.BigDecimal;
 import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.TreeMap;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import site.gachijoopging.server.domain.activity.dto.ActivityCardResponse;
+import site.gachijoopging.server.domain.activity.dto.ActivityPhotoRef;
 import site.gachijoopging.server.domain.activity.dto.ActivityResponse;
 import site.gachijoopging.server.domain.activity.dto.ActivitySummaryResponse;
 import site.gachijoopging.server.domain.activity.dto.AddItemsRequest;
 import site.gachijoopging.server.domain.activity.dto.Bbox;
+import site.gachijoopging.server.domain.activity.dto.EndActivityRequest;
 import site.gachijoopging.server.domain.activity.dto.ItemInput;
 import site.gachijoopging.server.domain.activity.dto.ItemResponse;
+import site.gachijoopging.server.domain.activity.dto.NewActivityPhoto;
+import site.gachijoopging.server.domain.activity.dto.PhotoResponse;
 import site.gachijoopging.server.domain.activity.dto.StartActivityRequest;
 import site.gachijoopging.server.domain.activity.dto.UpdateItemRequest;
 import site.gachijoopging.server.domain.activity.entity.Activity;
@@ -23,10 +35,19 @@ import site.gachijoopging.server.domain.activity.entity.ActivityItem;
 import site.gachijoopging.server.domain.activity.entity.ActivityStatus;
 import site.gachijoopging.server.domain.activity.entity.ItemSource;
 import site.gachijoopging.server.domain.activity.repository.ActivityItemRepository;
+import site.gachijoopging.server.domain.activity.repository.ActivityQueryRepository;
 import site.gachijoopging.server.domain.activity.repository.ActivityRepository;
+import site.gachijoopging.server.domain.crew.dto.UserBriefResponse;
+import site.gachijoopging.server.domain.live.service.LiveService;
+import site.gachijoopging.server.domain.media.event.MediaQuarantineEvent;
+import site.gachijoopging.server.domain.media.service.MediaSignedUrl;
+import site.gachijoopging.server.domain.stats.dto.StatsDelta;
+import site.gachijoopging.server.domain.stats.service.StatsService;
 import site.gachijoopging.server.global.error.BusinessException;
 import site.gachijoopging.server.global.error.ErrorCode;
 import site.gachijoopging.server.global.lock.UserLock;
+import site.gachijoopging.server.global.response.CursorPage;
+import site.gachijoopging.server.global.response.Cursors;
 
 @Service
 @RequiredArgsConstructor
@@ -36,8 +57,25 @@ public class ActivityService {
   // AI 신뢰도가 이보다 낮으면 앱이 "확인 필요" 로 보인다 (feature-scope §AI 줍기)
   private static final float UNCLASSIFIED_BELOW = 0.7f;
 
+  private static final String WITHDRAWN_NICKNAME = "탈퇴한 크루원";
+
+  // 앱이 초를 반올림하는 오차, 활동 중 기기 시계가 보정되는 차이를 받아 준다
+  private static final Duration CLOCK_SKEW = Duration.ofMinutes(1);
+
+  // feature-scope §위치 품질의 "초속 5m 초과 버림" 과 같은 기준이다
+  private static final int MAX_SPEED_MPS = 5;
+
+  // feature-scope §활동 최대 시간. 넘친 값을 거절하면 활동이 진행 중으로 남아 다음 시작·로그아웃을
+  // 막으므로, 자동 종료가 없는 앱이나 시계가 어긋난 기기가 보낸 값도 받아서 24시간 시점으로 자른다
+  private static final Duration MAX_ACTIVITY = Duration.ofHours(24);
+
   private final ActivityRepository activityRepository;
   private final ActivityItemRepository itemRepository;
+  private final ActivityQueryRepository queryRepository;
+  private final StatsService statsService;
+  private final LiveService liveService;
+  private final MediaSignedUrl signedUrl;
+  private final ApplicationEventPublisher events;
   private final UserLock userLock;
   private final Clock clock;
 
@@ -69,6 +107,7 @@ public class ActivityService {
       }
       throw new BusinessException(ErrorCode.CONFLICT, "진행 중인 활동이 있다");
     }
+    liveService.started(me, request.id(), crewId);
     return new Started(true, response(activityRepository.findById(request.id()).orElseThrow()));
   }
 
@@ -116,27 +155,182 @@ public class ActivityService {
     return summary(activity, ids.stream().map(saved::get).map(ActivityService::item).toList());
   }
 
+  // 끝난 활동도 본인은 기록 상세(5-3)에서 고친다
   @Transactional
   public ActivitySummaryResponse updateItem(
       UUID me, UUID id, UUID itemId, UpdateItemRequest request) {
-    Activity activity = lockInProgress(me, id);
+    Activity activity = lockOwn(me, id);
+    Map<String, Integer> before = activity.getByCategory();
     itemRepository
         .findByIdAndActivityId(itemId, id)
         .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "없는 줍기다"))
         .change(request.category(), request.quantity());
-    recount(activity);
+    recount(activity, before);
     return summary(activity, List.of());
   }
 
   // 되돌리기는 앱이 디스크에 남겨 두고 재시도하므로, 이미 지운 줍기도 204 로 흡수한다 (화면 4-6)
   @Transactional
   public void deleteItem(UUID me, UUID id, UUID itemId) {
-    Activity activity = lockInProgress(me, id);
+    Activity activity = lockOwn(me, id);
+    Map<String, Integer> before = activity.getByCategory();
     itemRepository.findByIdAndActivityId(itemId, id).ifPresent(itemRepository::delete);
-    recount(activity);
+    recount(activity, before);
   }
 
-  private Activity lockInProgress(UUID me, UUID id) {
+  // 오프라인에서 끝낸 활동을 나중에 보내므로 재전송은 저장된 결과로 흡수하고 다시 적립하지 않는다
+  @Transactional
+  public ActivityResponse end(UUID me, UUID id, EndActivityRequest request) {
+    Activity activity = lockOwn(me, id);
+    if (activity.inProgress()) {
+      requireEndable(activity, request);
+      Instant lastEndedAt = activity.getStartedAt().plus(MAX_ACTIVITY);
+      int maxSec = (int) MAX_ACTIVITY.toSeconds();
+      int durationSec = Math.min(request.durationSec(), maxSec);
+      activity.end(
+          request.endedAt().isAfter(lastEndedAt) ? lastEndedAt : request.endedAt(),
+          durationSec,
+          Math.min(request.pausedSec(), maxSec - durationSec),
+          Math.min(request.distanceM(), durationSec * MAX_SPEED_MPS),
+          request.steps());
+      // 점이 둘 미만이면 선이 되지 않는다. 짧은 활동도 저장해야 하므로 경로만 비워 둔다
+      if (request.route().size() >= 2) {
+        activityRepository.updateRoute(id, lineString(request.route()));
+      }
+      statsService.add(activity.getCrewId(), activity.getStartedAt(), totals(activity));
+      liveService.ended(me, id, activity.getCrewId());
+    }
+    return response(activity, true);
+  }
+
+  // 본인은 이전 크루 기록까지, 남은 지금 같은 크루에서 한 활동만 본다
+  public ActivityResponse detail(UUID me, UUID id) {
+    Activity activity =
+        activityRepository
+            .findLive(id)
+            .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "없는 활동이다"));
+    if (activity.ownedBy(me)) {
+      return response(activity, true);
+    }
+    if (!activityRepository.findCrewOf(me).map(activity.getCrewId()::equals).orElse(false)) {
+      throw forbidden();
+    }
+    return response(activity, activity.isLocationShared());
+  }
+
+  // 앱 대기열이 재시도하므로 이미 지운 활동도 204 로 흡수한다. 다시 빼지 않는다
+  @Transactional
+  public void delete(UUID me, UUID id) {
+    Activity activity = activityRepository.findLiveForUpdate(id).orElse(null);
+    if (activity == null) {
+      return;
+    }
+    if (!activity.ownedBy(me)) {
+      throw forbidden();
+    }
+    // 지운 진행 중 활동은 한 사람 한 활동 제약에 남아 다음 시작을 막는다 (화면 5-3: 저장 완료 활동만 삭제)
+    if (activity.inProgress()) {
+      throw new BusinessException(ErrorCode.CONFLICT, "진행 중인 활동이다");
+    }
+    activity.delete(clock.instant());
+    statsService.add(activity.getCrewId(), activity.getStartedAt(), totals(activity).negate());
+    List<String> keys = new ArrayList<>();
+    queryRepository
+        .findPhotos(id)
+        .forEach(
+            photo -> {
+              keys.add(photo.getObjectKey());
+              keys.add(photo.getThumbKey());
+            });
+    events.publishEvent(new MediaQuarantineEvent(keys));
+  }
+
+  public CursorPage<ActivityCardResponse> mine(UUID me, String cursor, int limit) {
+    List<ActivityQueryRepository.CardRow> rows;
+    if (cursor == null) {
+      rows = queryRepository.findMine(me, limit + 1);
+    } else {
+      Cursors.Cursor before = Cursors.decode(cursor);
+      rows = queryRepository.findMineBefore(me, before.createdAt(), before.id(), limit + 1);
+    }
+    List<ActivityQueryRepository.CardRow> page = rows.subList(0, Math.min(limit, rows.size()));
+    String next =
+        rows.size() > limit
+            ? Cursors.encode(page.getLast().getStartedAt(), page.getLast().getId())
+            : null;
+    return new CursorPage<>(page.stream().map(this::card).toList(), next);
+  }
+
+  /** 사진 파일을 저장하기 전에 부른다. 끝난 활동이면 앱이 4-3 으로 돌아가도록 404 다 (화면 4-4). */
+  public void requirePhotoTarget(UUID me, UUID activityId) {
+    photoTarget(me, activityRepository.findLive(activityId));
+  }
+
+  // media 의 트랜잭션에 합류해 media 행과 함께 커밋되거나 함께 사라진다
+  @Transactional
+  public UUID addPhoto(UUID me, NewActivityPhoto photo) {
+    photoTarget(me, activityRepository.findLiveForUpdate(photo.activityId()));
+    activityRepository.insertPhotoIfAbsent(
+        UUID.randomUUID(),
+        photo.activityId(),
+        photo.mediaId(),
+        photo.lat(),
+        photo.lng(),
+        photo.takenAt(),
+        photo.inferenceStatus(),
+        photo.modelVersion(),
+        photo.inferenceMs());
+    ActivityRepository.PhotoRow saved =
+        activityRepository
+            .findPhotoByMedia(photo.mediaId())
+            .orElseThrow(() -> new BusinessException(ErrorCode.INTERNAL, "넣은 활동 사진이 없다"));
+    if (!saved.getActivityId().equals(photo.activityId())) {
+      throw new BusinessException(ErrorCode.CONFLICT, "다른 활동에 올린 사진이다");
+    }
+    return saved.getId();
+  }
+
+  public Optional<ActivityPhotoRef> photoOf(UUID mediaId) {
+    return activityRepository
+        .findPhotoByMedia(mediaId)
+        .map(row -> new ActivityPhotoRef(row.getId(), row.getActivityId()));
+  }
+
+  // 사용자가 버린 사진만 지운다. 줍기가 붙은 사진을 지우면 확정한 줍기까지 CASCADE 로 사라진다
+  @Transactional
+  public void removePhoto(UUID me, UUID mediaId) {
+    ActivityRepository.PhotoRow photo =
+        activityRepository
+            .findPhotoByMedia(mediaId)
+            .orElseThrow(() -> new BusinessException(ErrorCode.CONFLICT, "활동 사진이 아니다"));
+    Activity activity =
+        activityRepository
+            .findLiveForUpdate(photo.getActivityId())
+            .orElseThrow(() -> new BusinessException(ErrorCode.CONFLICT, "지워진 활동의 사진이다"));
+    if (!activity.ownedBy(me)) {
+      throw forbidden();
+    }
+    if (!activity.inProgress()) {
+      throw new BusinessException(ErrorCode.CONFLICT, "끝난 활동의 사진이다");
+    }
+    if (activityRepository.hasItemsOn(photo.getId())) {
+      throw new BusinessException(ErrorCode.CONFLICT, "줍기가 붙은 사진이다");
+    }
+    activityRepository.deletePhoto(photo.getId());
+  }
+
+  private static void photoTarget(UUID me, Optional<Activity> found) {
+    Activity activity =
+        found.orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "없는 활동이다"));
+    if (!activity.ownedBy(me)) {
+      throw forbidden();
+    }
+    if (!activity.inProgress()) {
+      throw new BusinessException(ErrorCode.NOT_FOUND, "끝난 활동이다");
+    }
+  }
+
+  private Activity lockOwn(UUID me, UUID id) {
     Activity activity =
         activityRepository
             .findLiveForUpdate(id)
@@ -144,6 +338,11 @@ public class ActivityService {
     if (!activity.ownedBy(me)) {
       throw forbidden();
     }
+    return activity;
+  }
+
+  private Activity lockInProgress(UUID me, UUID id) {
+    Activity activity = lockOwn(me, id);
     if (!activity.inProgress()) {
       throw new BusinessException(ErrorCode.CONFLICT, "끝난 활동이다");
     }
@@ -173,9 +372,67 @@ public class ActivityService {
     activity.recount(itemRepository.findByActivityIdOrderById(activity.getId()));
   }
 
+  // 끝난 활동은 이미 크루 합산에 들어가 있으므로 바뀐 만큼만 고친다
+  private void recount(Activity activity, Map<String, Integer> before) {
+    recount(activity);
+    if (activity.inProgress()) {
+      return;
+    }
+    Map<String, Integer> changed = new TreeMap<>(activity.getByCategory());
+    before.forEach((category, quantity) -> changed.merge(category, -quantity, Integer::sum));
+    changed.values().removeIf(quantity -> quantity == 0);
+    if (!changed.isEmpty()) {
+      statsService.add(
+          activity.getCrewId(), activity.getStartedAt(), new StatsDelta(0, 0, 0, changed));
+    }
+  }
+
+  // 받은 값이 크루 하루 합산(int)에 더해진다. 터무니없는 값 하나가 그날 크루 전원의 종료를
+  // 넘침으로 막지 않도록, 시작·종료 시각과 위치 필터(초속 5m 초과 버림) 안에 드는 값만 받는다
+  private static void requireEndable(Activity activity, EndActivityRequest request) {
+    Instant startedAt = activity.getStartedAt();
+    Instant endedAt = request.endedAt();
+    if (endedAt.isBefore(startedAt)) {
+      throw new BusinessException(ErrorCode.VALIDATION, "endedAt 이 startedAt 보다 이르다");
+    }
+    long elapsedSec = Duration.between(startedAt, endedAt).plus(CLOCK_SKEW).toSeconds();
+    if ((long) request.durationSec() + request.pausedSec() > elapsedSec) {
+      throw new BusinessException(ErrorCode.VALIDATION, "시간이 시작·종료 시각 사이보다 길다");
+    }
+    if (request.distanceM() > (long) request.durationSec() * MAX_SPEED_MPS) {
+      throw new BusinessException(ErrorCode.VALIDATION, "거리가 시간에 비해 길다");
+    }
+    // NaN·무한대는 어떤 비교도 거짓이라, 범위 안에 있는지를 물어야 함께 걸러진다
+    for (List<Double> point : request.route()) {
+      if (!(Math.abs(point.get(0)) <= 180 && Math.abs(point.get(1)) <= 90)) {
+        throw new BusinessException(ErrorCode.VALIDATION, "route 의 좌표가 범위를 벗어났다");
+      }
+    }
+  }
+
+  private static StatsDelta totals(Activity activity) {
+    return new StatsDelta(
+        1, activity.getDurationSec(), activity.getDistanceM(), activity.getByCategory());
+  }
+
+  private static String lineString(List<List<Double>> route) {
+    return route.stream()
+        .map(
+            point ->
+                BigDecimal.valueOf(point.get(0)).toPlainString()
+                    + " "
+                    + BigDecimal.valueOf(point.get(1)).toPlainString())
+        .collect(Collectors.joining(", ", "LINESTRING(", ")"));
+  }
+
   private ActivityResponse response(Activity activity) {
+    return response(activity, true);
+  }
+
+  private ActivityResponse response(Activity activity, boolean withRoute) {
     return new ActivityResponse(
         activity.getId(),
+        user(activity.getUserId()),
         activity.getStatus().name(),
         activity.getStartedAt(),
         activity.getEndedAt(),
@@ -188,9 +445,48 @@ public class ActivityService {
         activity.isLocationShared(),
         activity.getItemCount(),
         activity.getByCategory(),
+        withRoute ? route(activity.getId()) : null,
+        queryRepository.findPhotos(activity.getId()).stream()
+            .map(
+                photo ->
+                    new PhotoResponse(
+                        photo.getId(),
+                        signedUrl.of(photo.getObjectKey()),
+                        signedUrl.of(photo.getThumbKey()),
+                        photo.getTakenAt()))
+            .toList(),
         itemRepository.findByActivityIdOrderById(activity.getId()).stream()
             .map(ActivityService::item)
             .toList());
+  }
+
+  private List<List<Double>> route(UUID activityId) {
+    return queryRepository.findRoute(activityId).stream()
+        .map(point -> List.of(point.getLng(), point.getLat()))
+        .toList();
+  }
+
+  // 탈퇴한 사람은 이름·사진 없이 "탈퇴한 크루원" 으로 보인다 (ERD 회원 탈퇴 때)
+  private UserBriefResponse user(UUID userId) {
+    ActivityQueryRepository.UserRow user = queryRepository.findUser(userId);
+    if ("DELETED".equals(user.getStatus())) {
+      return new UserBriefResponse(userId.toString(), WITHDRAWN_NICKNAME, null, true);
+    }
+    return new UserBriefResponse(
+        userId.toString(),
+        Objects.requireNonNullElse(user.getNickname(), ""),
+        user.getPhotoKey() == null ? null : signedUrl.of(user.getPhotoKey()),
+        false);
+  }
+
+  private ActivityCardResponse card(ActivityQueryRepository.CardRow row) {
+    return new ActivityCardResponse(
+        row.getId(),
+        row.getStartedAt(),
+        row.getDurationSec(),
+        row.getDistanceM(),
+        row.getItemCount(),
+        row.getThumbKey() == null ? null : signedUrl.of(row.getThumbKey()));
   }
 
   private static ActivitySummaryResponse summary(Activity activity, List<ItemResponse> items) {

@@ -41,6 +41,14 @@ public class MediaStorage {
     }
   }
 
+  public void delete(String key) {
+    try {
+      Files.deleteIfExists(routeInBounds(key));
+    } catch (IOException e) {
+      throw new UncheckedIOException("사진을 지우지 못했다: " + key, e);
+    }
+  }
+
   private Path routeInBounds(String key) {
     Path target;
     try {

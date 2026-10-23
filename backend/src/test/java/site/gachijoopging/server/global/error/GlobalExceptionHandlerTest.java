@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import site.gachijoopging.server.global.config.WebConfig;
 import site.gachijoopging.server.global.security.AccountAuthorityLoader;
 import site.gachijoopging.server.global.security.SecurityConfig;
@@ -123,6 +124,14 @@ class GlobalExceptionHandlerTest {
   }
 
   @Test
+  void 멀티파트_한도를_넘으면_500_이_아니라_413_PAYLOAD_TOO_LARGE_다() throws Exception {
+    mockMvc
+        .perform(get("/api/v1/test/too-large"))
+        .andExpect(status().isPayloadTooLarge())
+        .andExpect(jsonPath("$.code").value("PAYLOAD_TOO_LARGE"));
+  }
+
+  @Test
   void 무결성_위반은_409_CONFLICT_이고_제약_이름을_흘리지_않는다() throws Exception {
     mockMvc
         .perform(get("/api/v1/test/integrity"))
@@ -147,6 +156,11 @@ class GlobalExceptionHandlerTest {
     @GetMapping("/test/rate-limited")
     void rateLimited() {
       throw new BusinessException(ErrorCode.RATE_LIMITED, "일일 한도", 600L);
+    }
+
+    @GetMapping("/test/too-large")
+    void 너무_크다() {
+      throw new MaxUploadSizeExceededException(11L * 1024 * 1024);
     }
 
     @GetMapping("/test/integrity")

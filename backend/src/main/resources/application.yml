@@ -46,10 +46,16 @@ spring:
 
   servlet:
     multipart:
-      # 계약상 한도는 20MB 이고 그 판정은 MediaImageValidator 가 한다 (422 + 봉투).
-      # 여기를 20MB 로 맞추면 스프링이 먼저 끊어 우리 에러 봉투가 나가지 못한다 — 그래서 조금 위에 둔다.
-      max-file-size: 21MB
-      max-request-size: 22MB
+      # 계약상 한도는 10MB 이고 그 판정은 MediaImageValidator 가 한다 (413 + 봉투).
+      # 여기를 10MB 로 맞추면 스프링이 먼저 끊어 판정 사유가 흐려진다 — 그래서 조금 위에 둔다.
+      max-file-size: 11MB
+      max-request-size: 12MB
+
+server:
+  tomcat:
+    # 한도를 넘은 본문을 Tomcat 이 기본 2MB 만 읽고 연결을 끊으면, 아직 보내는 중인 Nginx 가
+    # 413 봉투 대신 502 를 낸다. Nginx 의 client_max_body_size(22m)까지는 끝까지 읽는다
+    max-swallow-size: 22MB
 
 app:
   jwt:
@@ -167,6 +173,8 @@ app:
       guest-password: ${DEMO_GUEST_PASSWORD:}
 
 live:
+  # LIVE_UPDATE 묶음 주기 — 계약 docs/realtime.md §서버 → 앱 의 "크루원당 최대 5초에 한 번"
+  broadcast-interval: 5s
   # presence 임계값 — 근거는 ERD §설계 근거 "활동 중 위치" · §보존·정리. 30초는 앱의 발신 주기라 서버가 읽지 않는다
   presence:
     freshness: 2m
