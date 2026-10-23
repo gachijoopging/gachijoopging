@@ -25,9 +25,10 @@ import {
   characterStageNames,
   characterStages,
 } from 'design-system/src';
-import { peek, type ApiClient } from '../../src/api/client';
+import { ApiError, peek, type ApiClient } from '../../src/api/client';
 import { createApiClient } from '../../src/api/config';
 import { MOCKS } from '../../src/api/mocks.generated';
+import { leaveForMembership } from '../../src/feed/leave';
 import { characterBubble, myCategorySummary } from '../../src/home/home';
 import { useFlash } from '../../src/ui/useFlash';
 
@@ -52,7 +53,8 @@ export default function HomeScreen() {
       const res = await api.get('GET /crew/home');
       setHome(res.data);
       setFailed(false);
-    } catch {
+    } catch (e) {
+      if (e instanceof ApiError && e.code === 'NO_CREW') return void leaveForMembership();
       setFailed(true);
       if (mode === 'pull') setRefreshFailed(true);
     } finally {
