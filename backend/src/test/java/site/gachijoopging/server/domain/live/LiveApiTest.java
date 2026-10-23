@@ -132,7 +132,7 @@ class LiveApiTest extends IntegrationTest {
     mockMvc.perform(활동_중(크루원)).andExpect(jsonPath("$.data.length()").value(0));
 
     assertThat(남_수신.poll(500, TimeUnit.MILLISECONDS)).isNull();
-    assertThat(내_수신.poll(500, TimeUnit.MILLISECONDS)).isNull();
+    받는다(내_수신, "LIVE_UPDATE");
   }
 
   @Test
