@@ -15,6 +15,7 @@ jest.mock('expo-router', () => ({
 jest.mock('react-native', () => ({ View: 'View', RefreshControl: 'RefreshControl' }));
 jest.mock('./CalendarPanel', () => ({ CalendarPanel: 'CalendarPanel' }));
 jest.mock('./RecordsPanel', () => ({ RecordsPanel: 'RecordsPanel' }));
+jest.mock('../feed/leave', () => ({ leaveForMembership: jest.fn() }));
 jest.mock('design-system/src', () => new Proxy(
   { space: {}, size: {}, borderWidth: {}, useTheme: () => ({ colors: {} }) },
   { get: (target, key) => (key in target ? target[key as keyof typeof target] : String(key)) },
