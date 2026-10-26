@@ -217,6 +217,16 @@ class OpenApiContractTest extends IntegrationTest {
         .isEqualTo(다룬_것);
   }
 
+  @Test
+  void 미구현_스키마는_담당_이슈의_연산이_남아_있을_때만_표에_있다() {
+    assertThat(미구현_스키마.keySet())
+        .as("대조 표와 미구현 표에 같은 스키마가 있다 — 구현했으면 미구현_스키마 에서 지운다")
+        .doesNotContainAnyElementsOf(모바일_스키마_매핑.keySet());
+    assertThat(new TreeSet<>(미구현_연산.values()))
+        .as("담당 이슈의 연산은 다 구현됐는데 스키마가 미구현_스키마 에 남았다 — 모바일_스키마_매핑 으로 옮긴다")
+        .containsAll(미구현_스키마.values());
+  }
+
   private static String 제외_사유() {
     return 사유_목록(모바일_대조_제외);
   }
