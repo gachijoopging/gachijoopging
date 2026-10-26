@@ -194,7 +194,7 @@ PENDING 이 있는 사람의 크루 만들기·다른 크루 가입·신청은 4
 | paused_at | timestamptz | 일시정지 시작 시각. 재개·종료 시 null |
 | distance_m | int | 필터·걸음수 보정 뒤 값(Q31) |
 | steps | int | 선택 측정값, 미측정 null. 일시정지 걸음수 제외. 권한 부재·비보행 활동도 저장하며 사용할 수 없는 0/null로 GPS 보정하지 않음 |
-| route | geometry(LineString, 4326) | |
+| route | geometry(LineString, 4326) | 종료 때 단순화해 저장 (feature-scope §활동 경로) |
 | location_shared | boolean | NOT NULL — 시작 시트의 선택(Q16) |
 | item_count | int | 줍기 수량 합 |
 | by_category | jsonb | 카테고리별 수량 합 |
