@@ -57,9 +57,17 @@ public interface ActivityRepository extends JpaRepository<Activity, UUID> {
 
   @Modifying
   @Query(
-      value = "UPDATE activities SET route = ST_GeomFromText(:wkt, 4326) WHERE id = :id",
+      value =
+          """
+          UPDATE activities
+          SET route = ST_SimplifyPreserveTopology(ST_GeomFromText(:wkt, 4326), :toleranceDegrees)
+          WHERE id = :id
+          """,
       nativeQuery = true)
-  void updateRoute(@Param("id") UUID id, @Param("wkt") String wkt);
+  void updateRoute(
+      @Param("id") UUID id,
+      @Param("wkt") String wkt,
+      @Param("toleranceDegrees") double toleranceDegrees);
 
   @Query(
       value =

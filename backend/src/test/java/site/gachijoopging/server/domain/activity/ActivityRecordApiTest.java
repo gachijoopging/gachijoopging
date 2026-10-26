@@ -47,6 +47,26 @@ class ActivityRecordApiTest extends IntegrationTest {
   private String 업로드_루트;
 
   @Test
+  void 경로는_5m_안쪽으로_흔들린_점을_덜어_저장하고_시작과_끝_좌표는_보낸_그대로다() throws Exception {
+    TestAccount 나 = 크루원이_된다("rec-simplify@test.io");
+    UUID 활동 = 진행_중_활동(나, true);
+    StringBuilder 직선 = new StringBuilder("[");
+    for (int i = 0; i <= 20; i++) {
+      double 흔들림 = i % 2 == 0 ? 0 : 0.00001; // 약 1m
+      직선.append(i == 0 ? "" : ",").append("[%s,%s]".formatted(126.93 + i * 0.0001, 37.52 + 흔들림));
+    }
+    직선.append("]");
+
+    종료한다(나, 활동, 직선.toString(), "null")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.route.length()").value(2))
+        .andExpect(jsonPath("$.data.route[0][0]").value(126.93))
+        .andExpect(jsonPath("$.data.route[0][1]").value(37.52))
+        .andExpect(jsonPath("$.data.route[1][0]").value(126.932))
+        .andExpect(jsonPath("$.data.route[1][1]").value(37.52));
+  }
+
+  @Test
   void 종료하면_그날_크루_합산이_늘고_같은_종료를_다시_보내도_한_번만_더한다() throws Exception {
     TestAccount 나 = 크루원이_된다("rec-end@test.io");
     UUID 활동 = 진행_중_활동(나, true);

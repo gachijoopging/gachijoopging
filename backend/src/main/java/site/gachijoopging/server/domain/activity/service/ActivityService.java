@@ -69,10 +69,15 @@ public class ActivityService {
   // 막으므로, 자동 종료가 없는 앱이나 시계가 어긋난 기기가 보낸 값도 받아서 24시간 시점으로 자른다
   private static final Duration MAX_ACTIVITY = Duration.ofHours(24);
 
+  // 위도 1도의 길이. 경도 1도는 위도에 따라 짧아져(서울 약 0.8배) 실제 허용 오차가 경도 방향으로
+  // 그만큼 작아진다 — 지도에 그릴 점을 고르는 데는 충분하다
+  private static final double METERS_PER_DEGREE = 111_320;
+
   private final ActivityRepository activityRepository;
   private final ActivityItemRepository itemRepository;
   private final ActivityQueryRepository queryRepository;
   private final StatsService statsService;
+  private final ActivityProperties properties;
   private final LiveService liveService;
   private final MediaSignedUrl signedUrl;
   private final ApplicationEventPublisher events;
@@ -195,7 +200,8 @@ public class ActivityService {
           request.steps());
       // 점이 둘 미만이면 선이 되지 않는다. 짧은 활동도 저장해야 하므로 경로만 비워 둔다
       if (request.route().size() >= 2) {
-        activityRepository.updateRoute(id, lineString(request.route()));
+        activityRepository.updateRoute(
+            id, lineString(request.route()), properties.routeSimplifyMeters() / METERS_PER_DEGREE);
       }
       statsService.add(activity.getCrewId(), activity.getStartedAt(), totals(activity));
       liveService.ended(me, id, activity.getCrewId());
