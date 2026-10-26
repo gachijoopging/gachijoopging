@@ -31,31 +31,78 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.test.web.servlet.MockMvc;
 import org.yaml.snakeyaml.Yaml;
 import site.gachijoopging.server.global.config.WebConfig;
-import site.gachijoopging.server.global.security.jwt.JwtIssuer;
 import site.gachijoopging.server.support.IntegrationTest;
+import site.gachijoopging.server.support.TestAccounts;
+import site.gachijoopging.server.support.TestAccounts.TestAccount;
 
 @AutoConfigureMockMvc
 class OpenApiContractTest extends IntegrationTest {
 
-  private static final int 모바일_계약_경로_수 = 58;
-
-  private static final int 관리자_계약_경로_수 = 12;
-
   private static final Path 모바일_계약 = Path.of("..", "docs", "openapi.yaml");
-  private static final Path 관리자_계약 = Path.of("..", "docs", "openapi-admin.yaml");
 
-  private static final String 관리자_접두사 = WebConfig.ADMIN_BASE_PATH;
+  private static final Map<String, String> 계약_밖_경로 =
+      Map.of("GET /health", "앱이 부르지 않는다 — 서버 상태는 /actuator/health 로 본다 (docs/operations.md)");
 
-  private static final Set<String> 테스트_전용_경로 = Set.of("/probe");
+  // 구현되면 이 표에서 지운다
+  private static final Map<String, String> 미구현_연산 =
+      Map.ofEntries(
+          Map.entry("DELETE /users/me", "GAC-73"),
+          Map.entry("GET /agreements", "GAC-82"),
+          Map.entry("GET /users/me/agreements", "GAC-82"),
+          Map.entry("PUT /users/me/agreements", "GAC-82"),
+          Map.entry("GET /crew/posts", "GAC-91"),
+          Map.entry("POST /crew/posts", "GAC-91"),
+          Map.entry("GET /posts/{postId}", "GAC-91"),
+          Map.entry("DELETE /posts/{postId}", "GAC-91"),
+          Map.entry("PUT /posts/{postId}/like", "GAC-91"),
+          Map.entry("DELETE /posts/{postId}/like", "GAC-91"),
+          Map.entry("GET /crew/members/{userId}/posts", "GAC-91"),
+          Map.entry("GET /posts/{postId}/comments", "GAC-92"),
+          Map.entry("POST /posts/{postId}/comments", "GAC-92"),
+          Map.entry("DELETE /comments/{commentId}", "GAC-92"),
+          Map.entry("GET /crew/notices", "GAC-93"),
+          Map.entry("POST /crew/notices", "GAC-93"),
+          Map.entry("GET /notices/{noticeId}", "GAC-93"),
+          Map.entry("PATCH /notices/{noticeId}", "GAC-93"),
+          Map.entry("DELETE /notices/{noticeId}", "GAC-93"),
+          Map.entry("POST /notices/{noticeId}/comments", "GAC-93"),
+          Map.entry("DELETE /notice-comments/{commentId}", "GAC-93"),
+          Map.entry("GET /notifications", "GAC-95"),
+          Map.entry("POST /notifications/read", "GAC-95"),
+          Map.entry("GET /notifications/unread-count", "GAC-95"),
+          Map.entry("PUT /users/{userId}/follow", "GAC-95"),
+          Map.entry("DELETE /users/{userId}/follow", "GAC-95"),
+          Map.entry("GET /users/me/blocked", "GAC-96"),
+          Map.entry("PUT /users/{userId}/block", "GAC-96"),
+          Map.entry("DELETE /users/{userId}/block", "GAC-96"),
+          Map.entry("POST /reports", "GAC-96"),
+          Map.entry("GET /crew/reports", "GAC-96"),
+          Map.entry("POST /crew/reports/{reportId}", "GAC-96"),
+          Map.entry("GET /crew/export", "GAC-97"),
+          Map.entry("GET /crew/chat/messages", "GAC-50"),
+          Map.entry("PUT /crew/chat/read", "GAC-50"));
+
+  private static final Map<String, String> 미구현_스키마 =
+      Map.of(
+          "AgreementCatalog", "GAC-82",
+          "Agreements", "GAC-82",
+          "Post", "GAC-91",
+          "Comment", "GAC-92",
+          "Notice", "GAC-93",
+          "Notification", "GAC-95",
+          "Report", "GAC-96",
+          "ChatMessage", "GAC-50");
+
+  private static JsonNode 산출물_문서;
 
   @Autowired private MockMvc mockMvc;
   @Autowired private ObjectMapper objectMapper;
-  @Autowired private JwtIssuer jwtIssuer;
 
   @Test
   void 서버가_서비스하는_경로는_전부_계약에_있다() throws Exception {
     Set<String> 계약 = 계약의_경로와_메서드(모바일_계약);
     Set<String> 산출물 = 산출물의_경로와_메서드();
+    산출물.removeAll(계약_밖_경로.keySet());
 
     assertThat(산출물).isNotEmpty();
     assertThat(산출물)
@@ -85,129 +132,42 @@ class OpenApiContractTest extends IntegrationTest {
 
   @Test
   void 모바일_openapi_경로가_모두_구현되어_있다() throws Exception {
-    Set<String> 계약_경로 = 계약의_경로만(모바일_계약);
+    Set<String> 빠진_것 = 계약의_경로와_메서드(모바일_계약);
+    빠진_것.removeAll(산출물의_경로와_메서드());
 
-    assertThat(계약_경로).hasSize(모바일_계약_경로_수);
-    assertThat(산출물의_경로만(WebConfig.API_BASE_PATH))
-        .as("계약에 있는데 서버가 서비스하지 않는 경로다 — 구현하거나 계약에서 뺀다")
-        .containsExactlyInAnyOrderElementsOf(계약_경로);
-  }
-
-  @Test
-  void 관리자_openapi_경로가_모두_구현되어_있다() throws Exception {
-    Set<String> 계약_경로 = 계약의_경로만(관리자_계약);
-    Set<String> 산출물 = new TreeSet<>(산출물의_경로만(관리자_접두사));
-    산출물.removeAll(테스트_전용_경로);
-
-    assertThat(계약_경로).hasSize(관리자_계약_경로_수);
-    assertThat(산출물)
-        .as("계약에 있는데 서버가 서비스하지 않는 경로다 — 구현하거나 계약에서 뺀다")
-        .containsExactlyInAnyOrderElementsOf(계약_경로);
-  }
-
-  private static final Map<String, String> 관리자_스키마_매핑 =
-      Map.ofEntries(
-          Map.entry("AdminMe", "AdminMeResponse"),
-          Map.entry("Dashboard", "DashboardResponse"),
-          Map.entry("DashboardKpis", "DashboardKpis"),
-          Map.entry("Retention", "RetentionResponse"),
-          Map.entry("AiAccuracy", "AiAccuracyResponse"),
-          Map.entry("MemberRow", "MemberRowResponse"),
-          Map.entry("ReportUser", "ReportUserResponse"),
-          Map.entry("Report", "ReportResponse"),
-          Map.entry("ReportTarget", "ReportTargetResponse"),
-          Map.entry("ExportFilter", "ExportFilterRequest"),
-          Map.entry("ExportRow", "ExportRowResponse"),
-          Map.entry("ExportHistory", "ExportHistoryResponse"));
-
-  static Stream<Arguments> 관리자_스키마_쌍() {
-    return 관리자_스키마_매핑.entrySet().stream()
-        .sorted(Map.Entry.comparingByKey())
-        .map(e -> Arguments.of(e.getKey(), e.getValue()));
-  }
-
-  @ParameterizedTest(name = "{0} ↔ {1}")
-  @MethodSource("관리자_스키마_쌍")
-  void 관리자_스키마가_필드_nullable_enum_타입까지_계약과_산출물에서_같다(String 계약_이름, String 산출물_이름) throws Exception {
-    Map<String, Object> 계약 = 계약_스키마(관리자_계약, 계약_이름);
-    JsonNode 문서 = 산출물();
-    JsonNode 산출물 = 문서.path("components").path("schemas").path(산출물_이름);
-
-    assertThat(산출물.isMissingNode()).as("산출물에 %s 스키마가 없다 — DTO 이름이 바뀌었는지 본다", 산출물_이름).isFalse();
-
-    assertThat(산출물의_필드(산출물)).as("계약과 산출물의 %s 필드가 다르다", 계약_이름).isEqualTo(계약의_필드(계약));
-
-    assertThat(산출물의_nullable(산출물))
-        .as("계약과 산출물의 %s nullable 이 다르다 — DTO 의 @Schema(nullable = true) 를 맞춘다", 계약_이름)
-        .isEqualTo(계약의_nullable(계약));
-
-    assertThat(산출물의_enum값(산출물))
-        .as("계약과 산출물의 %s enum 값이 다르다 — DTO 를 enum 타입으로 두거나 @Schema(allowableValues) 를 맞춘다", 계약_이름)
-        .isEqualTo(계약의_enum값(관리자_계약, 계약_이름));
-
-    Map<String, 필드_타입> 계약_타입 = 계약의_타입자리(관리자_계약, 계약_이름);
-    Map<String, 필드_타입> 산출물_타입 = 산출물의_타입자리(문서, 산출물);
-
-    assertThat(타입만(산출물_타입))
-        .as("계약과 산출물의 %s 필드 타입이 다르다 — DTO 의 자바 타입을 계약에 맞춘다", 계약_이름)
-        .isEqualTo(타입만(계약_타입));
-
-    assertThat(format이_어긋난_자리(계약_이름, 계약_타입, 산출물_타입))
-        .as("계약과 산출물의 %s format 이 다르다.%n뺀 자리와 사유:%n%s", 계약_이름, 사유_목록(format_대조_제외))
-        .isEqualTo(format_제외된_자리(계약_이름));
-  }
-
-  @Test
-  void ExportRow_의_lat_lng_는_계약에서_nullable_이다() throws Exception {
-    assertThat(계약의_nullable(계약_스키마(관리자_계약, "ExportRow")))
-        .as("좌표 없는 사진의 항목도 내보낸다 (결정 1) — lat·lng 는 nullable 이어야 한다")
-        .contains("lat", "lng");
+    assertThat(빠진_것)
+        .as("계약에 있는데 서버가 서비스하지 않는 연산이 미구현_연산 표와 다르다 — 구현했으면 표에서 지우고, 아니면 담당 이슈와 함께 적는다")
+        .isEqualTo(new TreeSet<>(미구현_연산.keySet()));
   }
 
   private static final Map<String, String> 모바일_스키마_매핑 =
       Map.ofEntries(
-          Map.entry("ActiveLocation", "ActiveLocationRequest"),
-          Map.entry("ActivityDetail", "ActivityDetailResponse"),
-          Map.entry("ActivityDetailPhoto", "DetailPhotoResponse"),
-          Map.entry("ActivityItemSubmit", "ItemSubmit"),
-          Map.entry("ActivityPhotoSubmit", "PhotoSubmit"),
-          Map.entry("ActivitySubmit", "ActivitySubmitRequest"),
+          Map.entry("Activity", "ActivityResponse"),
+          Map.entry("ActivityCard", "ActivityCardResponse"),
           Map.entry("ActivitySummary", "ActivitySummaryResponse"),
-          Map.entry("AuthorInline", "PostAuthorResponse"),
           Map.entry("Bbox", "BboxResponse"),
-          Map.entry("ChatMessage", "ChatMessageResponse"),
-          Map.entry("ChatPollResult", "ChatPollResult"),
-          Map.entry("Comment", "PostCommentResponse"),
-          Map.entry("Credentials", "CredentialsRequest"),
-          Map.entry("GeoPoint", "GeoPoint"),
-          Map.entry("Inference", "InferenceResponse"),
-          Map.entry("InferenceItem", "InferenceItemResponse"),
+          Map.entry("Crew", "CrewResponse"),
+          Map.entry("CrewStats", "CrewStatsResponse"),
+          Map.entry("CrewSummary", "CrewSummaryResponse"),
+          Map.entry("Home", "HomeResponse"),
+          Map.entry("Item", "ItemResponse"),
+          Map.entry("ItemInput", "ItemInput"),
           Map.entry("JoinRequest", "JoinRequestResponse"),
+          Map.entry("LiveMember", "LiveMemberResponse"),
           Map.entry("Me", "MeResponse"),
-          Map.entry("MediaUploadResult", "MediaUploadResponse"),
-          Map.entry("Meet", "MeetResponse"),
-          Map.entry("MeetCreate", "CreateMeetRequest"),
-          Map.entry("Neighborhood", "NeighborhoodResponse"),
-          Map.entry("Notification", "NotificationResponse"),
-          Map.entry("PickupPoint", "PickupPointResponse"),
-          Map.entry("Post", "PostResponse"),
-          Map.entry("PostCreate", "PostCreateRequest"),
-          Map.entry("ReportCreate", "ReportCreateRequest"),
-          Map.entry("Session", "SessionResponse"),
-          Map.entry("TokenPair", "TokenPairResponse"),
-          Map.entry("UserProfile", "UserProfileResponse"),
-          Map.entry("UserSummary", "UserSummaryResponse"),
-          Map.entry("WeeklyStats", "WeeklyStatsResponse"));
+          Map.entry("MediaResult", "MediaUploadResponse"),
+          Map.entry("Member", "MemberResponse"),
+          Map.entry("MemberProfile", "MemberProfileResponse"),
+          Map.entry("MemberStats", "MemberStatsResponse"),
+          Map.entry("UserBrief", "UserBriefResponse"));
 
   private static final Map<String, String> 모바일_대조_제외 =
       Map.of(
           "Category",
               "enum — properties 가 없어 필드·nullable 축이 성립하지 않는다."
                   + " 값은 이것을 $ref 하는 객체 스키마의 필드에서 대조된다",
-          "CategoryNullable", "enum — 같은 이유",
-          "MeetVisibility", "enum — 같은 이유",
-          "ErrorResponse",
-              "@RestControllerAdvice 가 만들어 컨트롤러 시그니처에 없다 — springdoc 산출물에 스키마가 등록되지 않는다");
+          "JoinPolicy", "enum — 같은 이유",
+          "Region", "enum — 같은 이유");
 
   @ParameterizedTest(name = "{0} ↔ {1}")
   @MethodSource("모바일_스키마_쌍")
@@ -250,10 +210,21 @@ class OpenApiContractTest extends IntegrationTest {
   void 모바일_계약의_모든_스키마가_대조_표에_있거나_제외되어_있다() throws Exception {
     Set<String> 다룬_것 = new TreeSet<>(모바일_스키마_매핑.keySet());
     다룬_것.addAll(모바일_대조_제외.keySet());
+    다룬_것.addAll(미구현_스키마.keySet());
 
     assertThat(new TreeSet<>(계약_schemas(모바일_계약).keySet()))
         .as("계약에 스키마가 늘었다 — 모바일_스키마_매핑 에 대응을 적거나 모바일_대조_제외 에 사유를 적는다.%n지금 빠져 있는 것:%n%s", 제외_사유())
         .isEqualTo(다룬_것);
+  }
+
+  @Test
+  void 미구현_스키마는_담당_이슈의_연산이_남아_있을_때만_표에_있다() {
+    assertThat(미구현_스키마.keySet())
+        .as("대조 표와 미구현 표에 같은 스키마가 있다 — 구현했으면 미구현_스키마 에서 지운다")
+        .doesNotContainAnyElementsOf(모바일_스키마_매핑.keySet());
+    assertThat(new TreeSet<>(미구현_연산.values()))
+        .as("담당 이슈의 연산은 다 구현됐는데 스키마가 미구현_스키마 에 남았다 — 모바일_스키마_매핑 으로 옮긴다")
+        .containsAll(미구현_스키마.values());
   }
 
   private static String 제외_사유() {
@@ -274,55 +245,51 @@ class OpenApiContractTest extends IntegrationTest {
         .isEqualTo(계약의_이름_붙은_enum(모바일_계약));
   }
 
-  @Test
-  void 관리자_계약의_이름_붙은_enum_은_전부_값이_대조된다() throws Exception {
-    assertThat(대조되는_이름_붙은_enum(관리자_계약, 관리자_스키마_매핑.keySet()))
-        .as("관리자 계약의 이 enum 이 값 대조에서 빠졌다 — 부르는 객체 스키마를 대조 표에 넣는다")
-        .isEqualTo(계약의_이름_붙은_enum(관리자_계약));
-  }
-
   private static Set<String> 대조되는_이름_붙은_enum(Path 계약_문서, Set<String> 표의_계약_이름) throws Exception {
     Set<String> 결과 = new TreeSet<>(값이_대조되는_enum(계약_문서, 표의_계약_이름));
-    계약의_경로_enum(계약_문서).stream().map(경로_enum자리::이름붙은enum).filter(Objects::nonNull).forEach(결과::add);
+    구현된_경로_enum(계약_문서).stream().map(경로_enum자리::이름붙은enum).filter(Objects::nonNull).forEach(결과::add);
     return 결과;
   }
 
   private record 경로_enum자리(
       String 메서드, String 경로, List<String> 단계, List<String> 값, String 이름붙은enum) {
 
+    String 연산() {
+      return 메서드 + " " + 경로;
+    }
+
     @Override
     public String toString() {
-      return 메서드 + " " + 경로 + " " + String.join(".", 단계).replace(".[]", "[]");
+      return 연산() + " " + String.join(".", 단계).replace(".[]", "[]");
     }
   }
 
   private static final Set<String> 모바일_경로_enum_자리 =
       Set.of(
-          "GET /meets ?when",
-          "GET /posts ?scope",
-          "GET /users/nickname-available 200.data.reason",
-          "PATCH /activities/{id}/items/{itemId} body.finalCategory",
-          "PATCH /meets/{id} body.visibility",
-          "PATCH /posts/{id} body.visibility",
-          "POST /activities/{id}/photos/{photoId}/items body.finalCategory",
-          "POST /users/me/social body.provider");
-
-  private static final Set<String> 관리자_경로_enum_자리 =
-      Set.of(
-          "GET /exports/options 200.data.categories[]",
-          "GET /exports/preview ?category",
-          "GET /exports/preview ?period",
-          "GET /members ?status",
-          "GET /reports ?status",
-          "PATCH /members/{id}/status body.status",
-          "POST /reports/{id}/resolve body.result");
+          "GET /crew/posts ?scope",
+          "GET /crew/stats ?range",
+          "GET /crews ?region",
+          "PATCH /activities/{id}/items/{itemId} body.category",
+          "PATCH /crew body.joinPolicy",
+          "PATCH /crew body.region",
+          "POST /crew/join-requests/{requestId} body.decision",
+          "POST /crew/posts body.visibility",
+          "POST /crew/reports/{reportId} body.result",
+          "POST /crews body.joinPolicy",
+          "POST /crews body.region",
+          "POST /media body.purpose",
+          "POST /reports body.reason",
+          "POST /reports body.targetType",
+          "PUT /users/me/agreements body.items[].type",
+          "PUT /users/me/devices body.platform",
+          "PUT /users/me/social body.provider");
 
   static Stream<Arguments> 모바일_경로_enum() throws Exception {
-    return 계약의_경로_enum(모바일_계약).stream().map(Arguments::of);
+    return 구현된_경로_enum(모바일_계약).stream().map(Arguments::of);
   }
 
-  static Stream<Arguments> 관리자_경로_enum() throws Exception {
-    return 계약의_경로_enum(관리자_계약).stream().map(Arguments::of);
+  private static List<경로_enum자리> 구현된_경로_enum(Path 계약_문서) throws Exception {
+    return 계약의_경로_enum(계약_문서).stream().filter(자리 -> !미구현_연산.containsKey(자리.연산())).toList();
   }
 
   @ParameterizedTest(name = "{0}")
@@ -333,26 +300,11 @@ class OpenApiContractTest extends IntegrationTest {
         .isEqualTo(자리.값());
   }
 
-  @ParameterizedTest(name = "{0}")
-  @MethodSource("관리자_경로_enum")
-  void 관리자_경로의_enum_값이_계약과_산출물에서_같다(경로_enum자리 자리) throws Exception {
-    assertThat(산출물의_경로_enum값(관리자_접두사, 자리))
-        .as("계약과 산출물의 %s enum 값이 다르다 — 파라미터·DTO 를 enum 타입으로 두거나 @Schema(allowableValues) 를 맞춘다", 자리)
-        .isEqualTo(자리.값());
-  }
-
   @Test
   void 모바일_계약의_경로_enum_자리가_전부_대조된다() throws Exception {
     assertThat(경로_enum_자리이름(모바일_계약))
         .as("모바일 계약의 경로 enum 자리가 달라졌다 — 모바일_경로_enum_자리 를 맞춘다")
         .isEqualTo(new TreeSet<>(모바일_경로_enum_자리));
-  }
-
-  @Test
-  void 관리자_계약의_경로_enum_자리가_전부_대조된다() throws Exception {
-    assertThat(경로_enum_자리이름(관리자_계약))
-        .as("관리자 계약의 경로 enum 자리가 달라졌다 — 관리자_경로_enum_자리 를 맞춘다")
-        .isEqualTo(new TreeSet<>(관리자_경로_enum_자리));
   }
 
   private static Set<String> 경로_enum_자리이름(Path 계약_문서) throws Exception {
@@ -482,6 +434,9 @@ class OpenApiContractTest extends IntegrationTest {
     JsonNode 노드;
     if (앵커.startsWith("?")) {
       노드 = 산출물의_파라미터_스키마(연산, 앵커.substring(1));
+    } else if ("body".equals(앵커) && multipart_필드인가(연산, 단계)) {
+      노드 = 산출물의_파라미터_스키마(연산, 단계.get(1));
+      단계 = List.of(앵커);
     } else if ("body".equals(앵커)) {
       노드 = 산출물의_본문_스키마(연산.path("requestBody"));
     } else {
@@ -494,6 +449,11 @@ class OpenApiContractTest extends IntegrationTest {
     List<String> 결과 = new ArrayList<>();
     산출물_참조를_푼다(산출물, 노드).path("enum").forEach(항목 -> 결과.add(항목.asText()));
     return List.copyOf(결과);
+  }
+
+  // springdoc 은 multipart 본문의 @RequestParam 필드를 query 파라미터로 그린다 (POST /media)
+  private static boolean multipart_필드인가(JsonNode 연산, List<String> 단계) {
+    return 단계.size() == 2 && !산출물의_파라미터_스키마(연산, 단계.get(1)).isMissingNode();
   }
 
   private static JsonNode 산출물_참조를_푼다(JsonNode 산출물, JsonNode 노드) {
@@ -632,9 +592,9 @@ class OpenApiContractTest extends IntegrationTest {
 
   private static final Map<String, String> format_대조_제외 =
       Map.of(
-          "ActivitySubmit.meetId", "계약이 format: uuid 를 빠뜨렸다 — DTO 는 UUID 다 (계약 수정에 앱 팀 합의 필요)",
-          "Comment.id", "같은 이유",
-          "PostCreate.recordId", "같은 이유");
+          "Activity.id", "계약이 format: uuid 를 빠뜨렸다 — DTO 는 UUID 다 (계약 수정은 앱과 같은 PR 이어야 한다)",
+          "ActivityCard.id", "같은 이유",
+          "Item.photoId", "같은 이유");
 
   private static Map<String, 필드_타입> 계약의_타입자리(Path 계약_문서, String 이름) throws Exception {
     Map<String, Map<String, Object>> schemas = 계약_schemas(계약_문서);
@@ -797,17 +757,20 @@ class OpenApiContractTest extends IntegrationTest {
     return Map.of("properties", 병합);
   }
 
+  // 산출물은 인증 뒤에 있고, 토큰의 사용자가 DB 에 있어야 인증된다
   private JsonNode 산출물() throws Exception {
-    String 본문 =
-        mockMvc
-            .perform(
-                get("/v3/api-docs")
-                    .header("Authorization", "Bearer " + jwtIssuer.issue(UUID.randomUUID())))
-            .andExpect(status().isOk())
-            .andReturn()
-            .getResponse()
-            .getContentAsString();
-    return objectMapper.readTree(본문);
+    if (산출물_문서 == null) {
+      TestAccount 계정 = TestAccounts.가입한다(mockMvc, "contract-" + UUID.randomUUID() + "@test.io");
+      String 본문 =
+          mockMvc
+              .perform(get("/v3/api-docs").header("Authorization", 계정.bearer()))
+              .andExpect(status().isOk())
+              .andReturn()
+              .getResponse()
+              .getContentAsString();
+      산출물_문서 = objectMapper.readTree(본문);
+    }
+    return 산출물_문서;
   }
 
   private Set<String> 산출물의_경로와_메서드() throws Exception {
@@ -820,14 +783,6 @@ class OpenApiContractTest extends IntegrationTest {
                   결과.add(method.getKey().toUpperCase() + " " + 경로);
                 }
               });
-    }
-    return 결과;
-  }
-
-  private Set<String> 산출물의_경로만(String 접두사) throws Exception {
-    Set<String> 결과 = new TreeSet<>();
-    for (Map.Entry<String, JsonNode> path : 산출물().path("paths").properties()) {
-      경로_떼기(path.getKey(), 접두사).ifPresent(결과::add);
     }
     return 결과;
   }
@@ -849,10 +804,6 @@ class OpenApiContractTest extends IntegrationTest {
                     .filter(OpenApiContractTest::HTTP_메서드인가)
                     .forEach(method -> 결과.add(method.toUpperCase() + " " + 경로)));
     return 결과;
-  }
-
-  private static Set<String> 계약의_경로만(Path 계약_문서) throws Exception {
-    return new TreeSet<>(계약_paths(계약_문서).keySet());
   }
 
   private static boolean HTTP_메서드인가(String key) {

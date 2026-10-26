@@ -1,5 +1,6 @@
 package site.gachijoopging.server.domain.activity.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -12,5 +13,5 @@ public record ItemInput(
     @NotNull Category category,
     @NotNull @Min(1) @Max(999) Integer quantity,
     Category aiPredictedCategory,
-    Float aiConfidence,
+    @Schema(nullable = true) Float aiConfidence,
     @Valid Bbox bbox) {}
