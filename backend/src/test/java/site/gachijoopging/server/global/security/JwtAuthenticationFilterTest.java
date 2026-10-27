@@ -11,6 +11,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.util.Base64;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -81,7 +82,8 @@ class JwtAuthenticationFilterTest {
 
   @Test
   void 만료된_토큰이면_401_이다() throws Exception {
-    String 토큰 = new JwtIssuer(키_설정.짧은_수명(), Clock.systemUTC()).issue(UUID.randomUUID());
+    String 토큰 =
+        new JwtIssuer(키_설정.짧은_수명(), Clock.systemUTC(), 키_설정.끊긴_적_없음()).issue(UUID.randomUUID());
     Thread.sleep(1100);
 
     mockMvc
@@ -104,6 +106,10 @@ class JwtAuthenticationFilterTest {
           Duration.ofSeconds(1));
     }
 
+    static SessionVersionLoader 끊긴_적_없음() {
+      return userId -> Optional.of(0);
+    }
+
     @Bean
     AccountAuthorityLoader accountAuthorityLoader() {
       return userId -> List.of();
@@ -111,12 +117,12 @@ class JwtAuthenticationFilterTest {
 
     @Bean
     JwtIssuer jwtIssuer() {
-      return new JwtIssuer(PROPERTIES, Clock.systemUTC());
+      return new JwtIssuer(PROPERTIES, Clock.systemUTC(), 끊긴_적_없음());
     }
 
     @Bean
     JwtVerifier jwtVerifier() {
-      return new JwtVerifier(PROPERTIES, Clock.systemUTC());
+      return new JwtVerifier(PROPERTIES, Clock.systemUTC(), 끊긴_적_없음());
     }
 
     private static JwtProperties 새_설정() {
