@@ -46,6 +46,7 @@ import org.springframework.web.socket.handler.AbstractWebSocketHandler;
 import org.springframework.web.socket.messaging.WebSocketStompClient;
 import site.gachijoopging.server.domain.live.dto.LiveUpdateResponse;
 import site.gachijoopging.server.domain.live.service.LiveBroadcaster;
+import site.gachijoopging.server.global.security.SessionVersionLoader;
 import site.gachijoopging.server.global.security.jwt.JwtIssuer;
 import site.gachijoopging.server.global.security.jwt.JwtProperties;
 import site.gachijoopging.server.support.IntegrationTest;
@@ -63,6 +64,7 @@ class LiveApiTest extends IntegrationTest {
   @Autowired private JdbcTemplate jdbcTemplate;
   @Autowired private LiveBroadcaster broadcaster;
   @Autowired private JwtProperties jwtProperties;
+  @Autowired private SessionVersionLoader sessionVersionLoader;
   @Autowired private SimpUserRegistry userRegistry;
 
   private final WebSocketStompClient stompClient = stompClient();
@@ -78,7 +80,9 @@ class LiveApiTest extends IntegrationTest {
     TestAccount 나 = 크루원이_된다("live-expired@test.io");
     String 만료 =
         new JwtIssuer(
-                jwtProperties, Clock.fixed(Instant.parse("2020-01-01T00:00:00Z"), ZoneOffset.UTC))
+                jwtProperties,
+                Clock.fixed(Instant.parse("2020-01-01T00:00:00Z"), ZoneOffset.UTC),
+                sessionVersionLoader)
             .issue(나.id());
 
     assertThat(닫힘_코드("?token=" + 만료)).isEqualTo(4401);

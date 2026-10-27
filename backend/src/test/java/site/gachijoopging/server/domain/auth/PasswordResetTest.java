@@ -233,8 +233,6 @@ class PasswordResetTest extends IntegrationTest {
     TestAccount 바꾸는_사람 = TestAccounts.가입한다(mockMvc, "access-reset@test.io");
     TestAccount 가만있는_사람 = TestAccounts.가입한다(mockMvc, "access-keep@test.io");
     String 코드 = 코드를_받는다("access-reset@test.io");
-    // iat 는 초 단위라 같은 초에 바꾸면 그 전 토큰도 통한다 — 다음 초로 넘긴다
-    Thread.sleep(1_100);
 
     mockMvc
         .perform(확인요청("access-reset@test.io", 코드, "newpassword123"))

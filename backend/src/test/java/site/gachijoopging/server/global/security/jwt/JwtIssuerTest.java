@@ -8,6 +8,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -24,7 +25,7 @@ class JwtIssuerTest {
     JwtProperties properties =
         new JwtProperties(
             "active-1", 키.privateKeyPem(), 키.publicKeyPem(), null, null, Duration.ofHours(1));
-    issuer = new JwtIssuer(properties, Clock.fixed(지금, ZoneOffset.UTC));
+    issuer = new JwtIssuer(properties, Clock.fixed(지금, ZoneOffset.UTC), userId -> Optional.of(3));
   }
 
   @Test
@@ -34,6 +35,13 @@ class JwtIssuerTest {
     DecodedJWT 토큰 = JWT.decode(issuer.issue(사용자));
 
     assertThat(토큰.getSubject()).isEqualTo(사용자.toString());
+  }
+
+  @Test
+  void 지금_세션_버전이_실린다() {
+    DecodedJWT 토큰 = JWT.decode(issuer.issue(UUID.randomUUID()));
+
+    assertThat(토큰.getClaim("sv").asInt()).isEqualTo(3);
   }
 
   @Test
