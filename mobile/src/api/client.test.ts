@@ -219,6 +219,13 @@ describe('실 API 클라이언트', () => {
     expect(calls[1]).toEqual(expect.objectContaining({ url: `${BASE}/notices/n1`, method: 'PATCH', body: '{"title":"t"}' }));
   });
 
+  test('내 정보를 받으면 기억한 소속을 맞춘다 — 크루를 만든 뒤 오프라인으로 재실행해도 1-6 에 멈추지 않는다', async () => {
+    rememberAccount({ id: 'u1', membership: { status: 'NONE' } });
+    const { api } = server(() => json(200, { data: { id: 'u1', membership: { status: 'MEMBER', crew: { id: 'c1', name: 'c', isLeader: true }, rejection: null } } }));
+    await api.get('GET /users/me');
+    expect(currentAccount()).toEqual(expect.objectContaining({ id: 'u1', hasCrew: true }));
+  });
+
   test('204 는 값 없이 끝난다', async () => {
     const { api } = server(() => json(204));
     await expect(api.mutate('DELETE /posts/{postId}', { postId: 'p1' })).resolves.toBeUndefined();
@@ -244,7 +251,7 @@ describe('실 API 클라이언트', () => {
   test('refresh 가 거절되면 토큰·계정·기억한 응답을 지우고 로그아웃 상태가 된다', async () => {
     const { api } = server((c) => {
       if (isRefresh(c)) return expired();
-      return c.url.endsWith('/users/me') ? json(200, { data: { id: 'u1' } }) : expired();
+      return c.url.endsWith('/users/me') ? json(200, { data: { id: 'u1', membership: { status: 'MEMBER' } } }) : expired();
     });
     await api.get('GET /users/me');
     expect(peek('GET /users/me')).toBeDefined();
@@ -267,7 +274,7 @@ describe('실 API 클라이언트', () => {
       if (isRefresh(c)) { await gate; return renewed(); }
       return c.headers.Authorization === 'Bearer new' ? json(200, { data: c.url }) : expired();
     });
-    const all = Promise.all((['GET /crew/home', 'GET /crew', 'GET /users/me'] as const).map((k) => api.get(k)));
+    const all = Promise.all((['GET /crew/home', 'GET /crew', 'GET /crew/members'] as const).map((k) => api.get(k)));
     await new Promise((r) => setTimeout(r, 0));
     release();
     await all;
