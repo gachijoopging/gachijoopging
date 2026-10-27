@@ -1,9 +1,11 @@
 package site.gachijoopging.server.domain.auth;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -12,7 +14,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.concurrent.CompletableFuture;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -22,7 +26,9 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
@@ -40,6 +46,7 @@ class PasswordResetTest extends IntegrationTest {
   @Autowired private StringRedisTemplate redis;
 
   @MockitoBean private PasswordResetMailSender mailSender;
+  @MockitoSpyBean private PasswordEncoder passwordEncoder;
 
   @BeforeEach
   void 제한을_비운다() {
@@ -255,6 +262,53 @@ class PasswordResetTest extends IntegrationTest {
             .asText();
     mockMvc.perform(내_정보(새_토큰)).andExpect(status().isOk());
     mockMvc.perform(내_정보(가만있는_사람.accessToken())).andExpect(status().isOk());
+  }
+
+  @Test
+  void 이전_비밀번호_확인과_발급_사이에_재설정이_끝나면_그_로그인의_토큰은_모두_거부된다() throws Exception {
+    가입한다("race-reset@test.io");
+    String 코드 = 코드를_받는다("race-reset@test.io");
+    doAnswer(
+            확인 -> {
+              Object 맞다 = 확인.callRealMethod();
+              CompletableFuture.runAsync(
+                      () -> {
+                        try {
+                          mockMvc
+                              .perform(확인요청("race-reset@test.io", 코드, "newpassword123"))
+                              .andExpect(status().isNoContent());
+                        } catch (Exception e) {
+                          throw new IllegalStateException(e);
+                        }
+                      })
+                  .join();
+              return 맞다;
+            })
+        .when(passwordEncoder)
+        .matches(any(), any());
+
+    JsonNode 토큰 =
+        objectMapper
+            .readTree(
+                mockMvc
+                    .perform(로그인("race-reset@test.io", "password123"))
+                    .andExpect(status().isOk())
+                    .andReturn()
+                    .getResponse()
+                    .getContentAsString())
+            .get("data");
+
+    mockMvc
+        .perform(내_정보(토큰.get("accessToken").asText()))
+        .andExpect(status().isUnauthorized())
+        .andExpect(jsonPath("$.code").value("TOKEN_EXPIRED"));
+    mockMvc
+        .perform(
+            post("/api/v1/auth/refresh")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"refreshToken\":\"%s\"}".formatted(토큰.get("refreshToken").asText())))
+        .andExpect(status().isUnauthorized())
+        .andExpect(jsonPath("$.code").value("TOKEN_EXPIRED"));
   }
 
   private static MockHttpServletRequestBuilder 내_정보(String accessToken) {

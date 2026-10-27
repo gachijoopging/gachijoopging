@@ -42,13 +42,22 @@ public class RefreshToken {
   @Column(nullable = false)
   private Instant createdAt;
 
+  @Column(nullable = false)
+  private int sessionVersion;
+
   @Builder
   private RefreshToken(
-      UUID userId, String tokenHash, UUID familyId, Instant expiresAt, Instant now) {
+      UUID userId,
+      String tokenHash,
+      UUID familyId,
+      Instant expiresAt,
+      int sessionVersion,
+      Instant now) {
     this.userId = requireNonNull(userId, "userId");
     this.tokenHash = requireNonNull(tokenHash, "tokenHash");
     this.familyId = requireNonNull(familyId, "familyId");
     this.expiresAt = requireNonNull(expiresAt, "expiresAt");
+    this.sessionVersion = sessionVersion;
     this.createdAt = requireNonNull(now, "now");
   }
 

@@ -31,12 +31,13 @@ class AuthServiceRefreshRaceTest {
   private final RefreshTokenRepository refreshTokenRepository = mock(RefreshTokenRepository.class);
   private final RefreshTokenFamilyRevoker familyRevoker = mock(RefreshTokenFamilyRevoker.class);
   private final JwtIssuer jwtIssuer = mock(JwtIssuer.class);
+  private final UserService userService = mock(UserService.class);
 
   private final AuthService authService =
       new AuthService(
           refreshTokenRepository,
           familyRevoker,
-          mock(UserService.class),
+          userService,
           mock(ActivityService.class),
           mock(UserLock.class),
           jwtIssuer,
@@ -63,5 +64,6 @@ class AuthServiceRefreshRaceTest {
             .now(지금)
             .build();
     given(refreshTokenRepository.findByTokenHash(any())).willReturn(Optional.of(살아있음));
+    given(userService.sessionVersionOf(살아있음.getUserId())).willReturn(Optional.of(0));
   }
 }

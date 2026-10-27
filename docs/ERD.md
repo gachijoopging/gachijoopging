@@ -76,7 +76,7 @@ erDiagram
 
 비밀번호 재설정 성공 시 모든 기기의 access/refresh 세션을 무효화하고 재로그인을 요구한다. 소셜 전용 계정에 새 비밀번호를 만드는 기능은 없다. refresh 는 폐기하고, access 는 `session_version` 으로 막는다.
 
-**refresh_tokens** — 이관한 `auth` Entity 그대로.
+**refresh_tokens** — 이관한 `auth` Entity 에 `session_version`(V7)만 더했다. 비밀번호를 확인한 시점의 `users.session_version` 을 싣고 회전해도 그대로 물려준다. 지금 값과 다르면 refresh 를 거부해, 재설정과 엇갈린 로그인이 일괄 폐기 뒤에 저장한 토큰도 막는다.
 
 **password_reset_tokens** — 메일로 보낸 6자리 코드 한 장이 한 행이다. 새로 보내면 그 사용자의 쓰지 않은 행은 `used_at` 이 찍혀 무효가 된다(V2).
 
