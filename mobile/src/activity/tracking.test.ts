@@ -145,6 +145,13 @@ describe('걸음수 갱신', () => {
     expect(mockStored.session?.steps).toBe(120);
   });
 
+  test('24시간이 지나서 읽어도 걸음은 시작 + 24시간까지만 센다', async () => {
+    mockStored = { session: active(), ended: null, outbox: [] };
+    const count = jest.fn(async () => 9_000);
+    await refreshSteps(T0 + 25 * 3_600_000, { status: async () => 'granted', count });
+    expect(count).toHaveBeenCalledWith(new Date(T0).toISOString(), new Date(T0 + 24 * 3_600_000).toISOString());
+  });
+
   test('못 읽으면 앞서 잰 값도 버린다 — 낡은 걸음이 지금 GPS 거리와 대조되지 않는다', async () => {
     mockStored = { session: { ...active(), steps: 120 }, ended: null, outbox: [] };
     await refreshSteps(T0 + 120_000, source(new Error('remote')));

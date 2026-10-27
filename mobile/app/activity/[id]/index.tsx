@@ -41,6 +41,7 @@ import { enqueue } from '../../../src/activity/outbox';
 import { endActivity } from '../../../src/activity/actions';
 import { QuickPickupSheet } from '../../../src/activity/QuickPickupSheet';
 import {
+  activityDeadline,
   bannerFor,
   displayDistance,
   elapsedSec,
@@ -268,6 +269,11 @@ export default function ActivityInProgressScreen() {
     setConfirmEnd(false);
     router.replace({ pathname: '/activity/[id]/summary', params: { id } });
   };
+
+  // 24시간이 되면 종료 버튼과 같게 끝낸다. 꺼져 있던 앱을 다시 열었을 때도 첫 화면에서 같은 검사를 거친다
+  useEffect(() => {
+    if (session && now >= activityDeadline(session)) void end();
+  }, [now, session]);
 
   const status = session ? gpsStatus(session, now) : 'searching';
   const banner = bannerFor({ locationOff, offline, connecting: false, gps: status, paused: !!session?.paused });

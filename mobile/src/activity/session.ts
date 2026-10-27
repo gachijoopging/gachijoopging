@@ -8,6 +8,10 @@ import { correctDistance, distanceM, filterFix, initialFilterState, moved, type 
 const SEARCH_AFTER_MS = 10_000;
 const UNSTABLE_AFTER_MS = 15_000;
 
+/** 활동은 시작부터 24시간까지다(feature-scope "활동 최대 시간"). 그 뒤의 위치·걸음·시간은 기록에 넣지 않는다 */
+export const MAX_ACTIVITY_MS = 24 * 60 * 60 * 1000;
+export const activityDeadline = (s: Pick<Session, 'startedAt'>) => Date.parse(s.startedAt) + MAX_ACTIVITY_MS;
+
 /** 4-3 이 기기에 쥐고 있는 활동. 계정별로 디스크에 남아 재실행·배경에서도 이어진다 */
 export type Session = {
   activityId: string;
@@ -64,6 +68,8 @@ export function newSession(a: ActivityStart, userId: string, now: number): Sessi
 }
 
 export function applyFix(s: Session, fix: Fix): Session {
+  // 경로 점에는 시각이 없어 나중에 잘라낼 수 없다. 24시간 뒤의 점은 처음부터 받지 않는다
+  if (fix.timestamp >= activityDeadline(s)) return s;
   const result = filterFix(s.filter, fix);
   if (!result.point) {
     // 기준을 옮겼으면 그 사이 경로를 모른다. 다음 점을 지난 구간과 잇지 않는다

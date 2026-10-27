@@ -3,7 +3,7 @@ import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 
 const mockHaptic = jest.fn(async (_type: string) => {});
 const mockReplace = jest.fn();
-const mockSession = { activityId: 'a1', userId: 'u1', startedAt: '2026-10-01T00:00:00Z', pausedSec: 0, paused: false, pausedAt: null, locationShared: false, itemCount: 0, byCategory: {}, segments: [], distanceM: 0, steps: null };
+const mockSession = { activityId: 'a1', userId: 'u1', startedAt: new Date().toISOString(), pausedSec: 0, paused: false, pausedAt: null, locationShared: false, itemCount: 0, byCategory: {}, segments: [], distanceM: 0, steps: null };
 let mockStored: Record<string, unknown> = { session: mockSession, ended: null, outbox: [] };
 jest.mock('expo/src/winter/fetch', () => ({ fetch: jest.fn() }));
 jest.mock('expo-crypto', () => ({ randomUUID: () => 'u' }));
@@ -84,6 +84,20 @@ test('종료하면 기기에 남는 경로도 종료 기록과 같다 — 요약
   const { session, ended } = mockStored as { session: { segments: { latitude: number; longitude: number }[][] }; ended: { route: number[][] } };
   expect(ended.route).toHaveLength(2);
   expect(session.segments.flat().map((p) => [p.longitude, p.latitude])).toEqual(ended.route);
+});
+
+test('시작한 지 24시간이 지난 활동을 열면 그 시점으로 끝내고 요약으로 간다 — 앱이 꺼져 있던 동안 지난 경우', async () => {
+  const startedAt = Date.now() - 25 * 3_600_000;
+  mockStored = { session: { ...mockSession, startedAt: new Date(startedAt).toISOString() }, ended: null, outbox: [] };
+  await act(async () => { tree = create(React.createElement(Activity)); });
+  expect((mockStored.ended as { endedAt: string }).endedAt).toBe(new Date(startedAt + 24 * 3_600_000).toISOString());
+  expect(mockReplace).toHaveBeenCalledWith({ pathname: '/activity/[id]/summary', params: { id: 'a1' } });
+});
+
+test('24시간 전이면 끝내지 않는다', async () => {
+  await act(async () => { tree = create(React.createElement(Activity)); });
+  expect(mockStored.ended).toBeNull();
+  expect(mockReplace).not.toHaveBeenCalled();
 });
 
 describe('기기에 없는 활동으로 들어왔을 때', () => {

@@ -9,7 +9,7 @@ import { healthConnect } from './health-connect';
 import { flush, type Op } from './outbox';
 import { fixLogLine } from './fix-log';
 import type { Fix } from './location-filter';
-import { applyFix, livePayload, trackingNotice } from './session';
+import { activityDeadline, applyFix, livePayload, trackingNotice } from './session';
 import { readSteps, type StepSource } from './steps';
 import { getStored, loadLastAccount, updateStored } from './store';
 
@@ -71,7 +71,7 @@ export async function refreshSteps(now: number, source: StepSource = healthConne
   if (!before || getStored().ended || readingSteps) return;
   readingSteps = (async () => {
     // 못 읽으면 앞서 잰 값도 버린다. 권한을 거둔 뒤 낡은 걸음으로 거리를 계속 줄이면 안 된다
-    const steps = await readSteps(before, now, source);
+    const steps = await readSteps(before, Math.min(now, activityDeadline(before)), source);
     updateStored((st) => (st.session?.activityId === before.activityId && !st.ended ? { ...st, session: { ...st.session, steps } } : st));
   })();
   try {

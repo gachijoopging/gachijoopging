@@ -318,3 +318,9 @@ describe('정지 드리프트 억제', () => {
     expect(Math.abs(replay(walk).distanceM - 400) / 400).toBeLessThan(0.15);
   });
 });
+
+test('24시간 뒤의 위치는 경로·거리·현재 위치에 넣지 않는다 — 경로 점에는 시각이 없어 나중에 자를 수 없다', () => {
+  const s = walk(started(), 0, 5);
+  const late = applyFix(applyFix(s, { ...fix(0, 0.001), timestamp: T0 + 86_400_000 }), { ...fix(0, 0.002), timestamp: T0 + 90_000_000 });
+  expect(late).toBe(s);
+});

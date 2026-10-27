@@ -1,5 +1,6 @@
 import { endActivity, quickPickup, recordPickup, undoPickup } from './actions';
 import { newSession } from './session';
+import type { EndBody } from './outbox';
 
 let mockStored: ReturnType<typeof import('./store')['getStored']>;
 jest.mock('expo-crypto', () => ({ randomUUID: () => 'i1' }));
@@ -56,4 +57,36 @@ test('종료 직전 걸음을 못 읽으면 걸음을 미측정으로 남긴다'
   mockFinalSteps.mockRejectedValueOnce(new Error('hc'));
   await endActivity();
   expect((mockStored.ended as { steps: number | null }).steps).toBeNull();
+});
+
+describe('24시간 자동 종료', () => {
+  const START = Date.parse('2026-09-30T00:00:00Z');
+  const endAt = async (hours: number) => {
+    const now = jest.spyOn(Date, 'now').mockReturnValue(START + hours * 3_600_000);
+    try {
+      await endActivity();
+    } finally {
+      now.mockRestore();
+    }
+    return mockStored.ended as EndBody;
+  };
+
+  test('24시간을 넘겨 끝내면 시작 + 24시간으로 끝내고 오프라인이어도 종료 큐에 남긴다', async () => {
+    mockStored = { ...mockStored, session: { ...mockStored.session!, pausedSec: 600 } };
+    const ended = await endAt(25);
+    expect(ended.endedAt).toBe('2026-10-01T00:00:00.000Z');
+    expect(ended.durationSec + ended.pausedSec).toBeLessThanOrEqual(86_400);
+    expect(ended.durationSec).toBe(86_400 - 600);
+    expect(mockStored.outbox).toEqual([{ kind: 'end', activityId: 'a1', body: ended }]);
+  });
+
+  test('일시정지한 채 24시간을 넘겨도 멈춘 시간은 일시정지로 센다', async () => {
+    mockStored = { ...mockStored, session: { ...mockStored.session!, paused: true, pausedAt: '2026-09-30T20:00:00Z' } };
+    const ended = await endAt(30);
+    expect(ended).toMatchObject({ endedAt: '2026-10-01T00:00:00.000Z', durationSec: 20 * 3600, pausedSec: 4 * 3600 });
+  });
+
+  test('24시간 전에 끝내면 지금으로 끝낸다', async () => {
+    expect((await endAt(1)).endedAt).toBe('2026-09-30T01:00:00.000Z');
+  });
 });

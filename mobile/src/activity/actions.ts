@@ -1,7 +1,7 @@
 import * as Crypto from 'expo-crypto';
 import type { Category } from '../category';
 import { enqueue, undoItem, type ItemInput } from './outbox';
-import { addItems, closeSegment, endBody, removeItem } from './session';
+import { activityDeadline, addItems, closeSegment, endBody, removeItem } from './session';
 import { getStored, updateStored } from './store';
 import { finalSteps, isSendingItem, stopTracking, syncOutbox } from './tracking';
 
@@ -66,7 +66,8 @@ export async function endActivity(): Promise<'ended' | 'saveFailed'> {
       const measured = counted ? st.session : { ...st.session, steps: null };
       // 요약 지도·공유 카드도 종료 기록과 같은 경로를 그리도록 닫은 세션을 남긴다
       const session = measured.paused ? measured : closeSegment(measured);
-      const body = endBody(session, Date.now());
+      // 24시간을 넘겨 끝내면(자동 종료가 늦게 돈 경우) 그 시점으로 끝낸다
+      const body = endBody(session, Math.min(Date.now(), activityDeadline(session)));
       return { ...st, session, ended: body, outbox: enqueue(st.outbox, { kind: 'end', activityId: st.session.activityId, body }) };
     });
   } catch {
