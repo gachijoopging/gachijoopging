@@ -219,6 +219,23 @@ describe('실 API 클라이언트', () => {
     expect(calls[1]).toEqual(expect.objectContaining({ url: `${BASE}/notices/n1`, method: 'PATCH', body: '{"title":"t"}' }));
   });
 
+  test('활동 합계가 바뀌는 변경이 성공해야만 합계를 담은 응답을 잊는다 — 다시 연 5-3·홈이 이전 합계를 그리면 안 된다', async () => {
+    let fail = false;
+    const { api } = server(() => (fail ? json(500, { code: 'INTERNAL' }) : json(200, { data: {} })));
+    await api.get('GET /activities/{id}', { id: 'a1' });
+    await api.get('GET /crew/home');
+    await api.get('GET /crew/members/{userId}/activities', { userId: 'u1', cursor: 'c1' });
+    await api.mutate('POST /activities/{id}/live', { id: 'a1' });
+    fail = true;
+    await api.mutate('PATCH /activities/{id}/items/{itemId}', { id: 'a1', itemId: 'i1', quantity: 2 }).catch(() => {});
+    expect(peek('GET /crew/home')).toBeDefined();
+    fail = false;
+    await api.mutate('PATCH /activities/{id}/items/{itemId}', { id: 'a1', itemId: 'i1', quantity: 2 });
+    expect(peek('GET /activities/{id}', { id: 'a1' })).toBeUndefined();
+    expect(peek('GET /crew/home')).toBeUndefined();
+    expect(peek('GET /crew/members/{userId}/activities', { userId: 'u1', cursor: 'c1' })).toBeUndefined();
+  });
+
   test('204 는 값 없이 끝난다', async () => {
     const { api } = server(() => json(204));
     await expect(api.mutate('DELETE /posts/{postId}', { postId: 'p1' })).resolves.toBeUndefined();

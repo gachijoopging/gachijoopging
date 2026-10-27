@@ -139,6 +139,23 @@ export function forget(key: QueryKey, query?: unknown): void {
   forgets += 1;
 }
 
+/** 활동 합계가 바뀌는 변경. 성공하면 합계를 담은 응답을 질의와 상관없이 잊는다 — 다시 연 5-3·5-5·홈이 이전 합계부터 그리면 안 된다 */
+const ACTIVITY_WRITES: readonly MutationKey[] = [
+  'POST /activities/{id}/items', 'PATCH /activities/{id}/items/{itemId}', 'DELETE /activities/{id}/items/{itemId}',
+  'POST /activities/{id}/end', 'DELETE /activities/{id}',
+];
+const ACTIVITY_VIEWS: readonly QueryKey[] = [
+  'GET /activities/{id}', 'GET /users/me/activities', 'GET /crew/members/{userId}/activities',
+  'GET /crew/home', 'GET /users/me/stats', 'GET /crew/stats', 'GET /crew/calendar',
+];
+
+function forgetActivityViews() {
+  for (const k of [...lastResponses.keys()]) {
+    if (ACTIVITY_VIEWS.some((key) => k.startsWith(`${key} `))) lastResponses.delete(k);
+  }
+  forgets += 1;
+}
+
 const MAX_RESPONSES = 100;
 
 /** owner·sentAt 은 요청을 보낼 때 값. 받는 사이 계정이 바뀌었거나 forget 이 있었으면 낡은 응답이므로 버린다 */
@@ -345,7 +362,9 @@ export function createHttpClient({ baseUrl, fetch: send = (...args) => globalThi
         await setTokens(response.data);
         return response as never;
       }
-      return (await authed(key, body)) as never;
+      const response = await authed(key, body);
+      if (ACTIVITY_WRITES.includes(key)) forgetActivityViews();
+      return response as never;
     },
   };
 }
