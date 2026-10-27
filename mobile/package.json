@@ -54,7 +54,7 @@
     "prebuild": "expo prebuild --platform android --clean",
     "test": "jest",
     "typecheck": "tsc --noEmit",
-    "gen:mocks": "node scripts/gen-mocks.mjs"
+    "gen:mocks": "node scripts/gen-mocks.mjs && npx --yes openapi-typescript@7.13.0 ../docs/openapi.yaml --immutable -o src/api/contract.generated.ts"
   },
   "private": true,
   "jest": {

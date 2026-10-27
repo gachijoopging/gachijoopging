@@ -58,6 +58,10 @@ import { Screen, Txt, useRipple } from 'design-system/src';
 `example` 을 넣은 뒤 `npm run gen:mocks` 를 돌린다. 목에 없는 화면을 만들려면 계약에
 `example` 을 먼저 채우는 순서다.
 
+`src/api/contract.generated.ts` 도 같은 명령이 만드는 계약 타입이다. 실서버로 옮긴 경로는
+`client.ts` 의 `ContractKey` 에 넣어 응답 타입을 목이 아니라 계약에서 가져온다. 그 경로의 응답
+스키마에는 `required` 를 채운다 — 비어 있으면 모든 필드가 optional 로 생성된다.
+
 화면에서 로딩·오류 UI 를 확인할 때는 목 클라이언트에 지연과 실패를 준다.
 
 ```ts

@@ -140,11 +140,12 @@ async function send(client: ApiClient, op: Op): Promise<unknown> {
   }
 }
 
-export function applyEndedActivity(id: string, data: { id: string; status: string; endedAt: string; durationSec: number; pausedSec: number; distanceM: number; steps: number | null; route?: readonly (readonly number[])[]; itemCount: number; byCategory: Record<string, number> }) {
-  if (data.id !== id || data.status !== 'ENDED') throw new Error('종료 응답이 활동과 일치하지 않아요');
+export function applyEndedActivity(id: string, data: { id: string; status: string; endedAt: string | null; durationSec: number; pausedSec: number; distanceM: number; steps: number | null; route?: readonly (readonly number[])[] | null; itemCount: number; byCategory: Readonly<Record<string, number>> }) {
+  const { endedAt } = data;
+  if (data.id !== id || data.status !== 'ENDED' || endedAt == null) throw new Error('종료 응답이 활동과 일치하지 않아요');
   updateStored((st) => st.session?.activityId === id ? {
     ...st,
-    ended: { endedAt: data.endedAt, durationSec: data.durationSec, pausedSec: data.pausedSec, distanceM: data.distanceM, steps: data.steps, route: data.route?.map((p) => [...p]) ?? (typeof st.ended === 'object' ? st.ended?.route : null) ?? [] },
+    ended: { endedAt, durationSec: data.durationSec, pausedSec: data.pausedSec, distanceM: data.distanceM, steps: data.steps, route: data.route?.map((p) => [...p]) ?? (typeof st.ended === 'object' ? st.ended?.route : null) ?? [] },
     session: { ...st.session, itemCount: data.itemCount, byCategory: data.byCategory, distanceM: data.distanceM, steps: data.steps },
   } : st);
 }
