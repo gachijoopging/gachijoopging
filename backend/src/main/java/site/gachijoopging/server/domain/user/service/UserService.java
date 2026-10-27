@@ -1,6 +1,7 @@
 package site.gachijoopging.server.domain.user.service;
 
 import java.time.Clock;
+import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -25,10 +26,11 @@ import site.gachijoopging.server.domain.user.repository.UserRepository;
 import site.gachijoopging.server.global.error.BusinessException;
 import site.gachijoopging.server.global.error.ErrorCode;
 import site.gachijoopging.server.global.security.AccountAuthorityLoader;
+import site.gachijoopging.server.global.security.SessionCutoffLoader;
 
 @Service
 @RequiredArgsConstructor
-public class UserService implements AccountAuthorityLoader {
+public class UserService implements AccountAuthorityLoader, SessionCutoffLoader {
 
   private static final List<GrantedAuthority> USER =
       List.of(new SimpleGrantedAuthority("ROLE_USER"));
@@ -230,6 +232,13 @@ public class UserService implements AccountAuthorityLoader {
   public Collection<? extends GrantedAuthority> authoritiesOf(UUID userId) {
     activeUser(userId);
     return USER;
+  }
+
+  // 비밀번호를 재설정하면 모든 기기의 세션을 끊는다 (docs/openapi.yaml §password-reset/confirm)
+  @Override
+  @Transactional(readOnly = true)
+  public Optional<Instant> sessionCutoffOf(UUID userId) {
+    return userRepository.findById(userId).map(User::getPasswordChangedAt);
   }
 
   private User activeUser(UUID userId) {

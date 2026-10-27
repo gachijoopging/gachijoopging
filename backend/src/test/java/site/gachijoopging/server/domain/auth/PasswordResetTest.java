@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -28,6 +29,7 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 import site.gachijoopging.server.domain.auth.service.PasswordResetMailSender;
 import site.gachijoopging.server.support.IntegrationTest;
 import site.gachijoopging.server.support.TestAccounts;
+import site.gachijoopging.server.support.TestAccounts.TestAccount;
 
 @AutoConfigureMockMvc
 class PasswordResetTest extends IntegrationTest {
@@ -224,6 +226,41 @@ class PasswordResetTest extends IntegrationTest {
     }
 
     mockMvc.perform(확인요청("four@test.io", 코드, "newpassword123")).andExpect(status().isNoContent());
+  }
+
+  @Test
+  void 바꾸면_그_전에_받은_accessToken_도_거부되고_새로_받은_것은_통한다() throws Exception {
+    TestAccount 바꾸는_사람 = TestAccounts.가입한다(mockMvc, "access-reset@test.io");
+    TestAccount 가만있는_사람 = TestAccounts.가입한다(mockMvc, "access-keep@test.io");
+    String 코드 = 코드를_받는다("access-reset@test.io");
+    // iat 는 초 단위라 같은 초에 바꾸면 그 전 토큰도 통한다 — 다음 초로 넘긴다
+    Thread.sleep(1_100);
+
+    mockMvc
+        .perform(확인요청("access-reset@test.io", 코드, "newpassword123"))
+        .andExpect(status().isNoContent());
+
+    mockMvc
+        .perform(내_정보(바꾸는_사람.accessToken()))
+        .andExpect(status().isUnauthorized())
+        .andExpect(jsonPath("$.code").value("TOKEN_EXPIRED"));
+    String 새_토큰 =
+        objectMapper
+            .readTree(
+                mockMvc
+                    .perform(로그인("access-reset@test.io", "newpassword123"))
+                    .andReturn()
+                    .getResponse()
+                    .getContentAsString())
+            .get("data")
+            .get("accessToken")
+            .asText();
+    mockMvc.perform(내_정보(새_토큰)).andExpect(status().isOk());
+    mockMvc.perform(내_정보(가만있는_사람.accessToken())).andExpect(status().isOk());
+  }
+
+  private static MockHttpServletRequestBuilder 내_정보(String accessToken) {
+    return get("/api/v1/users/me").header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken);
   }
 
   private static void 코드_오류다(ResultActions 결과) throws Exception {

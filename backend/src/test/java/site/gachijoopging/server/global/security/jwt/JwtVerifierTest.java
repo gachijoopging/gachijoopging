@@ -14,15 +14,19 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.Base64;
 import java.util.Date;
+import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import site.gachijoopging.server.global.error.BusinessException;
 import site.gachijoopging.server.global.error.ErrorCode;
+import site.gachijoopging.server.global.security.SessionCutoffLoader;
 
 class JwtVerifierTest {
 
   private static final Instant 지금 = Instant.parse("2026-08-04T00:00:00Z");
   private static final Clock 고정시계 = Clock.fixed(지금, ZoneOffset.UTC);
+
+  private static final SessionCutoffLoader 끊긴_적_없음 = userId -> Optional.empty();
 
   private final JwtKeyFixture active = JwtKeyFixture.새_키쌍();
   private final JwtKeyFixture previous = JwtKeyFixture.새_키쌍();
@@ -39,7 +43,8 @@ class JwtVerifierTest {
   void 만료된_토큰은_거부된다() {
     String 토큰 = issuer(active, "active-1").issue(UUID.randomUUID());
     JwtVerifier 한참_뒤 =
-        new JwtVerifier(properties(), Clock.fixed(지금.plus(Duration.ofHours(2)), ZoneOffset.UTC));
+        new JwtVerifier(
+            properties(), Clock.fixed(지금.plus(Duration.ofHours(2)), ZoneOffset.UTC), 끊긴_적_없음);
 
     assertThatThrownBy(() -> 한참_뒤.verify(토큰))
         .isInstanceOf(BusinessException.class)
@@ -62,7 +67,8 @@ class JwtVerifierTest {
             "active-1", active.privateKeyPem(), active.publicKeyPem(), "", "", Duration.ofHours(1));
     UUID 사용자 = UUID.randomUUID();
 
-    UUID 결과 = new JwtVerifier(빈_previous, 고정시계).verify(issuer(active, "active-1").issue(사용자));
+    UUID 결과 =
+        new JwtVerifier(빈_previous, 고정시계, 끊긴_적_없음).verify(issuer(active, "active-1").issue(사용자));
 
     assertThat(결과).isEqualTo(사용자);
   }
@@ -110,8 +116,30 @@ class JwtVerifierTest {
     assertThatThrownBy(() -> verifier().verify("not-a-jwt")).isInstanceOf(BusinessException.class);
   }
 
+  @Test
+  void 세션이_끊기기_전에_발급된_토큰은_거부된다() {
+    String 토큰 = issuer(active, "active-1").issue(UUID.randomUUID());
+    JwtVerifier 끊은_뒤 =
+        new JwtVerifier(properties(), 고정시계, userId -> Optional.of(지금.plusSeconds(1)));
+
+    assertThatThrownBy(() -> 끊은_뒤.verify(토큰))
+        .isInstanceOf(BusinessException.class)
+        .extracting(e -> ((BusinessException) e).errorCode())
+        .isEqualTo(ErrorCode.TOKEN_EXPIRED);
+  }
+
+  @Test
+  void 세션을_끊은_그_초_안에_발급된_토큰은_통한다() {
+    UUID 사용자 = UUID.randomUUID();
+    String 토큰 = issuer(active, "active-1").issue(사용자);
+    JwtVerifier 같은_초에_끊음 =
+        new JwtVerifier(properties(), 고정시계, userId -> Optional.of(지금.plusMillis(500)));
+
+    assertThat(같은_초에_끊음.verify(토큰)).isEqualTo(사용자);
+  }
+
   private JwtVerifier verifier() {
-    return new JwtVerifier(properties(), 고정시계);
+    return new JwtVerifier(properties(), 고정시계, 끊긴_적_없음);
   }
 
   private JwtProperties properties() {

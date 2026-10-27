@@ -61,6 +61,9 @@ public class User {
   @Column(name = "deleted_at")
   private Instant deletedAt;
 
+  @Column(name = "password_changed_at")
+  private Instant passwordChangedAt;
+
   public boolean active() {
     return status == UserStatus.ACTIVE;
   }
@@ -106,6 +109,7 @@ public class User {
 
   public void changePassword(String passwordHash, Instant now) {
     this.passwordHash = requireNonNull(passwordHash, "passwordHash");
+    this.passwordChangedAt = now;
     this.updatedAt = now;
   }
 }

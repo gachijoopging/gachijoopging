@@ -11,6 +11,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.util.Base64;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -116,7 +117,7 @@ class JwtAuthenticationFilterTest {
 
     @Bean
     JwtVerifier jwtVerifier() {
-      return new JwtVerifier(PROPERTIES, Clock.systemUTC());
+      return new JwtVerifier(PROPERTIES, Clock.systemUTC(), userId -> Optional.empty());
     }
 
     private static JwtProperties 새_설정() {

@@ -61,6 +61,7 @@ erDiagram
 | notify_activity_start | boolean | NOT NULL DEFAULT true — 팔로우 알림 전체 스위치 |
 | status | text | ACTIVE · DELETED |
 | created_at · updated_at · deleted_at | timestamptz | |
+| password_changed_at | timestamptz | 비밀번호 재설정 시각. 이보다 먼저 발급된 accessToken 은 거부 |
 
 **user_agreements** — 약관·개인정보 동의 이력. 닉네임 완료 상태로 동의 완료를 대신하지 않는다. API `complete` 는 필수 `type` 마다 현재 버전 행의 `agreed` 가 true 인지로 파생한다.
 
@@ -73,7 +74,7 @@ erDiagram
 | agreed_at | timestamptz | |
 | PK | | (user_id, type, version) |
 
-비밀번호 재설정 성공 시 모든 기기의 access/refresh 세션을 무효화하고 재로그인을 요구한다. 소셜 전용 계정에 새 비밀번호를 만드는 기능은 없다. 세션 무효화의 실제 저장/검증 방식은 구현에서 결정한다.
+비밀번호 재설정 성공 시 모든 기기의 access/refresh 세션을 무효화하고 재로그인을 요구한다. 소셜 전용 계정에 새 비밀번호를 만드는 기능은 없다. refresh 는 폐기하고, access 는 `password_changed_at` 으로 막는다.
 
 **refresh_tokens** — 이관한 `auth` Entity 그대로.
 

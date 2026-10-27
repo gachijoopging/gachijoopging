@@ -6,6 +6,7 @@ import com.auth0.jwt.interfaces.DecodedJWT;
 import java.security.interfaces.RSAPublicKey;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -13,6 +14,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import site.gachijoopging.server.global.error.BusinessException;
 import site.gachijoopging.server.global.error.ErrorCode;
+import site.gachijoopging.server.global.security.SessionCutoffLoader;
 
 @Component
 public class JwtVerifier {
@@ -21,10 +23,13 @@ public class JwtVerifier {
 
   private final Map<String, RSAPublicKey> publicKeysByKid;
   private final Clock clock;
+  private final SessionCutoffLoader sessionCutoffLoader;
 
-  public JwtVerifier(JwtProperties properties, Clock clock) {
+  public JwtVerifier(
+      JwtProperties properties, Clock clock, SessionCutoffLoader sessionCutoffLoader) {
     this.publicKeysByKid = publicKeysByKid(properties);
     this.clock = clock;
+    this.sessionCutoffLoader = sessionCutoffLoader;
   }
 
   public UUID verify(String token) {
@@ -55,7 +60,21 @@ public class JwtVerifier {
       throw reject("만료됐다");
     }
 
-    return subject(decoded);
+    UUID userId = subject(decoded);
+    if (issuedBeforeCutoff(decoded, userId)) {
+      throw reject("세션이 끊기기 전에 발급됐다");
+    }
+    return userId;
+  }
+
+  // iat 는 초 단위다. 기준도 초로 잘라야 끊은 그 초 안에 새로 받은 토큰이 통한다
+  private boolean issuedBeforeCutoff(DecodedJWT decoded, UUID userId) {
+    Instant issuedAt = decoded.getIssuedAtAsInstant();
+    return sessionCutoffLoader
+        .sessionCutoffOf(userId)
+        .map(cutoff -> cutoff.truncatedTo(ChronoUnit.SECONDS))
+        .filter(cutoff -> issuedAt == null || issuedAt.isBefore(cutoff))
+        .isPresent();
   }
 
   private DecodedJWT decode(String token) {
