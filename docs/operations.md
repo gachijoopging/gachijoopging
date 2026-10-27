@@ -790,11 +790,15 @@ Supabase **Free 플랜은 내려받을 수 있는 백업이 없다.** 그래서 
 
 | 무엇 | 값 |
 |---|---|
-| 언제 | 매일 03:30 (서버 cron, `provision.sh` 가 건다) |
+| 언제 | 매일 **03:30 UTC = 12:30 KST** (서버 cron, `provision.sh` 가 건다). 서버 시계가 UTC 라 한국 낮에 돈다 — 덤프가 1초라 부담이 없어 그대로 둔다 |
 | 무엇을 | `public` 스키마 + `postgis` 확장. Supabase 가 관리하는 `auth`·`storage` 는 우리 것이 아니라 뺀다 |
-| 어디에 | 서버 `/data/backups/db-YYYY-MM-DD.dump` (700, `pg_dump -Fc`). DB(Supabase)와 다른 곳이다 |
+| 어디에 | 서버 `/data/backups/db-YYYY-MM-DD.dump` — 디렉터리 700 · 파일 600 · `pg_dump -Fc`. DB(Supabase)와 다른 곳이다 |
 | 얼마나 | **30일.** 개인정보처리방침 §6 "백업에 남은 사본은 30일 안에 함께 지운다" |
 | 실패하면 | `watch.sh --limits` 가 하루 안의 덤프가 없을 때 알린다. cron 이 아예 안 돈 경우까지 잡는다 |
+
+**이미 있는 서버에는 `provision.sh` 를 한 번 더 돌린다** — 여러 번 돌려도 안전하다. `deploy.yml` 은
+`backup.sh` 를 올리기만 하고 cron 과 `/data/backups` 는 `provision.sh` 가 만든다. 안 돌리면 배포 다음
+날부터 **`watch.sh --limits` 가 매일 "백업이 하루 넘게 없다" 를 보낸다** — 백업이 아니라 cron 이 없어서다.
 
 > ⚠️ 서버와 DB 가 **함께** 사라지는 경우는 막지 못한다. 덤프를 서버 밖으로 옮기는 것은 하지 않았다 —
 > 개인정보가 든 파일을 한 곳 더 두는 대가가 있다. 필요해지면 그때 정한다.
@@ -827,8 +831,11 @@ cd /opt/gachijoopging
 **실제로 복원할 때** (DB 를 잃었을 때). 새 Supabase 프로젝트를 만들고 `DATABASE_*` 를 바꾼 뒤:
 
 ```sh
-docker run --rm -i -e PGPASSWORD=<새 비밀번호> postgres:17-alpine \
+# 비밀번호를 명령줄에 쓰지 않는다 — 쉘 히스토리에 남는다(watch.sh 가 웹훅을 인자로 받지 않는 것과 같다)
+read -rs PGPASSWORD && export PGPASSWORD
+docker run --rm -i -e PGPASSWORD postgres:17-alpine \
   pg_restore -h <새 호스트> -p 5432 -U <새 사용자> -d postgres --no-owner --no-acl < /data/backups/db-<날짜>.dump
+unset PGPASSWORD
 ```
 
 백엔드를 띄우면 Flyway 가 `flyway_schema_history` 를 보고 이미 적용된 것을 건너뛴다.

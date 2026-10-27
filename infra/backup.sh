@@ -49,31 +49,54 @@ if [ "${1:-}" = "--verify" ]; then
     exit 1
   fi
   name=gachijoopging-restore-check
-  docker rm -f "$name" >/dev/null 2>&1 || true
+  # -v 를 빼면 컨테이너만 지워지고 익명 볼륨이 남는다. 이미지가 PGDATA 를 VOLUME 으로 선언하므로
+  # 그 볼륨에 복원된 운영 DB 사본이 통째로 남는데, /data/backups 가 아니라 30일 삭제 대상도 아니다.
+  docker rm -fv "$name" >/dev/null 2>&1 || true
   # 끝나면 지운다. 개인정보가 든 복원본을 서버에 남기지 않는다.
-  trap 'docker rm -f "$name" >/dev/null 2>&1 || true' EXIT
+  trap 'docker rm -fv "$name" >/dev/null 2>&1 || true' EXIT
   docker run -d --name "$name" -e POSTGRES_PASSWORD=check "$RESTORE_IMAGE" >/dev/null
+  # TCP 로 묻는다. 유닉스 소켓으로 물으면 **초기화 중인 임시 서버**가 ready 를 돌려준다 —
+  # postgres 엔트리포인트는 초기화 서버를 listen_addresses='' 로 띄우기 때문이다. 그때 복원을
+  #시작하면 postgis 설치가 끝나며 그 서버가 내려가 복원이 중간에 끊기고, 증상은 "표 목록이
+  # 다르다"로 나와 덤프가 깨진 것처럼 보인다. TCP 는 진짜 서버가 뜬 뒤에만 열린다.
   i=0
-  until docker exec "$name" pg_isready -U postgres -q 2>/dev/null; do
+  until docker exec "$name" pg_isready -h 127.0.0.1 -U postgres -q 2>/dev/null; do
     i=$((i + 1))
-    if [ "$i" -gt 60 ]; then echo "복원용 DB 가 뜨지 않는다" >&2; exit 1; fi
+    if [ "$i" -gt 60 ]; then
+      echo "복원용 DB 가 뜨지 않는다" >&2
+      docker logs --tail 20 "$name" >&2 || true
+      exit 1
+    fi
     sleep 1
   done
-  # 이미지의 초기화 스크립트가 postgis 를 만든 뒤 한 번 재기동한다. 그 재기동이 끝나야 붙는다.
-  sleep 5
-  until docker exec "$name" pg_isready -U postgres -q 2>/dev/null; do sleep 1; done
+
+  # 기본 postgres DB 에는 이미지가 postgis 를 미리 깔아 둔다. 거기에 복원하면 덤프에 확장이
+  # 빠져 있어도 통과한다 — 검증이 덤프가 아니라 이미지를 보게 된다. 빈 DB 를 만들어 거기에 넣는다.
+  docker exec "$name" createdb -U postgres restore
 
   echo "복원: $file"
   start=$(date +%s)
+  rlog=$(mktemp)
+  trap 'docker rm -fv "$name" >/dev/null 2>&1 || true; rm -f "$rlog"' EXIT
   # 소유자·권한은 Supabase 역할이라 빈 DB 에 없다. 빼고 복원한다.
-  # 오류가 나도 끝까지 간다 — 무엇이 실패했는지 전부 보고 대조로 판정한다.
-  docker exec -i "$name" pg_restore -U postgres -d postgres --no-owner --no-acl < "$file" || true
+  # 오류가 나도 끝까지 가서 전부 모은 뒤 아래에서 가려낸다.
+  docker exec -i "$name" pg_restore -U postgres -d restore --no-owner --no-acl < "$file" 2>"$rlog" || true
   took=$(( $(date +%s) - start ))
 
+  # 복원 오류를 전부 무시하면 데이터 COPY 나 인덱스·FK 가 실패해도 표 목록은 맞아서 통과한다.
+  # 예상된 것 하나(template1 에 public 이 있어 나온다)만 넘기고 나머지는 실패로 본다.
+  errs=$(grep -c '^pg_restore: error:' "$rlog" || true)
+  benign=$(grep -c '^pg_restore: error:.*schema "public" already exists' "$rlog" || true)
+  cat "$rlog"
+  if [ "${errs:-0}" -ne "${benign:-0}" ]; then
+    echo "복원에 예상 밖의 오류가 있다 ($errs 건 중 $benign 건만 예상된 것)" >&2
+    exit 1
+  fi
+
   src=$(mktemp); dst=$(mktemp)
-  trap 'docker rm -f "$name" >/dev/null 2>&1 || true; rm -f "$src" "$dst"' EXIT
+  trap 'docker rm -fv "$name" >/dev/null 2>&1 || true; rm -f "$rlog" "$src" "$dst"' EXIT
   src_psql "$FACTS_SQL" > "$src"
-  docker exec "$name" psql -U postgres -d postgres -tA -c "$FACTS_SQL" > "$dst"
+  docker exec "$name" psql -U postgres -d restore -tA -c "$FACTS_SQL" > "$dst"
 
   echo ""
   echo "원본 | 복원본"
@@ -98,6 +121,17 @@ fi
 
 umask 077
 mkdir -p "$DIR"
+
+# 지우기를 덤프보다 **먼저** 한다. 맨 끝에 두면 덤프가 실패한 날 set -e 가 여기까지 오지 못해,
+# pooler 장애로 사흘 실패하면 30일 넘은 덤프가 사흘 더 남는다. 개인정보처리방침 §6 의 약속이라
+# 덤프 성공 여부와 독립이어야 한다.
+#
+# -mtime 은 나이를 하루 단위로 내림한다. 30일 전 덤프가 오늘 이 줄이 도는 시각보다 몇 초라도
+# 늦게 끝났다면 31일째까지 남는다. 분 단위로 재고 1시간 여유를 둬 cron 시각이 날마다 몇 초씩
+# 흔들리는 것을 흡수한다.
+find "$DIR" -name 'db-*.dump' -mmin +$((KEEP_DAYS * 24 * 60 - 60)) -print -delete
+find "$DIR" -name 'db-*.dump.tmp' -mtime +0 -print -delete
+
 out="$DIR/db-$(date +%F).dump"
 # 끝까지 쓴 것만 .dump 가 된다. 도중에 죽은 파일을 최근 덤프로 착각하지 않게 한다.
 #
@@ -113,6 +147,3 @@ mv "$out.tmp" "$out"
 # 당장 새지는 않지만, 개인정보가 든 파일이 디렉터리 권한 하나에만 기대게 두지 않는다.
 chmod 600 "$out"
 echo "$(date '+%F %T') 덤프 $(du -h "$out" | cut -f1) $out"
-
-find "$DIR" -name 'db-*.dump' -mtime +$((KEEP_DAYS - 1)) -print -delete
-find "$DIR" -name 'db-*.dump.tmp' -mtime +0 -print -delete
