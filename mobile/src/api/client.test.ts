@@ -226,6 +226,27 @@ describe('실 API 클라이언트', () => {
     expect(currentAccount()).toEqual(expect.objectContaining({ id: 'u1', hasCrew: true }));
   });
 
+  test.each([
+    ['로그아웃', null],
+    ['다른 계정으로 로그인', 'u2'],
+  ] as const)('내 정보를 기다리는 사이 %s 하면 늦게 온 앞 계정을 기억하지 않는다', async (_label, after) => {
+    let answer!: (r: Response) => void;
+    const { api } = server((c) => {
+      if (c.url.endsWith('/users/me')) return new Promise<Response>((r) => { answer = r; });
+      if (c.url.endsWith('/auth/logout')) return json(204);
+      return json(200, { data: { accessToken: 'b', refreshToken: 'r-b' } });
+    });
+    const late = api.get('GET /users/me');
+    await new Promise((r) => setTimeout(r, 0));
+    if (after) {
+      await api.mutate('POST /auth/login', { email: 'b@b.c', password: 'p' });
+      rememberAccount({ id: after, membership: { status: 'NONE' } });
+    } else await api.mutate('POST /auth/logout');
+    answer(json(200, { data: { id: 'u1', membership: { status: 'MEMBER', crew: null, rejection: null } } }));
+    await late;
+    expect(currentAccount()?.id ?? null).toBe(after);
+  });
+
   test('204 는 값 없이 끝난다', async () => {
     const { api } = server(() => json(204));
     await expect(api.mutate('DELETE /posts/{postId}', { postId: 'p1' })).resolves.toBeUndefined();

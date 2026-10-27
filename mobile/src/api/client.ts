@@ -314,11 +314,13 @@ export function createHttpClient({ baseUrl, fetch: send = (...args) => globalThi
     async get(key, query) {
       const owner = currentOwner();
       const sentAt = forgets;
+      const started = session;
       const response = (await authed(key, query)) as ApiResponse<typeof key>;
       remember(owner, sentAt, key, query, response);
       // 크루를 만들거나 가입이 승인돼도 화면마다 기억을 고치지 않는다. 내 정보를 받을 때마다 맞춘다 —
-      // 크루 없음으로 남으면 오프라인 재실행이 1-6 에 멈춰 활동 기록을 보내지 못한다
-      if (key === 'GET /users/me') rememberAccount((response as ApiResponse<'GET /users/me'>).data);
+      // 크루 없음으로 남으면 오프라인 재실행이 1-6 에 멈춰 활동 기록을 보내지 못한다.
+      // 기다리는 사이 로그아웃·계정 전환이 있었으면 앞 계정을 다시 기억하지 않는다
+      if (key === 'GET /users/me' && started === session) rememberAccount((response as ApiResponse<'GET /users/me'>).data);
       return response;
     },
     async mutate(key, body) {
