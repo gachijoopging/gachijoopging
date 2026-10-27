@@ -324,3 +324,9 @@ test('24시간 뒤의 위치는 경로·거리·현재 위치에 넣지 않는�
   const late = applyFix(applyFix(s, { ...fix(0, 0.001), timestamp: T0 + 86_400_000 }), { ...fix(0, 0.002), timestamp: T0 + 90_000_000 });
   expect(late).toBe(s);
 });
+
+test('끝내는 시각 뒤에 시작한 일시정지는 그 시각에 활동 중이었던 것으로 센다 — 활동 시간이 24시간을 넘거나 일시정지가 음수가 되지 않는다', () => {
+  const s = { ...started(), pausedSec: 600, paused: true, pausedAt: new Date(T0 + 24.5 * 3_600_000).toISOString() };
+  const body = endBody(s, T0 + 86_400_000);
+  expect(body).toMatchObject({ durationSec: 86_400 - 600, pausedSec: 600 });
+});

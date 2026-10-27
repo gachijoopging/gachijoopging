@@ -187,7 +187,10 @@ export function livePayload(s: Session, now: number) {
 }
 
 export function endBody(active: Session, now: number) {
-  const s = active.paused ? active : closeSegment(active);
+  // 끝내는 시각 뒤에 시작한 일시정지(24시간을 넘겨 늦게 끝낸 활동)는 그 시각에는 아직 활동 중이었다.
+  // 그대로 두면 활동 시간이 24시간을 넘고 일시정지가 음수가 된다
+  const asOfEnd = active.paused && active.pausedAt && Date.parse(active.pausedAt) > now ? { ...active, paused: false, pausedAt: null } : active;
+  const s = asOfEnd.paused ? asOfEnd : closeSegment(asOfEnd);
   const durationSec = elapsedSec(s, now);
   const totalSec = Math.max(0, Math.floor((now - Date.parse(s.startedAt)) / 1000));
   return {

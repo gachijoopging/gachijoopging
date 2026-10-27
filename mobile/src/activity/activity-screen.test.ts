@@ -3,6 +3,8 @@ import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 
 const mockHaptic = jest.fn(async (_type: string) => {});
 const mockReplace = jest.fn();
+let mockFocused = true;
+let mockWriteFails = false;
 const mockSession = { activityId: 'a1', userId: 'u1', startedAt: new Date().toISOString(), pausedSec: 0, paused: false, pausedAt: null, locationShared: false, itemCount: 0, byCategory: {}, segments: [], distanceM: 0, steps: null };
 let mockStored: Record<string, unknown> = { session: mockSession, ended: null, outbox: [] };
 jest.mock('expo/src/winter/fetch', () => ({ fetch: jest.fn() }));
@@ -14,7 +16,7 @@ jest.mock('expo-linking', () => ({ openSettings: jest.fn() }));
 jest.mock('expo-location', () => ({ getForegroundPermissionsAsync: async () => ({ granted: true }), hasServicesEnabledAsync: async () => true }));
 jest.mock('expo-network', () => ({ useNetworkState: () => ({ isConnected: true }) }));
 jest.mock('expo-status-bar', () => ({ StatusBar: 'StatusBar' }));
-jest.mock('expo-router', () => ({ router: { replace: (...a: unknown[]) => mockReplace(...a), push: jest.fn() }, useLocalSearchParams: () => ({ id: 'a1' }), useIsFocused: () => true, useFocusEffect: () => {} }));
+jest.mock('expo-router', () => ({ router: { replace: (...a: unknown[]) => mockReplace(...a), push: jest.fn() }, useLocalSearchParams: () => ({ id: 'a1' }), useIsFocused: () => mockFocused, useFocusEffect: () => {} }));
 jest.mock('react-native', () => ({ View: 'View', Pressable: 'Pressable', AppState: { currentState: 'active', addEventListener: () => ({ remove() {} }) } }));
 jest.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }) }));
 jest.mock('../../modules/kakao-map', () => ({ KakaoMapView: 'KakaoMapView' }));
@@ -25,7 +27,7 @@ jest.mock('./store', () => ({
   loadAccount: () => mockStored,
   loadLastAccount: () => null,
   subscribe: () => () => {},
-  updateStored: (fn: (s: typeof mockStored) => typeof mockStored) => { mockStored = fn(mockStored); },
+  updateStored: (fn: (s: typeof mockStored) => typeof mockStored) => { if (mockWriteFails) throw new Error('disk'); mockStored = fn(mockStored); },
 }));
 jest.mock('./tracking', () => ({ finalSteps: jest.fn(async () => {}), refreshSteps: jest.fn(async () => {}), startTracking: jest.fn(async () => {}), stopTracking: jest.fn(async () => {}), syncOutbox: jest.fn(async () => {}), tick: jest.fn() }));
 jest.mock('./QuickPickupSheet', () => ({ QuickPickupSheet: 'QuickPickupSheet' }));
@@ -38,7 +40,7 @@ import Activity from '../../app/activity/[id]/index';
 
 let tree: ReactTestRenderer;
 beforeAll(() => { (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true; });
-afterEach(() => { act(() => tree.unmount()); mockStored = { session: mockSession, ended: null, outbox: [] }; mockReplace.mockClear(); mockGet.mockReset().mockImplementation(() => new Promise(() => {})); });
+afterEach(() => { act(() => tree.unmount()); mockFocused = true; mockWriteFails = false; mockStored = { session: mockSession, ended: null, outbox: [] }; mockReplace.mockClear(); mockGet.mockReset().mockImplementation(() => new Promise(() => {})); });
 
 test('활동을 끝내 기록이 기기에 남으면 손끝으로 알리고 요약으로 간다', async () => {
   await act(async () => { tree = create(React.createElement(Activity)); });
@@ -115,5 +117,29 @@ describe('기기에 없는 활동으로 들어왔을 때', () => {
     expect(mockReplace).toHaveBeenCalledTimes(1);
     expect(mockReplace.mock.calls[0][0].params.flash).not.toBe('활동이 이미 끝났어요');
     expect(mockReplace.mock.calls[0][0].params.flash).toMatch(/불러오지 못했어요/);
+  });
+});
+
+describe('24시간 자동 종료가 4-3 에서 막힐 때', () => {
+  const expired = () => ({ session: { ...mockSession, startedAt: new Date(Date.now() - 25 * 3_600_000).toISOString() }, ended: null, outbox: [] });
+
+  test('4-4·4-5 가 위에 있으면 요약으로 바꾸지 않는다 — 그 화면의 이탈 막기에 걸린다', async () => {
+    mockStored = expired();
+    mockFocused = false;
+    await act(async () => { tree = create(React.createElement(Activity)); });
+    expect(mockReplace).not.toHaveBeenCalled();
+  });
+
+  test('저장에 실패하면 확인창이 오류와 [종료하기] 재시도를 보인다', async () => {
+    mockStored = expired();
+    mockWriteFails = true;
+    await act(async () => { tree = create(React.createElement(Activity)); });
+    const dialog = tree.root.find((n) => (n.type as unknown) === 'Dialog' && n.props.title === '활동을 종료할까요?');
+    expect(dialog.props.visible).toBe(true);
+    expect(dialog.findAll((n) => (n.type as unknown) === 'Banner')).toHaveLength(1);
+    expect(mockReplace).not.toHaveBeenCalled();
+    mockWriteFails = false;
+    await pressEnd();
+    expect(mockReplace).toHaveBeenCalledWith({ pathname: '/activity/[id]/summary', params: { id: 'a1' } });
   });
 });

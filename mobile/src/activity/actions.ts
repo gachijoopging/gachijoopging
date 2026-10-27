@@ -2,7 +2,7 @@ import * as Crypto from 'expo-crypto';
 import type { Category } from '../category';
 import { enqueue, undoItem, type ItemInput } from './outbox';
 import { activityDeadline, addItems, closeSegment, endBody, removeItem } from './session';
-import { getStored, updateStored } from './store';
+import { getStored, loadLastAccount, updateStored } from './store';
 import { finalSteps, isSendingItem, stopTracking, syncOutbox } from './tracking';
 
 /** 시트 안 "되돌리기" 가 가리키는 마지막 담기. 되돌리기는 이 한 단위만 한다 */
@@ -61,7 +61,8 @@ export async function endActivity(): Promise<'ended' | 'saveFailed'> {
   ]);
   try {
     updateStored((st) => {
-      if (!st.session) return st;
+      // 4-3·배경 위치 작업·앱 복귀가 함께 끝내려 해도 종료 기록은 하나다
+      if (!st.session || st.ended) return st;
       // 종료 시각까지 읽지 못한 걸음은 일부 구간 값이다. 그것으로 전체 거리를 줄이지 않는다
       const measured = counted ? st.session : { ...st.session, steps: null };
       // 요약 지도·공유 카드도 종료 기록과 같은 경로를 그리도록 닫은 세션을 남긴다
@@ -76,4 +77,11 @@ export async function endActivity(): Promise<'ended' | 'saveFailed'> {
   await stopTracking();
   void syncOutbox();
   return 'ended';
+}
+
+/** 시작 24시간이 지난 활동을 끝낸다. 4-3 이 없어도(배경 위치 작업·콜드 스타트·앱 복귀) 같은 종료를 탄다 */
+export async function endIfExpired(now = Date.now()): Promise<boolean> {
+  const st = loadLastAccount();
+  if (!st?.session || st.ended || now < activityDeadline(st.session)) return false;
+  return (await endActivity()) === 'ended';
 }

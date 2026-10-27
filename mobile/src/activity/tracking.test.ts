@@ -28,8 +28,11 @@ jest.mock('expo-task-manager', () => ({ defineTask: jest.fn() }));
 jest.mock('../../modules/tracking-notification', () => ({ updateTrackingNotification: jest.fn() }));
 jest.mock('./store', () => ({
   getStored: () => mockStored,
+  loadLastAccount: () => mockStored,
   updateStored: (fn: (st: typeof mockStored) => typeof mockStored) => { mockStored = fn(mockStored); },
 }));
+const mockEndIfExpired = jest.fn(async () => false);
+jest.mock('./actions', () => ({ endIfExpired: () => mockEndIfExpired() }));
 
 beforeEach(() => {
   mockStored = { session: null, ended: null, outbox: [] };
@@ -211,3 +214,16 @@ describe('걸음수 갱신', () => {
   });
 });
 
+
+describe('배경 위치 작업', () => {
+  const task = () => (jest.requireMock('expo-task-manager').defineTask as jest.Mock).mock.calls[0][1] as (body: unknown) => Promise<void>;
+  const fixAt = (t: number) => ({ coords: { latitude: 37.5, longitude: 127, accuracy: 5 }, timestamp: t });
+
+  test('화면이 없어도 위치가 들어올 때 24시간이 지났는지 보고, 끝냈으면 실시간 위치를 보내지 않는다', async () => {
+    mockStored.session = newSession({ id: 'a1', startedAt: new Date(Date.now() - 25 * 3_600_000).toISOString(), pausedSec: 0, paused: false, pausedAt: null, itemCount: 0, locationShared: true }, 'u1', 0);
+    mockEndIfExpired.mockResolvedValueOnce(true);
+    await task()({ data: { locations: [fixAt(Date.now())] }, error: null });
+    expect(mockEndIfExpired).toHaveBeenCalledTimes(1);
+    expect(mockMutate).not.toHaveBeenCalledWith('POST /activities/{id}/live', expect.anything());
+  });
+});

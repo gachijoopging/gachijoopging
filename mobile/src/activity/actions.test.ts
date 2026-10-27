@@ -1,4 +1,4 @@
-import { endActivity, quickPickup, recordPickup, undoPickup } from './actions';
+import { endActivity, endIfExpired, quickPickup, recordPickup, undoPickup } from './actions';
 import { newSession } from './session';
 import type { EndBody } from './outbox';
 
@@ -10,6 +10,7 @@ jest.mock('./tracking', () => ({ syncOutbox: jest.fn(), isSendingItem: () => fal
 let mockWriteFails = false;
 jest.mock('./store', () => ({
   getStored: () => mockStored,
+  loadLastAccount: () => mockStored,
   updateStored: (fn: (st: typeof mockStored) => typeof mockStored) => { if (mockWriteFails) throw new Error('disk'); mockStored = fn(mockStored); },
 }));
 
@@ -88,5 +89,31 @@ describe('24시간 자동 종료', () => {
 
   test('24시간 전에 끝내면 지금으로 끝낸다', async () => {
     expect((await endAt(1)).endedAt).toBe('2026-09-30T01:00:00.000Z');
+  });
+});
+
+test('4-3·배경 위치 작업·앱 복귀가 함께 끝내도 종료 기록은 하나다', async () => {
+  await endActivity();
+  const first = mockStored.ended;
+  await endActivity();
+  expect(mockStored.outbox.filter((op) => op.kind === 'end')).toHaveLength(1);
+  expect(mockStored.ended).toBe(first);
+});
+
+describe('화면 없이 24시간 지난 활동 끝내기', () => {
+  const START = Date.parse('2026-09-30T00:00:00Z');
+
+  test('24시간이 지났으면 그 시점으로 끝내고 추적을 끈다', async () => {
+    await expect(endIfExpired(START + 25 * 3_600_000)).resolves.toBe(true);
+    expect(mockStored.outbox).toEqual([expect.objectContaining({ kind: 'end', activityId: 'a1' })]);
+    expect(mockStop).toHaveBeenCalledTimes(1);
+  });
+
+  test('24시간 전이거나 이미 끝났으면 건드리지 않는다', async () => {
+    await expect(endIfExpired(START + 3_600_000)).resolves.toBe(false);
+    mockStored = { ...mockStored, ended: true };
+    await expect(endIfExpired(START + 25 * 3_600_000)).resolves.toBe(false);
+    expect(mockStored.outbox).toEqual([]);
+    expect(mockStop).not.toHaveBeenCalled();
   });
 });

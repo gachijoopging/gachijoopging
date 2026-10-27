@@ -39,6 +39,9 @@ TaskManager.defineTask<{ locations: Location.LocationObject[] }>(TRACKING_TASK, 
     const session = fixes.reduce(applyFix, st.session);
     return { ...st, session };
   });
+  // 화면이 없어도 24시간이 되면 끝내고 추적을 끈다. actions 가 이 모듈을 가져다 쓰므로 순환을 피해 부를 때 가져온다
+  const { endIfExpired } = require('./actions') as typeof import('./actions');
+  if (await endIfExpired()) return;
   await tick(Date.now());
 });
 

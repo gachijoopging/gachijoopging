@@ -262,6 +262,8 @@ export default function ActivityInProgressScreen() {
     if ((await endActivity()) === 'saveFailed') {
       setEnding(false);
       setEndFailed(true);
+      // 자동 종료는 확인창 없이 시작한다. 저장 실패와 재시도는 확인창이 보여 준다
+      setConfirmEnd(true);
       return;
     }
     // 기록이 기기에 남은 뒤에만 알린다. API 30 미만은 Confirm 이 없어 조용히 넘어간다
@@ -270,10 +272,15 @@ export default function ActivityInProgressScreen() {
     router.replace({ pathname: '/activity/[id]/summary', params: { id } });
   };
 
-  // 24시간이 되면 종료 버튼과 같게 끝낸다. 꺼져 있던 앱을 다시 열었을 때도 첫 화면에서 같은 검사를 거친다
+  // 24시간이 되면 종료 버튼과 같게 끝낸다. 꺼져 있던 앱을 다시 열었을 때도 첫 화면에서 같은 검사를 거친다.
+  // 4-4·4-5 가 위에 있으면 요약으로 바꾸는 이동이 그 화면의 이탈 막기에 걸리므로 4-3 으로 돌아왔을 때 한다.
+  // 저장에 실패하면 확인창의 [종료하기]로 다시 시도한다 — 매초 다시 부르지 않는다
+  const autoEnding = useRef(false);
   useEffect(() => {
-    if (session && now >= activityDeadline(session)) void end();
-  }, [now, session]);
+    if (!focused || !session || autoEnding.current || now < activityDeadline(session)) return;
+    autoEnding.current = true;
+    void end();
+  }, [focused, now, session]);
 
   const status = session ? gpsStatus(session, now) : 'searching';
   const banner = bannerFor({ locationOff, offline, connecting: false, gps: status, paused: !!session?.paused });
