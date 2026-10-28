@@ -4,6 +4,7 @@ import { View, type TextInput } from 'react-native';
 import { router, useNavigation } from 'expo-router';
 import { AppHeader, Banner, BottomSheet, Button, Card, Dialog, Field, ListRow, Screen, SelectRow, Txt, space } from 'design-system/src';
 import { onboardingApi as api } from '../../src/api/onboarding';
+import { currentAccount, rememberAccount } from '../../src/auth/account';
 import { mapCrewCreateError } from '../../src/auth/errors';
 import { finishOnboarding, type OnboardingNavigation } from '../../src/auth/navigation';
 import { usePreventBack } from '../../src/auth/usePreventBack';
@@ -55,6 +56,8 @@ export default function CreateCrewScreen() {
     const crewName = normalizeCrewName(name);
     try {
       await api.mutate('POST /crews', { name: crewName, ...(intro.trim() ? { intro: intro.trim() } : {}), region, joinPolicy });
+      const account = currentAccount();
+      if (account) rememberAccount({ id: account.id, membership: { status: 'MEMBER' } });
       done.current = true;
       finishOnboarding(navigation, '/(tabs)', { flash: `${crewName} 크루를 만들었어요.` });
       return;

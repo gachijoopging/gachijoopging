@@ -108,9 +108,9 @@ export default function SettingsScreen() {
   const load = useCallback(async () => {
     try {
       const { data } = await api.get('GET /users/me');
+      rememberAccount(data);
       // 동의 목록이 안 오면 마케팅 행만 숨긴다. 로그아웃·탈퇴까지 막을 이유는 없다
       const marketing = await api.get('GET /users/me/agreements').then((r) => r.data.items.find((item) => item.type === 'MARKETING')).catch(() => undefined);
-      rememberAccount(data);
       loadAccount(data.id);
       setMe({
         hasPassword: data.hasPassword,

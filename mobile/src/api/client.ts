@@ -310,19 +310,26 @@ export function createHttpClient({ baseUrl, fetch: send = (...args) => globalThi
     }
   }
 
+  async function get<K extends QueryKey>(key: K, query?: unknown): Promise<ApiResponse<K>> {
+    const owner = currentOwner();
+    const sentAt = forgets;
+    const started = session;
+    const response = (await authed(key, query)) as ApiResponse<K>;
+    if (key === 'GET /users/me') {
+      // 호출자가 받은 data 로 다시 기억하고 그 계정 기준으로 이동하므로, 앞 계정의 응답은 돌려주지도 않는다
+      if (started !== session) throw new ApiError('TOKEN_EXPIRED', undefined, 401);
+      // 보낸 뒤 이 기기에서 소속이 바뀌었으면(크루 나가기) 바뀌기 전 상태의 응답이다. 호출자가 다시 기억하면 소속이 되돌아가므로 버리고 다시 받는다
+      if (owner !== currentOwner()) return get(key, query);
+    }
+    remember(owner, sentAt, key, query, response);
+    // 크루 생성·즉시 가입은 화면이 바로 기억하지만, 크루장의 승인처럼 서버에서 바뀐 소속은 내 정보를 받을 때만 알 수 있다.
+    // 크루 없음으로 남으면 오프라인 재실행이 1-6 에 멈춰 활동 기록을 보내지 못한다
+    if (key === 'GET /users/me') rememberAccount((response as ApiResponse<'GET /users/me'>).data);
+    return response;
+  }
+
   return {
-    async get(key, query) {
-      const owner = currentOwner();
-      const sentAt = forgets;
-      const started = session;
-      const response = (await authed(key, query)) as ApiResponse<typeof key>;
-      remember(owner, sentAt, key, query, response);
-      // 크루를 만들거나 가입이 승인돼도 화면마다 기억을 고치지 않는다. 내 정보를 받을 때마다 맞춘다 —
-      // 크루 없음으로 남으면 오프라인 재실행이 1-6 에 멈춰 활동 기록을 보내지 못한다.
-      // 기다리는 사이 로그아웃·계정 전환이 있었으면 앞 계정을 다시 기억하지 않는다
-      if (key === 'GET /users/me' && started === session) rememberAccount((response as ApiResponse<'GET /users/me'>).data);
-      return response;
-    },
+    get,
     async mutate(key, body) {
       // 응답을 기다리는 사이 다른 계정으로 로그인했으면 그 세션은 건드리지도 돌려주지도 않는다
       const started = session;
