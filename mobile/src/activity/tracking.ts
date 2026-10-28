@@ -126,8 +126,9 @@ async function send(client: ApiClient, op: Op): Promise<unknown> {
       try {
         await client.mutate('DELETE /media/{mediaId}', { mediaId: op.mediaId });
       } catch (error) {
-        // 403·409 는 다시 보내도 같다. 밖으로 내보내면 큐가 멈추고 활동이 사라졌다는 표시가 뜬다
-        if (!(error instanceof ApiError) || (error.code !== 'FORBIDDEN' && error.code !== 'CONFLICT')) throw error;
+        // 정리 작업이 종료를 막으면 안 된다. 403·409 는 다시 보내도 같고, 404 는 이 경로가 아직 없는 이전 서버가 낸다(계약상 없는 사진은 204).
+        // 밖으로 내보내면 큐가 멈추고 활동이 사라졌다는 표시가 뜬다
+        if (!(error instanceof ApiError) || !['FORBIDDEN', 'CONFLICT', 'NOT_FOUND'].includes(error.code)) throw error;
       }
       return;
     case 'pause':
