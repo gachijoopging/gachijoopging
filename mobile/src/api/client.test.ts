@@ -225,15 +225,24 @@ describe('실 API 클라이언트', () => {
     await api.get('GET /activities/{id}', { id: 'a1' });
     await api.get('GET /crew/home');
     await api.get('GET /crew/members/{userId}/activities', { userId: 'u1', cursor: 'c1' });
+    await api.get('GET /users/me/stats');
+    await api.get('GET /crew/stats', { range: 'WEEK' });
+    await api.get('GET /crew/calendar', { month: '2026-10' });
+    await api.get('GET /users/me/activities');
     await api.mutate('POST /activities/{id}/live', { id: 'a1' });
     fail = true;
     await api.mutate('PATCH /activities/{id}/items/{itemId}', { id: 'a1', itemId: 'i1', quantity: 2 }).catch(() => {});
     expect(peek('GET /crew/home')).toBeDefined();
+    expect(peek('GET /users/me/stats')).toBeDefined();
     fail = false;
     await api.mutate('PATCH /activities/{id}/items/{itemId}', { id: 'a1', itemId: 'i1', quantity: 2 });
     expect(peek('GET /activities/{id}', { id: 'a1' })).toBeUndefined();
     expect(peek('GET /crew/home')).toBeUndefined();
     expect(peek('GET /crew/members/{userId}/activities', { userId: 'u1', cursor: 'c1' })).toBeUndefined();
+    expect(peek('GET /users/me/stats')).toBeUndefined();
+    expect(peek('GET /crew/stats', { range: 'WEEK' })).toBeUndefined();
+    expect(peek('GET /crew/calendar', { month: '2026-10' })).toBeUndefined();
+    expect(peek('GET /users/me/activities')).toBeUndefined();
   });
 
   test('204 는 값 없이 끝난다', async () => {

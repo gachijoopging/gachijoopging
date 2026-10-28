@@ -127,6 +127,20 @@ describe('버린 사진 삭제', () => {
     expect(activityGoneCode()).toBeNull();
   });
 
+  test('NOT_FOUND 도 완료로 보고 뒤의 종료를 막지 않는다 — 삭제 경로가 없는 이전 서버라도 활동이 사라졌다는 표시를 남기지 않는다', async () => {
+    mockStored.session = startedSession();
+    mockStored.ended = snapshot;
+    mockStored.outbox = [discard, endOp];
+    const mutate = jest.fn(async (path: string) => {
+      if (path === 'DELETE /media/{mediaId}') throw new ApiError('NOT_FOUND', undefined, 404);
+      return { data: ended };
+    });
+    expect(await syncOutbox({ mutate } as unknown as ApiClient)).toBe(true);
+    expect(mutate.mock.calls.map(([path]) => path)).toEqual(['DELETE /media/{mediaId}', 'POST /activities/{id}/end']);
+    expect(mockStored.outbox).toEqual([]);
+    expect(activityGoneCode()).toBeNull();
+  });
+
   test('연결이 안 되면 그 자리에서 멈추고 삭제와 뒤의 종료를 남긴다', async () => {
     mockStored.session = startedSession();
     mockStored.ended = snapshot;
