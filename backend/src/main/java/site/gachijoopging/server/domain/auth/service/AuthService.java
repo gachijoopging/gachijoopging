@@ -106,13 +106,18 @@ public class AuthService {
 
     userService.requireUsable(stored.getUserId());
 
+    if (userService.sessionVersionOf(stored.getUserId()).orElseThrow()
+        != stored.getSessionVersion()) {
+      throw reject("비밀번호 재설정 전에 발급된 refreshToken");
+    }
+
     if (refreshTokenRepository.revokeIfActive(stored.getTokenHash(), now) == 0) {
       throw reject("이미 회전 중인 refreshToken 이다 — 다른 요청이 먼저 가져갔다");
     }
 
     return new TokenPairResponse(
         jwtIssuer.issue(stored.getUserId()),
-        issueRefreshToken(stored.getUserId(), stored.getFamilyId()),
+        issueRefreshToken(stored.getUserId(), stored.getFamilyId(), stored.getSessionVersion()),
         false);
   }
 
@@ -142,11 +147,12 @@ public class AuthService {
   private TokenPairResponse newSession(UserAccount account) {
     return new TokenPairResponse(
         jwtIssuer.issue(account.id()),
-        issueRefreshToken(account.id(), UUID.randomUUID()),
+        issueRefreshToken(account.id(), UUID.randomUUID(), account.sessionVersion()),
         account.isNew());
   }
 
-  private String issueRefreshToken(UUID userId, UUID familyId) {
+  // 버전은 다시 읽지 않고 비밀번호를 확인한 시점의 것을 싣는다 — 그 사이 재설정이 끝났으면 이 토큰은 거부돼야 한다
+  private String issueRefreshToken(UUID userId, UUID familyId, int sessionVersion) {
     Instant now = clock.instant();
     String rawToken = OpaqueToken.newToken();
     refreshTokenRepository.save(
@@ -155,6 +161,7 @@ public class AuthService {
             .tokenHash(OpaqueToken.hash(rawToken))
             .familyId(familyId)
             .expiresAt(now.plus(REFRESH_TOKEN_TTL))
+            .sessionVersion(sessionVersion)
             .now(now)
             .build());
     return rawToken;
