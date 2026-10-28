@@ -1,9 +1,9 @@
 const snapshot = { endedAt: '2026-09-30T00:01:00Z', durationSec: 60, pausedSec: 0, distanceM: 10, steps: null, route: [] };
-import { ApiError, createMockClient, type ApiClient } from '../api/client';
+import { ApiError, NetworkError, createMockClient, type ApiClient } from '../api/client';
 import type { Op } from './outbox';
 import { undoItem } from './outbox';
 import { displayDistance, newSession } from './session';
-import { finalSteps, isSendingItem, refreshSteps, startTracking, syncOutbox, tick } from './tracking';
+import { activityGoneCode, finalSteps, isSendingItem, refreshSteps, startTracking, syncOutbox, tick } from './tracking';
 import type { StepSource } from './steps';
 
 let mockStored: ReturnType<typeof import('./store')['getStored']>;
@@ -97,6 +97,53 @@ test('이미 종료됐어도 줍기 합계가 다른 상세는 완료 처리하�
   const get = jest.fn().mockResolvedValue({ data: { ...snapshot, id: 'a1', status: 'ENDED', itemCount: 0, byCategory: {} } });
   expect(await syncOutbox({ mutate, get } as unknown as ApiClient)).toBe(false);
   expect(mockStored.outbox).toHaveLength(1);
+});
+
+describe('버린 사진 삭제', () => {
+  const discard: Op = { kind: 'discardPhoto', activityId: 'a1', mediaId: 'm1' };
+  const endOp: Op = { kind: 'end', activityId: 'a1', body: snapshot };
+  const ended = { ...snapshot, id: 'a1', status: 'ENDED', itemCount: 0, byCategory: {} };
+  const startedSession = () => newSession({ id: 'a1', startedAt: '2026-09-30T00:00:00Z', pausedSec: 0, paused: false, pausedAt: null, itemCount: 0, locationShared: false }, 'u1', 0);
+
+  test('사진 id 로 서버에 삭제를 보낸다', async () => {
+    mockStored.outbox = [discard];
+    const mutate = jest.fn().mockResolvedValue(undefined);
+    expect(await syncOutbox({ mutate } as unknown as ApiClient)).toBe(true);
+    expect(mutate).toHaveBeenCalledWith('DELETE /media/{mediaId}', { mediaId: 'm1' });
+    expect(mockStored.outbox).toEqual([]);
+  });
+
+  test.each(['FORBIDDEN', 'CONFLICT'])('%s 는 다시 보내도 같으므로 완료로 보고 뒤의 종료를 막지 않는다 — 활동이 사라졌다는 표시도 남기지 않는다', async (code) => {
+    mockStored.session = startedSession();
+    mockStored.ended = snapshot;
+    mockStored.outbox = [discard, endOp];
+    const mutate = jest.fn(async (path: string) => {
+      if (path === 'DELETE /media/{mediaId}') throw new ApiError(code, undefined, 409);
+      return { data: ended };
+    });
+    expect(await syncOutbox({ mutate } as unknown as ApiClient)).toBe(true);
+    expect(mutate.mock.calls.map(([path]) => path)).toEqual(['DELETE /media/{mediaId}', 'POST /activities/{id}/end']);
+    expect(mockStored.outbox).toEqual([]);
+    expect(activityGoneCode()).toBeNull();
+  });
+
+  test('연결이 안 되면 그 자리에서 멈추고 삭제와 뒤의 종료를 남긴다', async () => {
+    mockStored.session = startedSession();
+    mockStored.ended = snapshot;
+    mockStored.outbox = [discard, endOp];
+    const mutate = jest.fn().mockRejectedValue(new NetworkError('OFFLINE'));
+    expect(await syncOutbox({ mutate } as unknown as ApiClient)).toBe(false);
+    expect(mutate.mock.calls.map(([path]) => path)).toEqual(['DELETE /media/{mediaId}']);
+    expect(mockStored.outbox).toEqual([discard, endOp]);
+  });
+
+  test('줍기 전송의 FORBIDDEN 은 여전히 멈추고 활동이 사라졌다고 알린다', async () => {
+    mockStored.outbox = [{ kind: 'items', activityId: 'a1', photoId: 'p1', items: [{ id: 'i1', category: 'CAN', quantity: 1 }] }, discard];
+    const mutate = jest.fn().mockRejectedValue(new ApiError('FORBIDDEN', undefined, 403));
+    expect(await syncOutbox({ mutate } as unknown as ApiClient)).toBe(false);
+    expect(mockStored.outbox).toHaveLength(2);
+    expect(activityGoneCode()).toBe('FORBIDDEN');
+  });
 });
 
 test('다음 요청 실패 전에 성공한 요청을 디스크 상태에서 제거한다', async () => {

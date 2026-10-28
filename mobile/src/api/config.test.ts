@@ -51,6 +51,22 @@ test('활동은 시작부터 종료·기록까지 실서버로 보낸다 — 시
   ]);
 });
 
+test('내 누적·크루 통계·달력·크루원 기록은 실서버 응답이다 — 목 ID 로는 상세가 422 로 열리지 않는다', async () => {
+  const api = createApiClient();
+  await api.get('GET /users/me/stats');
+  await api.get('GET /crew/stats', { range: 'WEEK' });
+  await api.get('GET /crew/calendar', { month: '2026-10' });
+  await api.get('GET /crew/members/{userId}/activities', { userId: 'u2', cursor: undefined });
+  expect(fetch.mock.calls.map(([url]) => url.replace('https://api.test/api/v1', ''))).toEqual([
+    '/users/me/stats', '/crew/stats?range=WEEK', '/crew/calendar?month=2026-10', '/crew/members/u2/activities',
+  ]);
+});
+
+test('버린 활동 사진 삭제는 실서버로 보낸다 — 목이 성공을 돌려주면 서버에 사진이 남은 채 대기열이 비워진다', async () => {
+  await createApiClient().mutate('DELETE /media/{mediaId}', { mediaId: 'm1' });
+  expect(fetch.mock.calls.map(([url, init]) => `${init?.method} ${url}`)).toEqual(['DELETE https://api.test/api/v1/media/m1']);
+});
+
 test('탈퇴는 실서버로 보낸다 — 목이 성공을 돌려주면 계정이 남은 채 탈퇴 완료가 뜬다', async () => {
   await createApiClient().mutate('DELETE /users/me');
   expect(fetch.mock.calls.map(([url, init]) => `${init?.method} ${url}`)).toEqual(['DELETE https://api.test/api/v1/users/me']);
