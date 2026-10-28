@@ -9,12 +9,20 @@ import { finalSteps, isSendingItem, stopTracking, syncOutbox } from './tracking'
 export type LastPickup = { itemId: string; category: Category; quantity: number };
 
 /**
+ * 줍기·되돌리기·일시정지를 받을 수 있는 활동인가. 서버는 24시간 기한을 보지 않으므로 기한 뒤의 변경은
+ * 종료 기록보다 먼저 동기화되지 않게 기기에서 거절한다
+ */
+export function isActivityOpen(activityId?: string): boolean {
+  const { session, ended } = getStored();
+  return !!session && !ended && (activityId === undefined || session.activityId === activityId) && Date.now() < activityDeadline(session);
+}
+
+/**
  * 줍기를 기기에 먼저 남기고 보낸다. 디스크 쓰기가 실패하면 예외가 그대로 올라가
  * 화면이 합계를 올리지 않고 재시도를 보인다.
  */
 export function recordPickup(items: (ItemInput & { aiPredictedCategory?: Category; aiConfidence?: number })[], photoId: string | null, activityId: string): LastPickup | null {
-  const { session, ended } = getStored();
-  if (!session || ended || session.activityId !== activityId) throw new Error('진행 중인 활동이 아니에요');
+  if (!isActivityOpen(activityId)) throw new Error('진행 중인 활동이 아니에요');
   if (items.length === 0) return null;
   updateStored((st) =>
     st.session
@@ -31,7 +39,7 @@ export function quickPickup(category: Category, quantity: number): LastPickup | 
 }
 
 export function undoPickup(last: LastPickup) {
-  if (getStored().ended || !getStored().session) throw new Error('진행 중인 활동이 아니에요');
+  if (!isActivityOpen()) throw new Error('진행 중인 활동이 아니에요');
   updateStored((st) =>
     st.session
       ? { ...st, session: removeItem(st.session, last), outbox: undoItem(st.outbox, st.session.activityId, last.itemId, isSendingItem(last.itemId)) }

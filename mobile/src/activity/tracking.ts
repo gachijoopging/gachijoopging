@@ -114,9 +114,10 @@ export async function startTracking(): Promise<boolean> {
   }
 }
 
+// 시작 여부를 먼저 기다리면 그 사이 시작된 다른 계정의 추적까지 끈다
 export async function stopTracking(): Promise<void> {
   try {
-    if (await Location.hasStartedLocationUpdatesAsync(TRACKING_TASK)) await Location.stopLocationUpdatesAsync(TRACKING_TASK);
+    await Location.stopLocationUpdatesAsync(TRACKING_TASK);
   } catch {
     // 이미 멈췄다
   }

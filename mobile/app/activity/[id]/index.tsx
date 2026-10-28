@@ -38,7 +38,7 @@ import { type ApiClient } from '../../../src/api/client';
 import { createApiClient } from '../../../src/api/config';
 import type { MOCKS } from '../../../src/api/mocks.generated';
 import { enqueue } from '../../../src/activity/outbox';
-import { endActivity } from '../../../src/activity/actions';
+import { endActivity, isActivityOpen } from '../../../src/activity/actions';
 import { QuickPickupSheet } from '../../../src/activity/QuickPickupSheet';
 import {
   activityDeadline,
@@ -247,6 +247,7 @@ export default function ActivityInProgressScreen() {
   };
 
   const togglePause = () => {
+    if (!isActivityOpen(id)) return;
     updateStored((st) => {
       if (!st.session) return st;
       const t = Date.now();
