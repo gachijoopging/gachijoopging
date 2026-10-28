@@ -102,6 +102,28 @@ test('24시간 전이면 끝내지 않는다', async () => {
   expect(mockReplace).not.toHaveBeenCalled();
 });
 
+describe('일시정지 버튼과 24시간 기한', () => {
+  const STARTED = Date.parse('2026-10-07T10:00:00Z');
+  const DEADLINE = STARTED + 24 * 3_600_000;
+
+  test.each([
+    ['기한 1ms 전', 1, DEADLINE - 1],
+    ['기한 정각', 0, DEADLINE],
+  ])('%s 에 일시정지를 누르면 pause op 가 %i개 큐에 들어간다 — 종료보다 먼저 동기화되지 않게', async (_label, count, at) => {
+    const now = jest.spyOn(Date, 'now').mockReturnValue(at);
+    mockFocused = false;
+    mockStored = { session: { ...mockSession, startedAt: new Date(STARTED).toISOString() }, ended: null, outbox: [] };
+    try {
+      await act(async () => { tree = create(React.createElement(Activity)); });
+      const button = tree.root.find((n) => typeof n.type === 'function' && n.props.accessibilityLabel === '일시정지');
+      await act(async () => button.props.onPress());
+      expect((mockStored.outbox as { kind: string }[]).filter((op) => op.kind === 'pause')).toHaveLength(count);
+    } finally {
+      now.mockRestore();
+    }
+  });
+});
+
 describe('기기에 없는 활동으로 들어왔을 때', () => {
   const enter = async (current: () => Promise<unknown>) => {
     mockStored = { session: null, ended: null, outbox: [] };

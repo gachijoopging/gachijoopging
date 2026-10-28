@@ -3,7 +3,7 @@ import { ApiError, createMockClient, type ApiClient } from '../api/client';
 import type { Op } from './outbox';
 import { undoItem } from './outbox';
 import { displayDistance, newSession, pause, resume, type Session } from './session';
-import { finalSteps, isSendingItem, refreshSteps, startTracking, syncOutbox, tick } from './tracking';
+import { finalSteps, isSendingItem, refreshSteps, startTracking, stopTracking, syncOutbox, tick, TRACKING_TASK } from './tracking';
 import type { StepSource } from './steps';
 
 let mockStored: ReturnType<typeof import('./store')['getStored']>;
@@ -11,19 +11,23 @@ const mockMutate = jest.mocked(createMockClient().mutate);
 const mockPermission = jest.fn().mockResolvedValue({ granted: true });
 const mockEnabled = jest.fn().mockResolvedValue(true);
 const mockStart = jest.fn().mockResolvedValue(undefined);
+const mockStopLocation = jest.fn().mockResolvedValue(undefined);
+const mockHasStarted = jest.fn().mockResolvedValue(true);
 jest.mock('../api/client', () => {
   const client = { mutate: jest.fn().mockResolvedValue({}) };
   return { ...jest.requireActual('../api/client'), createMockClient: () => client };
 });
 jest.mock('expo-location', () => ({
   Accuracy: { BestForNavigation: 6 },
-  hasStartedLocationUpdatesAsync: jest.fn().mockResolvedValue(true),
+  hasStartedLocationUpdatesAsync: (...args: unknown[]) => mockHasStarted(...args),
+  stopLocationUpdatesAsync: (...args: unknown[]) => mockStopLocation(...args),
   startLocationUpdatesAsync: (...args: unknown[]) => mockStart(...args),
   getForegroundPermissionsAsync: (...args: unknown[]) => mockPermission(...args),
   hasServicesEnabledAsync: (...args: unknown[]) => mockEnabled(...args),
 }));
 const mockNetwork = jest.fn().mockResolvedValue({ isConnected: true, isInternetReachable: true });
 jest.mock('expo-network', () => ({ getNetworkStateAsync: () => mockNetwork() }));
+jest.mock('expo-crypto', () => ({ randomUUID: () => 'u' }));
 jest.mock('expo-task-manager', () => ({ defineTask: jest.fn() }));
 jest.mock('../../modules/tracking-notification', () => ({ updateTrackingNotification: jest.fn() }));
 jest.mock('./store', () => ({
@@ -40,6 +44,8 @@ beforeEach(() => {
   mockPermission.mockResolvedValue({ granted: true });
   mockEnabled.mockResolvedValue(true);
   mockStart.mockClear();
+  mockStopLocation.mockReset().mockResolvedValue(undefined);
+  mockHasStarted.mockReset().mockResolvedValue(true);
   mockNetwork.mockResolvedValue({ isConnected: true, isInternetReachable: true });
 });
 
@@ -269,5 +275,40 @@ describe('배경 위치 작업', () => {
     mockEndIfExpired.mockResolvedValueOnce(null);
     await task()({ data: { locations: [fixAt(Date.now())] }, error: null });
     expect(mockMutate).toHaveBeenCalledWith('POST /activities/{id}/live', expect.objectContaining({ id: 'a1' }));
+  });
+});
+
+describe('추적 중지', () => {
+  const notFound = () => Object.assign(new Error('Task not found'), { code: 'E_TASK_NOT_FOUND' });
+
+  test('시작 여부 조회를 기다리지 않고 같은 틱에 중지를 건다 — 기다리는 사이 다른 계정의 추적이 시작돼도 꺼지지 않게', async () => {
+    mockHasStarted.mockReturnValue(new Promise(() => {}));
+    const stopping = stopTracking();
+    expect(mockStopLocation).toHaveBeenCalledWith(TRACKING_TASK);
+    await stopping;
+  });
+
+  test('시작되지 않은 작업을 멈추려는 예외는 흡수한다', async () => {
+    mockStopLocation.mockRejectedValue(notFound());
+    await expect(stopTracking()).resolves.toBeUndefined();
+  });
+
+  describe('활동 종료', () => {
+    const { endActivity } = jest.requireActual('./actions') as typeof import('./actions');
+    const open = () => newSession({ id: 'a1', startedAt: new Date().toISOString(), pausedSec: 0, paused: false, pausedAt: null, itemCount: 0, locationShared: false }, 'u1', Date.now());
+
+    test('종료 기록을 남긴 뒤 시작 여부 조회가 끝나지 않아도 추적 중지를 건다', async () => {
+      mockHasStarted.mockReturnValue(new Promise(() => {}));
+      mockStored = { session: open(), ended: null, outbox: [] };
+      await expect(endActivity('a1')).resolves.toBe('ended');
+      expect(mockStopLocation).toHaveBeenCalledWith(TRACKING_TASK);
+    });
+
+    test('추적이 이미 꺼져 있어 중지가 거절돼도 종료는 끝난다', async () => {
+      mockStopLocation.mockRejectedValue(notFound());
+      mockStored = { session: open(), ended: null, outbox: [] };
+      await expect(endActivity('a1')).resolves.toBe('ended');
+      expect(mockStored.outbox).toEqual([expect.objectContaining({ kind: 'end', activityId: 'a1' })]);
+    });
   });
 });
