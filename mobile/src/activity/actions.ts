@@ -51,14 +51,17 @@ const FINAL_STEPS_WAIT_MS = 1_500;
 /**
  * 활동을 기기에서 끝낸다 — 종료 기록을 디스크에 먼저 남기고, 남은 뒤에만 추적을 끈다.
  * 'saveFailed' 면 추적이 그대로 켜져 있다. 여기서 넘어가면 기록을 잃으므로 화면은 다시 시도하게 한다.
+ * 'stale' 이면 걸음을 기다리는 사이 다른 계정의 기록이 열렸다. 아무것도 쓰지 않고, 기기 전역인 위치 추적도
+ * 이제 그 계정 활동의 것이므로 끄지 않는다.
  * 서버 전송은 큐가 맡는다 — 오프라인이어도 'ended' 다.
  */
-export async function endActivity(): Promise<'ended' | 'saveFailed'> {
+export async function endActivity(activityId: string): Promise<'ended' | 'saveFailed' | 'stale'> {
   // 마지막 읽기 뒤 걸음까지 담는다. 실패하거나 늦으면 기다리지 않는다
   const counted = await Promise.race([
     finalSteps().then(() => true, () => false),
     new Promise<boolean>((r) => setTimeout(() => r(false), FINAL_STEPS_WAIT_MS)),
   ]);
+  if (getStored().session?.activityId !== activityId) return 'stale';
   try {
     updateStored((st) => {
       // 4-3·배경 위치 작업·앱 복귀가 함께 끝내려 해도 종료 기록은 하나다
@@ -79,9 +82,13 @@ export async function endActivity(): Promise<'ended' | 'saveFailed'> {
   return 'ended';
 }
 
-/** 시작 24시간이 지난 활동을 끝낸다. 4-3 이 없어도(배경 위치 작업·콜드 스타트·앱 복귀) 같은 종료를 탄다 */
-export async function endIfExpired(now = Date.now()): Promise<boolean> {
+/**
+ * 시작 24시간이 지난 활동을 끝낸다. 4-3 이 없어도(배경 위치 작업·콜드 스타트·앱 복귀) 같은 종료를 탄다.
+ * 기한 전·활동 없음·기다리는 사이 다른 계정이 열린 경우는 null
+ */
+export async function endIfExpired(now = Date.now()): Promise<'ended' | 'saveFailed' | null> {
   const st = loadLastAccount();
-  if (!st?.session || st.ended || now < activityDeadline(st.session)) return false;
-  return (await endActivity()) === 'ended';
+  if (!st?.session || st.ended || now < activityDeadline(st.session)) return null;
+  const result = await endActivity(st.session.activityId);
+  return result === 'stale' ? null : result;
 }

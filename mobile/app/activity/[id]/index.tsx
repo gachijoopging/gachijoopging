@@ -259,7 +259,9 @@ export default function ActivityInProgressScreen() {
     if (ending || !session) return;
     setEnding(true);
     setEndFailed(false);
-    if ((await endActivity()) === 'saveFailed') {
+    const result = await endActivity(id);
+    if (result === 'stale') return setEnding(false);
+    if (result === 'saveFailed') {
       setEnding(false);
       setEndFailed(true);
       // 자동 종료는 확인창 없이 시작한다. 저장 실패와 재시도는 확인창이 보여 준다

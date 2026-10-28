@@ -9,7 +9,7 @@ import { healthConnect } from './health-connect';
 import { flush, type Op } from './outbox';
 import { fixLogLine } from './fix-log';
 import type { Fix } from './location-filter';
-import { activityDeadline, applyFix, livePayload, trackingNotice } from './session';
+import { activityDeadline, applyFix, asOf, livePayload, trackingNotice } from './session';
 import { readSteps, type StepSource } from './steps';
 import { getStored, loadLastAccount, updateStored } from './store';
 
@@ -50,14 +50,16 @@ export async function tick(now: number) {
   const { session, ended } = getStored();
   if (!session || ended || now - lastLiveAt < LIVE_EVERY_MS) return;
   lastLiveAt = now;
-  const { title, body } = trackingNotice(session, now);
+  const at = Math.min(now, activityDeadline(session));
+  const shown = asOf(session, at);
+  const { title, body } = trackingNotice(shown, at);
   updateTrackingNotification(TRACKING_TASK, title, body, `gachijoopging://activity/[id]?id=${session.activityId}`);
   const [permission, enabled] = await Promise.all([
     Location.getForegroundPermissionsAsync().catch(() => null),
     Location.hasServicesEnabledAsync().catch(() => false),
   ]);
   if (getStored().ended || getStored().session?.activityId !== session.activityId) return;
-  const { activityId, ...live } = livePayload(session, now);
+  const { activityId, ...live } = livePayload(shown, at);
   if (!permission?.granted || !enabled) live.location = null;
   // 위치 전송은 쌓아 두지 않는다 — 마지막 값만 의미가 있다
   await api.mutate('POST /activities/{id}/live', { id: activityId, ...live }).catch(() => {});
@@ -74,7 +76,8 @@ export async function refreshSteps(now: number, source: StepSource = healthConne
   if (!before || getStored().ended || readingSteps) return;
   readingSteps = (async () => {
     // 못 읽으면 앞서 잰 값도 버린다. 권한을 거둔 뒤 낡은 걸음으로 거리를 계속 줄이면 안 된다
-    const steps = await readSteps(before, Math.min(now, activityDeadline(before)), source);
+    const at = Math.min(now, activityDeadline(before));
+    const steps = await readSteps(asOf(before, at), at, source);
     updateStored((st) => (st.session?.activityId === before.activityId && !st.ended ? { ...st, session: { ...st.session, steps } } : st));
   })();
   try {

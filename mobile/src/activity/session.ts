@@ -186,11 +186,25 @@ export function livePayload(s: Session, now: number) {
   };
 }
 
+/**
+ * end 시각의 활동. 24시간을 넘겨 늦게 끝내거나 읽으면 그 시각 뒤에 시작한 일시정지는 아직 없었고,
+ * 걸친 일시정지는 그 시각까지만이다. 그대로 두면 활동 시간·일시정지·걸음 조회가 24시간 밖을 센다
+ */
+export function asOf(s: Session, end: number): Session {
+  const current = s.paused && s.pausedAt && Date.parse(s.pausedAt) > end ? { ...s, paused: false, pausedAt: null } : s;
+  const pauses = knownPauses(s);
+  // ponytail: 구간을 모르는 일시정지(서버 합계)는 자르지 못해 end 뒤 일시정지도 그대로 뺀다. 서버가 구간을 주면 같이 자른다
+  if (!pauses) return current;
+  const cut = pauses
+    .filter(([from]) => Date.parse(from) < end)
+    .map(([from, to]): [string, string] => [from, Date.parse(to) > end ? new Date(end).toISOString() : to]);
+  const pausedSec = cut.reduce((sum, [from, to]) => sum + Math.max(0, Math.floor((Date.parse(to) - Date.parse(from)) / 1000)), 0);
+  return { ...current, pauses: cut, pausedSec };
+}
+
 export function endBody(active: Session, now: number) {
-  // 끝내는 시각 뒤에 시작한 일시정지(24시간을 넘겨 늦게 끝낸 활동)는 그 시각에는 아직 활동 중이었다.
-  // 그대로 두면 활동 시간이 24시간을 넘고 일시정지가 음수가 된다
-  const asOfEnd = active.paused && active.pausedAt && Date.parse(active.pausedAt) > now ? { ...active, paused: false, pausedAt: null } : active;
-  const s = asOfEnd.paused ? asOfEnd : closeSegment(asOfEnd);
+  const atEnd = asOf(active, now);
+  const s = atEnd.paused ? atEnd : closeSegment(atEnd);
   const durationSec = elapsedSec(s, now);
   const totalSec = Math.max(0, Math.floor((now - Date.parse(s.startedAt)) / 1000));
   return {
