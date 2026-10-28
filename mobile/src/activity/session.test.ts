@@ -326,7 +326,31 @@ test('24시간 뒤의 위치는 경로·거리·현재 위치에 넣지 않는�
 });
 
 test('끝내는 시각 뒤에 시작한 일시정지는 그 시각에 활동 중이었던 것으로 센다 — 활동 시간이 24시간을 넘거나 일시정지가 음수가 되지 않는다', () => {
-  const s = { ...started(), pausedSec: 600, paused: true, pausedAt: new Date(T0 + 24.5 * 3_600_000).toISOString() };
+  const s = pause(resume(pause(started(), at(3600)), at(4200)), T0 + 24.5 * 3_600_000);
   const body = endBody(s, T0 + 86_400_000);
   expect(body).toMatchObject({ durationSec: 86_400 - 600, pausedSec: 600 });
+});
+
+describe('24시간 경계에 걸친 일시정지', () => {
+  const H = 3_600_000;
+  const deadline = T0 + 24 * H;
+
+  test('경계를 넘겨 재개한 일시정지는 경계까지만 센다 — 23시간에 멈추고 26시간에 재개해 늦게 끝내도 활동 23시간·일시정지 1시간', () => {
+    const s = resume(pause(started(), T0 + 23 * H), T0 + 26 * H);
+    expect(endBody(s, deadline)).toMatchObject({ durationSec: 23 * 3600, pausedSec: 3600 });
+  });
+
+  test('경계에 걸쳐 아직 멈춰 있어도 경계까지만 일시정지로 센다', () => {
+    const s = pause(started(), T0 + 23 * H);
+    expect(endBody(s, deadline)).toMatchObject({ durationSec: 23 * 3600, pausedSec: 3600 });
+  });
+
+  test('구간을 모르는 일시정지(서버 합계)는 자르지 못해도 활동·일시정지가 음수가 되지 않는다', () => {
+    const s = newSession(
+      { id: 'a1', startedAt: new Date(T0).toISOString(), pausedSec: 3600, paused: true, pausedAt: new Date(T0 + 24.5 * H).toISOString(), itemCount: 0, locationShared: true },
+      'u1',
+      T0,
+    );
+    expect(endBody(s, deadline)).toMatchObject({ durationSec: 23 * 3600, pausedSec: 3600 });
+  });
 });

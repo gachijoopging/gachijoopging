@@ -143,3 +143,19 @@ describe('24시간 자동 종료가 4-3 에서 막힐 때', () => {
     expect(mockReplace).toHaveBeenCalledWith({ pathname: '/activity/[id]/summary', params: { id: 'a1' } });
   });
 });
+
+test('종료를 기다리는 사이 다른 계정의 활동이 열리면 그 활동을 끝내지 않고 요약으로 가지 않는다', async () => {
+  const { finalSteps, stopTracking } = jest.requireMock('./tracking') as { finalSteps: jest.Mock; stopTracking: jest.Mock };
+  stopTracking.mockClear();
+  finalSteps.mockImplementationOnce(async () => {
+    mockStored = { session: { ...mockSession, activityId: 'b1', userId: 'u2' }, ended: null, outbox: [] };
+  });
+  await act(async () => { tree = create(React.createElement(Activity)); });
+  await pressEnd();
+  expect(mockStored).toMatchObject({ ended: null, outbox: [] });
+  expect(stopTracking).not.toHaveBeenCalled();
+  expect(mockReplace).not.toHaveBeenCalled();
+  const dialog = tree.root.find((n) => (n.type as unknown) === 'Dialog' && n.props.title === '활동을 종료할까요?');
+  const end = React.Children.toArray(dialog.props.actions.props.children).find((b) => (b as React.ReactElement<{ label: string }>).props.label === '종료하기') as React.ReactElement<{ loading: boolean }>;
+  expect(end.props.loading).toBe(false);
+});
