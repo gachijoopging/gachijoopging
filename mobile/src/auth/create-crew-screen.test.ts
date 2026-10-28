@@ -74,6 +74,41 @@ test('크루를 만들면 소속을 기억한다 — 직후 오프라인으로 �
   expect(currentAccount()).toEqual(expect.objectContaining({ id: 'u1', hasCrew: true }));
 });
 
+const deferred = () => { let resolve!: (value: unknown) => void; let reject!: (error: Error) => void; const promise = new Promise((yes, no) => { resolve = yes; reject = no; }); return { promise, resolve, reject }; };
+async function submitPending() {
+  const request = deferred();
+  mockMutate.mockReturnValue(request.promise);
+  await fill();
+  await act(async () => { button().props.onPress(); });
+  return request;
+}
+
+test('응답이 늦어도 계정이 그대로면 크루원으로 기억하고 홈으로 간다', async () => {
+  const request = await submitPending();
+  await act(async () => request.resolve({ data: {} }));
+  expect(currentAccount()).toEqual(expect.objectContaining({ id: 'u1', hasCrew: true }));
+  expect(mockReset).toHaveBeenCalledTimes(1);
+});
+
+test('만드는 응답을 기다리는 사이 계정이 바뀌면 새 계정을 크루원으로 기억하지도 홈으로 보내지도 않는다', async () => {
+  const request = await submitPending();
+  rememberAccount({ id: 'u2', membership: { status: 'NONE' } });
+  await act(async () => request.resolve({ data: {} }));
+  expect(currentAccount()).toEqual(expect.objectContaining({ id: 'u2', hasCrew: false }));
+  expect(mockReset).not.toHaveBeenCalled();
+  expect(button().props.loading).toBe(false);
+});
+
+test('만드는 응답이 409 로 늦게 와도 계정이 바뀌었으면 승인 대기로 보내지 않는다', async () => {
+  const { ApiError } = require('../api/client');
+  const request = await submitPending();
+  rememberAccount({ id: 'u2', membership: { status: 'NONE' } });
+  await act(async () => request.reject(new ApiError('JOIN_REQUEST_PENDING')));
+  expect(currentAccount()).toEqual(expect.objectContaining({ id: 'u2', hasCrew: false }));
+  expect(mockReset).not.toHaveBeenCalled();
+  expect(button().props.loading).toBe(false);
+});
+
 test('이미 있는 크루 이름이면 이름 칸 아래에 알리고 화면에 머문다', async () => {
   const { ApiError } = require('../api/client');
   mockMutate.mockRejectedValueOnce(new ApiError('CREW_NAME_TAKEN'));

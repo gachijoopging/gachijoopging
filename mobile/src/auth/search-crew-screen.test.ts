@@ -148,6 +148,53 @@ test('비공개 크루에 신청하면 승인 대기로 간다', async () => {
   expect(currentAccount()?.hasCrew).toBe(false);
 });
 
+const deferred = () => { let resolve!: (value: unknown) => void; let reject!: (error: Error) => void; const promise = new Promise((yes, no) => { resolve = yes; reject = no; }); return { promise, resolve, reject }; };
+const closeSheet = (title: string) => act(async () => find('BottomSheet', (p) => p.title === title)[0].props.onClosed());
+async function joinPending(crewId: string) {
+  const request = deferred();
+  mockMutate.mockReturnValue(request.promise);
+  await openCrew(crewId);
+  await act(async () => { sheetButton().props.onPress(); });
+  return request;
+}
+
+test('가입 중 이미 소속이 바뀌었다는 409 면 계정이 그대로일 때 홈으로 간다', async () => {
+  const { ApiError } = require('../api/client');
+  const request = await joinPending('c001');
+  await act(async () => request.reject(new ApiError('ALREADY_IN_CREW')));
+  await closeSheet('한강줍깅크루');
+  expect(mockReset).toHaveBeenCalledWith({ index: 0, routes: [{ name: '(tabs)', params: { screen: 'index', params: { flash: '이미 크루에 소속돼 있어요.' } } }] });
+});
+
+test('즉시 가입 응답을 기다리는 사이 계정이 바뀌면 새 계정을 크루원으로 기억하지도 홈으로 보내지도 않는다', async () => {
+  const request = await joinPending('c003');
+  rememberAccount({ id: 'u2', membership: { status: 'NONE' } });
+  await act(async () => request.resolve({ data: { id: 'jr001', crew: { id: 'c003', name: '여의도아침줍깅' }, status: 'APPROVED' } }));
+  await closeSheet('여의도아침줍깅');
+  expect(currentAccount()).toEqual(expect.objectContaining({ id: 'u2', hasCrew: false }));
+  expect(mockReset).not.toHaveBeenCalled();
+  expect(sheetButton().props.loading).toBe(false);
+});
+
+test('가입 신청 응답을 기다리는 사이 계정이 바뀌면 새 계정을 승인 대기로 보내지 않는다', async () => {
+  const request = await joinPending('c001');
+  rememberAccount({ id: 'u2', membership: { status: 'NONE' } });
+  await act(async () => request.resolve({ data: { id: 'jr001', crew: { id: 'c001', name: '한강줍깅크루' }, status: 'PENDING' } }));
+  await closeSheet('한강줍깅크루');
+  expect(mockReset).not.toHaveBeenCalled();
+  expect(sheetButton().props.loading).toBe(false);
+});
+
+test('가입 응답이 409 로 늦게 와도 계정이 바뀌었으면 다른 화면으로 보내지 않는다', async () => {
+  const { ApiError } = require('../api/client');
+  const request = await joinPending('c001');
+  rememberAccount({ id: 'u2', membership: { status: 'NONE' } });
+  await act(async () => request.reject(new ApiError('ALREADY_IN_CREW')));
+  await closeSheet('한강줍깅크루');
+  expect(mockReset).not.toHaveBeenCalled();
+  expect(sheetButton().props.loading).toBe(false);
+});
+
 test('추방된 크루면 시트 안에 알리고 버튼을 끈다', async () => {
   const { ApiError } = require('../api/client');
   mockMutate.mockRejectedValue(new ApiError('EXPELLED_FROM_CREW'));
