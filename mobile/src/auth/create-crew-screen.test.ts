@@ -1,6 +1,14 @@
 import React from 'react';
 import CreateCrewScreen from '../../app/(onboarding)/create-crew';
+import { currentAccount, rememberAccount } from './account';
 
+let mockAccountFile: string | null = null;
+jest.mock('expo-file-system', () => ({ Paths: { document: 'documents' }, File: class {
+  get exists() { return mockAccountFile != null; }
+  textSync() { return mockAccountFile; }
+  write(text: string) { mockAccountFile = text; }
+  delete() { mockAccountFile = null; }
+} }));
 const { act, create } = require('react-test-renderer');
 const mockMutate = jest.fn();
 const mockReset = jest.fn();
@@ -29,6 +37,8 @@ beforeAll(() => { (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REAC
 beforeEach(() => {
   mockMutate.mockReset().mockResolvedValue({ data: {} });
   mockReset.mockClear();
+  mockAccountFile = null;
+  rememberAccount({ id: 'u1', membership: { status: 'NONE' } });
 });
 
 let tree: ReturnType<typeof create>;
@@ -58,6 +68,12 @@ test('이름·지역·가입 방식을 모두 골라야 만들 수 있고, 만�
   expect(mockReset).toHaveBeenCalledWith({ index: 0, routes: [{ name: '(tabs)', params: { screen: 'index', params: { flash: '한강줍깅크루 크루를 만들었어요.' } } }] });
 });
 
+test('크루를 만들면 소속을 기억한다 — 직후 오프라인으로 재실행해도 1-6 에 멈추지 않는다', async () => {
+  await fill();
+  await act(async () => button().props.onPress());
+  expect(currentAccount()).toEqual(expect.objectContaining({ id: 'u1', hasCrew: true }));
+});
+
 test('이미 있는 크루 이름이면 이름 칸 아래에 알리고 화면에 머문다', async () => {
   const { ApiError } = require('../api/client');
   mockMutate.mockRejectedValueOnce(new ApiError('CREW_NAME_TAKEN'));
@@ -65,6 +81,7 @@ test('이미 있는 크루 이름이면 이름 칸 아래에 알리고 화면에
   await act(async () => button().props.onPress());
   expect(find('Field', (p) => p.label === '크루 이름')[0].props.error).toBe('이미 사용 중인 크루 이름이에요.');
   expect(mockReset).not.toHaveBeenCalled();
+  expect(currentAccount()?.hasCrew).toBe(false);
 });
 
 test('다른 기기에서 가입 신청 중이면 승인 대기로 간다', async () => {
