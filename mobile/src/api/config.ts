@@ -27,6 +27,7 @@ const REAL_KEYS: ReadonlySet<MutationKey> = new Set<MutationKey>([
   'POST /activities/{id}/items', 'PATCH /activities/{id}/items/{itemId}', 'DELETE /activities/{id}/items/{itemId}',
   'POST /activities/{id}/end', 'GET /activities/{id}', 'DELETE /activities/{id}', 'GET /users/me/activities',
   'GET /crew/home', 'GET /users/me/stats', 'GET /crew/stats', 'GET /crew/calendar', 'GET /crew/members/{userId}/activities',
+  'DELETE /media/{mediaId}',
 ]);
 
 /** 프로필·크루·활동 사진만 서버에 올린다. 목 mediaId 는 UUID 가 아니라 실서버 PATCH 가 422 로 거절한다. 게시물 사진은 게시물 API 가 실서버로 갈 때 함께 옮긴다 */

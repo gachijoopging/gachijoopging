@@ -33,6 +33,7 @@ import {
 } from 'design-system/src';
 import { ApiError, type ApiClient } from '../../../src/api/client';
 import { createApiClient } from '../../../src/api/config';
+import { discardPhoto } from '../../../src/activity/actions';
 import { getStored } from '../../../src/activity/store';
 
 const api: ApiClient = createApiClient({ delayMs: 600 });
@@ -93,6 +94,13 @@ export default function TakePhotoScreen() {
     }, [readPerm, appActive]),
   );
 
+  // 올리지 못한 사진도 서버에는 저장됐을 수 있어 같은 mediaId 로 지운다
+  const dropShot = (dropped: Shot) => {
+    discardPhoto(dropped.mediaId, id);
+    setShot(null);
+    setRejected(false);
+  };
+
   useEffect(
     () =>
       navigation.addListener('beforeRemove', (e) => {
@@ -100,8 +108,7 @@ export default function TakePhotoScreen() {
         if (uploading) return e.preventDefault();
         if (shot) {
           e.preventDefault();
-          setShot(null);
-          setRejected(false);
+          dropShot(shot);
         }
       }),
     [navigation, uploading, shot],
@@ -279,7 +286,7 @@ export default function TakePhotoScreen() {
           // 올리지 못한 사진만 여기 남는다. 같은 mediaId 로 다시 올려 서버가 중복을 거른다
           <View style={{ flexDirection: 'row', gap: space.sm }}>
             <View style={{ flex: 1 }}>
-              <Button label="다시 찍기" variant="translucent" size="lg" fullWidth onPress={() => { setShot(null); setRejected(false); }} />
+              <Button label="다시 찍기" variant="translucent" size="lg" fullWidth onPress={() => dropShot(shot)} />
             </View>
             {rejected ? null : (
               <View style={{ flex: 1 }}>

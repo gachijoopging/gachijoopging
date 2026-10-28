@@ -64,7 +64,8 @@ export type VoidMutationKey =
   | 'POST /activities/{id}/resume'
   | 'POST /activities/{id}/live'
   | 'DELETE /activities/{id}/items/{itemId}'
-  | 'DELETE /activities/{id}';
+  | 'DELETE /activities/{id}'
+  | 'DELETE /media/{mediaId}';
 export type MutationKey = QueryKey | VoidMutationKey;
 /** 1-8 가입 응답. 공개 크루는 APPROVED, 비공개 크루는 PENDING 으로 온다 */
 export type JoinResult = { id: string; crew: { id: string; name: string }; status: JoinRequestStatus };
