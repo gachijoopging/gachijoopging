@@ -213,6 +213,10 @@ export function createMockClient({ delayMs = 0, failing = [], activityTotals }: 
         agreements = { items, complete: items.every((item) => !item.required || item.agreed) };
         return { data: agreements } as never;
       }
+      if (key === 'POST /activities') {
+        // 목의 startedAt 은 고정값이라 그대로 쓰면 시작하자마자 24시간 기한이 지난 활동이 된다
+        return { data: { ...MOCKS['POST /activities'].data, ...(body as object) } } as never;
+      }
       if (key === 'POST /activities/{id}/end') {
         const request = body as EndBody & { id: string };
         const totals = activityTotals?.();

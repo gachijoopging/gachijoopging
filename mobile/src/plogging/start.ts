@@ -38,7 +38,8 @@ export async function startActivity(
 ): Promise<StartResult> {
   try {
     const res = await api.mutate('POST /activities', body);
-    return { kind: 'started', id: res.data.id, startedAt: body.startedAt, locationShared: body.locationShared };
+    // 같은 id 로 다시 보내면 서버는 기존 활동을 돌려준다. 24시간 기한·공유 상태는 그 활동의 값이어야 한다
+    return { kind: 'started', id: res.data.id, startedAt: res.data.startedAt, locationShared: res.data.locationShared };
   } catch (e) {
     if (e instanceof ApiError && e.code === 'NO_CREW') return { kind: 'noCrew' };
     if (!(e instanceof ApiError && e.code === 'CONFLICT')) return { kind: 'failed' };
