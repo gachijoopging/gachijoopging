@@ -314,13 +314,17 @@ export function createHttpClient({ baseUrl, fetch: send = (...args) => globalThi
     const owner = currentOwner();
     const sentAt = forgets;
     const started = session;
-    const response = (await authed(key, query)) as ApiResponse<K>;
-    if (key === 'GET /users/me') {
-      // 호출자가 받은 data 로 다시 기억하고 그 계정 기준으로 이동하므로, 앞 계정의 응답은 돌려주지도 않는다
-      if (started !== session) throw new ApiError('TOKEN_EXPIRED', undefined, 401);
-      // 보낸 뒤 이 기기에서 소속이 바뀌었으면(크루 나가기) 바뀌기 전 상태의 응답이다. 호출자가 다시 기억하면 소속이 되돌아가므로 버리고 다시 받는다
-      if (owner !== currentOwner()) return get(key, query);
+    // 호출자는 응답을 받은 계정 기준으로 소속을 기억하고 이동하므로, 앞 세션의 응답은 성공이든 NO_CREW 같은 오류든 돌려주지 않는다
+    const stale = () => new ApiError('TOKEN_EXPIRED', undefined, 401);
+    let response: ApiResponse<K>;
+    try {
+      response = (await authed(key, query)) as ApiResponse<K>;
+    } catch (error) {
+      throw started === session ? error : stale();
     }
+    if (started !== session) throw stale();
+    // 보낸 뒤 이 기기에서 소속이 바뀌었으면(크루 나가기) 바뀌기 전 상태의 응답이다. 호출자가 다시 기억하면 소속이 되돌아가므로 버리고 다시 받는다
+    if (key === 'GET /users/me' && owner !== currentOwner()) return get(key, query);
     remember(owner, sentAt, key, query, response);
     // 크루 생성·즉시 가입은 화면이 바로 기억하지만, 크루장의 승인처럼 서버에서 바뀐 소속은 내 정보를 받을 때만 알 수 있다.
     // 크루 없음으로 남으면 오프라인 재실행이 1-6 에 멈춰 활동 기록을 보내지 못한다
