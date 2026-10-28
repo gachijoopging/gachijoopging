@@ -54,16 +54,19 @@ export default function CreateCrewScreen() {
     setBanner(undefined);
     setLoading(true);
     const crewName = normalizeCrewName(name);
+    const sentBy = currentAccount()?.id;
     try {
       await api.mutate('POST /crews', { name: crewName, ...(intro.trim() ? { intro: intro.trim() } : {}), region, joinPolicy });
       const account = currentAccount();
-      if (account) rememberAccount({ id: account.id, membership: { status: 'MEMBER' } });
-      done.current = true;
-      finishOnboarding(navigation, '/(tabs)', { flash: `${crewName} 크루를 만들었어요.` });
-      return;
+      if (account?.id === sentBy) {
+        if (account) rememberAccount({ id: account.id, membership: { status: 'MEMBER' } });
+        done.current = true;
+        finishOnboarding(navigation, '/(tabs)', { flash: `${crewName} 크루를 만들었어요.` });
+        return;
+      }
     } catch (e) {
       const mapped = mapCrewCreateError(e);
-      if (mapped.moved) {
+      if (mapped.moved && currentAccount()?.id === sentBy) {
         done.current = true;
         finishOnboarding(navigation, mapped.moved.to, { flash: mapped.moved.flash });
         return;
