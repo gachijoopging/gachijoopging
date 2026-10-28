@@ -147,6 +147,17 @@ public class PostQueryRepository {
         .single();
   }
 
+  // 나가기·추방이 지우는 행을 잡아, 그 커밋 뒤에는 없는 것으로 보고 앞이면 그쪽을 기다리게 한다
+  public boolean lockMembership(UUID crewId, UUID userId) {
+    return jdbc.sql(
+            "SELECT 1 FROM crew_members WHERE crew_id = :crewId AND user_id = :userId FOR SHARE")
+        .param("crewId", crewId)
+        .param("userId", userId)
+        .query(Integer.class)
+        .optional()
+        .isPresent();
+  }
+
   private static PostRow post(ResultSet rs, int rowNum) throws SQLException {
     return new PostRow(
         rs.getObject("id", UUID.class),

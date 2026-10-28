@@ -25,6 +25,7 @@ import site.gachijoopging.server.domain.crew.repository.CrewQueryRepository;
 import site.gachijoopging.server.domain.crew.repository.CrewQueryRepository.CrewSummaryRow;
 import site.gachijoopging.server.domain.crew.repository.CrewQueryRepository.UserBriefRow;
 import site.gachijoopging.server.domain.crew.repository.CrewRepository;
+import site.gachijoopging.server.domain.media.entity.MediaPurpose;
 import site.gachijoopging.server.domain.media.service.MediaService;
 import site.gachijoopging.server.domain.media.service.MediaSignedUrl;
 import site.gachijoopging.server.global.error.BusinessException;
@@ -145,7 +146,9 @@ public class CrewService implements CrewMembershipLoader {
       throw new BusinessException(ErrorCode.CREW_NAME_TAKEN, "이미 쓰는 크루 이름이다");
     }
     if (request.photoMediaId() != null) {
-      request.photoMediaId().ifPresent(mediaId -> mediaService.requireOwnedBy(mediaId, me));
+      request
+          .photoMediaId()
+          .ifPresent(mediaId -> mediaService.requireOwnedBy(mediaId, me, MediaPurpose.CREW));
     }
     Instant now = clock.instant();
     if (crew.getJoinPolicy() == JoinPolicy.APPROVAL && request.joinPolicy() == JoinPolicy.OPEN) {

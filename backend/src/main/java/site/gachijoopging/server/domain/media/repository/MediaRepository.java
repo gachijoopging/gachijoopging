@@ -8,10 +8,11 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import site.gachijoopging.server.domain.media.entity.Media;
+import site.gachijoopging.server.domain.media.entity.MediaPurpose;
 
 public interface MediaRepository extends JpaRepository<Media, UUID> {
 
-  boolean existsByIdAndOwnerId(UUID id, UUID ownerId);
+  boolean existsByIdAndOwnerIdAndPurpose(UUID id, UUID ownerId, MediaPurpose purpose);
 
   // 지우는 동안 프로필·크루 사진으로 지정되거나 같은 삭제가 겹치지 않도록 줄 세운다.
   // PESSIMISTIC_WRITE 는 FOR NO KEY UPDATE 로 나가 그 참조의 FK 검사(KEY SHARE)를 막지 못하므로 FOR UPDATE 다

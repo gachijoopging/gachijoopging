@@ -13,12 +13,19 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.Timestamp;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+import javax.sql.DataSource;
+import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -38,6 +45,7 @@ class PostApiTest extends IntegrationTest {
   @Autowired private MockMvc mockMvc;
   @Autowired private JdbcTemplate jdbcTemplate;
   @Autowired private ObjectMapper objectMapper;
+  @Autowired private DataSource dataSource;
 
   @Value("${app.media.root}")
   private String 업로드_루트;
@@ -175,6 +183,48 @@ class PostApiTest extends IntegrationTest {
       assertThat(Path.of(업로드_루트, "deleted", 원본)).exists();
       assertThat(Path.of(업로드_루트, "deleted", 썸네일(원본))).exists();
     }
+  }
+
+  @Test
+  void 추방이_커밋되기를_기다린_작성은_옛_크루에_남지_않는다() throws Exception {
+    TestAccount 크루장 = 크루를_만든다("post-expel-race-leader@test.io");
+    TestAccount 나 = 크루원이_된다("post-expel-race-me@test.io", 크루장);
+    UUID id = UUID.randomUUID();
+
+    try (Connection 추방 = dataSource.getConnection()) {
+      추방.setAutoCommit(false);
+      try (PreparedStatement 지우기 =
+          추방.prepareStatement("DELETE FROM crew_members WHERE user_id = ?")) {
+        지우기.setObject(1, 나.id());
+        지우기.executeUpdate();
+      }
+      CompletableFuture<ResultActions> 작성_결과 =
+          CompletableFuture.supplyAsync(
+              () -> {
+                try {
+                  return mockMvc.perform(작성(나, id, "늦은 글", "CREW", List.of()));
+                } catch (Exception e) {
+                  throw new IllegalStateException(e);
+                }
+              });
+      Awaitility.await()
+          .atMost(Duration.ofSeconds(10))
+          .until(
+              () ->
+                  jdbcTemplate.queryForObject(
+                          "SELECT count(*) FROM pg_stat_activity WHERE wait_event_type = 'Lock'",
+                          Long.class)
+                      > 0);
+      추방.commit();
+
+      작성_결과
+          .get(10, TimeUnit.SECONDS)
+          .andExpect(status().isForbidden())
+          .andExpect(jsonPath("$.code").value("NO_CREW"));
+    }
+    assertThat(
+            jdbcTemplate.queryForObject("SELECT count(*) FROM posts WHERE id = ?", Long.class, id))
+        .isZero();
   }
 
   @Test

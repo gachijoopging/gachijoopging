@@ -89,6 +89,10 @@ public class PostService {
   @Transactional
   public PostResponse create(UUID me, CrewMembership crew, CreatePostRequest request) {
     userLock.lock(me);
+    // 주입된 소속은 잠금을 기다리기 전에 읽은 것이라, 그사이 나갔거나 추방됐으면 옛 크루에 쓰게 된다
+    if (!queryRepository.lockMembership(crew.crewId(), me)) {
+      throw new BusinessException(ErrorCode.NO_CREW, "소속 크루가 없다");
+    }
     Post same = postRepository.findById(request.id()).orElse(null);
     if (same != null) {
       if (!same.writtenBy(me)) {
