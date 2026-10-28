@@ -158,6 +158,16 @@ public class PostQueryRepository {
         .isPresent();
   }
 
+  // 위임이 잠그는 크루 행을 잡아, 그 커밋 뒤의 leader_id 로 대조한다
+  public boolean lockLeader(UUID crewId, UUID userId) {
+    return jdbc.sql("SELECT leader_id = :userId FROM crews WHERE id = :crewId FOR SHARE")
+        .param("crewId", crewId)
+        .param("userId", userId)
+        .query(Boolean.class)
+        .optional()
+        .orElse(false);
+  }
+
   private static PostRow post(ResultSet rs, int rowNum) throws SQLException {
     return new PostRow(
         rs.getObject("id", UUID.class),

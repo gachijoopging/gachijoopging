@@ -228,6 +228,44 @@ class PostApiTest extends IntegrationTest {
   }
 
   @Test
+  void 위임이_커밋되기를_기다린_삭제는_옛_크루장_권한으로_지우지_못한다() throws Exception {
+    TestAccount 크루장 = 크루를_만든다("post-delegate-race-leader@test.io");
+    TestAccount 나 = 크루원이_된다("post-delegate-race-me@test.io", 크루장);
+    UUID 내_글 = 쓴다(나, "위임 뒤에도 남을 글", "CREW");
+
+    try (Connection 위임 = dataSource.getConnection()) {
+      위임.setAutoCommit(false);
+      try (PreparedStatement 바꾸기 =
+          위임.prepareStatement("UPDATE crews SET leader_id = ? WHERE leader_id = ?")) {
+        바꾸기.setObject(1, 나.id());
+        바꾸기.setObject(2, 크루장.id());
+        바꾸기.executeUpdate();
+      }
+      CompletableFuture<ResultActions> 삭제_결과 =
+          CompletableFuture.supplyAsync(
+              () -> {
+                try {
+                  return mockMvc.perform(지운다(크루장, 내_글));
+                } catch (Exception e) {
+                  throw new IllegalStateException(e);
+                }
+              });
+      Awaitility.await()
+          .atMost(Duration.ofSeconds(10))
+          .until(
+              () ->
+                  jdbcTemplate.queryForObject(
+                          "SELECT count(*) FROM pg_stat_activity WHERE wait_event_type = 'Lock'",
+                          Long.class)
+                      > 0);
+      위임.commit();
+
+      삭제_결과.get(10, TimeUnit.SECONDS).andExpect(status().isForbidden());
+    }
+    상세(나, 내_글).andExpect(status().isOk());
+  }
+
+  @Test
   void 같은_id_로_다시_보내면_한_건만_생긴다() throws Exception {
     TestAccount 나 = 크루를_만든다("post-retry@test.io");
     UUID id = UUID.randomUUID();

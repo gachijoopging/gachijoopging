@@ -124,7 +124,8 @@ public class PostService {
   public void delete(UUID me, CrewMembership crew, UUID postId) {
     visible(me, crew, postId);
     Post post = postRepository.findById(postId).orElseThrow(PostService::notFound);
-    if (!post.writtenBy(me) && !crew.leader()) {
+    // 주입된 크루장 여부는 요청 시작 때 것이라, 그사이 위임이 커밋됐으면 옛 권한으로 지우게 된다
+    if (!post.writtenBy(me) && !queryRepository.lockLeader(crew.crewId(), me)) {
       throw new BusinessException(ErrorCode.FORBIDDEN, "작성자나 크루장만 지울 수 있다");
     }
     post.delete(me, clock.instant());
