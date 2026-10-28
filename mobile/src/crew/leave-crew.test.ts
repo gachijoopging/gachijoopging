@@ -1,7 +1,7 @@
 import React from 'react';
 import { LeaveCrew } from './LeaveCrew';
 import { ApiError } from '../api/client';
-import { currentAccount, rememberAccount } from '../auth/account';
+import { currentAccount, forgetAccount, rememberAccount } from '../auth/account';
 
 const { act, create } = require('react-test-renderer');
 const mockGet = jest.fn();
@@ -89,6 +89,20 @@ test('나가는 응답을 기다리는 사이 계정이 바뀌면 이동하지 �
   await act(async () => request.resolve(undefined));
   expect(mockDismiss).not.toHaveBeenCalled();
   expect(currentAccount()).toMatchObject({ id: 'u2', hasCrew: true });
+  expect(openDialog()).toBeUndefined();
+  expect(row().props.disabled).toBe(false);
+  expect(button('나가기').props.loading).toBe(false);
+});
+
+test('나가는 응답을 기다리는 사이 로그아웃하면 이동하지 않고 다시 누를 수 있다', async () => {
+  const request = deferred();
+  mockMutate.mockReturnValue(request.promise);
+  await mount();
+  await act(async () => { button('나가기').props.onPress(); });
+  forgetAccount();
+  await act(async () => request.resolve(undefined));
+  expect(mockDismiss).not.toHaveBeenCalled();
+  expect(currentAccount()).toBeNull();
   expect(openDialog()).toBeUndefined();
   expect(row().props.disabled).toBe(false);
   expect(button('나가기').props.loading).toBe(false);

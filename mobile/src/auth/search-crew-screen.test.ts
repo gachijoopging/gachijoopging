@@ -1,7 +1,7 @@
 import React from 'react';
 import SearchCrewScreen from '../../app/(onboarding)/search-crew';
 import { MOCKS } from '../api/mocks.generated';
-import { currentAccount, rememberAccount } from './account';
+import { currentAccount, forgetAccount, rememberAccount } from './account';
 
 let mockAccountFile: string | null = null;
 jest.mock('expo-file-system', () => ({ Paths: { document: 'documents' }, File: class {
@@ -172,6 +172,16 @@ test('즉시 가입 응답을 기다리는 사이 계정이 바뀌면 새 계정
   await act(async () => request.resolve({ data: { id: 'jr001', crew: { id: 'c003', name: '여의도아침줍깅' }, status: 'APPROVED' } }));
   await closeSheet('여의도아침줍깅');
   expect(currentAccount()).toEqual(expect.objectContaining({ id: 'u2', hasCrew: false }));
+  expect(mockReset).not.toHaveBeenCalled();
+  expect(sheetButton().props.loading).toBe(false);
+});
+
+test('즉시 가입 응답을 기다리는 사이 로그아웃하면 기억도 이동도 하지 않는다', async () => {
+  const request = await joinPending('c003');
+  forgetAccount();
+  await act(async () => request.resolve({ data: { id: 'jr001', crew: { id: 'c003', name: '여의도아침줍깅' }, status: 'APPROVED' } }));
+  await closeSheet('여의도아침줍깅');
+  expect(currentAccount()).toBeNull();
   expect(mockReset).not.toHaveBeenCalled();
   expect(sheetButton().props.loading).toBe(false);
 });

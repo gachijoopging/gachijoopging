@@ -1,6 +1,6 @@
 import React from 'react';
 import CreateCrewScreen from '../../app/(onboarding)/create-crew';
-import { currentAccount, rememberAccount } from './account';
+import { currentAccount, forgetAccount, rememberAccount } from './account';
 
 let mockAccountFile: string | null = null;
 jest.mock('expo-file-system', () => ({ Paths: { document: 'documents' }, File: class {
@@ -107,6 +107,26 @@ test('만드는 응답이 409 로 늦게 와도 계정이 바뀌었으면 승인
   expect(currentAccount()).toEqual(expect.objectContaining({ id: 'u2', hasCrew: false }));
   expect(mockReset).not.toHaveBeenCalled();
   expect(button().props.loading).toBe(false);
+});
+
+test('만드는 응답을 기다리는 사이 로그아웃하면 기억도 이동도 하지 않는다', async () => {
+  const request = await submitPending();
+  forgetAccount();
+  await act(async () => request.resolve({ data: {} }));
+  expect(currentAccount()).toBeNull();
+  expect(mockReset).not.toHaveBeenCalled();
+  expect(button().props.loading).toBe(false);
+});
+
+test('계정이 바뀌어 막힌 뒤에도 같은 버튼을 다시 눌러 만들 수 있다', async () => {
+  const request = await submitPending();
+  rememberAccount({ id: 'u2', membership: { status: 'NONE' } });
+  await act(async () => request.resolve({ data: {} }));
+  expect(mockReset).not.toHaveBeenCalled();
+  await act(async () => button().props.onPress());
+  expect(mockMutate).toHaveBeenCalledTimes(2);
+  expect(mockReset).toHaveBeenCalledTimes(1);
+  expect(currentAccount()).toEqual(expect.objectContaining({ id: 'u2', hasCrew: true }));
 });
 
 test('이미 있는 크루 이름이면 이름 칸 아래에 알리고 화면에 머문다', async () => {

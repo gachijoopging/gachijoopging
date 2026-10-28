@@ -9,7 +9,7 @@ jest.mock('expo-file-system', () => ({ Paths: { document: 'documents' }, File: c
 } }));
 jest.mock('expo-router', () => ({ router: { replace: (...a: unknown[]) => mockReplace(...a) } }));
 jest.mock('../api/config', () => ({ createApiClient: () => ({ get: (...a: unknown[]) => mockGet(...a) }) }));
-import { currentAccount, rememberAccount } from '../auth/account';
+import { currentAccount, forgetAccount, rememberAccount } from '../auth/account';
 import { leaveForMembership } from './leave';
 
 beforeEach(() => {
@@ -41,4 +41,18 @@ test('내 정보를 기다리는 사이 계정이 바뀌면 새 계정을 1-6 �
 
   expect(mockReplace).not.toHaveBeenCalled();
   expect(currentAccount()).toMatchObject({ id: 'u2', hasCrew: true });
+});
+
+test('내 정보를 기다리는 사이 로그아웃하면 1-6 으로 보내지 않는다', async () => {
+  rememberAccount({ id: 'u1', membership: { status: 'MEMBER' } });
+  let reject!: (error: Error) => void;
+  mockGet.mockReturnValueOnce(new Promise((_, no) => { reject = no; }));
+
+  const left = leaveForMembership();
+  forgetAccount();
+  reject(new Error('TOKEN_EXPIRED'));
+  await left;
+
+  expect(mockReplace).not.toHaveBeenCalled();
+  expect(currentAccount()).toBeNull();
 });
