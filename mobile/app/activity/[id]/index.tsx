@@ -42,6 +42,7 @@ import { endActivity } from '../../../src/activity/actions';
 import { QuickPickupSheet } from '../../../src/activity/QuickPickupSheet';
 import {
   activityDeadline,
+  asOf,
   bannerFor,
   displayDistance,
   elapsedSec,
@@ -288,13 +289,16 @@ export default function ActivityInProgressScreen() {
   const banner = bannerFor({ locationOff, offline, connecting: false, gps: status, paused: !!session?.paused });
   const paused = !!session?.paused;
   const here = session?.here ?? null;
+  // 자동 종료 저장에 실패해 활동이 남아 있어도 기록은 24시간까지다. 화면도 거기서 멈춘다
+  const shownAt = session ? Math.min(now, activityDeadline(session)) : now;
+  const shown = session ? asOf(session, shownAt) : null;
 
-  const metrics = session
+  const metrics = shown
     ? [
-        { value: String(session.itemCount), label: '줍기 개수' },
-        { value: formatClock(elapsedSec(session, now)), label: '활동 시간', muted: paused },
-        { value: formatDistance(displayDistance(session)), label: '이동 거리', muted: paused },
-        { value: session.steps == null ? '측정 안 됨' : session.steps.toLocaleString('ko-KR'), label: '걸음', muted: paused },
+        { value: String(shown.itemCount), label: '줍기 개수' },
+        { value: formatClock(elapsedSec(shown, shownAt)), label: '활동 시간', muted: paused },
+        { value: formatDistance(displayDistance(shown)), label: '이동 거리', muted: paused },
+        { value: shown.steps == null ? '측정 안 됨' : shown.steps.toLocaleString('ko-KR'), label: '걸음', muted: paused },
       ]
     : [
         { value: '0', label: '줍기 개수' },
@@ -359,7 +363,7 @@ export default function ActivityInProgressScreen() {
           </View>
 
           <Card>
-            <MetricSplit items={metrics} divider="dashed" accessibilityLabel={session ? metricsLabel(session, now) : '기록을 불러오고 있어요'} />
+            <MetricSplit items={metrics} divider="dashed" accessibilityLabel={shown ? metricsLabel(shown, shownAt) : '기록을 불러오고 있어요'} />
           </Card>
 
           <Appear visible={!!banner} rise={0} pointerEvents="box-none" replayKey={banner ?? undefined}>
