@@ -74,9 +74,9 @@ function Review({ id, media, localUri }: { id: string; media: Media; localUri?: 
     router.dismissTo({ pathname: '/activity/[id]', params: { id, ...(flash ? { flash } : {}) } });
   };
 
-  const discardAndLeave = () => {
+  const discardAndLeave = (flash?: string) => {
     discardPhoto(media.mediaId, id);
-    backToActivity();
+    backToActivity(flash);
   };
 
   useEffect(
@@ -92,8 +92,8 @@ function Review({ id, media, localUri }: { id: string; media: Media; localUri?: 
 
   const save = () => {
     if (total === 0 || anyInvalid) return;
-    // 기한이 지나 거절될 줍기는 다시 시도해도 같으므로 재시도를 보이지 않는다
-    if (!isActivityOpen(id)) return backToActivity('활동이 끝나 사진을 담을 수 없어요');
+    // 기한이 지나 거절될 줍기는 다시 시도해도 같으므로 재시도를 보이지 않는다. 사진이 붙을 줍기가 없으니 버린 사진과 같이 지운다
+    if (!isActivityOpen(id)) return discardAndLeave('활동이 끝나 사진을 담을 수 없어요');
     setSaveFailed(false);
     try {
       // 같은 작업을 다시 시도하면 같은 id 를 쓴다 — 서버가 중복을 흡수한다
