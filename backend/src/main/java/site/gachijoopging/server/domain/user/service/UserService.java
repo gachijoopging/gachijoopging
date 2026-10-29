@@ -52,7 +52,7 @@ public class UserService implements AccountAuthorityLoader, SessionVersionLoader
           ? new BusinessException(ErrorCode.EMAIL_TAKEN, "이미 가입된 이메일이다")
           : nicknameTaken();
     }
-    return new UserAccount(id, true);
+    return new UserAccount(id, true, 0);
   }
 
   @Transactional(readOnly = true)
@@ -93,7 +93,7 @@ public class UserService implements AccountAuthorityLoader, SessionVersionLoader
             || (nickname != null && find.get().isEmpty() && insert.apply(null) == 1);
     return find.get()
         .filter(User::active)
-        .map(user -> new UserAccount(user.getId(), created))
+        .map(user -> new UserAccount(user.getId(), created, user.getSessionVersion()))
         .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_CREDENTIALS, "쓸 수 없는 계정이다"));
   }
 
@@ -248,7 +248,7 @@ public class UserService implements AccountAuthorityLoader, SessionVersionLoader
   }
 
   private static UserAccount account(User user) {
-    return new UserAccount(user.getId(), false);
+    return new UserAccount(user.getId(), false, user.getSessionVersion());
   }
 
   private static BusinessException nicknameTaken() {

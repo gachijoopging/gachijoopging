@@ -76,7 +76,7 @@ class AuthLoginMetricsTest {
   void 로그인이_성공하면_시도만_센다() {
     UUID userId = UUID.randomUUID();
     when(userService.authenticate("a@b.c", "맞는비밀번호"))
-        .thenReturn(Optional.of(new UserAccount(userId, false)));
+        .thenReturn(Optional.of(new UserAccount(userId, false, 0)));
     when(jwtIssuer.issue(userId)).thenReturn("access-token");
     when(refreshTokenRepository.save(any())).thenReturn(null);
 

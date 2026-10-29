@@ -245,6 +245,83 @@ describe('실 API 클라이언트', () => {
     expect(peek('GET /users/me/activities')).toBeUndefined();
   });
 
+  test('내 정보를 받으면 기억한 소속을 맞춘다 — 크루를 만든 뒤 오프라인으로 재실행해도 1-6 에 멈추지 않는다', async () => {
+    rememberAccount({ id: 'u1', membership: { status: 'NONE' } });
+    const { api } = server(() => json(200, { data: { id: 'u1', membership: { status: 'MEMBER', crew: { id: 'c1', name: 'c', isLeader: true }, rejection: null } } }));
+    await api.get('GET /users/me');
+    expect(currentAccount()).toEqual(expect.objectContaining({ id: 'u1', hasCrew: true }));
+  });
+
+  test.each([
+    ['로그아웃', null],
+    ['다른 계정으로 로그인', 'u2'],
+  ] as const)('내 정보를 기다리는 사이 %s 하면 늦게 온 앞 계정 응답은 호출자에게도 주지 않는다', async (_label, after) => {
+    let answer!: (r: Response) => void;
+    const { api } = server((c) => {
+      if (c.url.endsWith('/users/me')) return new Promise<Response>((r) => { answer = r; });
+      if (c.url.endsWith('/auth/logout')) return json(204);
+      return json(200, { data: { accessToken: 'b', refreshToken: 'r-b' } });
+    });
+    const late = api.get('GET /users/me');
+    await new Promise((r) => setTimeout(r, 0));
+    if (after) {
+      await api.mutate('POST /auth/login', { email: 'b@b.c', password: 'p' });
+      rememberAccount({ id: after, membership: { status: 'NONE' } });
+    } else await api.mutate('POST /auth/logout');
+    answer(json(200, { data: { id: 'u1', membership: { status: 'MEMBER', crew: null, rejection: null } } }));
+    await expect(late).rejects.toMatchObject({ code: 'TOKEN_EXPIRED' });
+    expect(currentAccount()?.id ?? null).toBe(after);
+    if (after) expect(currentAccount()?.hasCrew).toBe(false);
+  });
+
+  test('내 정보를 기다리는 사이 크루를 나가면 늦게 온 소속은 버리고 다시 받는다', async () => {
+    let answerFirst!: (r: Response) => void;
+    let received = 0;
+    const { calls, api } = server(() => {
+      received += 1;
+      if (received === 1) return new Promise<Response>((r) => { answerFirst = r; });
+      return json(200, { data: { id: 'u1', membership: { status: 'NONE', crew: null, rejection: null } } });
+    });
+    const pending = api.get('GET /users/me');
+    await new Promise((r) => setTimeout(r, 0));
+    rememberAccount({ id: 'u1', membership: { status: 'NONE' } });
+    answerFirst(json(200, { data: { id: 'u1', membership: { status: 'MEMBER', crew: { id: 'c1', name: 'c', isLeader: false }, rejection: null } } }));
+    const result = await pending;
+    expect(calls.filter((c) => c.url.endsWith('/users/me'))).toHaveLength(2);
+    expect(result.data.membership.status).toBe('NONE');
+    expect(currentAccount()).toEqual(expect.objectContaining({ id: 'u1', hasCrew: false }));
+  });
+
+  const noCrew = () => json(403, { code: 'NO_CREW', message: 'no crew', requestId: 'r1' });
+
+  test.each([
+    ['NO_CREW 오류', '로그아웃', null, noCrew],
+    ['NO_CREW 오류', '다른 계정으로 로그인', 'u2', noCrew],
+    ['성공', '로그아웃', null, () => json(200, { data: { memberCount: 3 } })],
+    ['성공', '다른 계정으로 로그인', 'u2', () => json(200, { data: { memberCount: 3 } })],
+  ] as const)('크루 GET 의 늦은 %s 응답이 %s 뒤에 오면 앞 세션 것이므로 TOKEN_EXPIRED 로 돌려준다', async (_kind, _change, after, reply) => {
+    let answer!: (r: Response) => void;
+    const { api } = server((c) => {
+      if (c.url.endsWith('/crew')) return new Promise<Response>((r) => { answer = r; });
+      if (c.url.endsWith('/auth/logout')) return json(204);
+      return json(200, { data: { accessToken: 'b', refreshToken: 'r-b' } });
+    });
+    const late = api.get('GET /crew');
+    await new Promise((r) => setTimeout(r, 0));
+    if (after) {
+      await api.mutate('POST /auth/login', { email: 'b@b.c', password: 'p' });
+      rememberAccount({ id: after, membership: { status: 'NONE' } });
+    } else await api.mutate('POST /auth/logout');
+    answer(reply());
+    await expect(late).rejects.toMatchObject({ code: 'TOKEN_EXPIRED', status: 401 });
+    expect(currentAccount()?.id ?? null).toBe(after);
+  });
+
+  test('세션이 그대로면 NO_CREW 는 그대로 온다 — 호출자가 받아 소속대로 분기한다', async () => {
+    const { api } = server(() => noCrew());
+    await expect(api.get('GET /crew')).rejects.toMatchObject({ code: 'NO_CREW', status: 403 });
+  });
+
   test('204 는 값 없이 끝난다', async () => {
     const { api } = server(() => json(204));
     await expect(api.mutate('DELETE /posts/{postId}', { postId: 'p1' })).resolves.toBeUndefined();
@@ -270,7 +347,7 @@ describe('실 API 클라이언트', () => {
   test('refresh 가 거절되면 토큰·계정·기억한 응답을 지우고 로그아웃 상태가 된다', async () => {
     const { api } = server((c) => {
       if (isRefresh(c)) return expired();
-      return c.url.endsWith('/users/me') ? json(200, { data: { id: 'u1' } }) : expired();
+      return c.url.endsWith('/users/me') ? json(200, { data: { id: 'u1', membership: { status: 'MEMBER' } } }) : expired();
     });
     await api.get('GET /users/me');
     expect(peek('GET /users/me')).toBeDefined();
@@ -293,7 +370,7 @@ describe('실 API 클라이언트', () => {
       if (isRefresh(c)) { await gate; return renewed(); }
       return c.headers.Authorization === 'Bearer new' ? json(200, { data: c.url }) : expired();
     });
-    const all = Promise.all((['GET /crew/home', 'GET /crew', 'GET /users/me'] as const).map((k) => api.get(k)));
+    const all = Promise.all((['GET /crew/home', 'GET /crew', 'GET /crew/members'] as const).map((k) => api.get(k)));
     await new Promise((r) => setTimeout(r, 0));
     release();
     await all;

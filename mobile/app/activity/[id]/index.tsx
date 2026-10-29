@@ -38,9 +38,11 @@ import { type ApiClient } from '../../../src/api/client';
 import { createApiClient } from '../../../src/api/config';
 import type { MOCKS } from '../../../src/api/mocks.generated';
 import { enqueue } from '../../../src/activity/outbox';
-import { endActivity } from '../../../src/activity/actions';
+import { endActivity, isActivityOpen } from '../../../src/activity/actions';
 import { QuickPickupSheet } from '../../../src/activity/QuickPickupSheet';
 import {
+  activityDeadline,
+  asOf,
   bannerFor,
   displayDistance,
   elapsedSec,
@@ -104,6 +106,7 @@ export default function ActivityInProgressScreen() {
   const [locationOff, setLocationOff] = useState(false);
   const [confirmEnd, setConfirmEnd] = useState(false);
   const [ending, setEnding] = useState(false);
+  const [ended, setEnded] = useState(false);
   const [endFailed, setEndFailed] = useState(false);
   const [quickOpen, setQuickOpen] = useState(false);
   const [snackbar, setSnackbar] = useFlash();
@@ -157,10 +160,18 @@ export default function ActivityInProgressScreen() {
   useEffect(
     () =>
       subscribe((st) => {
-        if (st.session?.activityId === id && !st.ended) setSession(st.session);
+        if (st.session?.activityId !== id) return;
+        if (st.ended) setEnded(true);
+        else setSession(st.session);
       }),
     [id],
   );
+
+  // 루트 검사·배경 위치 작업이 쓴 종료 기록도 4-3 을 끝낸다. 4-4·4-5 가 위에 있으면 이탈 막기에 걸리므로 포커스를 되찾았을 때 간다.
+  // end() 가 스스로 쓴 기록은 end() 가 이동하므로 그동안은 건너뛴다
+  useEffect(() => {
+    if (focused && ended && !ending) router.replace({ pathname: '/activity/[id]/summary', params: { id } });
+  }, [focused, ended, ending, id]);
 
   useEffect(() => {
     let stepsAt = 0;
@@ -245,6 +256,7 @@ export default function ActivityInProgressScreen() {
   };
 
   const togglePause = () => {
+    if (!isActivityOpen(id)) return;
     updateStored((st) => {
       if (!st.session) return st;
       const t = Date.now();
@@ -258,9 +270,13 @@ export default function ActivityInProgressScreen() {
     if (ending || !session) return;
     setEnding(true);
     setEndFailed(false);
-    if ((await endActivity()) === 'saveFailed') {
+    const result = await endActivity(id);
+    if (result === 'stale') return setEnding(false);
+    if (result === 'saveFailed') {
       setEnding(false);
       setEndFailed(true);
+      // 자동 종료는 확인창 없이 시작한다. 저장 실패와 재시도는 확인창이 보여 준다
+      setConfirmEnd(true);
       return;
     }
     // 기록이 기기에 남은 뒤에만 알린다. API 30 미만은 Confirm 이 없어 조용히 넘어간다
@@ -269,17 +285,30 @@ export default function ActivityInProgressScreen() {
     router.replace({ pathname: '/activity/[id]/summary', params: { id } });
   };
 
+  // 24시간이 되면 종료 버튼과 같게 끝낸다. 꺼져 있던 앱을 다시 열었을 때도 첫 화면에서 같은 검사를 거친다.
+  // 4-4·4-5 가 위에 있으면 요약으로 바꾸는 이동이 그 화면의 이탈 막기에 걸리므로 4-3 으로 돌아왔을 때 한다.
+  // 저장에 실패하면 확인창의 [종료하기]로 다시 시도한다 — 매초 다시 부르지 않는다
+  const autoEnding = useRef(false);
+  useEffect(() => {
+    if (!focused || !session || ended || autoEnding.current || now < activityDeadline(session)) return;
+    autoEnding.current = true;
+    void end();
+  }, [focused, now, session, ended]);
+
   const status = session ? gpsStatus(session, now) : 'searching';
   const banner = bannerFor({ locationOff, offline, connecting: false, gps: status, paused: !!session?.paused });
   const paused = !!session?.paused;
   const here = session?.here ?? null;
+  // 자동 종료 저장에 실패해 활동이 남아 있어도 기록은 24시간까지다. 화면도 거기서 멈춘다
+  const shownAt = session ? Math.min(now, activityDeadline(session)) : now;
+  const shown = session ? asOf(session, shownAt) : null;
 
-  const metrics = session
+  const metrics = shown
     ? [
-        { value: String(session.itemCount), label: '줍기 개수' },
-        { value: formatClock(elapsedSec(session, now)), label: '활동 시간', muted: paused },
-        { value: formatDistance(displayDistance(session)), label: '이동 거리', muted: paused },
-        { value: session.steps == null ? '측정 안 됨' : session.steps.toLocaleString('ko-KR'), label: '걸음', muted: paused },
+        { value: String(shown.itemCount), label: '줍기 개수' },
+        { value: formatClock(elapsedSec(shown, shownAt)), label: '활동 시간', muted: paused },
+        { value: formatDistance(displayDistance(shown)), label: '이동 거리', muted: paused },
+        { value: shown.steps == null ? '측정 안 됨' : shown.steps.toLocaleString('ko-KR'), label: '걸음', muted: paused },
       ]
     : [
         { value: '0', label: '줍기 개수' },
@@ -344,7 +373,7 @@ export default function ActivityInProgressScreen() {
           </View>
 
           <Card>
-            <MetricSplit items={metrics} divider="dashed" accessibilityLabel={session ? metricsLabel(session, now) : '기록을 불러오고 있어요'} />
+            <MetricSplit items={metrics} divider="dashed" accessibilityLabel={shown ? metricsLabel(shown, shownAt) : '기록을 불러오고 있어요'} />
           </Card>
 
           <Appear visible={!!banner} rise={0} pointerEvents="box-none" replayKey={banner ?? undefined}>
