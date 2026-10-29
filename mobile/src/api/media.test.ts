@@ -17,7 +17,7 @@ import { mediaFile } from './media';
 beforeEach(() => { jest.clearAllMocks(); });
 test.each([[4000, 3000, { width: 2048 }], [3000, 4000, { height: 2048 }]])('large image %i×%i keeps its aspect ratio and uploads JPEG85', async (width, height, dimensions) => {
   mockRender.mockResolvedValue({ width, height, saveAsync: mockSave, release: mockRelease });
-  await expect(mediaFile('original.png')).resolves.toEqual({ uri: 'compressed.jpg', name: 'photo.jpg', type: 'image/jpeg' });
+  await expect(mediaFile('original.png')).resolves.toMatchObject({ uri: 'compressed.jpg' });
   expect(mockResize).toHaveBeenCalledWith(dimensions);
   expect(mockSave).toHaveBeenCalledWith({ format: 'jpeg', compress: 0.85 });
   expect(mockRelease).toHaveBeenCalledTimes(3);

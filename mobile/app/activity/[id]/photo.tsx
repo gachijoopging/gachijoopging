@@ -153,7 +153,7 @@ export default function TakePhotoScreen() {
       setProgress(0.4);
       const body = new FormData();
       body.append('mediaId', shot.mediaId);
-      body.append('file', await mediaFile(shot.uri) as unknown as Blob);
+      body.append('file', await mediaFile(shot.uri));
       body.append('purpose', 'ACTIVITY');
       body.append('activityId', id);
       body.append('takenAt', shot.takenAt);
