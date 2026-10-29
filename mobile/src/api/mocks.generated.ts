@@ -1032,6 +1032,12 @@ export const MOCKS = {
   "POST /activities": {
     "data": {
       "id": "2b7e4c1a-9f3d-4e8b-a6c2-5d1f0e9b8a73",
+      "user": {
+        "id": "8a2d…",
+        "nickname": "상혁",
+        "photoUrl": null,
+        "withdrawn": false
+      },
       "status": "IN_PROGRESS",
       "startedAt": "2026-09-29T09:00:00+09:00",
       "endedAt": null,
@@ -1043,7 +1049,10 @@ export const MOCKS = {
       "steps": null,
       "locationShared": true,
       "itemCount": 0,
-      "byCategory": {}
+      "byCategory": {},
+      "route": [],
+      "photos": [],
+      "items": []
     }
   },
   "POST /activities/{id}/end": {
@@ -1064,7 +1073,56 @@ export const MOCKS = {
         "CIGARETTE": 9,
         "PLASTIC": 5,
         "CAN": 3
-      }
+      },
+      "user": {
+        "id": "8a2d…",
+        "nickname": "상혁",
+        "photoUrl": null,
+        "withdrawn": false
+      },
+      "route": [
+        [
+          126.93,
+          37.52
+        ],
+        [
+          126.931,
+          37.521
+        ]
+      ],
+      "photos": [],
+      "items": [
+        {
+          "id": "6f1c2d3e-4a5b-4c6d-8e7f-9a0b1c2d3e4f",
+          "photoId": null,
+          "category": "CIGARETTE",
+          "quantity": 9,
+          "source": "MANUAL",
+          "aiConfidence": null,
+          "unclassified": false,
+          "bbox": null
+        },
+        {
+          "id": "7a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d",
+          "photoId": null,
+          "category": "PLASTIC",
+          "quantity": 5,
+          "source": "MANUAL",
+          "aiConfidence": null,
+          "unclassified": false,
+          "bbox": null
+        },
+        {
+          "id": "8b3c4d5e-6f7a-4b8c-9d0e-1f2a3b4c5d6e",
+          "photoId": null,
+          "category": "CAN",
+          "quantity": 3,
+          "source": "MANUAL",
+          "aiConfidence": null,
+          "unclassified": false,
+          "bbox": null
+        }
+      ]
     }
   },
   "POST /activities/{id}/items": {

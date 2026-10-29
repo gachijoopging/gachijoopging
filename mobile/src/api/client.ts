@@ -1,4 +1,5 @@
 import { MOCKS, type MockKey } from './mocks.generated';
+import type { components, paths } from './contract.generated';
 import type { MembershipStatus, Rejection } from '../auth/destination';
 import type { JoinRequestStatus } from '../auth/pending-request';
 import type { EndBody } from '../activity/outbox';
@@ -10,27 +11,30 @@ import { kstDate } from '../crew/calendar';
 
 type MeData = (typeof MOCKS)['GET /users/me']['data'];
 type JoinRequestData = (typeof MOCKS)['GET /crews/join-requests/mine']['data'];
-/** docs/openapi.yaml 의 Activity 중 4-1 이 쓰는 필드. 목 example 은 리터럴이라 그대로 쓰면 타입이 좁다 */
-export type Activity = {
-  id: string;
-  status: 'IN_PROGRESS' | 'ENDED';
-  startedAt: string;
-  pausedSec: number;
-  paused: boolean;
-  pausedAt: string | null;
-  distanceM: number;
-  itemCount: number;
-  locationShared: boolean;
-};
+export type Activity = components['schemas']['Activity'];
+
+/** 응답 타입을 계약(docs/openapi.yaml)에서 가져오는 경로. 실서버로 옮긴 경로부터 늘린다 — 나머지는 아직 목 example 의 타입이다 */
+type ContractKey =
+  | 'POST /activities' | 'GET /activities/current' | 'POST /activities/{id}/items' | 'PATCH /activities/{id}/items/{itemId}'
+  | 'POST /activities/{id}/end' | 'GET /activities/{id}' | 'GET /users/me/activities' | 'POST /media';
+type JsonOf<R> = R extends { content: { 'application/json': infer B } } ? B : never;
+type ContractResponse<K extends ContractKey> = K extends `${infer M} ${infer P extends keyof paths}`
+  ? paths[P][Lowercase<M> & keyof paths[P]] extends { responses: infer R } ? JsonOf<R[Extract<keyof R, 200 | 201>]> : never
+  : never;
+
+// 목도 계약을 만족해야 한다. example 이 계약과 어긋나면 여기서 타입 오류가 난다
+MOCKS satisfies { readonly [K in ContractKey]: ContractResponse<K> };
+
 export type QueryKey = MockKey;
 export type ApiResponse<K extends QueryKey> =
+  K extends ContractKey ? ContractResponse<K> :
   K extends 'GET /agreements' ? { data: { items: readonly AgreementDefinition[] } } :
   K extends 'GET /users/me/agreements' ? { data: AgreementState } :
   K extends 'GET /users/me' ? { data: Omit<MeData, 'membership'> & {
     membership: { status: MembershipStatus; crew: MeData['membership']['crew'] | null; rejection: Rejection | null };
   } } : K extends 'GET /crews/join-requests/mine' ? {
     data: (Omit<JoinRequestData, 'status'> & { status: JoinRequestStatus }) | null;
-  } : K extends 'GET /activities/current' ? { data: Activity | null } : K extends MockKey ? (typeof MOCKS)[K] : never;
+  } : K extends MockKey ? (typeof MOCKS)[K] : never;
 
 /** 목에 example 이 없는 204 전용 경로. 성공해도 돌려줄 데이터가 없다 */
 export type VoidMutationKey =
@@ -70,6 +74,7 @@ export type MutationKey = QueryKey | VoidMutationKey;
 /** 1-8 가입 응답. 공개 크루는 APPROVED, 비공개 크루는 PENDING 으로 온다 */
 export type JoinResult = { id: string; crew: { id: string; name: string }; status: JoinRequestStatus };
 export type MutationResponse<K extends MutationKey> =
+  K extends ContractKey ? ContractResponse<K> :
   K extends 'PUT /users/me/agreements' ? { data: AgreementState } :
   K extends 'POST /crews/join-requests' ? { data: JoinResult } :
   K extends MockKey ? (typeof MOCKS)[K] : void;
