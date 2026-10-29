@@ -106,6 +106,7 @@ export default function ActivityInProgressScreen() {
   const [locationOff, setLocationOff] = useState(false);
   const [confirmEnd, setConfirmEnd] = useState(false);
   const [ending, setEnding] = useState(false);
+  const [ended, setEnded] = useState(false);
   const [endFailed, setEndFailed] = useState(false);
   const [quickOpen, setQuickOpen] = useState(false);
   const [snackbar, setSnackbar] = useFlash();
@@ -159,10 +160,18 @@ export default function ActivityInProgressScreen() {
   useEffect(
     () =>
       subscribe((st) => {
-        if (st.session?.activityId === id && !st.ended) setSession(st.session);
+        if (st.session?.activityId !== id) return;
+        if (st.ended) setEnded(true);
+        else setSession(st.session);
       }),
     [id],
   );
+
+  // 루트 검사·배경 위치 작업이 쓴 종료 기록도 4-3 을 끝낸다. 4-4·4-5 가 위에 있으면 이탈 막기에 걸리므로 포커스를 되찾았을 때 간다.
+  // end() 가 스스로 쓴 기록은 end() 가 이동하므로 그동안은 건너뛴다
+  useEffect(() => {
+    if (focused && ended && !ending) router.replace({ pathname: '/activity/[id]/summary', params: { id } });
+  }, [focused, ended, ending, id]);
 
   useEffect(() => {
     let stepsAt = 0;
@@ -281,10 +290,10 @@ export default function ActivityInProgressScreen() {
   // 저장에 실패하면 확인창의 [종료하기]로 다시 시도한다 — 매초 다시 부르지 않는다
   const autoEnding = useRef(false);
   useEffect(() => {
-    if (!focused || !session || autoEnding.current || now < activityDeadline(session)) return;
+    if (!focused || !session || ended || autoEnding.current || now < activityDeadline(session)) return;
     autoEnding.current = true;
     void end();
-  }, [focused, now, session]);
+  }, [focused, now, session, ended]);
 
   const status = session ? gpsStatus(session, now) : 'searching';
   const banner = bannerFor({ locationOff, offline, connecting: false, gps: status, paused: !!session?.paused });
