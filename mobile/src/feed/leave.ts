@@ -12,6 +12,7 @@ export async function leaveForMembership(): Promise<void> {
     const { data } = await createApiClient().get('GET /users/me');
     router.replace(resolveDestination(data));
   } catch {
+    if (currentAccount()?.id !== account?.id) return;
     router.replace('/crew-choice');
   }
 }

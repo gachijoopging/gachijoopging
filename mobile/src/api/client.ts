@@ -3,7 +3,7 @@ import type { MembershipStatus, Rejection } from '../auth/destination';
 import type { JoinRequestStatus } from '../auth/pending-request';
 import type { EndBody } from '../activity/outbox';
 import type { AgreementDefinition, AgreementState } from '../auth/agreements';
-import { currentAccount, forgetAccount } from '../auth/account';
+import { currentAccount, forgetAccount, rememberAccount } from '../auth/account';
 import { ApiError, NetworkError, fromEnvelope } from './errors';
 import { clearTokens, getTokens, setTokens, type TokenPair } from './tokens';
 import { kstDate } from '../crew/calendar';
@@ -310,14 +310,30 @@ export function createHttpClient({ baseUrl, fetch: send = (...args) => globalThi
     }
   }
 
+  async function get<K extends QueryKey>(key: K, query?: unknown): Promise<ApiResponse<K>> {
+    const owner = currentOwner();
+    const sentAt = forgets;
+    const started = session;
+    // 호출자는 응답을 받은 계정 기준으로 소속을 기억하고 이동하므로, 앞 세션의 응답은 성공이든 NO_CREW 같은 오류든 돌려주지 않는다
+    const stale = () => new ApiError('TOKEN_EXPIRED', undefined, 401);
+    let response: ApiResponse<K>;
+    try {
+      response = (await authed(key, query)) as ApiResponse<K>;
+    } catch (error) {
+      throw started === session ? error : stale();
+    }
+    if (started !== session) throw stale();
+    // 보낸 뒤 이 기기에서 소속이 바뀌었으면(크루 나가기) 바뀌기 전 상태의 응답이다. 호출자가 다시 기억하면 소속이 되돌아가므로 버리고 다시 받는다
+    if (key === 'GET /users/me' && owner !== currentOwner()) return get(key, query);
+    remember(owner, sentAt, key, query, response);
+    // 크루 생성·즉시 가입은 화면이 바로 기억하지만, 크루장의 승인처럼 서버에서 바뀐 소속은 내 정보를 받을 때만 알 수 있다.
+    // 크루 없음으로 남으면 오프라인 재실행이 1-6 에 멈춰 활동 기록을 보내지 못한다
+    if (key === 'GET /users/me') rememberAccount((response as ApiResponse<'GET /users/me'>).data);
+    return response;
+  }
+
   return {
-    async get(key, query) {
-      const owner = currentOwner();
-      const sentAt = forgets;
-      const response = (await authed(key, query)) as ApiResponse<typeof key>;
-      remember(owner, sentAt, key, query, response);
-      return response;
-    },
+    get,
     async mutate(key, body) {
       // 응답을 기다리는 사이 다른 계정으로 로그인했으면 그 세션은 건드리지도 돌려주지도 않는다
       const started = session;

@@ -5,6 +5,7 @@ import { router, useFocusEffect, useNavigation } from 'expo-router';
 import { AppHeader, Banner, Button, Card, Icon, IconButton, Screen, Snackbar, Txt, space } from 'design-system/src';
 import { useFlash } from '../../src/ui/useFlash';
 import { onboardingApi as api } from '../../src/api/onboarding';
+import { currentAccount } from '../../src/auth/account';
 import { authenticatedDestination } from '../../src/auth/destination';
 import { finishOnboarding, type OnboardingNavigation } from '../../src/auth/navigation';
 
@@ -44,15 +45,18 @@ export default function CreateOrJoinCrewScreen() {
     busy.current = true;
     setChecking(true);
     setError(false);
+    const sentBy = currentAccount()?.id;
     try {
       const me = await api.get('GET /users/me');
       const destination = await authenticatedDestination(api, me.data);
+      if (currentAccount()?.id !== sentBy) return;
       if (destination !== '/crew-choice') {
         finishOnboarding(navigation, destination);
       } else {
         next?.();
       }
     } catch {
+      if (currentAccount()?.id !== sentBy) return;
       setError(true);
       next?.();
     } finally {

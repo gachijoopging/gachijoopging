@@ -74,6 +74,14 @@ test('reconsent prefills saved nickname and skips an unchanged nickname mutation
   expect(mockReset).toHaveBeenCalledWith({ index: 0, routes: [{ name: '(tabs)' }] });
 });
 
+test('a new social account with no nickname yet opens 1-4 with an empty field instead of crashing', async () => {
+  mockGet.mockImplementation((key: string) => Promise.resolve({ data: key === 'GET /agreements' ? { items: definitions() } : key === 'GET /users/me/agreements' ? state() : { ...me(), nickname: null } }));
+  await mount(Nickname);
+  expect(tree.root.findByType('Field' as never).props.value).toBe('');
+  await fill('닉네임', '새별명'); acceptRequired(); await press('다음');
+  expect(mockMutate).toHaveBeenCalledWith('PATCH /users/me', { nickname: '새별명' });
+});
+
 test('version refresh preserves nickname and unchanged-version choice but clears new-version consent', async () => {
   await mount(Nickname); acceptRequired(); await fill('닉네임', '바꾼별명');
   mockGet.mockImplementation((key: string) => Promise.resolve({ data: key === 'GET /users/me/agreements' ? state('v2') : me() }));
