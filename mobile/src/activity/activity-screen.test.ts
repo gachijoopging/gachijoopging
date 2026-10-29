@@ -7,6 +7,7 @@ let mockFocused = true;
 let mockWriteFails = false;
 const mockSession = { activityId: 'a1', userId: 'u1', startedAt: new Date().toISOString(), pausedSec: 0, paused: false, pausedAt: null, locationShared: false, itemCount: 0, byCategory: {}, segments: [], distanceM: 0, steps: null };
 let mockStored: Record<string, unknown> = { session: mockSession, ended: null, outbox: [] };
+const mockListeners = new Set<(s: Record<string, unknown>) => void>();
 jest.mock('expo/src/winter/fetch', () => ({ fetch: jest.fn() }));
 jest.mock('expo-crypto', () => ({ randomUUID: () => 'u' }));
 jest.mock('expo-haptics', () => ({ performAndroidHapticsAsync: (t: string) => mockHaptic(t), AndroidHaptics: { Confirm: 'confirm' } }));
@@ -26,8 +27,15 @@ jest.mock('./store', () => ({
   getStored: () => mockStored,
   loadAccount: () => mockStored,
   loadLastAccount: () => null,
-  subscribe: () => () => {},
-  updateStored: (fn: (s: typeof mockStored) => typeof mockStored) => { if (mockWriteFails) throw new Error('disk'); mockStored = fn(mockStored); },
+  subscribe: (l: (s: typeof mockStored) => void) => { mockListeners.add(l); return () => mockListeners.delete(l); },
+  updateStored: (fn: (s: typeof mockStored) => typeof mockStored) => {
+    if (mockWriteFails) throw new Error('disk');
+    const next = fn(mockStored);
+    if (next === mockStored) return next;
+    mockStored = next;
+    mockListeners.forEach((l) => l(next));
+    return next;
+  },
 }));
 jest.mock('./tracking', () => ({ finalSteps: jest.fn(async () => {}), refreshSteps: jest.fn(async () => {}), startTracking: jest.fn(async () => {}), stopTracking: jest.fn(async () => {}), syncOutbox: jest.fn(async () => {}), tick: jest.fn() }));
 jest.mock('./QuickPickupSheet', () => ({ QuickPickupSheet: 'QuickPickupSheet' }));
@@ -49,6 +57,7 @@ test('활동을 끝내 기록이 기기에 남으면 손끝으로 알리고 요�
   await act(async () => end.props.onPress());
   expect(mockHaptic).toHaveBeenCalledWith('confirm');
   expect(mockReplace).toHaveBeenCalledWith({ pathname: '/activity/[id]/summary', params: { id: 'a1' } });
+  expect(mockReplace).toHaveBeenCalledTimes(1);
 });
 
 const pressEnd = async () => {
@@ -172,6 +181,75 @@ describe('24시간 자동 종료가 4-3 에서 막힐 때', () => {
     const metrics = tree.root.find((n) => (n.type as unknown) === 'MetricSplit');
     expect(metrics.props.items.find((m: { label: string }) => m.label === '활동 시간').value).toBe('24:00:00');
     expect(metrics.props.accessibilityLabel).toContain('활동 시간 24시간 0분');
+  });
+
+  describe('다른 주체가 종료 기록을 쓰면 — 루트 1분 검사·배경 위치 작업', () => {
+    const summary = { pathname: '/activity/[id]/summary', params: { id: 'a1' } };
+    const endElsewhere = () => act(async () => {
+      mockStored = { ...mockStored, ended: { endedAt: new Date().toISOString(), durationSec: 0, pausedSec: 0, distanceM: 0, steps: null, route: [] } };
+      mockListeners.forEach((l) => l(mockStored));
+    });
+    const refocus = () => act(async () => {
+      mockFocused = true;
+      tree.update(React.createElement(Activity));
+    });
+
+    test('4-3 이 포커스를 가진 동안이면 요약으로 간다', async () => {
+      await act(async () => { tree = create(React.createElement(Activity)); });
+      await endElsewhere();
+      expect(mockReplace).toHaveBeenCalledTimes(1);
+      expect(mockReplace).toHaveBeenCalledWith(summary);
+    });
+
+    test('저장 실패 확인창을 [계속 줍기]로 닫은 뒤 다른 주체가 저장해도 요약으로 간다', async () => {
+      mockStored = expired();
+      mockWriteFails = true;
+      await act(async () => { tree = create(React.createElement(Activity)); });
+      const dialog = tree.root.find((n) => (n.type as unknown) === 'Dialog' && n.props.title === '활동을 종료할까요?');
+      const keep = React.Children.toArray(dialog.props.actions.props.children).find((b) => (b as React.ReactElement<{ label: string }>).props.label === '계속 줍기') as React.ReactElement<{ onPress: () => void }>;
+      await act(async () => keep.props.onPress());
+      mockWriteFails = false;
+      await endElsewhere();
+      expect(mockReplace).toHaveBeenCalledTimes(1);
+      expect(mockReplace).toHaveBeenCalledWith(summary);
+    });
+
+    test('4-4·4-5 가 위에 있으면 이동하지 않고, 4-3 이 포커스를 되찾으면 한 번 이동한다', async () => {
+      await act(async () => { tree = create(React.createElement(Activity)); });
+      mockFocused = false;
+      await act(async () => { tree.update(React.createElement(Activity)); });
+      await endElsewhere();
+      expect(mockReplace).not.toHaveBeenCalled();
+      await refocus();
+      expect(mockReplace).toHaveBeenCalledTimes(1);
+      expect(mockReplace).toHaveBeenCalledWith(summary);
+    });
+
+    test('24시간이 지난 활동도 포커스를 되찾을 때 자동 종료와 겹쳐 두 번 이동하지 않는다', async () => {
+      mockStored = expired();
+      mockFocused = false;
+      await act(async () => { tree = create(React.createElement(Activity)); });
+      await endElsewhere();
+      await refocus();
+      expect(mockReplace).toHaveBeenCalledTimes(1);
+      expect(mockReplace).toHaveBeenCalledWith(summary);
+    });
+
+    test('저장에 실패한 자동 종료는 매초 다시 시도하지 않는다', async () => {
+      const { finalSteps } = jest.requireMock('./tracking') as { finalSteps: jest.Mock };
+      finalSteps.mockClear();
+      mockStored = expired();
+      mockWriteFails = true;
+      jest.useFakeTimers();
+      try {
+        await act(async () => { tree = create(React.createElement(Activity)); });
+        expect(finalSteps).toHaveBeenCalledTimes(1);
+        await act(async () => { jest.advanceTimersByTime(5_000); });
+        expect(finalSteps).toHaveBeenCalledTimes(1);
+      } finally {
+        jest.useRealTimers();
+      }
+    });
   });
 });
 
