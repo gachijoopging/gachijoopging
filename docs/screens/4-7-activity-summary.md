@@ -52,6 +52,7 @@
 | ③ | 구분선 | 세 칸 사이 세로 점선 2개 | `MetricSplit` divider dashed (옛 `divider_dashed_vertical`) | — |
 | ④ | 카테고리 칩 | `byCategory` (`POST /activities/{id}/end`) 의 항목마다 칩 하나. `Category` 의 한글 표기(담배꽁초·캔·플라스틱·종이·유리·비닐·일반) + 수량, 수량 내림차순, 같으면 `Category` 순서. 0 인 카테고리는 응답에 없으니 칩도 없다. 줄이 넘치면 다음 줄로 감싼다. `itemCount` 가 0 이면 이 줄 자체를 숨긴다 | `Chip` neutral + `Icon`(smoking · cup · bottle-soda-outline · file-document-outline · bottle-wine-outline · shopping-outline · trash-can-outline) | — |
 | ⑤ | 0개 배너 | 평소 숨김. `itemCount` 가 0 일 때 ④ 자리에 "🚶 줍기 기록 없이 활동만 저장돼요. 활동 시간과 이동 거리도 소중한 기록이에요." | `Banner` info (옛 `bg_banner_info`) | — |
+| ⑥ | 자동 종료 안내 | 평소 숨김. 24시간이 되어 자동으로 끝난 활동(`endedAt` 이 `startedAt` + 24시간)일 때 ⑥ 동기화 배너 위에 "24시간이 지나 활동을 자동으로 끝냈어요." | `Banner` info | — |
 | ⑥ | 동기화 배너 | 평소 숨김. 종료 요청이 기기 대기열에 있을 때 "동기화 대기 중이에요. 연결되면 자동으로 올라가요." | `Banner` warn | — |
 | ⑦ | 공유 제목 | 초록 체크 + "기록을 저장했어요. 피드에 공유할까요?" 저장이 끝난 뒤에만 이 문구. 저장 중·대기 중·실패는 상태 표의 문구로 바뀐다 | `Icon`(check) + `Txt` section (옛 `ic_check_small`) | — |
 | ⑦ | 공유 막힘 안내 | 평소 숨김. 저장이 아직 안 끝났을 때 제목 아래 "동기화가 끝나야 피드에 공유할 수 있어요." | `Txt` caption strong | — |

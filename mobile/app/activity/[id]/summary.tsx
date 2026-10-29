@@ -24,6 +24,7 @@ import {
 import { type ApiClient } from '../../../src/api/client';
 import { createApiClient } from '../../../src/api/config';
 import { summaryMeta, summaryMetaSpoken } from '../../../src/activity/pickup';
+import { MAX_ACTIVITY_MS } from '../../../src/activity/session';
 import { ActivityMetrics, CategoryChips, RouteMap } from '../../../src/activity/SummaryBlocks';
 import { getStored, loadLastAccount, subscribe, updateStored, type Stored } from '../../../src/activity/store';
 import { activityGoneCode, applyEndedActivity, syncOutbox } from '../../../src/activity/tracking';
@@ -160,6 +161,10 @@ export default function ActivitySummaryScreen() {
         ) : (
           <Banner tone="info">줍기 기록 없이 활동만 저장돼요. 활동 시간과 이동 거리도 소중한 기록이에요.</Banner>
         )}
+
+        {Date.parse(snapshot.endedAt) - Date.parse(session.startedAt) >= MAX_ACTIVITY_MS ? (
+          <Banner tone="info">24시간이 지나 활동을 자동으로 끝냈어요.</Banner>
+        ) : null}
 
         <Appear visible={phase === 'offline'} rise={0}>
           <View accessibilityLiveRegion="polite">

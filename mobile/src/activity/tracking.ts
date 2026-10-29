@@ -9,7 +9,7 @@ import { healthConnect } from './health-connect';
 import { flush, type Op } from './outbox';
 import { fixLogLine } from './fix-log';
 import type { Fix } from './location-filter';
-import { applyFix, livePayload, trackingNotice } from './session';
+import { activityDeadline, applyFix, asOf, livePayload, trackingNotice } from './session';
 import { readSteps, type StepSource } from './steps';
 import { getStored, loadLastAccount, updateStored } from './store';
 
@@ -39,6 +39,9 @@ TaskManager.defineTask<{ locations: Location.LocationObject[] }>(TRACKING_TASK, 
     const session = fixes.reduce(applyFix, st.session);
     return { ...st, session };
   });
+  // 화면이 없어도 24시간이 되면 끝내고 추적을 끈다. actions 가 이 모듈을 가져다 쓰므로 순환을 피해 부를 때 가져온다
+  const { endIfExpired } = require('./actions') as typeof import('./actions');
+  if (await endIfExpired()) return;
   await tick(Date.now());
 });
 
@@ -47,14 +50,16 @@ export async function tick(now: number) {
   const { session, ended } = getStored();
   if (!session || ended || now - lastLiveAt < LIVE_EVERY_MS) return;
   lastLiveAt = now;
-  const { title, body } = trackingNotice(session, now);
+  const at = Math.min(now, activityDeadline(session));
+  const shown = asOf(session, at);
+  const { title, body } = trackingNotice(shown, at);
   updateTrackingNotification(TRACKING_TASK, title, body, `gachijoopging://activity/[id]?id=${session.activityId}`);
   const [permission, enabled] = await Promise.all([
     Location.getForegroundPermissionsAsync().catch(() => null),
     Location.hasServicesEnabledAsync().catch(() => false),
   ]);
   if (getStored().ended || getStored().session?.activityId !== session.activityId) return;
-  const { activityId, ...live } = livePayload(session, now);
+  const { activityId, ...live } = livePayload(shown, at);
   if (!permission?.granted || !enabled) live.location = null;
   // 위치 전송은 쌓아 두지 않는다 — 마지막 값만 의미가 있다
   await api.mutate('POST /activities/{id}/live', { id: activityId, ...live }).catch(() => {});
@@ -71,7 +76,8 @@ export async function refreshSteps(now: number, source: StepSource = healthConne
   if (!before || getStored().ended || readingSteps) return;
   readingSteps = (async () => {
     // 못 읽으면 앞서 잰 값도 버린다. 권한을 거둔 뒤 낡은 걸음으로 거리를 계속 줄이면 안 된다
-    const steps = await readSteps(before, now, source);
+    const at = Math.min(now, activityDeadline(before));
+    const steps = await readSteps(asOf(before, at), at, source);
     updateStored((st) => (st.session?.activityId === before.activityId && !st.ended ? { ...st, session: { ...st.session, steps } } : st));
   })();
   try {
@@ -108,9 +114,10 @@ export async function startTracking(): Promise<boolean> {
   }
 }
 
+// 시작 여부를 먼저 기다리면 그 사이 시작된 다른 계정의 추적까지 끈다
 export async function stopTracking(): Promise<void> {
   try {
-    if (await Location.hasStartedLocationUpdatesAsync(TRACKING_TASK)) await Location.stopLocationUpdatesAsync(TRACKING_TASK);
+    await Location.stopLocationUpdatesAsync(TRACKING_TASK);
   } catch {
     // 이미 멈췄다
   }

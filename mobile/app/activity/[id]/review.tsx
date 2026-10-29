@@ -19,7 +19,7 @@ import {
 } from 'design-system/src';
 import { CATEGORIES, CATEGORY_LABEL, type Category } from '../../../src/category';
 import { CategoryTile } from '../../../src/activity/CategoryTile';
-import { recordPickup } from '../../../src/activity/actions';
+import { isActivityOpen, recordPickup } from '../../../src/activity/actions';
 import { aiBanner, groupDetections, itemsFromCounts, QUANTITY_MAX, totalOf, type Counts, type Inference } from '../../../src/activity/pickup';
 
 type Media = { photoId: string; url: string; thumbUrl?: string | null; inference: Inference };
@@ -87,6 +87,8 @@ function Review({ id, media, localUri }: { id: string; media: Media; localUri?: 
 
   const save = () => {
     if (total === 0 || anyInvalid) return;
+    // 기한이 지나 거절될 줍기는 다시 시도해도 같으므로 재시도를 보이지 않는다
+    if (!isActivityOpen(id)) return backToActivity('활동이 끝나 사진을 담을 수 없어요');
     setSaveFailed(false);
     try {
       // 같은 작업을 다시 시도하면 같은 id 를 쓴다 — 서버가 중복을 흡수한다
