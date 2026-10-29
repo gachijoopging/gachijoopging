@@ -109,6 +109,16 @@ class MeApiTest extends IntegrationTest {
   }
 
   @Test
+  void 게시물용_사진은_프로필에_쓸_수_없다() throws Exception {
+    TestAccount 나 = 가입한다(mockMvc, "me-photo-purpose@test.io");
+    UUID 게시물_사진 = 사진을_만든다(나.id(), "POST");
+
+    mockMvc
+        .perform(수정(나, "{\"photoMediaId\":\"" + 게시물_사진 + "\"}"))
+        .andExpect(status().isUnprocessableEntity());
+  }
+
+  @Test
   void 사진을_null_로_보내면_지워진다() throws Exception {
     TestAccount 나 = 가입한다(mockMvc, "me-photo-clear@test.io");
     UUID 내_사진 = 사진을_만든다(나.id());
@@ -186,11 +196,16 @@ class MeApiTest extends IntegrationTest {
   }
 
   private UUID 사진을_만든다(UUID 주인) {
+    return 사진을_만든다(주인, "PROFILE");
+  }
+
+  private UUID 사진을_만든다(UUID 주인, String 용도) {
     UUID id = UUID.randomUUID();
     jdbcTemplate.update(
-        "INSERT INTO media (id, owner_id, purpose, object_key, thumb_key) VALUES (?, ?, 'PROFILE', ?, ?)",
+        "INSERT INTO media (id, owner_id, purpose, object_key, thumb_key) VALUES (?, ?, ?, ?, ?)",
         id,
         주인,
+        용도,
         "o/" + id,
         "t/" + id);
     return id;

@@ -40,8 +40,9 @@ public class MediaService {
     return mediaRepository.findById(mediaId).map(MediaSummary::from);
   }
 
-  public void requireOwnedBy(UUID mediaId, UUID ownerId) {
-    if (!mediaRepository.existsByIdAndOwnerId(mediaId, ownerId)) {
+  // 용도가 섞이면 게시물·활동을 지울 때 격리한 파일을 프로필·크루 사진이 계속 가리킨다
+  public void requireOwnedBy(UUID mediaId, UUID ownerId, MediaPurpose purpose) {
+    if (!mediaRepository.existsByIdAndOwnerIdAndPurpose(mediaId, ownerId, purpose)) {
       throw new BusinessException(ErrorCode.VALIDATION, "쓸 수 없는 mediaId 다: " + mediaId);
     }
   }

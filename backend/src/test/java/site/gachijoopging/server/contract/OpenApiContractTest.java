@@ -50,13 +50,6 @@ class OpenApiContractTest extends IntegrationTest {
           Map.entry("GET /agreements", "GAC-82"),
           Map.entry("GET /users/me/agreements", "GAC-82"),
           Map.entry("PUT /users/me/agreements", "GAC-82"),
-          Map.entry("GET /crew/posts", "GAC-91"),
-          Map.entry("POST /crew/posts", "GAC-91"),
-          Map.entry("GET /posts/{postId}", "GAC-91"),
-          Map.entry("DELETE /posts/{postId}", "GAC-91"),
-          Map.entry("PUT /posts/{postId}/like", "GAC-91"),
-          Map.entry("DELETE /posts/{postId}/like", "GAC-91"),
-          Map.entry("GET /crew/members/{userId}/posts", "GAC-91"),
           Map.entry("GET /posts/{postId}/comments", "GAC-92"),
           Map.entry("POST /posts/{postId}/comments", "GAC-92"),
           Map.entry("DELETE /comments/{commentId}", "GAC-92"),
@@ -86,7 +79,6 @@ class OpenApiContractTest extends IntegrationTest {
       Map.of(
           "AgreementCatalog", "GAC-82",
           "Agreements", "GAC-82",
-          "Post", "GAC-91",
           "Comment", "GAC-92",
           "Notice", "GAC-93",
           "Notification", "GAC-95",
@@ -159,6 +151,7 @@ class OpenApiContractTest extends IntegrationTest {
           Map.entry("Member", "MemberResponse"),
           Map.entry("MemberProfile", "MemberProfileResponse"),
           Map.entry("MemberStats", "MemberStatsResponse"),
+          Map.entry("Post", "PostResponse"),
           Map.entry("UserBrief", "UserBriefResponse"));
 
   private static final Map<String, String> 모바일_대조_제외 =

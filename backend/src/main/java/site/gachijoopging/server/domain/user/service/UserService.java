@@ -13,6 +13,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import site.gachijoopging.server.domain.media.entity.MediaPurpose;
 import site.gachijoopging.server.domain.media.service.MediaService;
 import site.gachijoopging.server.domain.media.service.MediaSignedUrl;
 import site.gachijoopging.server.domain.user.dto.DeviceRequest;
@@ -193,7 +194,9 @@ public class UserService implements AccountAuthorityLoader, SessionVersionLoader
       throw new BusinessException(ErrorCode.NICKNAME_TAKEN, "이미 쓰는 닉네임이다");
     }
     if (request.photoMediaId() != null) {
-      request.photoMediaId().ifPresent(mediaId -> mediaService.requireOwnedBy(mediaId, userId));
+      request
+          .photoMediaId()
+          .ifPresent(mediaId -> mediaService.requireOwnedBy(mediaId, userId, MediaPurpose.PROFILE));
     }
     me.updateProfile(
         request.nickname(),
