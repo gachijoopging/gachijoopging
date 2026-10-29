@@ -34,6 +34,21 @@ export function recordPickup(items: (ItemInput & { aiPredictedCategory?: Categor
   return { itemId: last.id, category: last.category, quantity: last.quantity };
 }
 
+/**
+ * 버린 사진을 서버에서도 지우도록 줍기와 같은 대기열에 넣는다 — 종료보다 먼저 가야 지워진다.
+ * 정리 작업이라 디스크 쓰기가 실패해도 화면을 떠나는 것을 막지 않는다. 그때는 사진이 서버에 남는다
+ */
+export function discardPhoto(mediaId: string, activityId: string): void {
+  const { session, ended } = getStored();
+  if (!session || ended || session.activityId !== activityId) return;
+  try {
+    updateStored((st) => ({ ...st, outbox: enqueue(st.outbox, { kind: 'discardPhoto', activityId, mediaId }) }));
+  } catch {
+    return;
+  }
+  void syncOutbox();
+}
+
 export function quickPickup(category: Category, quantity: number): LastPickup | null {
   return recordPickup([{ id: Crypto.randomUUID(), category, quantity }], null, getStored().session?.activityId ?? '');
 }

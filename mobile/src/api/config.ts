@@ -13,8 +13,6 @@ export const apiConfig = {
 
 /**
  * 백엔드가 구현한 경로만 실서버로 보낸다. 경로가 생기면 한 줄 추가한다.
- * 활동은 종료(POST /activities/{id}/end)가 생길 때 한꺼번에 넣는다 — 시작만 서버에 가면
- * 서버에 진행 중 활동이 남아 다음 시작·로그아웃·크루 나가기가 409 가 된다.
  * 서버가 아직 거절하는 경로(DELETE /users/me 의 405)도 넣는다 — 목의 성공은 계정이 남은 채 완료를 띄운다.
  */
 const REAL_KEYS: ReadonlySet<MutationKey> = new Set<MutationKey>([
@@ -25,11 +23,16 @@ const REAL_KEYS: ReadonlySet<MutationKey> = new Set<MutationKey>([
   'GET /crew/members', 'GET /crew/members/{userId}', 'DELETE /crew/members/{userId}', 'PUT /crew/leader',
   'POST /crews/join-requests', 'GET /crews/join-requests/mine', 'DELETE /crews/join-requests/mine',
   'POST /crews/join-requests/{requestId}/read', 'GET /crew/join-requests', 'POST /crew/join-requests/{requestId}',
+  'POST /activities', 'GET /activities/current', 'POST /activities/{id}/pause', 'POST /activities/{id}/resume',
+  'POST /activities/{id}/items', 'PATCH /activities/{id}/items/{itemId}', 'DELETE /activities/{id}/items/{itemId}',
+  'POST /activities/{id}/end', 'GET /activities/{id}', 'DELETE /activities/{id}', 'GET /users/me/activities',
+  'GET /crew/home', 'GET /users/me/stats', 'GET /crew/stats', 'GET /crew/calendar', 'GET /crew/members/{userId}/activities',
+  'DELETE /media/{mediaId}',
 ]);
 
-/** 프로필·크루 사진만 서버에 올린다. 목 mediaId 는 UUID 가 아니라 실서버 PATCH 가 422 로 거절한다. 활동·게시물 사진은 그 API 가 실서버로 갈 때 함께 옮긴다 */
+/** 프로필·크루·활동 사진만 서버에 올린다. 목 mediaId 는 UUID 가 아니라 실서버 PATCH 가 422 로 거절한다. 게시물 사진은 게시물 API 가 실서버로 갈 때 함께 옮긴다 */
 const isRealUpload = (key: MutationKey, body: unknown) =>
-  key === 'POST /media' && body instanceof FormData && ['PROFILE', 'CREW'].includes(String(body.getAll('purpose')[0]));
+  key === 'POST /media' && body instanceof FormData && ['PROFILE', 'CREW', 'ACTIVITY'].includes(String(body.getAll('purpose')[0]));
 
 /** 화면은 이것만 부른다. 목/실을 모른다 */
 export function createApiClient(options: MockOptions = {}): ApiClient {
@@ -40,12 +43,6 @@ export function createApiClient(options: MockOptions = {}): ApiClient {
     get(key, query) {
       // ponytail: 서버에 동의 API 가 없다. complete:false 를 주면 로그인마다 1-5 로 돌아간다. 항목은 미선택 그대로 둬야 1-4 가 동의를 받는다. 동의 API 가 생기면 REAL_KEYS 로 옮기고 지운다
       if (key === 'GET /users/me/agreements') return Promise.resolve({ data: { ...MOCKS['GET /users/me/agreements'].data, complete: true } } as unknown as ApiResponse<typeof key>);
-      // ponytail: 서버에 홈 통계 API 가 없어 2-1 숫자는 목이다. 방금 가입한 크루와 다른 이름이 머리에 보이지 않게 크루만 실서버 값으로 바꾼다.
-      // mock.get 을 거치면 목 크루 이름이 든 응답이 기억돼 다시 연 홈이 그것부터 그린다. 통계 API 가 생기면 REAL_KEYS 로 옮기고 지운다
-      if (key === 'GET /crew/home') {
-        return http.get('GET /crew')
-          .then((crew) => ({ data: { ...MOCKS['GET /crew/home'].data, crew: { id: crew.data.id, name: crew.data.name } } }) as ApiResponse<typeof key>);
-      }
       return REAL_KEYS.has(key) ? http.get(key, query) : mock.get(key, query);
     },
     mutate: (key, body) => (REAL_KEYS.has(key) || isRealUpload(key, body) ? http.mutate(key, body) : mock.mutate(key, body)),

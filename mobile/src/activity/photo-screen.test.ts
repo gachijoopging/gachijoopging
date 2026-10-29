@@ -18,7 +18,11 @@ jest.mock('expo-status-bar', () => ({ StatusBar: 'StatusBar' }));
 jest.mock('expo-network', () => ({ useNetworkState: () => ({ isConnected: true }) }));
 const mockMutate = jest.fn();
 const mockPush = jest.fn();
-jest.mock('expo-router', () => ({ router: { push: (...a: unknown[]) => mockPush(...a), dismissTo: jest.fn(), back: jest.fn() }, useLocalSearchParams: () => ({ id: mockId }), useNavigation: () => ({ addListener: () => () => {} }), useFocusEffect: (fn: () => (() => void) | void) => require('react').useEffect(() => { const blur = fn(); if (blur) mockBlurs.push(blur); return blur; }, [fn]) }));
+type BeforeRemove = (e: { preventDefault: () => void }) => void;
+let mockBeforeRemove: BeforeRemove = () => {};
+const mockDiscard = jest.fn();
+jest.mock('./actions', () => ({ discardPhoto: (...a: unknown[]) => mockDiscard(...a) }));
+jest.mock('expo-router', () => ({ router: { push: (...a: unknown[]) => mockPush(...a), dismissTo: jest.fn(), back: jest.fn() }, useLocalSearchParams: () => ({ id: mockId }), useNavigation: () => ({ addListener: (_event: string, listener: BeforeRemove) => { mockBeforeRemove = listener; return () => {}; } }), useFocusEffect: (fn: () => (() => void) | void) => require('react').useEffect(() => { const blur = fn(); if (blur) mockBlurs.push(blur); return blur; }, [fn]) }));
 jest.mock('../api/config', () => ({ apiConfig: { real: false }, createApiClient: () => jest.requireMock('../api/client').createMockClient() }));
 jest.mock('../api/client', () => ({ ApiError: class extends Error {}, createMockClient: () => ({ mutate: (...a: unknown[]) => mockMutate(...a) }) }));
 jest.mock('./store', () => ({ getStored: () => ({ session: null }) }));
@@ -31,6 +35,8 @@ beforeAll(() => { (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REAC
 beforeEach(() => {
   mockMutate.mockReset().mockReturnValue(new Promise(() => {}));
   mockPush.mockReset();
+  mockDiscard.mockReset();
+  mockBeforeRemove = () => {};
   mockId = `a${Number(mockId.slice(1)) + 1}`;
   mockPermission.mockReset().mockResolvedValue({ granted: true, canAskAgain: true, status: 'granted' });
   mockRequest.mockReset().mockResolvedValue({ granted: false, canAskAgain: true, status: 'denied' });
@@ -111,4 +117,52 @@ test('올리지 못하면 같은 사진을 같은 mediaId 로 다시 올린다',
   const ids = mockMutate.mock.calls.map(([, body]) => (body as FormData).get('mediaId'));
   expect(ids).toEqual(['photo-id', 'photo-id']);
   expect(mockPush).toHaveBeenCalledTimes(1);
+});
+
+describe('버린 사진', () => {
+  const leave = () => {
+    const e = { preventDefault: jest.fn() };
+    act(() => mockBeforeRemove(e));
+    return e;
+  };
+
+  test('올리지 못한 사진을 다시 찍으면 그 mediaId 의 서버 사진을 지운다 — 응답이 유실됐어도 서버에는 저장됐을 수 있다', async () => {
+    mockMutate.mockRejectedValueOnce(new Error('offline'));
+    await shootOnce();
+    await act(async () => button('다시 찍기').props.onPress());
+    expect(mockDiscard.mock.calls).toEqual([['photo-id', mockId]]);
+    expect(button('다시 올리기')).toBeUndefined();
+  });
+
+  test('올리지 못한 사진이 남은 채 뒤로 가면 사진을 버리고 그 mediaId 를 지운다 — 화면은 닫지 않고 ①단계로 간다', async () => {
+    mockMutate.mockRejectedValueOnce(new Error('offline'));
+    await shootOnce();
+    const e = leave();
+    expect(e.preventDefault).toHaveBeenCalled();
+    expect(mockDiscard.mock.calls).toEqual([['photo-id', mockId]]);
+    expect(button('다시 올리기')).toBeUndefined();
+  });
+
+  test('올리는 중에는 이탈을 막을 뿐 지우지 않는다 — 결과가 확정된 뒤에 정한다', async () => {
+    await shootOnce();
+    const e = leave();
+    expect(e.preventDefault).toHaveBeenCalled();
+    expect(mockDiscard).not.toHaveBeenCalled();
+  });
+
+  test('찍은 사진이 없을 때 나가면 지울 것이 없다', async () => {
+    await act(async () => { tree = create(React.createElement(Photo)); });
+    const e = leave();
+    expect(e.preventDefault).not.toHaveBeenCalled();
+    expect(mockDiscard).not.toHaveBeenCalled();
+  });
+
+  test('올리기에 성공해 4-5 로 넘어간 뒤 이 화면이 닫혀도 지우지 않는다 — 사진은 4-5 가 맡는다', async () => {
+    mockMutate.mockResolvedValue({ data: { id: 'm1', items: [] } });
+    await shootOnce();
+    expect(mockPush).toHaveBeenCalledTimes(1);
+    const e = leave();
+    expect(e.preventDefault).not.toHaveBeenCalled();
+    expect(mockDiscard).not.toHaveBeenCalled();
+  });
 });

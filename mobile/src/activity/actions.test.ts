@@ -1,4 +1,4 @@
-import { endActivity, endIfExpired, quickPickup, recordPickup, undoPickup } from './actions';
+import { discardPhoto, endActivity, endIfExpired, quickPickup, recordPickup, undoPickup } from './actions';
 import { newSession } from './session';
 import type { EndBody } from './outbox';
 
@@ -6,7 +6,8 @@ let mockStored: ReturnType<typeof import('./store')['getStored']>;
 jest.mock('expo-crypto', () => ({ randomUUID: () => 'i1' }));
 const mockStop = jest.fn(async () => {});
 const mockFinalSteps = jest.fn(async () => {});
-jest.mock('./tracking', () => ({ syncOutbox: jest.fn(), isSendingItem: () => false, stopTracking: () => mockStop(), finalSteps: () => mockFinalSteps() }));
+const mockSync = jest.fn();
+jest.mock('./tracking', () => ({ syncOutbox: () => mockSync(), isSendingItem: () => false, stopTracking: () => mockStop(), finalSteps: () => mockFinalSteps() }));
 let mockWriteFails = false;
 let mockAfterWrite: (() => void) | null = null;
 jest.mock('./store', () => ({
@@ -20,6 +21,7 @@ const DEADLINE = START + 24 * 3_600_000;
 
 beforeEach(() => {
   mockWriteFails = false;
+  mockSync.mockClear();
   mockAfterWrite = null;
   mockStop.mockClear();
   mockFinalSteps.mockReset().mockResolvedValue(undefined);
@@ -109,6 +111,41 @@ test('종료 직전 걸음을 못 읽으면 걸음을 미측정으로 남긴다'
   mockFinalSteps.mockRejectedValueOnce(new Error('hc'));
   await endActivity('a1');
   expect((mockStored.ended as { steps: number | null }).steps).toBeNull();
+});
+
+describe('버린 사진', () => {
+  let now: jest.SpyInstance;
+  beforeEach(() => { now = jest.spyOn(Date, 'now').mockReturnValue(START + 3_600_000); });
+  afterEach(() => now.mockRestore());
+
+  test('진행 중인 활동의 사진이면 삭제를 대기열에 넣고 바로 보낸다', () => {
+    discardPhoto('m1', 'a1');
+    expect(mockStored.outbox).toEqual([{ kind: 'discardPhoto', activityId: 'a1', mediaId: 'm1' }]);
+    expect(mockSync).toHaveBeenCalledTimes(1);
+  });
+
+  test('삭제는 앞선 줍기 뒤, 나중에 넣는 종료 앞에 놓인다 — 끝난 뒤에 닿으면 서버가 지우지 않는다', async () => {
+    quickPickup('CAN', 1);
+    discardPhoto('m1', 'a1');
+    await endActivity('a1');
+    expect(mockStored.outbox.map((op) => op.kind)).toEqual(['items', 'discardPhoto', 'end']);
+  });
+
+  test.each([
+    ['세션이 없으면', () => { mockStored = { ...mockStored, session: null }; }, 'a1'],
+    ['종료 기록이 있으면', () => { mockStored = { ...mockStored, ended: true as never }; }, 'a1'],
+    ['다른 활동이면', () => {}, 'other'],
+  ])('%s 대기열에 넣지 않는다', (_label, setup, activityId) => {
+    setup();
+    discardPhoto('m1', activityId);
+    expect(mockStored.outbox).toEqual([]);
+    expect(mockSync).not.toHaveBeenCalled();
+  });
+
+  test('디스크에 못 남겨도 예외로 화면 이동을 막지 않는다', () => {
+    mockWriteFails = true;
+    expect(() => discardPhoto('m1', 'a1')).not.toThrow();
+  });
 });
 
 describe('24시간 자동 종료', () => {

@@ -219,6 +219,32 @@ describe('실 API 클라이언트', () => {
     expect(calls[1]).toEqual(expect.objectContaining({ url: `${BASE}/notices/n1`, method: 'PATCH', body: '{"title":"t"}' }));
   });
 
+  test('활동 합계가 바뀌는 변경이 성공해야만 합계를 담은 응답을 잊는다 — 다시 연 5-3·홈이 이전 합계를 그리면 안 된다', async () => {
+    let fail = false;
+    const { api } = server(() => (fail ? json(500, { code: 'INTERNAL' }) : json(200, { data: {} })));
+    await api.get('GET /activities/{id}', { id: 'a1' });
+    await api.get('GET /crew/home');
+    await api.get('GET /crew/members/{userId}/activities', { userId: 'u1', cursor: 'c1' });
+    await api.get('GET /users/me/stats');
+    await api.get('GET /crew/stats', { range: 'WEEK' });
+    await api.get('GET /crew/calendar', { month: '2026-10' });
+    await api.get('GET /users/me/activities');
+    await api.mutate('POST /activities/{id}/live', { id: 'a1' });
+    fail = true;
+    await api.mutate('PATCH /activities/{id}/items/{itemId}', { id: 'a1', itemId: 'i1', quantity: 2 }).catch(() => {});
+    expect(peek('GET /crew/home')).toBeDefined();
+    expect(peek('GET /users/me/stats')).toBeDefined();
+    fail = false;
+    await api.mutate('PATCH /activities/{id}/items/{itemId}', { id: 'a1', itemId: 'i1', quantity: 2 });
+    expect(peek('GET /activities/{id}', { id: 'a1' })).toBeUndefined();
+    expect(peek('GET /crew/home')).toBeUndefined();
+    expect(peek('GET /crew/members/{userId}/activities', { userId: 'u1', cursor: 'c1' })).toBeUndefined();
+    expect(peek('GET /users/me/stats')).toBeUndefined();
+    expect(peek('GET /crew/stats', { range: 'WEEK' })).toBeUndefined();
+    expect(peek('GET /crew/calendar', { month: '2026-10' })).toBeUndefined();
+    expect(peek('GET /users/me/activities')).toBeUndefined();
+  });
+
   test('내 정보를 받으면 기억한 소속을 맞춘다 — 크루를 만든 뒤 오프라인으로 재실행해도 1-6 에 멈추지 않는다', async () => {
     rememberAccount({ id: 'u1', membership: { status: 'NONE' } });
     const { api } = server(() => json(200, { data: { id: 'u1', membership: { status: 'MEMBER', crew: { id: 'c1', name: 'c', isLeader: true }, rejection: null } } }));

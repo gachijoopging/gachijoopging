@@ -129,6 +129,15 @@ async function send(client: ApiClient, op: Op): Promise<unknown> {
       return client.mutate('POST /activities/{id}/items', { id: op.activityId, photoId: op.photoId, items: op.items });
     case 'deleteItem':
       return client.mutate('DELETE /activities/{id}/items/{itemId}', { id: op.activityId, itemId: op.itemId });
+    case 'discardPhoto':
+      try {
+        await client.mutate('DELETE /media/{mediaId}', { mediaId: op.mediaId });
+      } catch (error) {
+        // 정리 작업이 종료를 막으면 안 된다. 403·409 는 다시 보내도 같고, 404 는 이 경로가 아직 없는 이전 서버가 낸다(계약상 없는 사진은 204).
+        // 밖으로 내보내면 큐가 멈추고 활동이 사라졌다는 표시가 뜬다
+        if (!(error instanceof ApiError) || !['FORBIDDEN', 'CONFLICT', 'NOT_FOUND'].includes(error.code)) throw error;
+      }
+      return;
     case 'pause':
       return client.mutate('POST /activities/{id}/pause', { id: op.activityId });
     case 'resume':

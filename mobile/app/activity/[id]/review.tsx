@@ -19,10 +19,10 @@ import {
 } from 'design-system/src';
 import { CATEGORIES, CATEGORY_LABEL, type Category } from '../../../src/category';
 import { CategoryTile } from '../../../src/activity/CategoryTile';
-import { isActivityOpen, recordPickup } from '../../../src/activity/actions';
+import { discardPhoto, isActivityOpen, recordPickup } from '../../../src/activity/actions';
 import { aiBanner, groupDetections, itemsFromCounts, QUANTITY_MAX, totalOf, type Counts, type Inference } from '../../../src/activity/pickup';
 
-type Media = { photoId: string; url: string; thumbUrl?: string | null; inference: Inference };
+type Media = { mediaId: string; photoId: string; url: string; thumbUrl?: string | null; inference: Inference };
 
 const BANNERS = {
   unavailable: { tone: 'info', text: '지금은 AI 분석을 쓸 수 없어요. 직접 골라 담으면 줍기 개수에는 바로 반영돼요.' },
@@ -34,7 +34,7 @@ const BANNERS = {
 function parseMedia(raw: string | undefined): Media | null {
   try {
     const media = JSON.parse(raw ?? '');
-    return typeof media?.photoId === 'string' && typeof media?.url === 'string' ? media : null;
+    return typeof media?.mediaId === 'string' && typeof media?.photoId === 'string' && typeof media?.url === 'string' ? media : null;
   } catch {
     return null;
   }
@@ -74,12 +74,17 @@ function Review({ id, media, localUri }: { id: string; media: Media; localUri?: 
     router.dismissTo({ pathname: '/activity/[id]', params: { id, ...(flash ? { flash } : {}) } });
   };
 
+  const discardAndLeave = (flash?: string) => {
+    discardPhoto(media.mediaId, id);
+    backToActivity(flash);
+  };
+
   useEffect(
     () =>
       navigation.addListener('beforeRemove', (e) => {
         if (leaving.current) return;
         e.preventDefault();
-        if (untouched) backToActivity();
+        if (untouched) discardAndLeave();
         else setConfirmLeave(true);
       }),
     [navigation, untouched],
@@ -87,8 +92,8 @@ function Review({ id, media, localUri }: { id: string; media: Media; localUri?: 
 
   const save = () => {
     if (total === 0 || anyInvalid) return;
-    // 기한이 지나 거절될 줍기는 다시 시도해도 같으므로 재시도를 보이지 않는다
-    if (!isActivityOpen(id)) return backToActivity('활동이 끝나 사진을 담을 수 없어요');
+    // 기한이 지나 거절될 줍기는 다시 시도해도 같으므로 재시도를 보이지 않는다. 사진이 붙을 줍기가 없으니 버린 사진과 같이 지운다
+    if (!isActivityOpen(id)) return discardAndLeave('활동이 끝나 사진을 담을 수 없어요');
     setSaveFailed(false);
     try {
       // 같은 작업을 다시 시도하면 같은 id 를 쓴다 — 서버가 중복을 흡수한다
@@ -170,6 +175,7 @@ function Review({ id, media, localUri }: { id: string; media: Media; localUri?: 
             variant="ghost"
             size="md"
             onPress={() => {
+              discardPhoto(media.mediaId, id);
               leaving.current = true;
               router.back();
             }}
@@ -200,13 +206,13 @@ function Review({ id, media, localUri }: { id: string; media: Media; localUri?: 
               size="md"
               onPress={() => {
                 setConfirmLeave(false);
-                backToActivity();
+                discardAndLeave();
               }}
             />
           </>
         }
       >
-        <Txt variant="body">입력한 줍기 수량을 버릴까요? 업로드된 사진은 남을 수 있어요.</Txt>
+        <Txt variant="body">찍은 사진과 입력한 줍기 수량이 지워져요.</Txt>
       </Dialog>
     </Screen>
   );

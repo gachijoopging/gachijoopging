@@ -64,7 +64,8 @@ export type VoidMutationKey =
   | 'POST /activities/{id}/resume'
   | 'POST /activities/{id}/live'
   | 'DELETE /activities/{id}/items/{itemId}'
-  | 'DELETE /activities/{id}';
+  | 'DELETE /activities/{id}'
+  | 'DELETE /media/{mediaId}';
 export type MutationKey = QueryKey | VoidMutationKey;
 /** 1-8 가입 응답. 공개 크루는 APPROVED, 비공개 크루는 PENDING 으로 온다 */
 export type JoinResult = { id: string; crew: { id: string; name: string }; status: JoinRequestStatus };
@@ -139,6 +140,23 @@ export function forget(key: QueryKey, query?: unknown): void {
   forgets += 1;
 }
 
+/** 활동 합계가 바뀌는 변경. 성공하면 합계를 담은 응답을 질의와 상관없이 잊는다 — 다시 연 5-3·5-5·홈이 이전 합계부터 그리면 안 된다 */
+const ACTIVITY_WRITES: readonly MutationKey[] = [
+  'POST /activities/{id}/items', 'PATCH /activities/{id}/items/{itemId}', 'DELETE /activities/{id}/items/{itemId}',
+  'POST /activities/{id}/end', 'DELETE /activities/{id}',
+];
+const ACTIVITY_VIEWS: readonly QueryKey[] = [
+  'GET /activities/{id}', 'GET /users/me/activities', 'GET /crew/members/{userId}/activities',
+  'GET /crew/home', 'GET /users/me/stats', 'GET /crew/stats', 'GET /crew/calendar',
+];
+
+function forgetActivityViews() {
+  for (const k of [...lastResponses.keys()]) {
+    if (ACTIVITY_VIEWS.some((key) => k.startsWith(`${key} `))) lastResponses.delete(k);
+  }
+  forgets += 1;
+}
+
 const MAX_RESPONSES = 100;
 
 /** owner·sentAt 은 요청을 보낼 때 값. 받는 사이 계정이 바뀌었거나 forget 이 있었으면 낡은 응답이므로 버린다 */
@@ -195,6 +213,10 @@ export function createMockClient({ delayMs = 0, failing = [], activityTotals }: 
         });
         agreements = { items, complete: items.every((item) => !item.required || item.agreed) };
         return { data: agreements } as never;
+      }
+      if (key === 'POST /activities') {
+        // 목의 startedAt 은 고정값이라 그대로 쓰면 시작하자마자 24시간 기한이 지난 활동이 된다
+        return { data: { ...MOCKS['POST /activities'].data, ...(body as object) } } as never;
       }
       if (key === 'POST /activities/{id}/end') {
         const request = body as EndBody & { id: string };
@@ -361,7 +383,9 @@ export function createHttpClient({ baseUrl, fetch: send = (...args) => globalThi
         await setTokens(response.data);
         return response as never;
       }
-      return (await authed(key, body)) as never;
+      const response = await authed(key, body);
+      if (ACTIVITY_WRITES.includes(key)) forgetActivityViews();
+      return response as never;
     },
   };
 }

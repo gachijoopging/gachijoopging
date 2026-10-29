@@ -166,11 +166,11 @@ export default function EditCrewScreen() {
   const upload = async (asset: ImagePicker.ImagePickerAsset) => {
     setUploading(true);
     try {
-      // 계약이 multipart/form-data 다. RN 의 FormData 는 { uri, name, type } 을 파일로 올린다
+      // 계약이 multipart/form-data 다
       const body = new FormData();
       body.append('mediaId', Crypto.randomUUID());
       body.append('purpose', 'CREW');
-      body.append('file', await mediaFile(asset.uri) as unknown as Blob);
+      body.append('file', await mediaFile(asset.uri));
       const { data } = await api.mutate('POST /media', body);
       setPhoto({ uri: asset.uri, mediaId: data.mediaId });
       update({ photoMediaId: data.mediaId });

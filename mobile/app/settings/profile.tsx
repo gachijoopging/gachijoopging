@@ -104,7 +104,7 @@ export default function EditProfileScreen() {
           const body = new FormData();
           body.append('mediaId', picked.uploadId);
           body.append('purpose', 'PROFILE');
-          body.append('file', await mediaFile(picked.uri) as unknown as Blob);
+          body.append('file', await mediaFile(picked.uri));
           const { data } = await api.mutate('POST /media', body);
           mediaId = data.mediaId;
           setPicked({ ...picked, mediaId });

@@ -160,7 +160,7 @@ export default function CreatePostScreen() {
       const body = new FormData();
       body.append('mediaId', photo.key);
       body.append('purpose', 'POST');
-      body.append('file', await mediaFile(photo.uri) as unknown as Blob);
+      body.append('file', await mediaFile(photo.uri));
       const { data } = await api.mutate('POST /media', body);
       updatePhoto(photo.key, { mediaId: data.mediaId, failed: false });
       return data.mediaId;
