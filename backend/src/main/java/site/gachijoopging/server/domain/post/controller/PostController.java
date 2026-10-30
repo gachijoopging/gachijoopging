@@ -17,6 +17,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import site.gachijoopging.server.domain.post.dto.CommentResponse;
+import site.gachijoopging.server.domain.post.dto.CreateCommentRequest;
 import site.gachijoopging.server.domain.post.dto.CreatePostRequest;
 import site.gachijoopging.server.domain.post.dto.PostDetailResponse;
 import site.gachijoopging.server.domain.post.dto.PostResponse;
@@ -80,6 +82,33 @@ public class PostController {
   public void unlike(
       @CurrentUser UUID me, @CurrentCrew CrewMembership crew, @PathVariable UUID postId) {
     postService.unlike(me, crew, postId);
+  }
+
+  @GetMapping("/posts/{postId}/comments")
+  public ApiResponse<CursorPage<CommentResponse>> comments(
+      @CurrentUser UUID me,
+      @CurrentCrew CrewMembership crew,
+      @PathVariable UUID postId,
+      @RequestParam(required = false) String cursor,
+      @RequestParam(defaultValue = "20") @Min(1) @Max(50) int limit) {
+    return ApiResponse.of(postService.comments(me, crew, postId, cursor, limit));
+  }
+
+  @PostMapping("/posts/{postId}/comments")
+  @ResponseStatus(HttpStatus.CREATED)
+  public ApiResponse<CommentResponse> comment(
+      @CurrentUser UUID me,
+      @CurrentCrew CrewMembership crew,
+      @PathVariable UUID postId,
+      @Valid @RequestBody CreateCommentRequest request) {
+    return ApiResponse.of(postService.comment(me, crew, postId, request));
+  }
+
+  @DeleteMapping("/comments/{commentId}")
+  @ResponseStatus(HttpStatus.NO_CONTENT)
+  public void deleteComment(
+      @CurrentUser UUID me, @CurrentCrew CrewMembership crew, @PathVariable UUID commentId) {
+    postService.deleteComment(me, crew, commentId);
   }
 
   @GetMapping("/crew/members/{userId}/posts")
