@@ -28,6 +28,7 @@ import site.gachijoopging.server.domain.crew.repository.CrewRepository;
 import site.gachijoopging.server.domain.media.entity.MediaPurpose;
 import site.gachijoopging.server.domain.media.service.MediaService;
 import site.gachijoopging.server.domain.media.service.MediaSignedUrl;
+import site.gachijoopging.server.domain.notice.service.NoticeService;
 import site.gachijoopging.server.global.error.BusinessException;
 import site.gachijoopging.server.global.error.ErrorCode;
 import site.gachijoopging.server.global.lock.UserLock;
@@ -50,6 +51,7 @@ public class CrewService implements CrewMembershipLoader {
   private final CrewJoinRequestRepository joinRequestRepository;
   private final MediaService mediaService;
   private final MediaSignedUrl mediaSignedUrl;
+  private final NoticeService noticeService;
   private final ApplicationEventPublisher events;
   private final Clock clock;
 
@@ -200,7 +202,13 @@ public class CrewService implements CrewMembershipLoader {
         crewRepository.countMembers(crew.getId()),
         crew.getGoalCount(),
         leader ? crewRepository.countPendingJoinRequests(crew.getId()) : 0,
-        null,
+        noticeService
+            .latest(crew.getId())
+            .map(
+                notice ->
+                    new CrewResponse.PinnedNotice(
+                        notice.id().toString(), notice.title(), notice.createdAt()))
+            .orElse(null),
         0,
         leader);
   }
