@@ -17,7 +17,7 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 import site.gachijoopging.server.domain.post.entity.PostVisibility;
 
-// 목록·상세·좋아요·삭제가 같은 조건으로 게시물을 본다 — 목록에 보인 글이 상세에서 404 가 되지 않게 한 곳에 둔다.
+// 목록·상세·좋아요·삭제·댓글이 같은 조건으로 게시물을 본다 — 목록에 보인 글이 상세에서 404 가 되지 않게 한 곳에 둔다.
 // 삭제됨·남의 나만 보기·현재 크루 밖·차단한 작성자는 구분 없이 보이지 않는다 (openapi GET /posts/{postId})
 @Repository
 @RequiredArgsConstructor
@@ -30,17 +30,31 @@ public class PostQueryRepository {
       AND NOT EXISTS (SELECT 1 FROM blocks b WHERE b.blocker_id = :me AND b.blocked_id = p.author_id)
       """;
 
+  // 댓글 수와 댓글 목록이 같은 조건을 써야 commentCount 가 목록과 어긋나지 않는다
+  private static final String VISIBLE_COMMENT =
+      """
+      c.deleted_at IS NULL
+      AND NOT EXISTS (SELECT 1 FROM blocks b WHERE b.blocker_id = :me AND b.blocked_id = c.author_id)
+      """;
+
   private static final String POST_COLUMNS =
       """
       SELECT p.id, p.author_id, u.nickname, u.status, um.object_key AS photo_key,
              p.text, p.visibility, p.created_at,
              (SELECT count(*) FROM post_likes l WHERE l.post_id = p.id) AS like_count,
              EXISTS (SELECT 1 FROM post_likes l WHERE l.post_id = p.id AND l.user_id = :me) AS liked,
-             (SELECT count(*) FROM comments c WHERE c.post_id = p.id AND c.deleted_at IS NULL
-                AND NOT EXISTS (SELECT 1 FROM blocks b WHERE b.blocker_id = :me AND b.blocked_id = c.author_id))
-               AS comment_count
+             (SELECT count(*) FROM comments c WHERE c.post_id = p.id AND %s) AS comment_count
       FROM posts p
       JOIN users u ON u.id = p.author_id
+      LEFT JOIN media um ON um.id = u.photo_media_id
+      """
+          .formatted(VISIBLE_COMMENT);
+
+  private static final String COMMENT_COLUMNS =
+      """
+      SELECT c.id, c.author_id, u.nickname, u.status, um.object_key AS photo_key, c.text, c.created_at
+      FROM comments c
+      JOIN users u ON u.id = c.author_id
       LEFT JOIN media um ON um.id = u.photo_media_id
       """;
 
@@ -58,6 +72,15 @@ public class PostQueryRepository {
       long likeCount,
       boolean liked,
       long commentCount) {}
+
+  public record CommentRow(
+      UUID id,
+      UUID authorId,
+      String nickname,
+      String status,
+      String photoKey,
+      String text,
+      Instant createdAt) {}
 
   public record MediaRow(UUID postId, String objectKey, String thumbKey) {}
 
@@ -138,6 +161,40 @@ public class PostQueryRepository {
     return byPost;
   }
 
+  /** 최신부터 limit 개. (beforeCreatedAt, beforeId) 가 있으면 그보다 오래된 것만. */
+  public List<CommentRow> findComments(
+      UUID me, UUID postId, Instant beforeCreatedAt, UUID beforeId, int limit) {
+    String sql =
+        COMMENT_COLUMNS
+            + "WHERE c.post_id = :postId AND "
+            + VISIBLE_COMMENT
+            + (beforeId == null ? "" : "AND (c.created_at, c.id) < (:beforeCreatedAt, :beforeId) ")
+            + "ORDER BY c.created_at DESC, c.id DESC LIMIT :limit";
+    JdbcClient.StatementSpec statement =
+        jdbc.sql(sql).param("me", me).param("postId", postId).param("limit", limit);
+    if (beforeId != null) {
+      statement =
+          statement.param("beforeCreatedAt", utc(beforeCreatedAt)).param("beforeId", beforeId);
+    }
+    return statement.query(PostQueryRepository::comment).list();
+  }
+
+  // 댓글은 그 게시물이 보일 때만 보인다
+  public Optional<CommentRow> findVisibleComment(UUID me, UUID crewId, UUID commentId) {
+    return jdbc.sql(
+            COMMENT_COLUMNS
+                + "JOIN posts p ON p.id = c.post_id WHERE "
+                + VISIBLE
+                + "AND "
+                + VISIBLE_COMMENT
+                + "AND c.id = :commentId")
+        .param("me", me)
+        .param("crewId", crewId)
+        .param("commentId", commentId)
+        .query(PostQueryRepository::comment)
+        .optional();
+  }
+
   public boolean isMember(UUID crewId, UUID userId) {
     return jdbc.sql(
             "SELECT EXISTS (SELECT 1 FROM crew_members WHERE crew_id = :crewId AND user_id = :userId)")
@@ -181,6 +238,17 @@ public class PostQueryRepository {
         rs.getLong("like_count"),
         rs.getBoolean("liked"),
         rs.getLong("comment_count"));
+  }
+
+  private static CommentRow comment(ResultSet rs, int rowNum) throws SQLException {
+    return new CommentRow(
+        rs.getObject("id", UUID.class),
+        rs.getObject("author_id", UUID.class),
+        rs.getString("nickname"),
+        rs.getString("status"),
+        rs.getString("photo_key"),
+        rs.getString("text"),
+        rs.getObject("created_at", OffsetDateTime.class).toInstant());
   }
 
   private static OffsetDateTime utc(Instant instant) {

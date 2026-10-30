@@ -19,13 +19,19 @@ import site.gachijoopging.server.domain.media.entity.MediaPurpose;
 import site.gachijoopging.server.domain.media.event.MediaQuarantineEvent;
 import site.gachijoopging.server.domain.media.service.MediaService;
 import site.gachijoopging.server.domain.media.service.MediaSignedUrl;
+import site.gachijoopging.server.domain.post.dto.CommentResponse;
+import site.gachijoopging.server.domain.post.dto.CreateCommentRequest;
 import site.gachijoopging.server.domain.post.dto.CreatePostRequest;
 import site.gachijoopging.server.domain.post.dto.PostDetailResponse;
 import site.gachijoopging.server.domain.post.dto.PostMediaResponse;
 import site.gachijoopging.server.domain.post.dto.PostResponse;
 import site.gachijoopging.server.domain.post.dto.PostScope;
+import site.gachijoopging.server.domain.post.entity.Comment;
 import site.gachijoopging.server.domain.post.entity.Post;
+import site.gachijoopging.server.domain.post.event.CommentCreatedEvent;
+import site.gachijoopging.server.domain.post.repository.CommentRepository;
 import site.gachijoopging.server.domain.post.repository.PostQueryRepository;
+import site.gachijoopging.server.domain.post.repository.PostQueryRepository.CommentRow;
 import site.gachijoopging.server.domain.post.repository.PostQueryRepository.MediaRow;
 import site.gachijoopging.server.domain.post.repository.PostQueryRepository.PostRow;
 import site.gachijoopging.server.domain.post.repository.PostRepository;
@@ -45,9 +51,14 @@ public class PostService {
 
   private static final int MAX_TEXT = 1000;
 
+  private static final int MAX_COMMENT = 500;
+
+  private static final int DETAIL_COMMENTS = 20;
+
   private static final String WITHDRAWN_NICKNAME = "탈퇴한 크루원";
 
   private final PostRepository postRepository;
+  private final CommentRepository commentRepository;
   private final PostQueryRepository queryRepository;
   private final MediaService mediaService;
   private final MediaSignedUrl signedUrl;
@@ -82,7 +93,57 @@ public class PostService {
   }
 
   public PostDetailResponse detail(UUID me, CrewMembership crew, UUID postId) {
-    return PostDetailResponse.of(post(me, crew, postId), List.of(), null);
+    PostResponse post = post(me, crew, postId);
+    CursorPage<CommentResponse> comments = commentPage(me, postId, null, DETAIL_COMMENTS);
+    return PostDetailResponse.of(post, comments.items(), comments.nextCursor());
+  }
+
+  public CursorPage<CommentResponse> comments(
+      UUID me, CrewMembership crew, UUID postId, String cursor, int limit) {
+    visible(me, crew, postId);
+    return commentPage(me, postId, cursor, limit);
+  }
+
+  @Transactional
+  public CommentResponse comment(
+      UUID me, CrewMembership crew, UUID postId, CreateCommentRequest request) {
+    userLock.lock(me);
+    // 주입된 소속은 잠금을 기다리기 전에 읽은 것이라, 그사이 나갔거나 추방됐으면 옛 크루에 쓰게 된다
+    if (!queryRepository.lockMembership(crew.crewId(), me)) {
+      throw new BusinessException(ErrorCode.NO_CREW, "소속 크루가 없다");
+    }
+    PostRow post = visible(me, crew, postId);
+    Comment same = commentRepository.findById(request.id()).orElse(null);
+    if (same != null) {
+      if (!same.writtenBy(me) || !same.getPostId().equals(postId)) {
+        throw new BusinessException(ErrorCode.FORBIDDEN, "남의 댓글 id 다");
+      }
+      return visibleComment(me, crew, same.getId());
+    }
+    String text = request.text().strip();
+    int length = text.codePointCount(0, text.length());
+    if (length < 1 || length > MAX_COMMENT) {
+      throw invalid("댓글은 1~" + MAX_COMMENT + "자다");
+    }
+
+    // 잠금은 같은 사람만 줄 세운다. 남이 같은 id 로 먼저 넣었으면 덮어쓰지 않고 남의 id 로 본다
+    if (commentRepository.insertIfAbsent(request.id(), postId, me, text, clock.instant()) == 0) {
+      throw new BusinessException(ErrorCode.FORBIDDEN, "남의 댓글 id 다");
+    }
+    events.publishEvent(new CommentCreatedEvent(postId, post.authorId(), request.id(), me));
+    return visibleComment(me, crew, request.id());
+  }
+
+  @Transactional
+  public void deleteComment(UUID me, CrewMembership crew, UUID commentId) {
+    visibleComment(me, crew, commentId);
+    Comment comment =
+        commentRepository.findById(commentId).orElseThrow(PostService::commentNotFound);
+    // 주입된 크루장 여부는 요청 시작 때 것이라, 그사이 위임이 커밋됐으면 옛 권한으로 지우게 된다
+    if (!comment.writtenBy(me) && !queryRepository.lockLeader(crew.crewId(), me)) {
+      throw new BusinessException(ErrorCode.FORBIDDEN, "작성자나 크루장만 지울 수 있다");
+    }
+    comment.delete(me, clock.instant());
   }
 
   // 같은 사람의 작성을 줄 세워 같은 id 재전송과 같은 사진 중복 첨부가 엇갈리지 않게 한다
@@ -184,6 +245,39 @@ public class PostService {
     return new CursorPage<>(responses(page), next);
   }
 
+  // 장은 과거 방향으로 넘기고 한 장 안은 오래된 것부터 보인다 (openapi GET /posts/{postId}/comments)
+  private CursorPage<CommentResponse> commentPage(UUID me, UUID postId, String cursor, int limit) {
+    Cursors.Cursor before = cursor == null ? null : Cursors.decode(cursor);
+    List<CommentRow> rows =
+        queryRepository.findComments(
+            me,
+            postId,
+            before == null ? null : before.createdAt(),
+            before == null ? null : before.id(),
+            limit + 1);
+    List<CommentRow> page = rows.subList(0, Math.min(limit, rows.size()));
+    String next =
+        rows.size() > limit
+            ? Cursors.encode(page.getLast().createdAt(), page.getLast().id())
+            : null;
+    return new CursorPage<>(page.reversed().stream().map(this::comment).toList(), next);
+  }
+
+  private CommentResponse visibleComment(UUID me, CrewMembership crew, UUID commentId) {
+    return queryRepository
+        .findVisibleComment(me, crew.crewId(), commentId)
+        .map(this::comment)
+        .orElseThrow(PostService::commentNotFound);
+  }
+
+  private CommentResponse comment(CommentRow row) {
+    return new CommentResponse(
+        row.id().toString(),
+        author(row.authorId(), row.status(), row.nickname(), row.photoKey()),
+        row.text(),
+        row.createdAt());
+  }
+
   private PostResponse post(UUID me, CrewMembership crew, UUID postId) {
     return responses(List.of(visible(me, crew, postId))).getFirst();
   }
@@ -202,7 +296,7 @@ public class PostService {
             row ->
                 new PostResponse(
                     row.id().toString(),
-                    author(row),
+                    author(row.authorId(), row.status(), row.nickname(), row.photoKey()),
                     row.text(),
                     row.visibility(),
                     media.getOrDefault(row.id(), List.of()).stream()
@@ -216,15 +310,12 @@ public class PostService {
   }
 
   // 탈퇴한 사람은 이름·사진 없이 "탈퇴한 크루원" 으로 보인다 (ERD 회원 탈퇴 때)
-  private UserBriefResponse author(PostRow row) {
-    if ("DELETED".equals(row.status())) {
-      return new UserBriefResponse(row.authorId().toString(), WITHDRAWN_NICKNAME, null, true);
+  private UserBriefResponse author(UUID id, String status, String nickname, String photoKey) {
+    if ("DELETED".equals(status)) {
+      return new UserBriefResponse(id.toString(), WITHDRAWN_NICKNAME, null, true);
     }
     return new UserBriefResponse(
-        row.authorId().toString(),
-        Objects.requireNonNullElse(row.nickname(), ""),
-        url(row.photoKey()),
-        false);
+        id.toString(), Objects.requireNonNullElse(nickname, ""), url(photoKey), false);
   }
 
   private String url(String key) {
@@ -261,5 +352,9 @@ public class PostService {
 
   private static BusinessException notFound() {
     return new BusinessException(ErrorCode.NOT_FOUND, "없는 게시물이다");
+  }
+
+  private static BusinessException commentNotFound() {
+    return new BusinessException(ErrorCode.NOT_FOUND, "없는 댓글이다");
   }
 }

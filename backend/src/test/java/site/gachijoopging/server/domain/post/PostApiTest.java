@@ -349,6 +349,236 @@ class PostApiTest extends IntegrationTest {
         .andExpect(status().isUnprocessableEntity());
   }
 
+  @Test
+  void 댓글을_달면_commentCount_가_늘고_상세에_오래된_것부터_온다() throws Exception {
+    TestAccount 크루장 = 크루를_만든다("comment-create-leader@test.io");
+    TestAccount 나 = 크루원이_된다("comment-create-me@test.io", 크루장);
+    UUID 글 = 쓴다(크루장, "댓글 달아 주세요", "CREW");
+    UUID 첫_댓글 = 댓글을_단다(나, 글, "  첫 댓글  ");
+    UUID 둘째_댓글 = 댓글을_단다(크루장, 글, "둘째 댓글");
+    댓글_시각을_바꾼다(첫_댓글, "2026-10-01T00:00:00Z");
+    댓글_시각을_바꾼다(둘째_댓글, "2026-10-02T00:00:00Z");
+
+    상세(나, 글)
+        .andExpect(jsonPath("$.data.commentCount").value(2))
+        .andExpect(jsonPath("$.data.comments[0].id").value(첫_댓글.toString()))
+        .andExpect(jsonPath("$.data.comments[0].text").value("첫 댓글"))
+        .andExpect(jsonPath("$.data.comments[0].author.id").value(나.id().toString()))
+        .andExpect(jsonPath("$.data.comments[1].id").value(둘째_댓글.toString()))
+        .andExpect(jsonPath("$.data.commentsNextCursor").isEmpty());
+    assertThat(
+            본문(mockMvc.perform(피드(나, "CREW"))).path("items").get(0).path("commentCount").asLong())
+        .isEqualTo(2);
+  }
+
+  @Test
+  void 같은_id_로_다시_단_댓글은_한_건이고_남의_댓글_id_는_403_이다() throws Exception {
+    TestAccount 크루장 = 크루를_만든다("comment-retry-leader@test.io");
+    TestAccount 나 = 크루원이_된다("comment-retry-me@test.io", 크루장);
+    UUID 글 = 쓴다(크루장, "재전송", "CREW");
+    UUID id = UUID.randomUUID();
+
+    mockMvc.perform(댓글_작성(나, 글, id, "한 번만")).andExpect(status().isCreated());
+    mockMvc
+        .perform(댓글_작성(나, 글, id, "한 번만"))
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.data.id").value(id.toString()));
+    mockMvc.perform(댓글_작성(크루장, 글, id, "가로채기")).andExpect(status().isForbidden());
+
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM comments WHERE id = ?", Long.class, id))
+        .isEqualTo(1);
+  }
+
+  @Test
+  void 크루장은_남의_댓글을_지우고_크루원은_남의_댓글을_못_지운다() throws Exception {
+    TestAccount 크루장 = 크루를_만든다("comment-del-leader@test.io");
+    TestAccount 나 = 크루원이_된다("comment-del-me@test.io", 크루장);
+    TestAccount 옆 = 크루원이_된다("comment-del-other@test.io", 크루장);
+    UUID 글 = 쓴다(옆, "댓글 지우기", "CREW");
+    UUID 내_댓글 = 댓글을_단다(나, 글, "지워질 댓글");
+    UUID 내가_지울_댓글 = 댓글을_단다(나, 글, "내가 지울 댓글");
+
+    mockMvc.perform(댓글_삭제(옆, 내_댓글)).andExpect(status().isForbidden());
+
+    mockMvc.perform(댓글_삭제(크루장, 내_댓글)).andExpect(status().isNoContent());
+    mockMvc.perform(댓글_삭제(나, 내가_지울_댓글)).andExpect(status().isNoContent());
+
+    assertThat(댓글_지운_사람(내_댓글)).isEqualTo(크루장.id());
+    assertThat(댓글_지운_사람(내가_지울_댓글)).isNull();
+    상세(나, 글)
+        .andExpect(jsonPath("$.data.commentCount").value(0))
+        .andExpect(jsonPath("$.data.comments").isEmpty());
+    assertThat(ids(댓글_목록(나, 글))).isEmpty();
+    mockMvc.perform(댓글_삭제(나, 내가_지울_댓글)).andExpect(status().isNotFound());
+  }
+
+  @Test
+  void 차단한_사람의_댓글은_목록과_수에서_빠지고_지우려_하면_404_다() throws Exception {
+    TestAccount 크루장 = 크루를_만든다("comment-block-leader@test.io");
+    TestAccount 나 = 크루원이_된다("comment-block-me@test.io", 크루장);
+    TestAccount 옆 = 크루원이_된다("comment-block-other@test.io", 크루장);
+    UUID 글 = 쓴다(나, "차단", "CREW");
+    UUID 옆_댓글 = 댓글을_단다(옆, 글, "차단당할 댓글");
+    UUID 내_댓글 = 댓글을_단다(나, 글, "남을 댓글");
+    jdbcTemplate.update(
+        "INSERT INTO blocks (blocker_id, blocked_id) VALUES (?, ?)", 나.id(), 옆.id());
+
+    상세(나, 글).andExpect(jsonPath("$.data.commentCount").value(1));
+    assertThat(ids(댓글_목록(나, 글))).containsExactly(내_댓글.toString());
+    mockMvc.perform(댓글_삭제(나, 옆_댓글)).andExpect(status().isNotFound());
+    상세(크루장, 글).andExpect(jsonPath("$.data.commentCount").value(2));
+  }
+
+  @Test
+  void 빈_댓글과_오백_자를_넘는_댓글은_422_다() throws Exception {
+    TestAccount 나 = 크루를_만든다("comment-invalid@test.io");
+    UUID 글 = 쓴다(나, "검증", "CREW");
+
+    mockMvc
+        .perform(댓글_작성(나, 글, UUID.randomUUID(), " 　 "))
+        .andExpect(status().isUnprocessableEntity());
+    mockMvc
+        .perform(댓글_작성(나, 글, UUID.randomUUID(), "가".repeat(501)))
+        .andExpect(status().isUnprocessableEntity());
+    mockMvc
+        .perform(댓글_작성(나, 글, UUID.randomUUID(), "😀".repeat(500)))
+        .andExpect(status().isCreated());
+  }
+
+  @Test
+  void 다른_크루나_남의_나만_보기_글의_댓글은_403_이_아니라_404_다() throws Exception {
+    TestAccount 우리_크루장 = 크루를_만든다("comment-other-ours@test.io");
+    TestAccount 나 = 크루원이_된다("comment-other-me@test.io", 우리_크루장);
+    TestAccount 남의_크루장 = 크루를_만든다("comment-other-theirs@test.io");
+    UUID 남의_글 = 쓴다(남의_크루장, "남의 크루 글", "CREW");
+    UUID 남의_댓글 = 댓글을_단다(남의_크루장, 남의_글, "남의 크루 댓글");
+    UUID 나만_보는_글 = 쓴다(나, "나만 봐요", "PRIVATE");
+
+    for (UUID 글 : List.of(남의_글, 나만_보는_글)) {
+      mockMvc
+          .perform(
+              get("/api/v1/posts/{postId}/comments", 글)
+                  .header(HttpHeaders.AUTHORIZATION, 우리_크루장.bearer()))
+          .andExpect(status().isNotFound());
+      mockMvc.perform(댓글_작성(우리_크루장, 글, UUID.randomUUID(), "몰래")).andExpect(status().isNotFound());
+    }
+    mockMvc.perform(댓글_삭제(우리_크루장, 남의_댓글)).andExpect(status().isNotFound());
+  }
+
+  @Test
+  void 댓글은_커서로_과거_방향으로_넘기고_한_장_안은_오래된_것부터다() throws Exception {
+    TestAccount 나 = 크루를_만든다("comment-page@test.io");
+    UUID 글 = 쓴다(나, "페이지", "CREW");
+    List<String> 댓글 = new ArrayList<>();
+    for (int i = 0; i < 3; i++) {
+      UUID 댓글_id = 댓글을_단다(나, 글, "댓글 " + i);
+      댓글_시각을_바꾼다(댓글_id, "2026-10-0%dT00:00:00Z".formatted(i + 1));
+      댓글.add(댓글_id.toString());
+    }
+
+    JsonNode 첫_장 =
+        본문(
+            mockMvc.perform(
+                get("/api/v1/posts/{postId}/comments", 글)
+                    .param("limit", "2")
+                    .header(HttpHeaders.AUTHORIZATION, 나.bearer())));
+    assertThat(ids(첫_장)).containsExactly(댓글.get(1), 댓글.get(2));
+    JsonNode 둘째_장 =
+        본문(
+            mockMvc.perform(
+                get("/api/v1/posts/{postId}/comments", 글)
+                    .param("limit", "2")
+                    .param("cursor", 첫_장.path("nextCursor").asText())
+                    .header(HttpHeaders.AUTHORIZATION, 나.bearer())));
+    assertThat(ids(둘째_장)).containsExactly(댓글.get(0));
+    assertThat(둘째_장.path("nextCursor").isNull()).isTrue();
+  }
+
+  @Test
+  void 추방이_커밋되기를_기다린_댓글은_옛_크루에_남지_않는다() throws Exception {
+    TestAccount 크루장 = 크루를_만든다("comment-expel-race-leader@test.io");
+    TestAccount 나 = 크루원이_된다("comment-expel-race-me@test.io", 크루장);
+    UUID 글 = 쓴다(크루장, "추방 경합", "CREW");
+    UUID id = UUID.randomUUID();
+
+    try (Connection 추방 = dataSource.getConnection()) {
+      추방.setAutoCommit(false);
+      try (PreparedStatement 지우기 =
+          추방.prepareStatement("DELETE FROM crew_members WHERE user_id = ?")) {
+        지우기.setObject(1, 나.id());
+        지우기.executeUpdate();
+      }
+      CompletableFuture<ResultActions> 작성_결과 =
+          CompletableFuture.supplyAsync(
+              () -> {
+                try {
+                  return mockMvc.perform(댓글_작성(나, 글, id, "늦은 댓글"));
+                } catch (Exception e) {
+                  throw new IllegalStateException(e);
+                }
+              });
+      Awaitility.await()
+          .atMost(Duration.ofSeconds(10))
+          .until(
+              () ->
+                  jdbcTemplate.queryForObject(
+                          "SELECT count(*) FROM pg_stat_activity WHERE wait_event_type = 'Lock'",
+                          Long.class)
+                      > 0);
+      추방.commit();
+
+      작성_결과
+          .get(10, TimeUnit.SECONDS)
+          .andExpect(status().isForbidden())
+          .andExpect(jsonPath("$.code").value("NO_CREW"));
+    }
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM comments WHERE id = ?", Long.class, id))
+        .isZero();
+  }
+
+  @Test
+  void 위임이_커밋되기를_기다린_댓글_삭제는_옛_크루장_권한으로_지우지_못한다() throws Exception {
+    TestAccount 크루장 = 크루를_만든다("comment-delegate-race-leader@test.io");
+    TestAccount 나 = 크루원이_된다("comment-delegate-race-me@test.io", 크루장);
+    UUID 글 = 쓴다(나, "위임 경합", "CREW");
+    UUID 내_댓글 = 댓글을_단다(나, 글, "위임 뒤에도 남을 댓글");
+
+    try (Connection 위임 = dataSource.getConnection()) {
+      위임.setAutoCommit(false);
+      try (PreparedStatement 바꾸기 =
+          위임.prepareStatement("UPDATE crews SET leader_id = ? WHERE leader_id = ?")) {
+        바꾸기.setObject(1, 나.id());
+        바꾸기.setObject(2, 크루장.id());
+        바꾸기.executeUpdate();
+      }
+      CompletableFuture<ResultActions> 삭제_결과 =
+          CompletableFuture.supplyAsync(
+              () -> {
+                try {
+                  return mockMvc.perform(댓글_삭제(크루장, 내_댓글));
+                } catch (Exception e) {
+                  throw new IllegalStateException(e);
+                }
+              });
+      Awaitility.await()
+          .atMost(Duration.ofSeconds(10))
+          .until(
+              () ->
+                  jdbcTemplate.queryForObject(
+                          "SELECT count(*) FROM pg_stat_activity WHERE wait_event_type = 'Lock'",
+                          Long.class)
+                      > 0);
+      위임.commit();
+
+      삭제_결과.get(10, TimeUnit.SECONDS).andExpect(status().isForbidden());
+    }
+    assertThat(ids(댓글_목록(나, 글))).containsExactly(내_댓글.toString());
+  }
+
   private TestAccount 크루를_만든다(String 이메일) throws Exception {
     TestAccount 계정 = 가입한다(mockMvc, 이메일);
     mockMvc
@@ -443,6 +673,44 @@ class PostApiTest extends IntegrationTest {
 
   private UUID 지운_사람(UUID 글) {
     return jdbcTemplate.queryForObject("SELECT deleted_by FROM posts WHERE id = ?", UUID.class, 글);
+  }
+
+  private UUID 댓글을_단다(TestAccount 계정, UUID 글, String 댓글) throws Exception {
+    UUID id = UUID.randomUUID();
+    mockMvc.perform(댓글_작성(계정, 글, id, 댓글)).andExpect(status().isCreated());
+    return id;
+  }
+
+  private MockHttpServletRequestBuilder 댓글_작성(TestAccount 계정, UUID 글, UUID id, String 댓글)
+      throws Exception {
+    return post("/api/v1/posts/{postId}/comments", 글)
+        .header(HttpHeaders.AUTHORIZATION, 계정.bearer())
+        .contentType(MediaType.APPLICATION_JSON)
+        .content(objectMapper.writeValueAsString(Map.of("id", id, "text", 댓글)));
+  }
+
+  private JsonNode 댓글_목록(TestAccount 계정, UUID 글) throws Exception {
+    return 본문(
+        mockMvc
+            .perform(
+                get("/api/v1/posts/{postId}/comments", 글)
+                    .header(HttpHeaders.AUTHORIZATION, 계정.bearer()))
+            .andExpect(status().isOk()));
+  }
+
+  private static MockHttpServletRequestBuilder 댓글_삭제(TestAccount 계정, UUID 댓글) {
+    return delete("/api/v1/comments/{commentId}", 댓글)
+        .header(HttpHeaders.AUTHORIZATION, 계정.bearer());
+  }
+
+  private void 댓글_시각을_바꾼다(UUID 댓글, String 시각) {
+    jdbcTemplate.update(
+        "UPDATE comments SET created_at = ? WHERE id = ?", Timestamp.from(Instant.parse(시각)), 댓글);
+  }
+
+  private UUID 댓글_지운_사람(UUID 댓글) {
+    return jdbcTemplate.queryForObject(
+        "SELECT deleted_by FROM comments WHERE id = ?", UUID.class, 댓글);
   }
 
   private JsonNode 본문(ResultActions 결과) throws Exception {
