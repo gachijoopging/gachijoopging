@@ -20,6 +20,7 @@ import site.gachijoopging.server.domain.crew.repository.CrewJoinRequestRepositor
 import site.gachijoopging.server.domain.crew.repository.CrewQueryRepository;
 import site.gachijoopging.server.domain.crew.repository.CrewQueryRepository.MemberRow;
 import site.gachijoopging.server.domain.crew.repository.CrewRepository;
+import site.gachijoopging.server.domain.safety.service.ReportService;
 import site.gachijoopging.server.global.error.BusinessException;
 import site.gachijoopging.server.global.error.ErrorCode;
 import site.gachijoopging.server.global.lock.UserLock;
@@ -37,6 +38,7 @@ public class CrewMemberService {
   private final CrewQueryRepository crewQueryRepository;
   private final CrewJoinRequestRepository joinRequestRepository;
   private final CrewService crewService;
+  private final ReportService reportService;
   private final ApplicationEventPublisher events;
   private final Clock clock;
 
@@ -89,6 +91,7 @@ public class CrewMemberService {
       throw notMember();
     }
     crewRepository.recordExpulsion(crew.getId(), userId, me, clock.instant());
+    reportService.resolveExpelled(me, crew.getId(), userId);
     events.publishEvent(new MemberExpelledEvent(crew.getId(), userId, me));
   }
 
