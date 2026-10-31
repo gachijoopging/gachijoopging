@@ -54,6 +54,8 @@ if [ "${1:-}" = "--verify" ]; then
   docker rm -fv "$name" >/dev/null 2>&1 || true
   # 끝나면 지운다. 개인정보가 든 복원본을 서버에 남기지 않는다.
   trap 'docker rm -fv "$name" >/dev/null 2>&1 || true' EXIT
+  # dash(/bin/sh)는 신호로 죽을 때 EXIT trap 을 돌리지 않는다. Ctrl-C·SSH 끊김에도 복원본을 지운다.
+  trap 'exit 1' INT TERM HUP
   docker run -d --name "$name" -e POSTGRES_PASSWORD=check "$RESTORE_IMAGE" >/dev/null
   # TCP 로 묻는다. 유닉스 소켓으로 물으면 **초기화 중인 임시 서버**가 ready 를 돌려준다 —
   # postgres 엔트리포인트는 초기화 서버를 listen_addresses='' 로 띄우기 때문이다. 그때 복원을
@@ -73,28 +75,21 @@ if [ "${1:-}" = "--verify" ]; then
   # 기본 postgres DB 에는 이미지가 postgis 를 미리 깔아 둔다. 거기에 복원하면 덤프에 확장이
   # 빠져 있어도 통과한다 — 검증이 덤프가 아니라 이미지를 보게 된다. 빈 DB 를 만들어 거기에 넣는다.
   docker exec "$name" createdb -U postgres restore
+  # 덤프에 CREATE SCHEMA public 이 들어 있다. 미리 지워 두면 정상 복원에 오류가 하나도 없어서
+  # pg_restore 의 종료 코드만으로 판정할 수 있다 — 도중에 죽은 복원(SIGKILL)도 여기서 걸린다.
+  docker exec "$name" psql -U postgres -d restore -q -c 'drop schema public'
 
   echo "복원: $file"
   start=$(date +%s)
-  rlog=$(mktemp)
-  trap 'docker rm -fv "$name" >/dev/null 2>&1 || true; rm -f "$rlog"' EXIT
   # 소유자·권한은 Supabase 역할이라 빈 DB 에 없다. 빼고 복원한다.
-  # 오류가 나도 끝까지 가서 전부 모은 뒤 아래에서 가려낸다.
-  docker exec -i "$name" pg_restore -U postgres -d restore --no-owner --no-acl < "$file" 2>"$rlog" || true
-  took=$(( $(date +%s) - start ))
-
-  # 복원 오류를 전부 무시하면 데이터 COPY 나 인덱스·FK 가 실패해도 표 목록은 맞아서 통과한다.
-  # 예상된 것 하나(template1 에 public 이 있어 나온다)만 넘기고 나머지는 실패로 본다.
-  errs=$(grep -c '^pg_restore: error:' "$rlog" || true)
-  benign=$(grep -c '^pg_restore: error:.*schema "public" already exists' "$rlog" || true)
-  cat "$rlog"
-  if [ "${errs:-0}" -ne "${benign:-0}" ]; then
-    echo "복원에 예상 밖의 오류가 있다 ($errs 건 중 $benign 건만 예상된 것)" >&2
+  if ! docker exec -i "$name" pg_restore -U postgres -d restore --no-owner --no-acl --exit-on-error < "$file"; then
+    echo "복원이 끝까지 가지 못했다" >&2
     exit 1
   fi
+  took=$(( $(date +%s) - start ))
 
   src=$(mktemp); dst=$(mktemp)
-  trap 'docker rm -fv "$name" >/dev/null 2>&1 || true; rm -f "$rlog" "$src" "$dst"' EXIT
+  trap 'docker rm -fv "$name" >/dev/null 2>&1 || true; rm -f "$src" "$dst"' EXIT
   src_psql "$FACTS_SQL" > "$src"
   docker exec "$name" psql -U postgres -d restore -tA -c "$FACTS_SQL" > "$dst"
 
@@ -121,6 +116,12 @@ fi
 
 umask 077
 mkdir -p "$DIR"
+# 수동 백업이 cron 과 겹치면 두 pg_dump 가 같은 .tmp 에 쓴다
+exec 9>"$DIR/.lock"
+if ! flock -n 9; then
+  echo "다른 백업이 돌고 있다" >&2
+  exit 1
+fi
 
 # 지우기를 덤프보다 **먼저** 한다. 맨 끝에 두면 덤프가 실패한 날 set -e 가 여기까지 오지 못해,
 # pooler 장애로 사흘 실패하면 30일 넘은 덤프가 사흘 더 남는다. 개인정보처리방침 §6 의 약속이라

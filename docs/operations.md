@@ -818,11 +818,8 @@ cd /opt/gachijoopging
 # 통과 — flyway·표 목록 일치, postgis 있음
 ```
 
-판정은 **flyway 마지막 버전과 표 목록**이다. 행 수는 덤프 뒤에 원본이 바뀐 만큼 다를 수 있어 보기만 한다.
-
-> `pg_restore: error: ... schema "public" already exists` 는 **정상이다.** 덤프에 `-n public` 으로
-> `CREATE SCHEMA public` 이 들어 있는데 복원 대상 이미지에 이미 있어서다. 무시하고 끝까지 가며,
-> 판정은 그 뒤의 대조로 한다 — 진짜로 표가 안 만들어졌으면 표 목록이 어긋나 걸린다.
+판정은 **복원이 오류 없이 끝났는지, flyway 마지막 버전, 표 목록**이다. 복원은 첫 오류에서 멈춘다 —
+도중에 죽은 복원도 종료 코드로 걸린다. 행 수는 덤프 뒤에 원본이 바뀐 만큼 다를 수 있어 보기만 한다.
 
 > ⚠️ **지금 리허설은 "스키마가 복원된다" 까지만 증명한다.** 운영에 데이터가 거의 없어서
 > (`flyway_schema_history` 4행 외에는 전부 0행) 행 단위 정합은 아직 검사된 적이 없다.
@@ -837,6 +834,10 @@ docker run --rm -i -e PGPASSWORD postgres:17-alpine \
   pg_restore -h <새 호스트> -p 5432 -U <새 사용자> -d postgres --no-owner --no-acl < /data/backups/db-<날짜>.dump
 unset PGPASSWORD
 ```
+
+> `pg_restore: error: ... schema "public" already exists` 는 **정상이다.** 덤프에 `-n public` 으로
+> `CREATE SCHEMA public` 이 들어 있는데 새 프로젝트에 이미 있어서다. 복원은 계속된다.
+> 그 밖의 `error:` 가 나오면 멈추고 본다.
 
 백엔드를 띄우면 Flyway 가 `flyway_schema_history` 를 보고 이미 적용된 것을 건너뛴다.
 
