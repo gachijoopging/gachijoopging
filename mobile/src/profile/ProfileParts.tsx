@@ -17,7 +17,6 @@ import {
   useRipple,
   useTheme,
 } from 'design-system/src';
-import type { MOCKS } from '../api/mocks.generated';
 import type { components } from '../api/contract.generated';
 import { kstToday } from '../crew/calendar';
 import { spokenDistance, withCommas } from '../crew/records';
@@ -25,7 +24,7 @@ import { formatDistance, formatElapsed } from '../format';
 import { activeDaysGrid, activityTitle } from './profile';
 
 export type ActivityCard = components['schemas']['ActivityCard'];
-export type Post = (typeof MOCKS)['GET /crew/members/{userId}/posts']['data']['items'][number];
+export type Post = components['schemas']['Post'];
 export type Stats = { totalActivities: number; totalDistanceM: number; totalItems: number };
 type Page<T> = { items: readonly T[]; nextCursor: string | null };
 

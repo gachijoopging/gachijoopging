@@ -3038,7 +3038,7 @@ export interface paths {
                          *     }
                          */
                         readonly "application/json": {
-                            readonly data?: components["schemas"]["Post"];
+                            readonly data: components["schemas"]["Post"];
                         };
                     };
                 };
@@ -3133,10 +3133,10 @@ export interface paths {
                          *     }
                          */
                         readonly "application/json": {
-                            readonly data?: components["schemas"]["Post"] & {
-                                readonly comments?: readonly components["schemas"]["Comment"][];
+                            readonly data: components["schemas"]["Post"] & {
+                                readonly comments: readonly components["schemas"]["Comment"][];
                                 /** @description 더 오래된 댓글이 없으면 null */
-                                readonly commentsNextCursor?: string | null;
+                                readonly commentsNextCursor: string | null;
                             };
                         };
                     };
@@ -3277,9 +3277,9 @@ export interface paths {
                          *     }
                          */
                         readonly "application/json": {
-                            readonly data?: {
-                                readonly items?: readonly components["schemas"]["Comment"][];
-                                readonly nextCursor?: string | null;
+                            readonly data: {
+                                readonly items: readonly components["schemas"]["Comment"][];
+                                readonly nextCursor: string | null;
                             };
                         };
                     };
@@ -3322,7 +3322,7 @@ export interface paths {
                          *     }
                          */
                         readonly "application/json": {
-                            readonly data?: components["schemas"]["Comment"];
+                            readonly data: components["schemas"]["Comment"];
                         };
                     };
                 };
@@ -4844,27 +4844,27 @@ export interface components {
             } | null;
         };
         readonly Post: {
-            readonly id?: string;
-            readonly author?: components["schemas"]["UserBrief"];
-            readonly text?: string;
+            readonly id: string;
+            readonly author: components["schemas"]["UserBrief"];
+            readonly text: string;
             /** @enum {string} */
-            readonly visibility?: "CREW" | "PRIVATE";
-            readonly media?: readonly {
-                readonly url?: string;
-                readonly thumbUrl?: string;
+            readonly visibility: "CREW" | "PRIVATE";
+            readonly media: readonly {
+                readonly url: string;
+                readonly thumbUrl: string;
             }[];
-            readonly likeCount?: number;
-            readonly liked?: boolean;
-            readonly commentCount?: number;
+            readonly likeCount: number;
+            readonly liked: boolean;
+            readonly commentCount: number;
             /** Format: date-time */
-            readonly createdAt?: string;
+            readonly createdAt: string;
         };
         readonly Comment: {
-            readonly id?: string;
-            readonly author?: components["schemas"]["UserBrief"];
-            readonly text?: string;
+            readonly id: string;
+            readonly author: components["schemas"]["UserBrief"];
+            readonly text: string;
             /** Format: date-time */
-            readonly createdAt?: string;
+            readonly createdAt: string;
         };
         readonly Notice: {
             readonly id?: string;
@@ -5111,9 +5111,9 @@ export interface components {
                  *     }
                  */
                 readonly "application/json": {
-                    readonly data?: {
-                        readonly items?: readonly components["schemas"]["Post"][];
-                        readonly nextCursor?: string | null;
+                    readonly data: {
+                        readonly items: readonly components["schemas"]["Post"][];
+                        readonly nextCursor: string | null;
                     };
                 };
             };
