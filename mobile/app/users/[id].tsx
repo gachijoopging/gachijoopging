@@ -29,6 +29,7 @@ import { ActivityCalendar, StatsTile, usePaged, type ActivityCard, type Post } f
 import { ProfileTabList } from '../../src/profile/ProfileTabList';
 import { INTRO_FOLD, safetyRows, type SafetyRow } from '../../src/profile/profile';
 import { setUserBlocked } from '../../src/profile/blocked-users';
+import { leaveForMembership } from '../../src/feed/leave';
 
 type Profile = Omit<(typeof MOCKS)['GET /crew/members/{userId}']['data'], 'isLeader' | 'following' | 'blocked' | 'activeDays'> & {
   isLeader: boolean;
@@ -130,6 +131,7 @@ export default function UserProfileScreen() {
     } catch (e) {
       if (memberId.current !== id || request !== profileRequest.current) return true;
       if (e instanceof ApiError && e.code === 'NOT_FOUND') setGone(true);
+      else if (e instanceof ApiError && e.code === 'NO_CREW') void leaveForMembership();
       else setFailed(true);
       return false;
     }

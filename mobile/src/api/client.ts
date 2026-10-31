@@ -16,7 +16,9 @@ export type Activity = components['schemas']['Activity'];
 /** 응답 타입을 계약(docs/openapi.yaml)에서 가져오는 경로. 실서버로 옮긴 경로부터 늘린다 — 나머지는 아직 목 example 의 타입이다 */
 type ContractKey =
   | 'POST /activities' | 'GET /activities/current' | 'POST /activities/{id}/items' | 'PATCH /activities/{id}/items/{itemId}'
-  | 'POST /activities/{id}/end' | 'GET /activities/{id}' | 'GET /users/me/activities' | 'POST /media';
+  | 'POST /activities/{id}/end' | 'GET /activities/{id}' | 'GET /users/me/activities' | 'POST /media'
+  | 'GET /crew/posts' | 'POST /crew/posts' | 'GET /posts/{postId}' | 'GET /posts/{postId}/comments' | 'POST /posts/{postId}/comments'
+  | 'GET /crew/members/{userId}/posts';
 type JsonOf<R> = R extends { content: { 'application/json': infer B } } ? B : never;
 type ContractResponse<K extends ContractKey> = K extends `${infer M} ${infer P extends keyof paths}`
   ? paths[P][Lowercase<M> & keyof paths[P]] extends { responses: infer R } ? JsonOf<R[Extract<keyof R, 200 | 201>]> : never
