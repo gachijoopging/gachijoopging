@@ -58,6 +58,8 @@ services:
       # 서비스 이름으로 바꿔 준다.
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/gachijoopging
       SPRING_DATA_REDIS_HOST: redis
+      # local 프로파일 기본값 ./build/uploads 는 이미지의 /app/build 라 컨테이너 사용자가 만들 수 없다
+      MEDIA_ROOT: /tmp/uploads
     # JWT_ACTIVE_KID·JWT_PRIVATE_KEY_PEM·JWT_PUBLIC_KEY_PEM 은 여기 적지 않는다.
     # 루트 .env 가 통째로 들어가고(infra/dev-keys.ps1 이 넣는다), environment 에 ${...} 로 쓰면
     # compose 가 그 변수를 infra/.env 에서 찾다가 못 찾아 빈 문자열로 덮어쓴다.
