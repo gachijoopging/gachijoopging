@@ -50,13 +50,6 @@ class OpenApiContractTest extends IntegrationTest {
           Map.entry("GET /agreements", "GAC-82"),
           Map.entry("GET /users/me/agreements", "GAC-82"),
           Map.entry("PUT /users/me/agreements", "GAC-82"),
-          Map.entry("GET /crew/notices", "GAC-93"),
-          Map.entry("POST /crew/notices", "GAC-93"),
-          Map.entry("GET /notices/{noticeId}", "GAC-93"),
-          Map.entry("PATCH /notices/{noticeId}", "GAC-93"),
-          Map.entry("DELETE /notices/{noticeId}", "GAC-93"),
-          Map.entry("POST /notices/{noticeId}/comments", "GAC-93"),
-          Map.entry("DELETE /notice-comments/{commentId}", "GAC-93"),
           Map.entry("GET /notifications", "GAC-95"),
           Map.entry("POST /notifications/read", "GAC-95"),
           Map.entry("GET /notifications/unread-count", "GAC-95"),
@@ -76,7 +69,6 @@ class OpenApiContractTest extends IntegrationTest {
       Map.of(
           "AgreementCatalog", "GAC-82",
           "Agreements", "GAC-82",
-          "Notice", "GAC-93",
           "Notification", "GAC-95",
           "Report", "GAC-96",
           "ChatMessage", "GAC-50");
@@ -148,6 +140,7 @@ class OpenApiContractTest extends IntegrationTest {
           Map.entry("Member", "MemberResponse"),
           Map.entry("MemberProfile", "MemberProfileResponse"),
           Map.entry("MemberStats", "MemberStatsResponse"),
+          Map.entry("Notice", "NoticeResponse"),
           Map.entry("Post", "PostResponse"),
           Map.entry("UserBrief", "UserBriefResponse"));
 
