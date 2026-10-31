@@ -1,4 +1,4 @@
-import { ApiError, type Activity, type ApiClient } from '../api/client';
+import { ApiError, createMockClient, type Activity, type ApiClient } from '../api/client';
 import { MOCKS } from '../api/mocks.generated';
 import { activeSec, activityMetrics, activitySummaryLabel, startActivity } from './start';
 
@@ -58,9 +58,21 @@ describe('활동 시작', () => {
     mutate: post as never,
   });
 
-  test('201 이면 시작 — 시계는 앱이 보낸 시작 시각과 공유 설정으로 연다', async () => {
+  test('201 이면 시작 — 시계는 서버가 돌려준 활동으로 연다', async () => {
     await expect(startActivity(client(async () => ({ data: { ...base, id: 'u1' } })), body))
       .resolves.toEqual({ kind: 'started', id: 'u1', startedAt: body.startedAt, locationShared: true });
+  });
+
+  test('응답이 유실돼 다시 보내면 서버가 돌려준 기존 활동의 시작 시각·공유 설정을 따른다 — 24시간 기한이 서버 활동과 같아야 한다', async () => {
+    const stored = { ...base, id: 'u1', startedAt: '2026-09-29T08:00:00Z', locationShared: false };
+    await expect(startActivity(client(async () => ({ data: stored })), body))
+      .resolves.toEqual({ kind: 'started', id: 'u1', startedAt: '2026-09-29T08:00:00Z', locationShared: false });
+  });
+
+  test('목 클라이언트는 요청한 id·시작 시각·공유 설정을 그대로 돌려준다 — 고정된 목 시각이면 시작하자마자 24시간이 지난 활동이 된다', async () => {
+    const requested = { id: 'u2', startedAt: '2026-10-28T01:00:00.000Z', locationShared: false };
+    await expect(startActivity(createMockClient(), requested))
+      .resolves.toEqual({ kind: 'started', id: 'u2', startedAt: '2026-10-28T01:00:00.000Z', locationShared: false });
   });
 
   test('네트워크 실패는 실패', async () => {

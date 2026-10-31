@@ -21,8 +21,9 @@ import {
   space,
   useTheme,
 } from 'design-system/src';
-import { peek, type ApiClient } from '../../src/api/client';
+import { ApiError, peek, type ApiClient } from '../../src/api/client';
 import { createApiClient } from '../../src/api/config';
+import { leaveForMembership } from '../../src/feed/leave';
 import type { MOCKS } from '../../src/api/mocks.generated';
 import { CalendarPanel } from '../../src/crew/CalendarPanel';
 import { NoticesPanel } from '../../src/crew/NoticesPanel';
@@ -71,7 +72,10 @@ export default function CrewScreen() {
     setRefreshing(false);
     // 알림 수를 못 받으면 점만 숨긴다
     setUnread(homeRes.status === 'fulfilled' ? homeRes.value.data.unreadNotifications : 0);
-    if (crewRes.status === 'rejected') return setFailed(true);
+    if (crewRes.status === 'rejected') {
+      if (crewRes.reason instanceof ApiError && crewRes.reason.code === 'NO_CREW') return void leaveForMembership();
+      return setFailed(true);
+    }
     setFailed(false);
     setCrew(crewRes.value.data);
   }, []);

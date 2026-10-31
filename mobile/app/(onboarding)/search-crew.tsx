@@ -26,6 +26,7 @@ import {
   useRipple,
 } from 'design-system/src';
 import { onboardingApi as api } from '../../src/api/onboarding';
+import { currentAccount, rememberAccount } from '../../src/auth/account';
 import { mapJoinError } from '../../src/auth/errors';
 import { finishOnboarding, type OnboardingNavigation } from '../../src/auth/navigation';
 import { usePreventBack } from '../../src/auth/usePreventBack';
@@ -157,16 +158,21 @@ export default function SearchCrewScreen() {
     busy.current = true;
     setJoining(true);
     setSheetBanner(undefined);
+    const sentBy = currentAccount()?.id;
     try {
       const { data } = await api.mutate('POST /crews/join-requests', { crewId: selected.id });
+      const account = currentAccount();
+      if (account?.id !== sentBy) return;
+      if (data.status === 'APPROVED' && account) rememberAccount({ id: account.id, membership: { status: 'MEMBER' } });
       // 검색 뒤 크루장이 가입 방식을 바꿨을 수 있다 — 이동은 응답의 status 를 따른다
       leaveTo(data.status === 'APPROVED'
         ? { to: '/(tabs)', flash: `${data.crew.name}에 가입했어요.` }
         : { to: '/pending-approval' });
     } catch (e) {
       const mapped = mapJoinError(e);
-      if (mapped.moved) leaveTo({ to: mapped.moved.to, flash: mapped.moved.flash });
-      else if (mapped.gone) {
+      if (mapped.moved) {
+        if (currentAccount()?.id === sentBy) leaveTo({ to: mapped.moved.to, flash: mapped.moved.flash });
+      } else if (mapped.gone) {
         setSheetOpen(false);
         setSnackbar('크루를 찾을 수 없어요. 다시 검색해 주세요.');
       } else {

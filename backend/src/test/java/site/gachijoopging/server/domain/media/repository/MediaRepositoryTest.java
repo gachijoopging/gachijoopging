@@ -6,6 +6,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
+import site.gachijoopging.server.domain.media.entity.MediaPurpose;
 import site.gachijoopging.server.support.IntegrationTest;
 
 class MediaRepositoryTest extends IntegrationTest {
@@ -18,7 +19,7 @@ class MediaRepositoryTest extends IntegrationTest {
     UUID 나 = 사용자를_만든다();
     UUID 내_사진 = 미디어를_만든다(나);
 
-    assertThat(mediaRepository.existsByIdAndOwnerId(내_사진, 나)).isTrue();
+    assertThat(mediaRepository.existsByIdAndOwnerIdAndPurpose(내_사진, 나, MediaPurpose.POST)).isTrue();
   }
 
   @Test
@@ -27,14 +28,26 @@ class MediaRepositoryTest extends IntegrationTest {
     UUID 남 = 사용자를_만든다();
     UUID 남의_사진 = 미디어를_만든다(남);
 
-    assertThat(mediaRepository.existsByIdAndOwnerId(남의_사진, 나)).isFalse();
+    assertThat(mediaRepository.existsByIdAndOwnerIdAndPurpose(남의_사진, 나, MediaPurpose.POST))
+        .isFalse();
+  }
+
+  @Test
+  void 용도가_다르면_거짓이다() {
+    UUID 나 = 사용자를_만든다();
+    UUID 내_사진 = 미디어를_만든다(나);
+
+    assertThat(mediaRepository.existsByIdAndOwnerIdAndPurpose(내_사진, 나, MediaPurpose.PROFILE))
+        .isFalse();
   }
 
   @Test
   void 없는_사진이면_거짓이다() {
     UUID 나 = 사용자를_만든다();
 
-    assertThat(mediaRepository.existsByIdAndOwnerId(UUID.randomUUID(), 나)).isFalse();
+    assertThat(
+            mediaRepository.existsByIdAndOwnerIdAndPurpose(UUID.randomUUID(), 나, MediaPurpose.POST))
+        .isFalse();
   }
 
   private UUID 사용자를_만든다() {

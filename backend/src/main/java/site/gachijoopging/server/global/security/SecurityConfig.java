@@ -10,13 +10,18 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import site.gachijoopging.server.global.config.WebConfig;
+import site.gachijoopging.server.global.websocket.WebSocketConfig;
 
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
 
+  // 소켓은 토큰을 헤더가 아니라 쿼리로 받고, 거절도 닫힘 코드로 한다 (global/websocket)
   static final String[] OPEN_PATHS = {
-    WebConfig.API_BASE_PATH + "/health", WebConfig.API_BASE_PATH + "/auth/**", "/actuator/**"
+    WebConfig.API_BASE_PATH + "/health",
+    WebConfig.API_BASE_PATH + "/auth/**",
+    WebSocketConfig.ENDPOINT,
+    "/actuator/**"
   };
 
   private static final String[] ADMIN_PATHS = {WebConfig.ADMIN_BASE_PATH + "/**"};

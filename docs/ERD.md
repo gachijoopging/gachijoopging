@@ -61,6 +61,7 @@ erDiagram
 | notify_activity_start | boolean | NOT NULL DEFAULT true — 팔로우 알림 전체 스위치 |
 | status | text | ACTIVE · DELETED |
 | created_at · updated_at · deleted_at | timestamptz | |
+| session_version | integer | NOT NULL DEFAULT 0 — 비밀번호를 재설정하면 1 오른다. accessToken 에 실린 값과 다르면 거부 |
 
 **user_agreements** — 약관·개인정보 동의 이력. 닉네임 완료 상태로 동의 완료를 대신하지 않는다. API `complete` 는 필수 `type` 마다 현재 버전 행의 `agreed` 가 true 인지로 파생한다.
 
@@ -73,9 +74,9 @@ erDiagram
 | agreed_at | timestamptz | |
 | PK | | (user_id, type, version) |
 
-비밀번호 재설정 성공 시 모든 기기의 access/refresh 세션을 무효화하고 재로그인을 요구한다. 소셜 전용 계정에 새 비밀번호를 만드는 기능은 없다. 세션 무효화의 실제 저장/검증 방식은 구현에서 결정한다.
+비밀번호 재설정 성공 시 모든 기기의 access/refresh 세션을 무효화하고 재로그인을 요구한다. 소셜 전용 계정에 새 비밀번호를 만드는 기능은 없다. refresh 는 폐기하고, access 는 `session_version` 으로 막는다.
 
-**refresh_tokens** — 이관한 `auth` Entity 그대로.
+**refresh_tokens** — 이관한 `auth` Entity 에 `session_version`(V7)만 더했다. 비밀번호를 확인한 시점의 `users.session_version` 을 싣고 회전해도 그대로 물려준다. 지금 값과 다르면 refresh 를 거부해, 재설정과 엇갈린 로그인이 일괄 폐기 뒤에 저장한 토큰도 막는다.
 
 **password_reset_tokens** — 메일로 보낸 6자리 코드 한 장이 한 행이다. 새로 보내면 그 사용자의 쓰지 않은 행은 `used_at` 이 찍혀 무효가 된다(V2).
 
@@ -194,7 +195,7 @@ PENDING 이 있는 사람의 크루 만들기·다른 크루 가입·신청은 4
 | paused_at | timestamptz | 일시정지 시작 시각. 재개·종료 시 null |
 | distance_m | int | 필터·걸음수 보정 뒤 값(Q31) |
 | steps | int | 선택 측정값, 미측정 null. 일시정지 걸음수 제외. 권한 부재·비보행 활동도 저장하며 사용할 수 없는 0/null로 GPS 보정하지 않음 |
-| route | geometry(LineString, 4326) | |
+| route | geometry(LineString, 4326) | 종료 때 단순화해 저장 (feature-scope §활동 경로) |
 | location_shared | boolean | NOT NULL — 시작 시트의 선택(Q16) |
 | item_count | int | 줍기 수량 합 |
 | by_category | jsonb | 카테고리별 수량 합 |
@@ -405,8 +406,8 @@ meets · meet_members · meet_invites · meet_join_requests · friendships · ne
 |---|---|---|---|
 | `refresh_tokens` | 로그아웃·탈퇴 때 | 로그아웃은 그 토큰 행, 탈퇴는 그 사람의 모든 행을 삭제 | 구현 전 (로그아웃 GAC-140 · 탈퇴 GAC-73). 지금 로그아웃은 revoke 만 한다 |
 | `refresh_tokens` | 매일 04:00 KST | 만료된 행 삭제 (`RefreshTokenCleanupJob`) | 있음. 지금은 만료 후 30일 지난 행만 지운다 — 만료 즉시로 바꾼다 |
-| 삭제된 콘텐츠의 사진 | 삭제 커밋 뒤 | 스토리지에서 `deleted/` 경로로 옮긴다 (`MediaQuarantineListener`) | 리스너만 있음. 발행은 각 도메인이 삭제를 만들 때 |
-| `live_locations` | 활동 종료 때 | 그 사람의 행 삭제 | 구현 전 |
+| 삭제된 콘텐츠의 사진 | 삭제 커밋 뒤 | 스토리지에서 `deleted/` 경로로 옮긴다 (`MediaQuarantineListener`) | 활동 삭제(GAC-88)·게시물 삭제(GAC-91)가 발행한다. 나머지 도메인은 삭제를 만들 때 발행한다 |
+| `live_locations` | 활동 종료 때 | 그 사람의 행 삭제 | 있음 — 종료 트랜잭션 안에서 `LiveService.ended` |
 | 종료 없이 끊긴 `live_locations` | 5분마다 | `updated_at` 이 25분 넘게 지난 행 삭제 — 늦어도 30분 안에 지워진다. 활동이 이어지면 다음 갱신이 행을 다시 만든다 | 구현 전 |
 | `password_reset_tokens` | 사용·폐기 때 · 매일 04:00 KST | 사용·재발급·오답 한도로 폐기되는 행은 그때 삭제, 쓰지 않고 만료된 행은 매일 삭제 | 구현 전 — 지금은 `used_at` 만 찍고 쌓인다 |
 | 처리 끝난 `reports` | 매일 04:00 KST | `resolved_at` 이 1년 지난 행 삭제 | 구현 전 |
@@ -414,4 +415,4 @@ meets · meet_members · meet_invites · meet_join_requests · friendships · ne
 | `deleted_at` 이 찍힌 `users`·`crews` | — | 물리 삭제하지 않는다. 탈퇴한 `users` 는 개인정보를 지운 빈 행으로 남아 "탈퇴한 크루원" 게시물·댓글이 가리키고, 해산한 `crews` 는 개인 활동 기록·`crew_daily_stats` 가 가리킨다 | 해당 없음 |
 | 서버 접속 로그 | 3개월 | 3개월 지난 로그 삭제 | infra 담당 (GAC-109). DB 행이 아니다 |
 | 사용자가 버린 활동 사진 | 버릴 때 (`DELETE /media/{mediaId}`) | `activity_photos`·`media` 행을 지우고 커밋 뒤 원본·썸네일 파일을 지운다. `deleted/` 를 거치지 않는다 | 있음 (GAC-89) |
-| 버리지 않았는데 줍기에 연결되지 않고 남은 활동 사진 | — | — | **미결** (`feature-scope.md` §미결) |
+| 버리지 않았는데 줍기에 연결되지 않고 남은 활동 사진 | 활동 삭제 때 | 활동의 다른 사진과 같다 — 기록의 일부로 남는다 (`feature-scope.md` "줍기 없이 남은 활동 사진") | 있음 (GAC-88) |

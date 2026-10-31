@@ -8,6 +8,10 @@ import { correctDistance, distanceM, filterFix, initialFilterState, moved, type 
 const SEARCH_AFTER_MS = 10_000;
 const UNSTABLE_AFTER_MS = 15_000;
 
+/** 활동은 시작부터 24시간까지다(feature-scope "활동 최대 시간"). 그 뒤의 위치·걸음·시간은 기록에 넣지 않는다 */
+export const MAX_ACTIVITY_MS = 24 * 60 * 60 * 1000;
+export const activityDeadline = (s: Pick<Session, 'startedAt'>) => Date.parse(s.startedAt) + MAX_ACTIVITY_MS;
+
 /** 4-3 이 기기에 쥐고 있는 활동. 계정별로 디스크에 남아 재실행·배경에서도 이어진다 */
 export type Session = {
   activityId: string;
@@ -64,6 +68,8 @@ export function newSession(a: ActivityStart, userId: string, now: number): Sessi
 }
 
 export function applyFix(s: Session, fix: Fix): Session {
+  // 경로 점에는 시각이 없어 나중에 잘라낼 수 없다. 24시간 뒤의 점은 처음부터 받지 않는다
+  if (fix.timestamp >= activityDeadline(s)) return s;
   const result = filterFix(s.filter, fix);
   if (!result.point) {
     // 기준을 옮겼으면 그 사이 경로를 모른다. 다음 점을 지난 구간과 잇지 않는다
@@ -180,8 +186,25 @@ export function livePayload(s: Session, now: number) {
   };
 }
 
+/**
+ * end 시각의 활동. 24시간을 넘겨 늦게 끝내거나 읽으면 그 시각 뒤에 시작한 일시정지는 아직 없었고,
+ * 걸친 일시정지는 그 시각까지만이다. 그대로 두면 활동 시간·일시정지·걸음 조회가 24시간 밖을 센다
+ */
+export function asOf(s: Session, end: number): Session {
+  const current = s.paused && s.pausedAt && Date.parse(s.pausedAt) > end ? { ...s, paused: false, pausedAt: null } : s;
+  const pauses = knownPauses(s);
+  // ponytail: 구간을 모르는 일시정지(서버 합계)는 자르지 못해 end 뒤 일시정지도 그대로 뺀다. 서버가 구간을 주면 같이 자른다
+  if (!pauses) return current;
+  const cut = pauses
+    .filter(([from]) => Date.parse(from) < end)
+    .map(([from, to]): [string, string] => [from, Date.parse(to) > end ? new Date(end).toISOString() : to]);
+  const pausedSec = cut.reduce((sum, [from, to]) => sum + Math.max(0, Math.floor((Date.parse(to) - Date.parse(from)) / 1000)), 0);
+  return { ...current, pauses: cut, pausedSec };
+}
+
 export function endBody(active: Session, now: number) {
-  const s = active.paused ? active : closeSegment(active);
+  const atEnd = asOf(active, now);
+  const s = atEnd.paused ? atEnd : closeSegment(atEnd);
   const durationSec = elapsedSec(s, now);
   const totalSec = Math.max(0, Math.floor((now - Date.parse(s.startedAt)) / 1000));
   return {

@@ -1,36 +1,40 @@
 import { MOCKS, type MockKey } from './mocks.generated';
+import type { components, paths } from './contract.generated';
 import type { MembershipStatus, Rejection } from '../auth/destination';
 import type { JoinRequestStatus } from '../auth/pending-request';
 import type { EndBody } from '../activity/outbox';
 import type { AgreementDefinition, AgreementState } from '../auth/agreements';
-import { currentAccount, forgetAccount } from '../auth/account';
+import { currentAccount, forgetAccount, rememberAccount } from '../auth/account';
 import { ApiError, NetworkError, fromEnvelope } from './errors';
 import { clearTokens, getTokens, setTokens, type TokenPair } from './tokens';
 import { kstDate } from '../crew/calendar';
 
 type MeData = (typeof MOCKS)['GET /users/me']['data'];
 type JoinRequestData = (typeof MOCKS)['GET /crews/join-requests/mine']['data'];
-/** docs/openapi.yaml 의 Activity 중 4-1 이 쓰는 필드. 목 example 은 리터럴이라 그대로 쓰면 타입이 좁다 */
-export type Activity = {
-  id: string;
-  status: 'IN_PROGRESS' | 'ENDED';
-  startedAt: string;
-  pausedSec: number;
-  paused: boolean;
-  pausedAt: string | null;
-  distanceM: number;
-  itemCount: number;
-  locationShared: boolean;
-};
+export type Activity = components['schemas']['Activity'];
+
+/** 응답 타입을 계약(docs/openapi.yaml)에서 가져오는 경로. 실서버로 옮긴 경로부터 늘린다 — 나머지는 아직 목 example 의 타입이다 */
+type ContractKey =
+  | 'POST /activities' | 'GET /activities/current' | 'POST /activities/{id}/items' | 'PATCH /activities/{id}/items/{itemId}'
+  | 'POST /activities/{id}/end' | 'GET /activities/{id}' | 'GET /users/me/activities' | 'POST /media';
+type JsonOf<R> = R extends { content: { 'application/json': infer B } } ? B : never;
+type ContractResponse<K extends ContractKey> = K extends `${infer M} ${infer P extends keyof paths}`
+  ? paths[P][Lowercase<M> & keyof paths[P]] extends { responses: infer R } ? JsonOf<R[Extract<keyof R, 200 | 201>]> : never
+  : never;
+
+// 목도 계약을 만족해야 한다. example 이 계약과 어긋나면 여기서 타입 오류가 난다
+MOCKS satisfies { readonly [K in ContractKey]: ContractResponse<K> };
+
 export type QueryKey = MockKey;
 export type ApiResponse<K extends QueryKey> =
+  K extends ContractKey ? ContractResponse<K> :
   K extends 'GET /agreements' ? { data: { items: readonly AgreementDefinition[] } } :
   K extends 'GET /users/me/agreements' ? { data: AgreementState } :
   K extends 'GET /users/me' ? { data: Omit<MeData, 'membership'> & {
     membership: { status: MembershipStatus; crew: MeData['membership']['crew'] | null; rejection: Rejection | null };
   } } : K extends 'GET /crews/join-requests/mine' ? {
     data: (Omit<JoinRequestData, 'status'> & { status: JoinRequestStatus }) | null;
-  } : K extends 'GET /activities/current' ? { data: Activity | null } : K extends MockKey ? (typeof MOCKS)[K] : never;
+  } : K extends MockKey ? (typeof MOCKS)[K] : never;
 
 /** 목에 example 이 없는 204 전용 경로. 성공해도 돌려줄 데이터가 없다 */
 export type VoidMutationKey =
@@ -64,11 +68,13 @@ export type VoidMutationKey =
   | 'POST /activities/{id}/resume'
   | 'POST /activities/{id}/live'
   | 'DELETE /activities/{id}/items/{itemId}'
-  | 'DELETE /activities/{id}';
+  | 'DELETE /activities/{id}'
+  | 'DELETE /media/{mediaId}';
 export type MutationKey = QueryKey | VoidMutationKey;
 /** 1-8 가입 응답. 공개 크루는 APPROVED, 비공개 크루는 PENDING 으로 온다 */
 export type JoinResult = { id: string; crew: { id: string; name: string }; status: JoinRequestStatus };
 export type MutationResponse<K extends MutationKey> =
+  K extends ContractKey ? ContractResponse<K> :
   K extends 'PUT /users/me/agreements' ? { data: AgreementState } :
   K extends 'POST /crews/join-requests' ? { data: JoinResult } :
   K extends MockKey ? (typeof MOCKS)[K] : void;
@@ -139,6 +145,23 @@ export function forget(key: QueryKey, query?: unknown): void {
   forgets += 1;
 }
 
+/** 활동 합계가 바뀌는 변경. 성공하면 합계를 담은 응답을 질의와 상관없이 잊는다 — 다시 연 5-3·5-5·홈이 이전 합계부터 그리면 안 된다 */
+const ACTIVITY_WRITES: readonly MutationKey[] = [
+  'POST /activities/{id}/items', 'PATCH /activities/{id}/items/{itemId}', 'DELETE /activities/{id}/items/{itemId}',
+  'POST /activities/{id}/end', 'DELETE /activities/{id}',
+];
+const ACTIVITY_VIEWS: readonly QueryKey[] = [
+  'GET /activities/{id}', 'GET /users/me/activities', 'GET /crew/members/{userId}/activities',
+  'GET /crew/home', 'GET /users/me/stats', 'GET /crew/stats', 'GET /crew/calendar',
+];
+
+function forgetActivityViews() {
+  for (const k of [...lastResponses.keys()]) {
+    if (ACTIVITY_VIEWS.some((key) => k.startsWith(`${key} `))) lastResponses.delete(k);
+  }
+  forgets += 1;
+}
+
 const MAX_RESPONSES = 100;
 
 /** owner·sentAt 은 요청을 보낼 때 값. 받는 사이 계정이 바뀌었거나 forget 이 있었으면 낡은 응답이므로 버린다 */
@@ -195,6 +218,10 @@ export function createMockClient({ delayMs = 0, failing = [], activityTotals }: 
         });
         agreements = { items, complete: items.every((item) => !item.required || item.agreed) };
         return { data: agreements } as never;
+      }
+      if (key === 'POST /activities') {
+        // 목의 startedAt 은 고정값이라 그대로 쓰면 시작하자마자 24시간 기한이 지난 활동이 된다
+        return { data: { ...MOCKS['POST /activities'].data, ...(body as object) } } as never;
       }
       if (key === 'POST /activities/{id}/end') {
         const request = body as EndBody & { id: string };
@@ -310,14 +337,30 @@ export function createHttpClient({ baseUrl, fetch: send = (...args) => globalThi
     }
   }
 
+  async function get<K extends QueryKey>(key: K, query?: unknown): Promise<ApiResponse<K>> {
+    const owner = currentOwner();
+    const sentAt = forgets;
+    const started = session;
+    // 호출자는 응답을 받은 계정 기준으로 소속을 기억하고 이동하므로, 앞 세션의 응답은 성공이든 NO_CREW 같은 오류든 돌려주지 않는다
+    const stale = () => new ApiError('TOKEN_EXPIRED', undefined, 401);
+    let response: ApiResponse<K>;
+    try {
+      response = (await authed(key, query)) as ApiResponse<K>;
+    } catch (error) {
+      throw started === session ? error : stale();
+    }
+    if (started !== session) throw stale();
+    // 보낸 뒤 이 기기에서 소속이 바뀌었으면(크루 나가기) 바뀌기 전 상태의 응답이다. 호출자가 다시 기억하면 소속이 되돌아가므로 버리고 다시 받는다
+    if (key === 'GET /users/me' && owner !== currentOwner()) return get(key, query);
+    remember(owner, sentAt, key, query, response);
+    // 크루 생성·즉시 가입은 화면이 바로 기억하지만, 크루장의 승인처럼 서버에서 바뀐 소속은 내 정보를 받을 때만 알 수 있다.
+    // 크루 없음으로 남으면 오프라인 재실행이 1-6 에 멈춰 활동 기록을 보내지 못한다
+    if (key === 'GET /users/me') rememberAccount((response as ApiResponse<'GET /users/me'>).data);
+    return response;
+  }
+
   return {
-    async get(key, query) {
-      const owner = currentOwner();
-      const sentAt = forgets;
-      const response = (await authed(key, query)) as ApiResponse<typeof key>;
-      remember(owner, sentAt, key, query, response);
-      return response;
-    },
+    get,
     async mutate(key, body) {
       // 응답을 기다리는 사이 다른 계정으로 로그인했으면 그 세션은 건드리지도 돌려주지도 않는다
       const started = session;
@@ -345,7 +388,9 @@ export function createHttpClient({ baseUrl, fetch: send = (...args) => globalThi
         await setTokens(response.data);
         return response as never;
       }
-      return (await authed(key, body)) as never;
+      const response = await authed(key, body);
+      if (ACTIVITY_WRITES.includes(key)) forgetActivityViews();
+      return response as never;
     },
   };
 }

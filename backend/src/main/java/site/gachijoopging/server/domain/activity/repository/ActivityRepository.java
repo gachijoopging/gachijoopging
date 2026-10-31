@@ -55,6 +55,20 @@ public interface ActivityRepository extends JpaRepository<Activity, UUID> {
       @Param("startedAt") Instant startedAt,
       @Param("locationShared") boolean locationShared);
 
+  @Modifying
+  @Query(
+      value =
+          """
+          UPDATE activities
+          SET route = ST_SimplifyPreserveTopology(ST_GeomFromText(:wkt, 4326), :toleranceDegrees)
+          WHERE id = :id
+          """,
+      nativeQuery = true)
+  void updateRoute(
+      @Param("id") UUID id,
+      @Param("wkt") String wkt,
+      @Param("toleranceDegrees") double toleranceDegrees);
+
   @Query(
       value =
           "SELECT EXISTS (SELECT 1 FROM activity_photos WHERE id = :photoId AND activity_id = :activityId)",

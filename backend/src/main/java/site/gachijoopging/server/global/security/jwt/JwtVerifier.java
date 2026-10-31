@@ -13,18 +13,24 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import site.gachijoopging.server.global.error.BusinessException;
 import site.gachijoopging.server.global.error.ErrorCode;
+import site.gachijoopging.server.global.security.SessionVersionLoader;
 
 @Component
 public class JwtVerifier {
+
+  static final String SESSION_VERSION_CLAIM = "sv";
 
   private static final String REQUIRED_ALGORITHM = "RS256";
 
   private final Map<String, RSAPublicKey> publicKeysByKid;
   private final Clock clock;
+  private final SessionVersionLoader sessionVersionLoader;
 
-  public JwtVerifier(JwtProperties properties, Clock clock) {
+  public JwtVerifier(
+      JwtProperties properties, Clock clock, SessionVersionLoader sessionVersionLoader) {
     this.publicKeysByKid = publicKeysByKid(properties);
     this.clock = clock;
+    this.sessionVersionLoader = sessionVersionLoader;
   }
 
   public UUID verify(String token) {
@@ -55,7 +61,20 @@ public class JwtVerifier {
       throw reject("만료됐다");
     }
 
-    return subject(decoded);
+    UUID userId = subject(decoded);
+    if (staleSession(decoded, userId)) {
+      throw reject("세션이 끊기기 전에 발급됐다");
+    }
+    return userId;
+  }
+
+  // 시각(iat)은 초 단위라 같은 초에 끊기 전·후 토큰을 가를 수 없다. 끊을 때마다 오르는 버전으로 대조한다
+  private boolean staleSession(DecodedJWT decoded, UUID userId) {
+    Integer tokenVersion = decoded.getClaim(SESSION_VERSION_CLAIM).asInt();
+    return sessionVersionLoader
+        .sessionVersionOf(userId)
+        .filter(current -> !current.equals(tokenVersion))
+        .isPresent();
   }
 
   private DecodedJWT decode(String token) {

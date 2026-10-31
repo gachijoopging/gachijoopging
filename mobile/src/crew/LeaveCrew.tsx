@@ -38,14 +38,17 @@ export function LeaveCrew({ api, crewName, isLeader }: { api: ApiClient; crewNam
   const leave = async () => {
     if (busy) return;
     setBusy(true);
+    const sentBy = currentAccount()?.id;
     try {
       if (offline) throw new ApiError('OFFLINE');
       await api.mutate('POST /crew/leave');
       const account = currentAccount();
-      if (account) rememberAccount({ id: account.id, membership: { status: 'NONE' } });
       setModal(null);
-      // 떠나는 화면은 다시 그리지 않는다 — 전환 중 재렌더가 Fabric 을 죽인다
-      return router.dismissTo({ pathname: '/crew-choice', params: { flash: '크루를 나갔어요.' } });
+      if (account?.id === sentBy) {
+        if (account) rememberAccount({ id: account.id, membership: { status: 'NONE' } });
+        // 떠나는 화면은 다시 그리지 않는다 — 전환 중 재렌더가 Fabric 을 죽인다
+        return router.dismissTo({ pathname: '/crew-choice', params: { flash: '크루를 나갔어요.' } });
+      }
     } catch (e) {
       const outcome = leaveFailure(e);
       if (outcome === 'delegate') setModal({ kind: 'delegate' });

@@ -14,6 +14,7 @@ export type EndBody = {
 export type Op =
   | { kind: 'items'; activityId: string; photoId: string | null; items: ItemInput[] }
   | { kind: 'deleteItem'; activityId: string; itemId: string }
+  | { kind: 'discardPhoto'; activityId: string; mediaId: string }
   | { kind: 'pause' | 'resume'; activityId: string }
   | { kind: 'end'; activityId: string; body: EndBody };
 

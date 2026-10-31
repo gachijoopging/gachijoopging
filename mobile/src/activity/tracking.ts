@@ -9,7 +9,7 @@ import { healthConnect } from './health-connect';
 import { flush, type Op } from './outbox';
 import { fixLogLine } from './fix-log';
 import type { Fix } from './location-filter';
-import { applyFix, livePayload, trackingNotice } from './session';
+import { activityDeadline, applyFix, asOf, livePayload, trackingNotice } from './session';
 import { readSteps, type StepSource } from './steps';
 import { getStored, loadLastAccount, updateStored } from './store';
 
@@ -39,6 +39,9 @@ TaskManager.defineTask<{ locations: Location.LocationObject[] }>(TRACKING_TASK, 
     const session = fixes.reduce(applyFix, st.session);
     return { ...st, session };
   });
+  // 화면이 없어도 24시간이 되면 끝내고 추적을 끈다. actions 가 이 모듈을 가져다 쓰므로 순환을 피해 부를 때 가져온다
+  const { endIfExpired } = require('./actions') as typeof import('./actions');
+  if (await endIfExpired()) return;
   await tick(Date.now());
 });
 
@@ -47,14 +50,16 @@ export async function tick(now: number) {
   const { session, ended } = getStored();
   if (!session || ended || now - lastLiveAt < LIVE_EVERY_MS) return;
   lastLiveAt = now;
-  const { title, body } = trackingNotice(session, now);
+  const at = Math.min(now, activityDeadline(session));
+  const shown = asOf(session, at);
+  const { title, body } = trackingNotice(shown, at);
   updateTrackingNotification(TRACKING_TASK, title, body, `gachijoopging://activity/[id]?id=${session.activityId}`);
   const [permission, enabled] = await Promise.all([
     Location.getForegroundPermissionsAsync().catch(() => null),
     Location.hasServicesEnabledAsync().catch(() => false),
   ]);
   if (getStored().ended || getStored().session?.activityId !== session.activityId) return;
-  const { activityId, ...live } = livePayload(session, now);
+  const { activityId, ...live } = livePayload(shown, at);
   if (!permission?.granted || !enabled) live.location = null;
   // 위치 전송은 쌓아 두지 않는다 — 마지막 값만 의미가 있다
   await api.mutate('POST /activities/{id}/live', { id: activityId, ...live }).catch(() => {});
@@ -71,7 +76,8 @@ export async function refreshSteps(now: number, source: StepSource = healthConne
   if (!before || getStored().ended || readingSteps) return;
   readingSteps = (async () => {
     // 못 읽으면 앞서 잰 값도 버린다. 권한을 거둔 뒤 낡은 걸음으로 거리를 계속 줄이면 안 된다
-    const steps = await readSteps(before, now, source);
+    const at = Math.min(now, activityDeadline(before));
+    const steps = await readSteps(asOf(before, at), at, source);
     updateStored((st) => (st.session?.activityId === before.activityId && !st.ended ? { ...st, session: { ...st.session, steps } } : st));
   })();
   try {
@@ -108,9 +114,10 @@ export async function startTracking(): Promise<boolean> {
   }
 }
 
+// 시작 여부를 먼저 기다리면 그 사이 시작된 다른 계정의 추적까지 끈다
 export async function stopTracking(): Promise<void> {
   try {
-    if (await Location.hasStartedLocationUpdatesAsync(TRACKING_TASK)) await Location.stopLocationUpdatesAsync(TRACKING_TASK);
+    await Location.stopLocationUpdatesAsync(TRACKING_TASK);
   } catch {
     // 이미 멈췄다
   }
@@ -122,6 +129,15 @@ async function send(client: ApiClient, op: Op): Promise<unknown> {
       return client.mutate('POST /activities/{id}/items', { id: op.activityId, photoId: op.photoId, items: op.items });
     case 'deleteItem':
       return client.mutate('DELETE /activities/{id}/items/{itemId}', { id: op.activityId, itemId: op.itemId });
+    case 'discardPhoto':
+      try {
+        await client.mutate('DELETE /media/{mediaId}', { mediaId: op.mediaId });
+      } catch (error) {
+        // 정리 작업이 종료를 막으면 안 된다. 403·409 는 다시 보내도 같고, 404 는 이 경로가 아직 없는 이전 서버가 낸다(계약상 없는 사진은 204).
+        // 밖으로 내보내면 큐가 멈추고 활동이 사라졌다는 표시가 뜬다
+        if (!(error instanceof ApiError) || !['FORBIDDEN', 'CONFLICT', 'NOT_FOUND'].includes(error.code)) throw error;
+      }
+      return;
     case 'pause':
       return client.mutate('POST /activities/{id}/pause', { id: op.activityId });
     case 'resume':
@@ -140,11 +156,12 @@ async function send(client: ApiClient, op: Op): Promise<unknown> {
   }
 }
 
-export function applyEndedActivity(id: string, data: { id: string; status: string; endedAt: string; durationSec: number; pausedSec: number; distanceM: number; steps: number | null; route?: readonly (readonly number[])[]; itemCount: number; byCategory: Record<string, number> }) {
-  if (data.id !== id || data.status !== 'ENDED') throw new Error('종료 응답이 활동과 일치하지 않아요');
+export function applyEndedActivity(id: string, data: { id: string; status: string; endedAt: string | null; durationSec: number; pausedSec: number; distanceM: number; steps: number | null; route?: readonly (readonly number[])[] | null; itemCount: number; byCategory: Readonly<Record<string, number>> }) {
+  const { endedAt } = data;
+  if (data.id !== id || data.status !== 'ENDED' || endedAt == null) throw new Error('종료 응답이 활동과 일치하지 않아요');
   updateStored((st) => st.session?.activityId === id ? {
     ...st,
-    ended: { endedAt: data.endedAt, durationSec: data.durationSec, pausedSec: data.pausedSec, distanceM: data.distanceM, steps: data.steps, route: data.route?.map((p) => [...p]) ?? (typeof st.ended === 'object' ? st.ended?.route : null) ?? [] },
+    ended: { endedAt, durationSec: data.durationSec, pausedSec: data.pausedSec, distanceM: data.distanceM, steps: data.steps, route: data.route?.map((p) => [...p]) ?? (typeof st.ended === 'object' ? st.ended?.route : null) ?? [] },
     session: { ...st.session, itemCount: data.itemCount, byCategory: data.byCategory, distanceM: data.distanceM, steps: data.steps },
   } : st);
 }

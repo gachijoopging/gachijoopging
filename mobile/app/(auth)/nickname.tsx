@@ -33,8 +33,9 @@ export default function NicknameScreen() {
       const { data } = await api.get('GET /users/me');
       if (request !== loadRequest.current) return;
       setMe(data);
-      originalNickname.current = data.nickname;
-      setNickname(data.nickname);
+      // 소셜로 처음 들어온 계정은 닉네임이 null 이다(계약 Me.nickname nullable)
+      originalNickname.current = data.nickname ?? '';
+      setNickname(data.nickname ?? '');
       rememberAccount(data);
       setBanner(undefined);
     } catch { if (request === loadRequest.current) setBanner('내 정보를 불러오지 못했어요. 다시 시도해 주세요.'); }

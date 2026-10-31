@@ -13,6 +13,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import site.gachijoopging.server.domain.media.entity.MediaPurpose;
 import site.gachijoopging.server.domain.media.service.MediaService;
 import site.gachijoopging.server.domain.media.service.MediaSignedUrl;
 import site.gachijoopging.server.domain.user.dto.DeviceRequest;
@@ -25,10 +26,11 @@ import site.gachijoopging.server.domain.user.repository.UserRepository;
 import site.gachijoopging.server.global.error.BusinessException;
 import site.gachijoopging.server.global.error.ErrorCode;
 import site.gachijoopging.server.global.security.AccountAuthorityLoader;
+import site.gachijoopging.server.global.security.SessionVersionLoader;
 
 @Service
 @RequiredArgsConstructor
-public class UserService implements AccountAuthorityLoader {
+public class UserService implements AccountAuthorityLoader, SessionVersionLoader {
 
   private static final List<GrantedAuthority> USER =
       List.of(new SimpleGrantedAuthority("ROLE_USER"));
@@ -51,7 +53,7 @@ public class UserService implements AccountAuthorityLoader {
           ? new BusinessException(ErrorCode.EMAIL_TAKEN, "이미 가입된 이메일이다")
           : nicknameTaken();
     }
-    return new UserAccount(id, true);
+    return new UserAccount(id, true, 0);
   }
 
   @Transactional(readOnly = true)
@@ -92,7 +94,7 @@ public class UserService implements AccountAuthorityLoader {
             || (nickname != null && find.get().isEmpty() && insert.apply(null) == 1);
     return find.get()
         .filter(User::active)
-        .map(user -> new UserAccount(user.getId(), created))
+        .map(user -> new UserAccount(user.getId(), created, user.getSessionVersion()))
         .orElseThrow(() -> new BusinessException(ErrorCode.INVALID_CREDENTIALS, "쓸 수 없는 계정이다"));
   }
 
@@ -192,7 +194,9 @@ public class UserService implements AccountAuthorityLoader {
       throw new BusinessException(ErrorCode.NICKNAME_TAKEN, "이미 쓰는 닉네임이다");
     }
     if (request.photoMediaId() != null) {
-      request.photoMediaId().ifPresent(mediaId -> mediaService.requireOwnedBy(mediaId, userId));
+      request
+          .photoMediaId()
+          .ifPresent(mediaId -> mediaService.requireOwnedBy(mediaId, userId, MediaPurpose.PROFILE));
     }
     me.updateProfile(
         request.nickname(),
@@ -232,6 +236,13 @@ public class UserService implements AccountAuthorityLoader {
     return USER;
   }
 
+  // 비밀번호를 재설정하면 모든 기기의 세션을 끊는다 (docs/openapi.yaml §password-reset/confirm)
+  @Override
+  @Transactional(readOnly = true)
+  public Optional<Integer> sessionVersionOf(UUID userId) {
+    return userRepository.findById(userId).map(User::getSessionVersion);
+  }
+
   private User activeUser(UUID userId) {
     return userRepository
         .findById(userId)
@@ -240,7 +251,7 @@ public class UserService implements AccountAuthorityLoader {
   }
 
   private static UserAccount account(User user) {
-    return new UserAccount(user.getId(), false);
+    return new UserAccount(user.getId(), false, user.getSessionVersion());
   }
 
   private static BusinessException nicknameTaken() {

@@ -56,3 +56,20 @@ test('저장이 끝난 기록의 지우기 버튼은 공유 카드 밖에 둔다
   act(() => tree.unmount());
   mockStored = { session: null, ended: null, outbox: [] };
 });
+
+test.each([
+  ['24시간에 끝난 활동이면 자동 종료를 알린다', '2026-10-01T00:00:00Z', 1],
+  ['그 전에 끝난 활동이면 알리지 않는다', '2026-09-30T23:59:59Z', 0],
+])('%s', async (_label, endedAt, shown) => {
+  mockStored = {
+    session: { activityId: 'a1', userId: 'u1', startedAt: '2026-09-30T00:00:00Z', pausedSec: 0, paused: false, pausedAt: null, locationShared: false, itemCount: 2, byCategory: {}, segments: [], distanceM: 120, steps: null },
+    ended: { endedAt, durationSec: 86_400, pausedSec: 0, distanceM: 120, steps: null, route: [] },
+    outbox: [],
+  };
+  let tree!: ReturnType<typeof create>;
+  await act(async () => { tree = create(React.createElement(Summary)); });
+  const notice = tree.root.findAll((n: any) => n.type === 'Banner' && n.props.children === '24시간이 지나 활동을 자동으로 끝냈어요.');
+  expect(notice).toHaveLength(shown);
+  act(() => tree.unmount());
+  mockStored = { session: null, ended: null, outbox: [] };
+});

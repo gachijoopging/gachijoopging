@@ -25,8 +25,10 @@ import site.gachijoopging.server.domain.crew.repository.CrewQueryRepository;
 import site.gachijoopging.server.domain.crew.repository.CrewQueryRepository.CrewSummaryRow;
 import site.gachijoopging.server.domain.crew.repository.CrewQueryRepository.UserBriefRow;
 import site.gachijoopging.server.domain.crew.repository.CrewRepository;
+import site.gachijoopging.server.domain.media.entity.MediaPurpose;
 import site.gachijoopging.server.domain.media.service.MediaService;
 import site.gachijoopging.server.domain.media.service.MediaSignedUrl;
+import site.gachijoopging.server.domain.notice.service.NoticeService;
 import site.gachijoopging.server.global.error.BusinessException;
 import site.gachijoopging.server.global.error.ErrorCode;
 import site.gachijoopging.server.global.lock.UserLock;
@@ -49,6 +51,7 @@ public class CrewService implements CrewMembershipLoader {
   private final CrewJoinRequestRepository joinRequestRepository;
   private final MediaService mediaService;
   private final MediaSignedUrl mediaSignedUrl;
+  private final NoticeService noticeService;
   private final ApplicationEventPublisher events;
   private final Clock clock;
 
@@ -145,7 +148,9 @@ public class CrewService implements CrewMembershipLoader {
       throw new BusinessException(ErrorCode.CREW_NAME_TAKEN, "이미 쓰는 크루 이름이다");
     }
     if (request.photoMediaId() != null) {
-      request.photoMediaId().ifPresent(mediaId -> mediaService.requireOwnedBy(mediaId, me));
+      request
+          .photoMediaId()
+          .ifPresent(mediaId -> mediaService.requireOwnedBy(mediaId, me, MediaPurpose.CREW));
     }
     Instant now = clock.instant();
     if (crew.getJoinPolicy() == JoinPolicy.APPROVAL && request.joinPolicy() == JoinPolicy.OPEN) {
@@ -197,7 +202,13 @@ public class CrewService implements CrewMembershipLoader {
         crewRepository.countMembers(crew.getId()),
         crew.getGoalCount(),
         leader ? crewRepository.countPendingJoinRequests(crew.getId()) : 0,
-        null,
+        noticeService
+            .latest(crew.getId())
+            .map(
+                notice ->
+                    new CrewResponse.PinnedNotice(
+                        notice.id().toString(), notice.title(), notice.createdAt()))
+            .orElse(null),
         0,
         leader);
   }
