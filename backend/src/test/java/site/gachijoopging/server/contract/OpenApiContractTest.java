@@ -50,15 +50,12 @@ class OpenApiContractTest extends IntegrationTest {
           Map.entry("GET /agreements", "GAC-82"),
           Map.entry("GET /users/me/agreements", "GAC-82"),
           Map.entry("PUT /users/me/agreements", "GAC-82"),
-          Map.entry("GET /crew/export", "GAC-97"),
-          Map.entry("GET /crew/chat/messages", "GAC-50"),
-          Map.entry("PUT /crew/chat/read", "GAC-50"));
+          Map.entry("GET /crew/export", "GAC-97"));
 
   private static final Map<String, String> 미구현_스키마 =
       Map.of(
           "AgreementCatalog", "GAC-82",
-          "Agreements", "GAC-82",
-          "ChatMessage", "GAC-50");
+          "Agreements", "GAC-82");
 
   private static JsonNode 산출물_문서;
 
@@ -113,6 +110,7 @@ class OpenApiContractTest extends IntegrationTest {
           Map.entry("ActivityCard", "ActivityCardResponse"),
           Map.entry("ActivitySummary", "ActivitySummaryResponse"),
           Map.entry("Bbox", "BboxResponse"),
+          Map.entry("ChatMessage", "ChatMessageResponse"),
           Map.entry("Comment", "CommentResponse"),
           Map.entry("Crew", "CrewResponse"),
           Map.entry("CrewStats", "CrewStatsResponse"),

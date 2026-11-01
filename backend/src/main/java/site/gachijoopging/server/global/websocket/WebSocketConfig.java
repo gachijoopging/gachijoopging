@@ -47,8 +47,11 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     this.heartbeatScheduler = heartbeatScheduler;
   }
 
+  // 한 연결에서 들어온 메시지를 순서대로 처리한다. 앱은 끊긴 동안 쌓인 채팅을 차례로 보내고(realtime.md),
+  // 병렬로 처리하면 뒤에 보낸 것이 먼저 seq 를 받는다
   @Override
   public void registerStompEndpoints(StompEndpointRegistry registry) {
+    registry.setPreserveReceiveOrder(true);
     // 앱은 브라우저가 아니고 인증은 토큰이 맡는다. Origin 을 보내지 않거나 제각각이다
     registry
         .addEndpoint(ENDPOINT)

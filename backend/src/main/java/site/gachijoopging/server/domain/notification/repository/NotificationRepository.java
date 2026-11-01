@@ -178,6 +178,21 @@ public class NotificationRepository {
         now);
   }
 
+  public List<NotificationRow> insertChat(UUID messageId, List<UUID> recipients, Instant now) {
+    return insert(
+        """
+        SELECT u.id, 'CHAT', '크루 채팅에 새 메시지가 있어요',
+               left(coalesce(a.nickname, '') || ': ' || m.text, %d), 'CHAT', NULL, :now
+        FROM chat_messages m
+        JOIN users a ON a.id = m.author_id
+        JOIN users u ON u.id IN (:recipients) AND u.status = 'ACTIVE'
+        WHERE m.id = :messageId
+        """
+            .formatted(DETAIL),
+        Map.of("messageId", messageId, "recipients", recipients),
+        now);
+  }
+
   // 지워진 글이라 갈 곳이 없다 — target.id 는 비운다 (2-3 POST_REMOVED)
   public List<NotificationRow> insertPostRemoved(UUID postId, Instant now) {
     return insert(

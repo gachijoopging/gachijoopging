@@ -10,6 +10,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import site.gachijoopging.server.domain.chat.service.ChatService;
 import site.gachijoopging.server.domain.crew.dto.UserBriefResponse;
 import site.gachijoopging.server.domain.media.service.MediaSignedUrl;
 import site.gachijoopging.server.domain.notice.service.NoticeService;
@@ -47,6 +48,7 @@ public class ReportService {
   private final ReportQueryRepository queryRepository;
   private final PostService postService;
   private final NoticeService noticeService;
+  private final ChatService chatService;
   private final MediaSignedUrl signedUrl;
   private final ApplicationEventPublisher events;
   private final UserLock userLock;
@@ -171,7 +173,7 @@ public class ReportService {
       case COMMENT -> postService.deleteReportedComment(me, report.getCrewId(), target);
       case NOTICE_COMMENT -> noticeService.deleteReportedComment(me, report.getCrewId(), target);
       case USER -> throw invalid("사용자 신고는 지울 수 없다 — 기각하거나 추방한다");
-      case CHAT_MESSAGE -> throw invalid("채팅 메시지 삭제는 아직 없다");
+      case CHAT_MESSAGE -> chatService.deleteReported(me, report.getCrewId(), target);
     }
   }
 

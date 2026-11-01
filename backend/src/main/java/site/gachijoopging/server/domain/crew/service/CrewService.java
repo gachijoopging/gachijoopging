@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import site.gachijoopging.server.domain.chat.service.ChatService;
 import site.gachijoopging.server.domain.crew.dto.CreateCrewRequest;
 import site.gachijoopging.server.domain.crew.dto.CrewResponse;
 import site.gachijoopging.server.domain.crew.dto.CrewSummaryResponse;
@@ -52,6 +53,7 @@ public class CrewService implements CrewMembershipLoader {
   private final MediaService mediaService;
   private final MediaSignedUrl mediaSignedUrl;
   private final NoticeService noticeService;
+  private final ChatService chatService;
   private final ApplicationEventPublisher events;
   private final Clock clock;
 
@@ -209,7 +211,7 @@ public class CrewService implements CrewMembershipLoader {
                     new CrewResponse.PinnedNotice(
                         notice.id().toString(), notice.title(), notice.createdAt()))
             .orElse(null),
-        0,
+        chatService.unreadCount(crew.getId(), me),
         leader);
   }
 
