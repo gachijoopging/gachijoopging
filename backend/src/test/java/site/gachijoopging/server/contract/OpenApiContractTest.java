@@ -55,12 +55,6 @@ class OpenApiContractTest extends IntegrationTest {
           Map.entry("GET /notifications/unread-count", "GAC-95"),
           Map.entry("PUT /users/{userId}/follow", "GAC-95"),
           Map.entry("DELETE /users/{userId}/follow", "GAC-95"),
-          Map.entry("GET /users/me/blocked", "GAC-96"),
-          Map.entry("PUT /users/{userId}/block", "GAC-96"),
-          Map.entry("DELETE /users/{userId}/block", "GAC-96"),
-          Map.entry("POST /reports", "GAC-96"),
-          Map.entry("GET /crew/reports", "GAC-96"),
-          Map.entry("POST /crew/reports/{reportId}", "GAC-96"),
           Map.entry("GET /crew/export", "GAC-97"),
           Map.entry("GET /crew/chat/messages", "GAC-50"),
           Map.entry("PUT /crew/chat/read", "GAC-50"));
@@ -70,7 +64,6 @@ class OpenApiContractTest extends IntegrationTest {
           "AgreementCatalog", "GAC-82",
           "Agreements", "GAC-82",
           "Notification", "GAC-95",
-          "Report", "GAC-96",
           "ChatMessage", "GAC-50");
 
   private static JsonNode 산출물_문서;
@@ -142,6 +135,7 @@ class OpenApiContractTest extends IntegrationTest {
           Map.entry("MemberStats", "MemberStatsResponse"),
           Map.entry("Notice", "NoticeResponse"),
           Map.entry("Post", "PostResponse"),
+          Map.entry("Report", "ReportResponse"),
           Map.entry("UserBrief", "UserBriefResponse"));
 
   private static final Map<String, String> 모바일_대조_제외 =

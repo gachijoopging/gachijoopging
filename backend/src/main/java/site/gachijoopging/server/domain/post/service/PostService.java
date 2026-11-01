@@ -13,6 +13,7 @@ import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import site.gachijoopging.server.domain.crew.dto.UserBriefResponse;
 import site.gachijoopging.server.domain.media.entity.MediaPurpose;
@@ -189,7 +190,35 @@ public class PostService {
     if (!post.writtenBy(me) && !queryRepository.lockLeader(crew.crewId(), me)) {
       throw new BusinessException(ErrorCode.FORBIDDEN, "작성자나 크루장만 지울 수 있다");
     }
-    post.delete(me, clock.instant());
+    remove(post, me);
+  }
+
+  // 신고 처리의 삭제는 크루장 관리라 차단과 무관하다. 이미 지워졌으면 처음 지운 사람을 덮어쓰지 않는다
+  @Transactional(propagation = Propagation.MANDATORY)
+  public void deleteReported(UUID leaderId, UUID crewId, UUID postId) {
+    postRepository
+        .findById(postId)
+        .filter(post -> post.getCrewId().equals(crewId) && post.getDeletedAt() == null)
+        .ifPresent(post -> remove(post, leaderId));
+  }
+
+  @Transactional(propagation = Propagation.MANDATORY)
+  public void deleteReportedComment(UUID leaderId, UUID crewId, UUID commentId) {
+    commentRepository
+        .findById(commentId)
+        .filter(comment -> comment.getDeletedAt() == null)
+        .filter(
+            comment ->
+                postRepository
+                    .findById(comment.getPostId())
+                    .filter(post -> post.getCrewId().equals(crewId))
+                    .isPresent())
+        .ifPresent(comment -> comment.delete(leaderId, clock.instant()));
+  }
+
+  private void remove(Post post, UUID by) {
+    UUID postId = post.getId();
+    post.delete(by, clock.instant());
     List<String> keys = new ArrayList<>();
     queryRepository
         .findMedia(List.of(postId))

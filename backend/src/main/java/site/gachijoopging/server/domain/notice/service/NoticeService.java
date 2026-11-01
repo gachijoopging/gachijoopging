@@ -8,6 +8,7 @@ import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import site.gachijoopging.server.domain.crew.dto.UserBriefResponse;
 import site.gachijoopging.server.domain.media.service.MediaSignedUrl;
@@ -170,6 +171,21 @@ public class NoticeService {
       throw new BusinessException(ErrorCode.FORBIDDEN, "작성자나 크루장만 지울 수 있다");
     }
     comment.delete(me, clock.instant());
+  }
+
+  // 신고 처리의 삭제는 크루장 관리라 차단과 무관하다. 이미 지워졌으면 처음 지운 사람을 덮어쓰지 않는다
+  @Transactional(propagation = Propagation.MANDATORY)
+  public void deleteReportedComment(UUID leaderId, UUID crewId, UUID commentId) {
+    commentRepository
+        .findById(commentId)
+        .filter(comment -> comment.getDeletedAt() == null)
+        .filter(
+            comment ->
+                noticeRepository
+                    .findById(comment.getNoticeId())
+                    .filter(notice -> notice.getCrewId().equals(crewId))
+                    .isPresent())
+        .ifPresent(comment -> comment.delete(leaderId, clock.instant()));
   }
 
   // 주입된 크루장 여부는 요청 시작 때 것이라, 그사이 위임이 커밋됐으면 옛 권한으로 쓰게 된다
