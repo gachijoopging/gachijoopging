@@ -1183,7 +1183,7 @@ paths:
           description: 생성
           content:
             application/json:
-              schema: { type: object, properties: { data: { $ref: '#/components/schemas/Post' } } }
+              schema: { type: object, required: [data], properties: { data: { $ref: '#/components/schemas/Post' } } }
               example:
                 data:
                   id: 5d0e…
@@ -1208,11 +1208,13 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [data]
                 properties:
                   data:
                     allOf:
                       - $ref: '#/components/schemas/Post'
                       - type: object
+                        required: [comments, commentsNextCursor]
                         properties:
                           comments: { type: array, items: { $ref: '#/components/schemas/Comment' } }
                           commentsNextCursor: { type: string, nullable: true, description: 더 오래된 댓글이 없으면 null }
@@ -1265,9 +1267,11 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [data]
                 properties:
                   data:
                     type: object
+                    required: [items, nextCursor]
                     properties:
                       items: { type: array, items: { $ref: '#/components/schemas/Comment' } }
                       nextCursor: { type: string, nullable: true }
@@ -1287,7 +1291,7 @@ paths:
           description: 생성
           content:
             application/json:
-              schema: { type: object, properties: { data: { $ref: '#/components/schemas/Comment' } } }
+              schema: { type: object, required: [data], properties: { data: { $ref: '#/components/schemas/Comment' } } }
               example:
                 data: { id: c3, author: { id: 6f1c…, nickname: 관열, photoUrl: null, withdrawn: false }, text: 저도 다음엔 갈게요, createdAt: 2026-09-06T14:00:00Z }
   /comments/{commentId}:
@@ -1870,9 +1874,11 @@ components:
         application/json:
           schema:
             type: object
+            required: [data]
             properties:
               data:
                 type: object
+                required: [items, nextCursor]
                 properties:
                   items: { type: array, items: { $ref: '#/components/schemas/Post' } }
                   nextCursor: { type: string, nullable: true }
@@ -2201,6 +2207,7 @@ components:
                   bbox: { $ref: '#/components/schemas/Bbox' }
     Post:
       type: object
+      required: [id, author, text, visibility, media, likeCount, liked, commentCount, createdAt]
       properties:
         id: { type: string }
         author: { $ref: '#/components/schemas/UserBrief' }
@@ -2210,6 +2217,7 @@ components:
           type: array
           items:
             type: object
+            required: [url, thumbUrl]
             properties: { url: { type: string }, thumbUrl: { type: string } }
         likeCount: { type: integer }
         liked: { type: boolean }
@@ -2217,6 +2225,7 @@ components:
         createdAt: { type: string, format: date-time }
     Comment:
       type: object
+      required: [id, author, text, createdAt]
       properties:
         id: { type: string }
         author: { $ref: '#/components/schemas/UserBrief' }

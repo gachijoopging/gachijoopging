@@ -24,8 +24,9 @@ import {
   space,
   useRipple,
 } from 'design-system/src';
-import { type ApiClient } from '../api/client';
+import { ApiError, type ApiClient } from '../api/client';
 import { createApiClient } from '../api/config';
+import { leaveForMembership } from '../feed/leave';
 import { useFlash } from '../ui/useFlash';
 import { INTRO_FOLD } from './profile';
 import { StatsTile, usePaged, type ActivityCard, type Post, type Stats } from './ProfileParts';
@@ -59,7 +60,14 @@ export function MyProfile({ recordsOnly = false }: { recordsOnly?: boolean }) {
   const ripple = useRipple();
 
   const records = usePaged<ActivityCard>(async (cursor) => (await api.get('GET /users/me/activities', { cursor })).data);
-  const posts = usePaged<Post>(async (cursor) => (await api.get('GET /crew/members/{userId}/posts', { userId: me?.id, cursor })).data, me?.id);
+  const posts = usePaged<Post>(async (cursor) => {
+    try {
+      return (await api.get('GET /crew/members/{userId}/posts', { userId: me?.id, cursor })).data;
+    } catch (e) {
+      if (e instanceof ApiError && e.code === 'NO_CREW') void leaveForMembership();
+      throw e;
+    }
+  }, me?.id);
 
   const loadMe = useCallback(async () => {
     try {

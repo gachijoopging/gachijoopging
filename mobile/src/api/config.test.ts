@@ -33,9 +33,27 @@ test('실 모드에서 백엔드에 있는 경로는 실서버로 보낸다', as
 
 test('실 모드에서도 백엔드에 없는 경로는 목 응답을 준다', async () => {
   const api = createApiClient();
-  await expect(api.get('GET /crew/posts', { scope: 'CREW' })).resolves.toEqual(await createMockClient().get('GET /crew/posts', { scope: 'CREW' }));
-  await expect(api.mutate('POST /crew/posts', { body: '줍깅' })).resolves.toBe(MOCKS['POST /crew/posts']);
+  await expect(api.get('GET /notifications')).resolves.toEqual(await createMockClient().get('GET /notifications'));
+  await expect(api.mutate('POST /crew/notices', { title: '공지' })).resolves.toBe(MOCKS['POST /crew/notices']);
   expect(fetch).not.toHaveBeenCalled();
+});
+
+test('게시물·댓글·좋아요와 크루원 게시물은 실서버로 보낸다 — 목 ID 로는 상세가 열리지 않는다', async () => {
+  const api = createApiClient();
+  await api.get('GET /crew/posts', { scope: 'MINE' });
+  await api.mutate('POST /crew/posts', { id: 'p1', text: '줍깅', visibility: 'CREW', mediaIds: [] });
+  await api.get('GET /posts/{postId}', { postId: 'p1' });
+  await api.mutate('PUT /posts/{postId}/like', { postId: 'p1' });
+  await api.mutate('DELETE /posts/{postId}/like', { postId: 'p1' });
+  await api.get('GET /posts/{postId}/comments', { postId: 'p1', cursor: 'c' });
+  await api.mutate('POST /posts/{postId}/comments', { postId: 'p1', id: 'c1', text: '좋아요' });
+  await api.mutate('DELETE /comments/{commentId}', { commentId: 'c1' });
+  await api.mutate('DELETE /posts/{postId}', { postId: 'p1' });
+  await api.get('GET /crew/members/{userId}/posts', { userId: 'u2', cursor: undefined });
+  expect(fetch.mock.calls.map(([url, init]) => `${init?.method} ${url.replace('https://api.test/api/v1', '')}`)).toEqual([
+    'GET /crew/posts?scope=MINE', 'POST /crew/posts', 'GET /posts/p1', 'PUT /posts/p1/like', 'DELETE /posts/p1/like',
+    'GET /posts/p1/comments?cursor=c', 'POST /posts/p1/comments', 'DELETE /comments/c1', 'DELETE /posts/p1', 'GET /crew/members/u2/posts',
+  ]);
 });
 
 test('활동은 시작부터 종료·기록까지 실서버로 보낸다 — 시작만 서버에 가면 진행 중 활동이 남아 다음 시작이 409 가 된다', async () => {
@@ -72,7 +90,7 @@ test('탈퇴는 실서버로 보낸다 — 목이 성공을 돌려주면 계정�
   expect(fetch.mock.calls.map(([url, init]) => `${init?.method} ${url}`)).toEqual(['DELETE https://api.test/api/v1/users/me']);
 });
 
-test('프로필·크루·활동 사진은 실서버에 올리고, 게시물 사진은 아직 목이다', async () => {
+test('프로필·크루·활동·게시물 사진은 실서버에 올린다 — 게시물 작성이 실서버라 목 mediaId 는 422 로 거절된다', async () => {
   const photo = (purpose: string) => {
     const body = new FormData();
     body.append('purpose', purpose);
@@ -80,7 +98,7 @@ test('프로필·크루·활동 사진은 실서버에 올리고, 게시물 사�
   };
   const api = createApiClient();
   for (const purpose of ['PROFILE', 'CREW', 'ACTIVITY', 'POST']) await api.mutate('POST /media', photo(purpose));
-  expect(fetch).toHaveBeenCalledTimes(3);
+  expect(fetch).toHaveBeenCalledTimes(4);
 });
 
 test('홈은 통계까지 실서버 응답이다', async () => {

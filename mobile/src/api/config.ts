@@ -28,11 +28,14 @@ const REAL_KEYS: ReadonlySet<MutationKey> = new Set<MutationKey>([
   'POST /activities/{id}/end', 'GET /activities/{id}', 'DELETE /activities/{id}', 'GET /users/me/activities',
   'GET /crew/home', 'GET /users/me/stats', 'GET /crew/stats', 'GET /crew/calendar', 'GET /crew/members/{userId}/activities',
   'DELETE /media/{mediaId}',
+  'GET /crew/posts', 'POST /crew/posts', 'GET /posts/{postId}', 'DELETE /posts/{postId}',
+  'PUT /posts/{postId}/like', 'DELETE /posts/{postId}/like', 'GET /posts/{postId}/comments', 'POST /posts/{postId}/comments',
+  'DELETE /comments/{commentId}', 'GET /crew/members/{userId}/posts',
 ]);
 
-/** 프로필·크루·활동 사진만 서버에 올린다. 목 mediaId 는 UUID 가 아니라 실서버 PATCH 가 422 로 거절한다. 게시물 사진은 게시물 API 가 실서버로 갈 때 함께 옮긴다 */
+/** 사진은 받는 경로가 실서버인 용도만 서버에 올린다. 목 mediaId 는 UUID 가 아니라 실서버가 422 로 거절한다 */
 const isRealUpload = (key: MutationKey, body: unknown) =>
-  key === 'POST /media' && body instanceof FormData && ['PROFILE', 'CREW', 'ACTIVITY'].includes(String(body.getAll('purpose')[0]));
+  key === 'POST /media' && body instanceof FormData && ['PROFILE', 'CREW', 'ACTIVITY', 'POST'].includes(String(body.getAll('purpose')[0]));
 
 /** 화면은 이것만 부른다. 목/실을 모른다 */
 export function createApiClient(options: MockOptions = {}): ApiClient {

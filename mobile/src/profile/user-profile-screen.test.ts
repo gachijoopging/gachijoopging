@@ -1,8 +1,14 @@
 const mockGet = jest.fn();
+const mockLeave = jest.fn();
 let mockPeeked: unknown;
 jest.mock('../api/config', () => ({ apiConfig: { real: false }, createApiClient: () => jest.requireMock('../api/client').createMockClient() }));
+jest.mock('../feed/leave', () => ({ leaveForMembership: (...args: unknown[]) => mockLeave(...args) }));
+jest.mock('./ProfileTabList', () => ({ ProfileTabList: ({ header }: { header: unknown }) => header }));
 jest.mock('../api/client', () => ({
-  ApiError: class extends Error {},
+  ApiError: class extends Error {
+    code: string;
+    constructor(value: string) { super(value); this.code = value; }
+  },
   peek: (key: string) => (key === 'GET /crew/members/{userId}' ? mockPeeked : undefined),
   createMockClient: () => ({ get: (...args: unknown[]) => mockGet(...args), mutate: jest.fn() }),
 }));
@@ -36,6 +42,7 @@ const profile = {
 let rendered: any;
 
 beforeEach(() => {
+  mockLeave.mockReset();
   mockGet.mockReset().mockImplementation(() => new Promise(() => {}));
   mockPeeked = undefined;
 });
@@ -57,4 +64,24 @@ test('전에 본 프로필이 있으면 받아 오는 동안에도 로딩 없이
 test('본 적 없는 프로필은 로딩부터 보인다', async () => {
   await mount();
   expect(profileLoading()).toHaveLength(1);
+});
+
+test('추방·나가기 뒤라 프로필이 NO_CREW 면 오류 대신 소속 화면으로 보낸다', async () => {
+  const { ApiError } = jest.requireMock('../api/client');
+  mockGet.mockImplementation((key: string) => (key === 'GET /crew/members/{userId}' ? Promise.reject(new ApiError('NO_CREW')) : new Promise(() => {})));
+  await mount();
+  expect(mockLeave).toHaveBeenCalled();
+  expect(rendered.root.findAllByType('ErrorState')).toHaveLength(0);
+});
+
+test('프로필을 연 뒤 게시물 조회가 NO_CREW 면 소속 화면으로 보낸다', async () => {
+  const { ApiError } = jest.requireMock('../api/client');
+  mockGet.mockImplementation((key: string) => {
+    if (key === 'GET /crew/members/{userId}') return Promise.resolve({ data: profile });
+    if (key === 'GET /crew/members/{userId}/posts') return Promise.reject(new ApiError('NO_CREW'));
+    return new Promise(() => {});
+  });
+  await mount();
+  await act(async () => rendered.root.findByType('Tabs').props.onChange('posts'));
+  expect(mockLeave).toHaveBeenCalled();
 });
