@@ -11,6 +11,7 @@
 /infra/             @yydd12
 /.github/           @yydd12
 
-# 계약은 셋 다 본다 — 바꾸면 앱·백엔드를 같은 PR 에서 고쳐야 한다
-/docs/openapi.yaml  @djm030 @whyH25 @yydd12
 /docs/              @djm030 @whyH25
+# 계약은 셋 다 본다 — 바꾸면 앱·백엔드를 같은 PR 에서 고쳐야 한다.
+# 맞는 줄 중 마지막 줄이 이기므로 /docs/ 보다 아래에 둔다
+/docs/openapi.yaml  @djm030 @whyH25 @yydd12
