@@ -3,6 +3,7 @@ const mockLeave = jest.fn();
 let mockPeeked: unknown;
 jest.mock('../api/config', () => ({ apiConfig: { real: false }, createApiClient: () => jest.requireMock('../api/client').createMockClient() }));
 jest.mock('../feed/leave', () => ({ leaveForMembership: (...args: unknown[]) => mockLeave(...args) }));
+jest.mock('./ProfileTabList', () => ({ ProfileTabList: ({ header }: { header: unknown }) => header }));
 jest.mock('../api/client', () => ({
   ApiError: class extends Error {
     code: string;
@@ -41,6 +42,7 @@ const profile = {
 let rendered: any;
 
 beforeEach(() => {
+  mockLeave.mockReset();
   mockGet.mockReset().mockImplementation(() => new Promise(() => {}));
   mockPeeked = undefined;
 });
@@ -70,4 +72,16 @@ test('추방·나가기 뒤라 프로필이 NO_CREW 면 오류 대신 소속 화
   await mount();
   expect(mockLeave).toHaveBeenCalled();
   expect(rendered.root.findAllByType('ErrorState')).toHaveLength(0);
+});
+
+test('프로필을 연 뒤 게시물 조회가 NO_CREW 면 소속 화면으로 보낸다', async () => {
+  const { ApiError } = jest.requireMock('../api/client');
+  mockGet.mockImplementation((key: string) => {
+    if (key === 'GET /crew/members/{userId}') return Promise.resolve({ data: profile });
+    if (key === 'GET /crew/members/{userId}/posts') return Promise.reject(new ApiError('NO_CREW'));
+    return new Promise(() => {});
+  });
+  await mount();
+  await act(async () => rendered.root.findByType('Tabs').props.onChange('posts'));
+  expect(mockLeave).toHaveBeenCalled();
 });
