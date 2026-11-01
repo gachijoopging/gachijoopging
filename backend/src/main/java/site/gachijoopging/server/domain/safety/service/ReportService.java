@@ -124,32 +124,42 @@ public class ReportService {
     if (!queryRepository.lockLeader(crew.crewId(), me)) {
       throw new BusinessException(ErrorCode.FORBIDDEN, "크루장만 할 수 있다");
     }
-    // 다른 기기의 처리나 추방이 같은 신고를 함께 닫지 않게 행을 잡은 뒤 상태를 본다
     Report report =
         reportRepository
-            .findForUpdate(reportId)
+            .findById(reportId)
             .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "없는 신고다"));
     if (!report.getCrewId().equals(crew.crewId())) {
       throw new BusinessException(ErrorCode.FORBIDDEN, "다른 크루의 신고다");
     }
-    if (report.resolved()) {
+    // 같은 대상의 대기 신고를 id 순으로 한꺼번에 잡는다 — 하나씩 잡으면 같은 대상의 두 신고를 동시에 처리할 때 서로를 기다려
+    // 교착한다. 잡은 뒤의 상태로 고르므로 다른 기기의 처리나 추방이 먼저 닫은 신고는 여기 없다
+    List<Report> pending =
+        reportRepository.findPendingForUpdate(
+            crew.crewId(), report.getTargetType(), report.getTargetId());
+    if (pending.stream().noneMatch(pendingReport -> pendingReport.getId().equals(reportId))) {
       throw new BusinessException(ErrorCode.CONFLICT, "이미 처리된 신고다");
     }
     if (result == ReportResult.DELETE) {
       deleteTarget(me, report);
     }
-    report.resolve(result, me, clock.instant());
-    events.publishEvent(new ReportResolvedEvent(report.getId(), report.getReporterId(), result));
+    // 지운 대상의 다른 신고가 남으면 크루장이 이미 지운 것을 다시 처리해야 하고 그 신고자들은 결과를 받지 못한다
+    resolve(result == ReportResult.DELETE ? pending : List.of(report), result, me);
   }
 
   // 추방과 한 트랜잭션이어야 추방만 커밋되고 신고가 대기로 남는 일이 없다
   @Transactional(propagation = Propagation.MANDATORY)
   public void resolveExpelled(UUID leaderId, UUID crewId, UUID userId) {
+    resolve(
+        reportRepository.findPendingForUpdate(crewId, ReportTargetType.USER, userId.toString()),
+        null,
+        leaderId);
+  }
+
+  private void resolve(List<Report> reports, ReportResult result, UUID by) {
     Instant now = clock.instant();
-    for (Report report :
-        reportRepository.findPendingUserReportsForUpdate(crewId, userId.toString())) {
-      report.resolve(null, leaderId, now);
-      events.publishEvent(new ReportResolvedEvent(report.getId(), report.getReporterId(), null));
+    for (Report report : reports) {
+      report.resolve(result, by, now);
+      events.publishEvent(new ReportResolvedEvent(report.getId(), report.getReporterId(), result));
     }
   }
 

@@ -57,10 +57,6 @@ public class Report {
     return reporterId.equals(userId);
   }
 
-  public boolean resolved() {
-    return status == ReportStatus.RESOLVED;
-  }
-
   // 추방으로 닫히면 result 는 null 이다 (ERD reports.result)
   public void resolve(ReportResult result, UUID by, Instant now) {
     this.status = ReportStatus.RESOLVED;

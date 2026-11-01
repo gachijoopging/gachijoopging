@@ -233,6 +233,31 @@ class SafetyApiTest extends IntegrationTest {
   }
 
   @Test
+  void DELETE_는_같은_대상의_대기_신고를_함께_닫고_DISMISS_는_그_신고만_닫는다() throws Exception {
+    TestAccount 크루장 = 크루를_만든다("safety-same-target-leader@test.io");
+    TestAccount 나 = 크루원이_된다("safety-same-target-me@test.io", 크루장);
+    TestAccount 옆 = 크루원이_된다("safety-same-target-other@test.io", 크루장);
+    TestAccount 작성자 = 크루원이_된다("safety-same-target-author@test.io", 크루장);
+    UUID 기각될_글 = 쓴다(작성자, "기각될 글");
+    UUID 지워질_글 = 쓴다(작성자, "지워질 글");
+    UUID 기각할_신고 = 신고한다(나, "POST", 기각될_글.toString(), "SPAM", null);
+    UUID 남을_신고 = 신고한다(옆, "POST", 기각될_글.toString(), "SPAM", null);
+    UUID 지울_신고 = 신고한다(나, "POST", 지워질_글.toString(), "SPAM", null);
+    UUID 함께_닫힐_신고 = 신고한다(옆, "POST", 지워질_글.toString(), "HATE", null);
+
+    mockMvc.perform(처리(크루장, 기각할_신고, "DISMISS")).andExpect(status().isNoContent());
+    assertThat(신고_상태(남을_신고)).containsEntry("status", "PENDING");
+
+    mockMvc.perform(처리(크루장, 지울_신고, "DELETE")).andExpect(status().isNoContent());
+    assertThat(신고_상태(함께_닫힐_신고))
+        .containsEntry("status", "RESOLVED")
+        .containsEntry("result", "DELETE")
+        .containsEntry("resolved_by", 크루장.id());
+    assertThat(ids(본문(mockMvc.perform(대기_신고(크루장))))).containsExactly(남을_신고.toString());
+    mockMvc.perform(처리(크루장, 함께_닫힐_신고, "DISMISS")).andExpect(status().isConflict());
+  }
+
+  @Test
   void 채팅_메시지_신고는_접수되지만_DELETE_처리는_422_다() throws Exception {
     TestAccount 크루장 = 크루를_만든다("safety-chat-leader@test.io");
     TestAccount 나 = 크루원이_된다("safety-chat-me@test.io", 크루장);

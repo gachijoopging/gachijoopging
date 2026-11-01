@@ -3,7 +3,6 @@ package site.gachijoopging.server.domain.safety.repository;
 import jakarta.persistence.LockModeType;
 import java.time.Instant;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
@@ -11,6 +10,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import site.gachijoopging.server.domain.safety.entity.Report;
+import site.gachijoopging.server.domain.safety.entity.ReportTargetType;
 
 public interface ReportRepository extends JpaRepository<Report, UUID> {
 
@@ -35,17 +35,15 @@ public interface ReportRepository extends JpaRepository<Report, UUID> {
       @Param("now") Instant now);
 
   @Lock(LockModeType.PESSIMISTIC_WRITE)
-  @Query("SELECT r FROM Report r WHERE r.id = :id")
-  Optional<Report> findForUpdate(@Param("id") UUID id);
-
-  @Lock(LockModeType.PESSIMISTIC_WRITE)
   @Query(
       """
       SELECT r FROM Report r
-      WHERE r.crewId = :crewId AND r.targetId = :userId
-        AND r.targetType = site.gachijoopging.server.domain.safety.entity.ReportTargetType.USER
+      WHERE r.crewId = :crewId AND r.targetType = :targetType AND r.targetId = :targetId
         AND r.status = site.gachijoopging.server.domain.safety.entity.ReportStatus.PENDING
+      ORDER BY r.id
       """)
-  List<Report> findPendingUserReportsForUpdate(
-      @Param("crewId") UUID crewId, @Param("userId") String userId);
+  List<Report> findPendingForUpdate(
+      @Param("crewId") UUID crewId,
+      @Param("targetType") ReportTargetType targetType,
+      @Param("targetId") String targetId);
 }
