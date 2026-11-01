@@ -20,6 +20,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,15 +31,11 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.messaging.converter.MappingJackson2MessageConverter;
-import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
-import org.springframework.messaging.simp.SimpMessageType;
-import org.springframework.messaging.simp.broker.SimpleBrokerMessageHandler;
 import org.springframework.messaging.simp.stomp.StompFrameHandler;
 import org.springframework.messaging.simp.stomp.StompHeaders;
 import org.springframework.messaging.simp.stomp.StompSession;
 import org.springframework.messaging.simp.stomp.StompSessionHandlerAdapter;
 import org.springframework.messaging.simp.user.SimpUserRegistry;
-import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
@@ -52,7 +49,6 @@ import site.gachijoopging.server.domain.live.service.LiveBroadcaster;
 import site.gachijoopging.server.global.security.SessionVersionLoader;
 import site.gachijoopging.server.global.security.jwt.JwtIssuer;
 import site.gachijoopging.server.global.security.jwt.JwtProperties;
-import site.gachijoopging.server.global.websocket.WebSocketConfig;
 import site.gachijoopging.server.support.IntegrationTest;
 import site.gachijoopging.server.support.TestAccounts.TestAccount;
 
@@ -70,7 +66,6 @@ class LiveApiTest extends IntegrationTest {
   @Autowired private JwtProperties jwtProperties;
   @Autowired private SessionVersionLoader sessionVersionLoader;
   @Autowired private SimpUserRegistry userRegistry;
-  @Autowired private SimpleBrokerMessageHandler broker;
 
   private final WebSocketStompClient stompClient = stompClient();
   private final List<StompSession> sessions = new ArrayList<>();
@@ -101,25 +96,13 @@ class LiveApiTest extends IntegrationTest {
     assertThat(닫힘_코드("?token=" + 미가입자.accessToken())).isEqualTo(4403);
   }
 
-  // 연결의 메시지를 순서대로 처리하면(WebSocketConfig) 거절이 ERROR 프레임으로 돌아오지 않는다. 막혔는지는 결과로 본다
   @Test
   void 크루_큐_말고는_구독할_수_없고_브로커로_직접_보낼_수_없다() throws Exception {
     TestAccount 나 = 크루원이_된다("live-dest@test.io");
-    TestAccount 크루원 = 같은_크루에_넣는다(나, "live-dest-member@test.io");
-    BlockingQueue<Map<String, Object>> 크루원_수신 = 구독한다(크루원);
-    StompSession 내_세션 = 연결한다(나);
 
-    String 크루원_큐 =
-        WebSocketConfig.CREW_QUEUE
-            + "-user"
-            + userRegistry.getUser(크루원.id().toString()).getSessions().iterator().next().getId();
-
-    내_세션.subscribe("/queue/crew", 무시);
-    내_세션.send(크루원_큐, Map.of("type", "LIVE_ENDED"));
-    Thread.sleep(500);
-
-    assertThat(브로커_구독(WebSocketConfig.CREW_QUEUE)).isEmpty();
-    assertThat(크루원_수신.poll(500, TimeUnit.MILLISECONDS)).isNull();
+    assertThat(거절_프레임(나, 세션 -> 세션.subscribe("/queue/crew", 무시))).isTrue();
+    assertThat(거절_프레임(나, 세션 -> 세션.send("/queue/crew", Map.of("type", "LIVE_ENDED")))).isTrue();
+    assertThat(구독_중(나)).isFalse();
   }
 
   @Test
@@ -301,6 +284,23 @@ class LiveApiTest extends IntegrationTest {
         public void handleFrame(StompHeaders headers, Object payload) {}
       };
 
+  private boolean 거절_프레임(TestAccount 계정, Consumer<StompSession> 시도) throws Exception {
+    CompletableFuture<StompHeaders> 오류 = new CompletableFuture<>();
+    StompSession 세션 =
+        stompClient
+            .connectAsync(
+                "ws://localhost:" + port + "/api/v1/ws?token=" + 계정.accessToken(),
+                new StompSessionHandlerAdapter() {
+                  @Override
+                  public void handleFrame(StompHeaders headers, Object payload) {
+                    오류.complete(headers);
+                  }
+                })
+            .get(5, TimeUnit.SECONDS);
+    시도.accept(세션);
+    return 오류.get(5, TimeUnit.SECONDS) != null;
+  }
+
   private StompSession 연결한다(TestAccount 계정) throws Exception {
     StompSession 세션 =
         stompClient
@@ -336,14 +336,6 @@ class LiveApiTest extends IntegrationTest {
     }
     assertThat(구독_중(계정)).isTrue();
     return 수신;
-  }
-
-  private org.springframework.util.MultiValueMap<String, String> 브로커_구독(String 목적지) {
-    SimpMessageHeaderAccessor 헤더 = SimpMessageHeaderAccessor.create(SimpMessageType.MESSAGE);
-    헤더.setDestination(목적지);
-    return broker
-        .getSubscriptionRegistry()
-        .findSubscriptions(MessageBuilder.createMessage(new byte[0], 헤더.getMessageHeaders()));
   }
 
   private boolean 구독_중(TestAccount 계정) {

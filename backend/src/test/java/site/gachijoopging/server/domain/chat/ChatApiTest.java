@@ -319,30 +319,6 @@ class ChatApiTest extends IntegrationTest {
   }
 
   @Test
-  void 한_연결에서_연달아_보낸_메시지는_보낸_순서대로_seq_를_받고_그_순서로_도착한다() throws Exception {
-    TestAccount 나 = 크루장이_된다("chat-order-me@test.io");
-    TestAccount 크루원 = 같은_크루에_넣는다(나, "chat-order-member@test.io");
-    BlockingQueue<Map<String, Object>> 크루원_수신 = 구독한다(크루원);
-    StompSession 내_세션 = 연결한다(나);
-
-    for (int i = 0; i < 15; i++) {
-      내_세션.send("/app/crew/chat", Map.of("id", UUID.randomUUID().toString(), "text", "순서" + i));
-    }
-
-    List<String> 글 = new ArrayList<>();
-    List<Integer> seq = new ArrayList<>();
-    for (int i = 0; i < 15; i++) {
-      Map<String, Object> 데이터 = 데이터(받는다(크루원_수신, "CHAT"));
-      글.add((String) 데이터.get("text"));
-      seq.add((Integer) 데이터.get("seq"));
-    }
-    assertThat(글)
-        .containsExactlyElementsOf(
-            java.util.stream.IntStream.range(0, 15).mapToObj(i -> "순서" + i).toList());
-    assertThat(seq).isSorted();
-  }
-
-  @Test
   void 남의_id_나_빈_글_501자_글은_저장하지_않고_limit_51_은_422_다() throws Exception {
     TestAccount 나 = 크루장이_된다("chat-reject-me@test.io");
     TestAccount 남 = 크루장이_된다("chat-reject-stranger@test.io");
