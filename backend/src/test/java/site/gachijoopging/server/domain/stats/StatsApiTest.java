@@ -226,7 +226,8 @@ class StatsApiTest extends IntegrationTest {
         .andExpect(jsonPath("$.data.character.items").value(107))
         .andExpect(jsonPath("$.data.character.goalCount").value(200))
         .andExpect(jsonPath("$.data.live.count").value(0))
-        .andExpect(jsonPath("$.data.unreadNotifications").value(0));
+        // 크루원이 공개 크루에 가입해 크루장에게 CREW_JOINED 가 한 건 왔다
+        .andExpect(jsonPath("$.data.unreadNotifications").value(1));
   }
 
   @Test

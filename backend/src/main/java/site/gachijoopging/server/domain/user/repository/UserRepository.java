@@ -83,4 +83,28 @@ public interface UserRepository extends JpaRepository<User, UUID> {
       @Param("userId") UUID userId,
       @Param("platform") String platform,
       @Param("now") Instant now);
+
+  // 계약이 204 뿐이라 자기 자신·다른 크루·없는 사용자는 오류 없이 넣지 않는다. 팔로우는 같은 크루 안에서만이다 (ERD follows)
+  @Modifying
+  @Query(
+      value =
+          """
+          INSERT INTO follows (follower_id, followee_id, created_at)
+          SELECT mine.user_id, other.user_id, :now
+          FROM crew_members mine JOIN crew_members other ON other.crew_id = mine.crew_id
+          WHERE mine.user_id = :followerId AND other.user_id = :followeeId
+            AND other.user_id <> mine.user_id
+          ON CONFLICT DO NOTHING
+          """,
+      nativeQuery = true)
+  void followIfSameCrew(
+      @Param("followerId") UUID followerId,
+      @Param("followeeId") UUID followeeId,
+      @Param("now") Instant now);
+
+  @Modifying
+  @Query(
+      value = "DELETE FROM follows WHERE follower_id = :followerId AND followee_id = :followeeId",
+      nativeQuery = true)
+  void unfollow(@Param("followerId") UUID followerId, @Param("followeeId") UUID followeeId);
 }

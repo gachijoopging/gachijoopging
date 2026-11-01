@@ -82,7 +82,7 @@ public class LiveService {
   @Transactional(propagation = Propagation.MANDATORY)
   public void started(UUID userId, UUID activityId, UUID crewId) {
     repository.upsertIfInProgress(activityId, null, 0, 0, 0, false, clock.instant());
-    events.publishEvent(new LiveStartedEvent(crewId, userId));
+    events.publishEvent(new LiveStartedEvent(crewId, userId, activityId));
   }
 
   @Transactional(propagation = Propagation.MANDATORY)

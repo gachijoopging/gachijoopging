@@ -154,11 +154,9 @@ app:
     # 경로까지 함께 죽는다. app.ai 가 같은 이유로 같은 모양이다.
     # 값은 서비스 계정 JSON 본문이다 (파일 경로가 아니다) — JWT 개인키를 PEM 본문으로 넣는 것과 같다.
     credentials: ${FCM_CREDENTIALS:}
-
-  notification:
-    # 좋아요(옛 THANKS) 묶음 창. 1차 알림 9종(feature-scope §알림)에 묶음이 없으면 notification 도메인 작성 때 지운다. 기준은 묶음의 최초 created_at 이다 — 최신 갱신 시각으로 재면
-    # 고마워요가 들어오는 동안 묶음이 무한히 연장돼 한 행이 영원히 산다
-    thanks-bundle-window: 1h
+    # 발송은 커밋 뒤 별도 스레드라 응답을 막지 않지만, 멈춘 연결이 발송 스레드를 오래 잡지 않게 끊는다
+    connect-timeout: 5s
+    read-timeout: 10s
 
   nickname:
     # 금지 닉네임은 테이블이 아니라 설정이다 (ERD 에 테이블 없음). 사칭·운영 혼동을 막는 최소한만 둔다
