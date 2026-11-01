@@ -29,6 +29,13 @@ public class ChatEventListener {
             ? chatService.recipients(event.crewId(), event.authorId())
             : List.of(event.authorId());
     send(recipients, new SocketMessage("CHAT", event.message()));
+    // 지운 메시지를 재전송하면 echo 가 없어 앱이 끝없이 "전송 실패" 로 남는다. echo 로 id 와 seq 를 잇게 한 뒤
+    // 지웠다고 알려 그 말풍선을 "삭제된 메시지" 로 바꾸게 한다. 보낸 사람 본인에게만 간다
+    if (event.deleted()) {
+      send(
+          List.of(event.authorId()),
+          new SocketMessage("CHAT_DELETED", new ChatDeletedResponse(event.message().seq())));
+    }
   }
 
   @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)

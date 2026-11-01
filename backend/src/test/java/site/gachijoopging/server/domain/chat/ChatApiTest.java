@@ -16,6 +16,7 @@ import java.sql.PreparedStatement;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -356,16 +357,30 @@ class ChatApiTest extends IntegrationTest {
   }
 
   @Test
-  void 신고로_지운_메시지는_같은_id_로_다시_보내도_echo_하지_않는다() throws Exception {
+  void 신고로_지운_메시지를_같은_id_로_다시_보내면_보낸_사람에게만_echo_와_CHAT_DELETED_가_간다() throws Exception {
     TestAccount 나 = 크루장이_된다("chat-deleted-resend@test.io");
+    TestAccount 크루원 = 같은_크루에_넣는다(나, "chat-deleted-resend-member@test.io");
     UUID id = UUID.randomUUID();
-    보낸다(나, id, "지워질 메시지");
+    long seq = 보낸다(나, id, "지워질 메시지");
     jdbcTemplate.update("UPDATE chat_messages SET deleted_at = now() WHERE id = ?", id);
     BlockingQueue<Map<String, Object>> 내_수신 = 구독한다(나);
+    BlockingQueue<Map<String, Object>> 크루원_수신 = 구독한다(크루원);
 
     연결한다(나).send("/app/crew/chat", Map.of("id", id.toString(), "text", "지워질 메시지"));
 
-    assertThat(더_받지_않는다(내_수신, "CHAT")).isTrue();
+    // 둘의 도착 순서는 정해져 있지 않다 (realtime.md §끊김과 이어받기)
+    Map<String, Map<String, Object>> 받은 = new HashMap<>();
+    long 기한 = System.currentTimeMillis() + 5_000;
+    while (받은.size() < 2 && System.currentTimeMillis() < 기한) {
+      Map<String, Object> 메시지 = 내_수신.poll(100, TimeUnit.MILLISECONDS);
+      if (메시지 != null) {
+        받은.put((String) 메시지.get("type"), 데이터(메시지));
+      }
+    }
+    assertThat(받은.get("CHAT")).containsEntry("id", id.toString());
+    assertThat(받은.get("CHAT_DELETED")).containsEntry("seq", (int) seq);
+    assertThat(더_받지_않는다(크루원_수신, "CHAT")).isTrue();
+    assertThat(더_받지_않는다(크루원_수신, "CHAT_DELETED")).isTrue();
   }
 
   private long 보낸다(TestAccount 계정, String 글) {

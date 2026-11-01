@@ -41,6 +41,13 @@ public class ChatService {
 
   @Transactional
   public void send(UUID me, SendChatRequest request) {
+    // 잘못된 입력이 크루 저장 줄을 막지 않게 잠금 전에 거른다. 재전송도 같은 본문이라 결과가 같다.
+    // DB CHECK(char_length)와 같게 code point 로 센다. @Size 는 UTF-16 단위라 이모지를 두 글자로 센다
+    String text = request.text().strip();
+    int length = text.codePointCount(0, text.length());
+    if (length < 1 || length > MAX_TEXT) {
+      throw new BusinessException(ErrorCode.VALIDATION, "메시지는 1~" + MAX_TEXT + "자다");
+    }
     UUID crewId =
         queryRepository
             .lockCrewOf(me)
@@ -51,19 +58,10 @@ public class ChatService {
       if (!same.sentBy(me, crewId)) {
         throw new BusinessException(ErrorCode.FORBIDDEN, "남의 메시지 id 다");
       }
-      // 신고로 지운 메시지를 재전송 echo 로 되살리지 않는다
-      if (same.getDeletedAt() != null) {
-        return;
-      }
       events.publishEvent(
-          new ChatMessageSentEvent(crewId, me, message(same.getId()), false, List.of()));
+          new ChatMessageSentEvent(
+              crewId, me, message(same.getId()), false, same.getDeletedAt() != null, List.of()));
       return;
-    }
-    // DB CHECK(char_length)와 같게 code point 로 센다. @Size 는 UTF-16 단위라 이모지를 두 글자로 센다
-    String text = request.text().strip();
-    int length = text.codePointCount(0, text.length());
-    if (length < 1 || length > MAX_TEXT) {
-      throw new BusinessException(ErrorCode.VALIDATION, "메시지는 1~" + MAX_TEXT + "자다");
     }
 
     // 이 메시지를 넣기 전에 골라야 "읽은 뒤 첫 메시지" 를 가를 수 있다
@@ -73,7 +71,7 @@ public class ChatService {
       throw new BusinessException(ErrorCode.FORBIDDEN, "남의 메시지 id 다");
     }
     events.publishEvent(
-        new ChatMessageSentEvent(crewId, me, message(request.id()), true, firstUnread));
+        new ChatMessageSentEvent(crewId, me, message(request.id()), true, false, firstUnread));
   }
 
   public ChatMessagesResponse messages(
