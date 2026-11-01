@@ -215,6 +215,16 @@ public class UserService implements AccountAuthorityLoader, SessionVersionLoader
         request.pushToken(), userId, request.platform().name(), clock.instant());
   }
 
+  @Transactional
+  public void follow(UUID me, UUID userId) {
+    userRepository.followIfSameCrew(me, userId, clock.instant());
+  }
+
+  @Transactional
+  public void unfollow(UUID me, UUID userId) {
+    userRepository.unfollow(me, userId);
+  }
+
   @Transactional(readOnly = true)
   public Optional<UUID> findPasswordOwnerId(String email) {
     return userRepository

@@ -30,6 +30,7 @@ import site.gachijoopging.server.domain.post.dto.PostScope;
 import site.gachijoopging.server.domain.post.entity.Comment;
 import site.gachijoopging.server.domain.post.entity.Post;
 import site.gachijoopging.server.domain.post.event.CommentCreatedEvent;
+import site.gachijoopging.server.domain.post.event.PostRemovedEvent;
 import site.gachijoopging.server.domain.post.repository.CommentRepository;
 import site.gachijoopging.server.domain.post.repository.PostQueryRepository;
 import site.gachijoopging.server.domain.post.repository.PostQueryRepository.CommentRow;
@@ -216,9 +217,15 @@ public class PostService {
         .ifPresent(comment -> comment.delete(leaderId, clock.instant()));
   }
 
+  // 같은 글을 두 길(직접 삭제·신고 처리)이 동시에 지워도 한쪽만 지운 것으로 쳐야 작성자가 삭제 알림을 두 번 받지 않는다
   private void remove(Post post, UUID by) {
     UUID postId = post.getId();
-    post.delete(by, clock.instant());
+    if (postRepository.deleteIfLive(postId, by, clock.instant()) == 0) {
+      return;
+    }
+    if (!post.writtenBy(by)) {
+      events.publishEvent(new PostRemovedEvent(postId));
+    }
     List<String> keys = new ArrayList<>();
     queryRepository
         .findMedia(List.of(postId))

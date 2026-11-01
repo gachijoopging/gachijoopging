@@ -4,8 +4,10 @@ import jakarta.validation.Valid;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -38,5 +40,17 @@ public class MeController {
   @ResponseStatus(HttpStatus.NO_CONTENT)
   public void registerDevice(@CurrentUser UUID me, @Valid @RequestBody DeviceRequest request) {
     userService.registerDevice(me, request);
+  }
+
+  @PutMapping("/users/{userId}/follow")
+  @ResponseStatus(HttpStatus.NO_CONTENT)
+  public void follow(@CurrentUser UUID me, @PathVariable UUID userId) {
+    userService.follow(me, userId);
+  }
+
+  @DeleteMapping("/users/{userId}/follow")
+  @ResponseStatus(HttpStatus.NO_CONTENT)
+  public void unfollow(@CurrentUser UUID me, @PathVariable UUID userId) {
+    userService.unfollow(me, userId);
   }
 }

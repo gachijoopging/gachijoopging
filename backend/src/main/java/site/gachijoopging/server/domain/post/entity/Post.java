@@ -46,11 +46,4 @@ public class Post {
   public boolean writtenBy(UUID userId) {
     return authorId.equals(userId);
   }
-
-  // 크루장이 남의 글을 지웠을 때만 남긴다 (ERD posts.deleted_by)
-  public void delete(UUID by, Instant now) {
-    this.deletedAt = now;
-    this.updatedAt = now;
-    this.deletedBy = writtenBy(by) ? null : by;
-  }
 }

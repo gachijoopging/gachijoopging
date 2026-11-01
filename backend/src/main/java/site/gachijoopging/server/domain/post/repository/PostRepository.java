@@ -27,6 +27,19 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
       @Param("visibility") String visibility,
       @Param("now") Instant now);
 
+  // 크루장이 남의 글을 지웠을 때만 deleted_by 를 남긴다 (ERD posts.deleted_by)
+  @Modifying
+  @Query(
+      value =
+          """
+          UPDATE posts
+          SET deleted_at = :now, updated_at = :now,
+              deleted_by = CASE WHEN author_id = :by THEN NULL ELSE CAST(:by AS uuid) END
+          WHERE id = :id AND deleted_at IS NULL
+          """,
+      nativeQuery = true)
+  int deleteIfLive(@Param("id") UUID id, @Param("by") UUID by, @Param("now") Instant now);
+
   @Modifying
   @Query(
       value =
