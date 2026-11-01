@@ -1,8 +1,10 @@
 package site.gachijoopging.server.domain.notification.event;
 
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
+import site.gachijoopging.server.domain.chat.event.ChatMessageSentEvent;
 import site.gachijoopging.server.domain.crew.event.CrewJoinedEvent;
 import site.gachijoopging.server.domain.crew.event.JoinRequestDecidedEvent;
 import site.gachijoopging.server.domain.crew.event.JoinRequestedEvent;
@@ -60,6 +62,15 @@ public class NotificationEventListener {
   @EventListener
   public void onReportResolved(ReportResolvedEvent event) {
     notificationService.reportResolved(event.reporterId(), event.result());
+  }
+
+  // 재전송은 새 메시지가 아니라 알리지 않는다
+  @EventListener
+  public void onChatMessageSent(ChatMessageSentEvent event) {
+    if (event.created() && !event.firstUnreadRecipients().isEmpty()) {
+      notificationService.chatSent(
+          UUID.fromString(event.message().id()), event.firstUnreadRecipients());
+    }
   }
 
   @EventListener

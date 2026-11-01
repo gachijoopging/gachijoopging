@@ -258,7 +258,7 @@ class SafetyApiTest extends IntegrationTest {
   }
 
   @Test
-  void 채팅_메시지_신고는_접수되지만_DELETE_처리는_422_다() throws Exception {
+  void 채팅_메시지_신고를_DELETE_로_처리하면_메시지가_지워지고_크루장이_남는다() throws Exception {
     TestAccount 크루장 = 크루를_만든다("safety-chat-leader@test.io");
     TestAccount 나 = 크루원이_된다("safety-chat-me@test.io", 크루장);
     UUID 메시지 = UUID.randomUUID();
@@ -272,8 +272,13 @@ class SafetyApiTest extends IntegrationTest {
     assertThat(본문(mockMvc.perform(대기_신고(크루장))).path("items").get(0).path("targetPreview").asText())
         .isEqualTo("광고");
 
-    mockMvc.perform(처리(크루장, 신고, "DELETE")).andExpect(status().isUnprocessableEntity());
-    mockMvc.perform(처리(크루장, 신고, "DISMISS")).andExpect(status().isNoContent());
+    mockMvc.perform(처리(크루장, 신고, "DELETE")).andExpect(status().isNoContent());
+    assertThat(
+            jdbcTemplate.queryForMap(
+                "SELECT deleted_at IS NOT NULL AS deleted, deleted_by FROM chat_messages WHERE id = ?",
+                메시지))
+        .containsEntry("deleted", true)
+        .containsEntry("deleted_by", 크루장.id());
   }
 
   @Test

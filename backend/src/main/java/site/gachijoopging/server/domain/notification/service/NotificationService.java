@@ -120,6 +120,12 @@ public class NotificationService {
     created(repository.insertReportResolved(reporterId, detail, clock.instant()));
   }
 
+  // 받는 사람은 chat 이 고른다 — "마지막으로 읽은 뒤 첫 메시지" 는 unreadChat 과 같은 정의여야 한다
+  @Transactional(propagation = Propagation.MANDATORY)
+  public void chatSent(UUID messageId, List<UUID> recipients) {
+    created(repository.insertChat(messageId, recipients, clock.instant()));
+  }
+
   @Transactional(propagation = Propagation.MANDATORY)
   public void postRemoved(UUID postId) {
     created(repository.insertPostRemoved(postId, clock.instant()));
