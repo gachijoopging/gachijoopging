@@ -1,6 +1,7 @@
 package site.gachijoopging.server.domain.media.repository;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -56,6 +57,27 @@ public interface MediaRepository extends JpaRepository<Media, UUID> {
           """,
       nativeQuery = true)
   boolean isUsedOutsideActivities(@Param("id") UUID id);
+
+  // 게시물·크루 사진은 탈퇴 뒤에도 남는 콘텐츠에 붙어 있어 지우지 않는다.
+  // 지운 키가 필요해 RETURNING 을 쓴다 — @Modifying 은 목록을 돌려주지 못한다
+  @Query(
+      value =
+          """
+          WITH gone AS (
+            DELETE FROM media
+            WHERE owner_id = :ownerId AND purpose IN ('ACTIVITY', 'PROFILE')
+            RETURNING object_key, thumb_key
+          )
+          SELECT object_key AS objectKey, thumb_key AS thumbKey FROM gone
+          """,
+      nativeQuery = true)
+  List<KeyRow> deletePersonalOf(@Param("ownerId") UUID ownerId);
+
+  interface KeyRow {
+    String getObjectKey();
+
+    String getThumbKey();
+  }
 
   @Modifying
   @Query("update Media m set m.objectKey = :toKey where m.objectKey = :fromKey")

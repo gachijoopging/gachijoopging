@@ -37,7 +37,11 @@ class MediaServiceTest {
 
   private MediaService mediaService() {
     return new MediaService(
-        mediaRepository, activityService, rateLimiter, Clock.fixed(NOW, ZoneOffset.UTC));
+        mediaRepository,
+        activityService,
+        rateLimiter,
+        event -> {},
+        Clock.fixed(NOW, ZoneOffset.UTC));
   }
 
   @Test

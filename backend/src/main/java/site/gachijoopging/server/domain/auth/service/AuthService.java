@@ -7,6 +7,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import site.gachijoopging.server.domain.activity.service.ActivityService;
 import site.gachijoopging.server.domain.auth.dto.AuthDtos.TokenPairResponse;
@@ -119,6 +120,11 @@ public class AuthService {
         jwtIssuer.issue(stored.getUserId()),
         issueRefreshToken(stored.getUserId(), stored.getFamilyId(), stored.getSessionVersion()),
         false);
+  }
+
+  @Transactional(propagation = Propagation.MANDATORY)
+  public void withdraw(UUID userId) {
+    refreshTokenRepository.deleteAllByUserId(userId);
   }
 
   @Transactional

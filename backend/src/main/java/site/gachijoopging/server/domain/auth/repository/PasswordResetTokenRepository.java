@@ -15,6 +15,10 @@ public interface PasswordResetTokenRepository extends JpaRepository<PasswordRese
       UUID userId, Instant now);
 
   @Modifying(clearAutomatically = true, flushAutomatically = true)
+  @Query("DELETE FROM PasswordResetToken t WHERE t.userId = :userId")
+  void deleteAllByUserId(@Param("userId") UUID userId);
+
+  @Modifying(clearAutomatically = true, flushAutomatically = true)
   @Query(
       """
       UPDATE PasswordResetToken t SET t.usedAt = :now

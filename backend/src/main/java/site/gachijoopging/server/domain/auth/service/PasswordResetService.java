@@ -9,6 +9,7 @@ import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import site.gachijoopging.server.domain.auth.entity.PasswordResetToken;
 import site.gachijoopging.server.domain.auth.repository.PasswordResetTokenRepository;
@@ -26,6 +27,11 @@ public class PasswordResetService {
   private final AuthService authService;
   private final PasswordResetProperties properties;
   private final Clock clock;
+
+  @Transactional(propagation = Propagation.MANDATORY)
+  public void withdraw(UUID userId) {
+    tokenRepository.deleteAllByUserId(userId);
+  }
 
   @Transactional
   public Optional<String> issue(String email) {

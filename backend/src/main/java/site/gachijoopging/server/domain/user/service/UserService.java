@@ -8,23 +8,30 @@ import java.util.UUID;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import site.gachijoopging.server.domain.activity.service.ActivityService;
+import site.gachijoopging.server.domain.crew.service.CrewMemberService;
 import site.gachijoopging.server.domain.media.entity.MediaPurpose;
 import site.gachijoopging.server.domain.media.service.MediaService;
 import site.gachijoopging.server.domain.media.service.MediaSignedUrl;
+import site.gachijoopging.server.domain.notification.service.NotificationService;
+import site.gachijoopging.server.domain.safety.service.BlockService;
 import site.gachijoopging.server.domain.user.dto.DeviceRequest;
 import site.gachijoopging.server.domain.user.dto.MeResponse;
 import site.gachijoopging.server.domain.user.dto.MeUpdateRequest;
 import site.gachijoopging.server.domain.user.dto.UserAccount;
 import site.gachijoopging.server.domain.user.entity.User;
+import site.gachijoopging.server.domain.user.event.UserWithdrawnEvent;
 import site.gachijoopging.server.domain.user.repository.UserQueryRepository;
 import site.gachijoopging.server.domain.user.repository.UserRepository;
 import site.gachijoopging.server.global.error.BusinessException;
 import site.gachijoopging.server.global.error.ErrorCode;
+import site.gachijoopging.server.global.lock.UserLock;
 import site.gachijoopging.server.global.security.AccountAuthorityLoader;
 import site.gachijoopging.server.global.security.SessionVersionLoader;
 
@@ -40,6 +47,12 @@ public class UserService implements AccountAuthorityLoader, SessionVersionLoader
   private final PasswordEncoder passwordEncoder;
   private final MediaService mediaService;
   private final MediaSignedUrl mediaSignedUrl;
+  private final ActivityService activityService;
+  private final CrewMemberService crewMemberService;
+  private final BlockService blockService;
+  private final NotificationService notificationService;
+  private final UserLock userLock;
+  private final ApplicationEventPublisher events;
   private final Clock clock;
 
   @Transactional
@@ -210,7 +223,7 @@ public class UserService implements AccountAuthorityLoader, SessionVersionLoader
 
   @Transactional
   public void registerDevice(UUID userId, DeviceRequest request) {
-    activeUser(userId);
+    userLock.lock(userId);
     userRepository.upsertDevice(
         request.pushToken(), userId, request.platform().name(), clock.instant());
   }
@@ -223,6 +236,23 @@ public class UserService implements AccountAuthorityLoader, SessionVersionLoader
   @Transactional
   public void unfollow(UUID me, UUID userId) {
     userRepository.unfollow(me, userId);
+  }
+
+  // 활동 시작·크루 가입·나가기와 같은 사용자 잠금으로 줄 세운다. 순서가 있다 — 활동 사진 행이 지워져야
+  // media 행을 지울 수 있고, 엔티티는 일괄 쿼리(이벤트 리스너 것 포함)가 영속성 컨텍스트를 비운 뒤에 읽어야
+  // 수정이 버려지지 않는다
+  @Transactional
+  public void withdraw(UUID me) {
+    userLock.lock(me);
+    activityService.withdraw(me);
+    crewMemberService.withdraw(me);
+    mediaService.withdraw(me);
+    userRepository.deleteDevicesOf(me);
+    userRepository.deleteFollowsOf(me);
+    blockService.withdraw(me);
+    notificationService.withdraw(me);
+    events.publishEvent(new UserWithdrawnEvent(me));
+    activeUser(me).withdraw(clock.instant());
   }
 
   @Transactional(readOnly = true)
