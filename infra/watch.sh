@@ -96,6 +96,15 @@ if [ "${1:-}" = "--limits" ]; then
       notify ":warning: **DB ${mb}MB** — ADR-0005 재검토 조건(400MB)을 넘었다"
     fi
   fi
+
+  # 백업은 실패해도 스스로 알리지 않는다(backup.sh). cron 이 안 돈 경우까지 여기서 잡는다.
+  last=$(find /data/backups -name 'db-*.dump' -mtime -1 2>/dev/null | head -1)
+  if [ -z "$last" ]; then
+    echo "DB 백업: 하루 안의 덤프가 없다" >&2
+    notify ":warning: **DB 백업이 하루 넘게 없다** — /var/log/gachijoopging-backup.log 를 본다"
+  else
+    echo "DB 백업: $last"
+  fi
   exit 0
 fi
 
