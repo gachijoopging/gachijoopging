@@ -31,6 +31,9 @@ const REAL_KEYS: ReadonlySet<MutationKey> = new Set<MutationKey>([
   'GET /crew/posts', 'POST /crew/posts', 'GET /posts/{postId}', 'DELETE /posts/{postId}',
   'PUT /posts/{postId}/like', 'DELETE /posts/{postId}/like', 'GET /posts/{postId}/comments', 'POST /posts/{postId}/comments',
   'DELETE /comments/{commentId}', 'GET /crew/members/{userId}/posts',
+  'GET /crew/notices', 'POST /crew/notices', 'GET /notices/{noticeId}', 'PATCH /notices/{noticeId}', 'DELETE /notices/{noticeId}',
+  'POST /notices/{noticeId}/comments', 'DELETE /notice-comments/{commentId}',
+  'GET /crew/chat/messages', 'PUT /crew/chat/read', 'GET /crew/live', 'POST /activities/{id}/live',
 ]);
 
 /** 사진은 받는 경로가 실서버인 용도만 서버에 올린다. 목 mediaId 는 UUID 가 아니라 실서버가 422 로 거절한다 */

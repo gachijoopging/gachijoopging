@@ -25,13 +25,13 @@ import {
 import { KakaoMapView } from '../../modules/kakao-map';
 import { type ApiClient } from '../../src/api/client';
 import { createApiClient } from '../../src/api/config';
-import { MOCKS } from '../../src/api/mocks.generated';
 import { spokenDistance } from '../../src/crew/records';
 import { formatDistance, formatElapsed } from '../../src/format';
-import { crewMarkers, locationShareLabel } from '../../src/live/live';
+import { applyLiveEvent, crewMarkers, locationShareLabel, type CrewLive } from '../../src/live/live';
+import { useLiveEvents } from '../../src/live/useLiveEvents';
 import { useBlockedUsers } from '../../src/profile/blocked-users';
 
-type Member = (typeof MOCKS)['GET /crew/live']['data'][number];
+type Member = CrewLive;
 
 const api: ApiClient = createApiClient({ delayMs: 300 });
 
@@ -64,6 +64,10 @@ export default function ActiveCrewMembersScreen() {
   }, []);
 
   useEffect(() => void load(), [load]);
+  useLiveEvents(
+    (event) => setMembers((current) => (current ? applyLiveEvent(current, event) : current)),
+    () => void api.get('GET /crew/live').then(({ data }) => setMembers(data)).catch(() => {}),
+  );
   useEffect(() => { void api.get('GET /users/me').then(({ data }) => setMeId(data.id)).catch(() => {}); }, []);
 
   const markers = members ? crewMarkers([...members]) : [];

@@ -13,13 +13,20 @@ export type SentItem = ChatMessage & { status: 'sent'; deleted: boolean };
 export type LocalItem = Omit<ChatMessage, 'seq'> & { status: 'sending' | 'failed' };
 export type ChatItem = SentItem | LocalItem;
 
-export type ChatState = { items: readonly ChatItem[]; reachedStart: boolean };
+/** deletedSeqs 는 받은 CHAT_DELETED 의 seq. 그 CHAT 이 나중에 와도 지운 메시지로 그린다 */
+export type ChatState = { items: readonly ChatItem[]; reachedStart: boolean; deletedSeqs: readonly number[] };
 
 export function emptyChat(): ChatState {
-  return { items: [], reachedStart: false };
+  return { items: [], reachedStart: false, deletedSeqs: [] };
 }
 
-const toSent = (m: ChatMessage): SentItem => ({ ...m, status: 'sent', deleted: false });
+const toSent = (state: ChatState, m: ChatMessage): SentItem => ({ ...m, status: 'sent', deleted: state.deletedSeqs.includes(m.seq) });
+
+/** 서로 다른 사람의 CHAT 은 seq 와 다른 순서로 온다. 더 큰 seq 의 서버 메시지 앞에 끼우고, 없으면 맨 아래에 붙인다 */
+function insertBySeq(items: readonly ChatItem[], item: SentItem): readonly ChatItem[] {
+  const at = items.findIndex((i) => i.status === 'sent' && i.seq > item.seq);
+  return at < 0 ? [...items, item] : [...items.slice(0, at), item, ...items.slice(at)];
+}
 
 export function mergeHistory(
   state: ChatState,
@@ -31,10 +38,11 @@ export function mergeHistory(
   const fresh = page.items
     .filter((m) => !known.has(m.id))
     .sort((a, b) => a.seq - b.seq)
-    .map(toSent);
-  if (direction === 'before') return { items: [...fresh, ...state.items], reachedStart: !page.hasMore };
+    .map((m) => toSent(state, m));
+  if (direction === 'before') return { ...state, items: [...fresh, ...state.items], reachedStart: !page.hasMore };
   return {
-    items: [...state.items, ...fresh],
+    ...state,
+    items: fresh.reduce(insertBySeq, state.items),
     reachedStart: direction === 'initial' ? !page.hasMore : state.reachedStart,
   };
 }
@@ -42,13 +50,13 @@ export function mergeHistory(
 /** 내가 보낸 메시지의 echo 면 그 자리의 전송 중을 보냄으로 바꾼다 */
 function confirm(state: ChatState, message: ChatMessage): ChatState {
   if (!state.items.some((i) => i.id === message.id && i.status !== 'sent')) return state;
-  return { ...state, items: state.items.map((i) => (i.id === message.id ? toSent(message) : i)) };
+  return { ...state, items: state.items.map((i) => (i.id === message.id ? toSent(state, message) : i)) };
 }
 
 export function receive(state: ChatState, message: ChatMessage): ChatState {
   state = confirm(state, message);
   if (state.items.some((i) => i.id === message.id)) return state;
-  return { ...state, items: [...state.items, toSent(message)] };
+  return { ...state, items: insertBySeq(state.items, toSent(state, message)) };
 }
 
 /** 되살린 미전송 메시지는 status 를 그대로 가져온다 */
@@ -72,11 +80,29 @@ export function retry(state: ChatState, id: string): ChatState {
   return setLocalStatus(state, id, 'sending');
 }
 
+/** 아직 받지 못한 seq 여도 기억한다. 지운 메시지를 같은 id 로 다시 보내면 echo 와 CHAT_DELETED 의 도착 순서가 뒤바뀔 수 있다 */
 export function markDeleted(state: ChatState, seq: number): ChatState {
   return {
     ...state,
+    deletedSeqs: state.deletedSeqs.includes(seq) ? state.deletedSeqs : [...state.deletedSeqs, seq],
     items: state.items.map((i) => (i.status === 'sent' && i.seq === seq ? { ...i, deleted: true } : i)),
   };
+}
+
+/** 끊기기 직전 이 시간 안에 받은 CHAT 은 그보다 앞 seq 가 아직 오는 중이었을 수 있다 (docs/realtime.md §끊김과 이어받기) */
+export const RESUME_WINDOW_MS = 10_000;
+
+export type Receipt = { seq: number; at: number };
+
+/** 소켓으로 받은 CHAT 을 적어 둔다. 이어받기 창보다 오래된 것은 버린다 */
+export function noteReceipt(receipts: readonly Receipt[], seq: number, at: number): Receipt[] {
+  return [...receipts.filter((r) => at - r.at <= RESUME_WINDOW_MS), { seq, at }];
+}
+
+/** 재연결 뒤 빈 구간을 채울 afterSeq. 끊기기 직전 10초 안에 받은 것 중 가장 작은 seq, 없으면 lastSeq */
+export function resumeSeq(receipts: readonly Receipt[], disconnectedAt: number, lastSeq: number): number {
+  const recent = receipts.filter((r) => r.at <= disconnectedAt && disconnectedAt - r.at <= RESUME_WINDOW_MS).map((r) => r.seq);
+  return recent.length ? Math.min(...recent) : lastSeq;
 }
 
 const KST_OFFSET_MS = 9 * 60 * 60 * 1000;

@@ -1,4 +1,4 @@
-import { canSendChat, chatLimitNotice, chatSession, saveChatSession, chatRows, chatTime, emptyChat, reconnectDelayMs, enqueue, markDeleted, markFailed, mergeHistory, receive, retry, type ChatMessage } from './chat';
+import { canSendChat, chatLimitNotice, chatSession, saveChatSession, chatRows, chatTime, emptyChat, reconnectDelayMs, enqueue, markDeleted, markFailed, mergeHistory, noteReceipt, receive, resumeSeq, retry, type ChatMessage } from './chat';
 
 const sanghyeok = { id: 'u2', nickname: '상혁', photoUrl: null, withdrawn: false };
 const me = { id: 'u1', nickname: '관열', photoUrl: null, withdrawn: false };
@@ -103,6 +103,65 @@ describe('지워진 메시지', () => {
   test('CHAT_DELETED 의 seq 는 삭제된 메시지로 남는다', () => {
     const state = markDeleted(mergeHistory(emptyChat(), 'initial', { items: [msg(1), msg(2)], hasMore: false }), 2);
     expect(state.items.map((i) => i.status === 'sent' && i.deleted)).toEqual([false, true]);
+  });
+
+  test('CHAT 보다 먼저 온 CHAT_DELETED 도 기억했다가 그 CHAT 을 지운 메시지로 그린다', () => {
+    let state = markDeleted(receive(emptyChat(), msg(1)), 2);
+    state = receive(state, msg(2));
+    expect(state.items.map((i) => i.status === 'sent' && i.deleted)).toEqual([false, true]);
+  });
+
+  test('지운 메시지를 같은 id 로 다시 보내 CHAT_DELETED 가 echo 보다 먼저 와도 전송 실패가 아니라 삭제된 메시지가 된다', () => {
+    const draft = { id: 'local-1', author: me, text: '광고 글', createdAt: '2026-09-06T06:26:00Z' };
+    let state = markFailed(enqueue(emptyChat(), draft), 'local-1');
+    state = markDeleted(state, 9);
+    state = receive(state, { ...draft, seq: 9 });
+    expect(state.items).toHaveLength(1);
+    expect(state.items[0]).toMatchObject({ id: 'local-1', status: 'sent', deleted: true });
+  });
+});
+
+describe('seq 순서와 다르게 도착한 CHAT', () => {
+  test('먼저 온 큰 seq 앞에 끼운다', () => {
+    let state = receive(emptyChat(), msg(1));
+    state = receive(state, msg(3));
+    state = receive(state, msg(2));
+    expect(seqs(state)).toEqual([1, 2, 3]);
+  });
+
+  test('빈 구간 채우기에 섞인 작은 seq 도 제자리에 끼운다', () => {
+    let state = mergeHistory(emptyChat(), 'initial', { items: [msg(1)], hasMore: false });
+    state = receive(state, msg(4));
+    state = mergeHistory(state, 'after', { items: [msg(2), msg(3), msg(4)], hasMore: false });
+    expect(seqs(state)).toEqual([1, 2, 3, 4]);
+  });
+
+  test('전송 중인 내 메시지는 자리를 지키고 그 뒤로 온 메시지는 아래에 붙는다', () => {
+    const draft = { id: 'local-1', author: me, text: '갈게요', createdAt: '2026-09-06T06:26:00Z' };
+    let state = enqueue(receive(emptyChat(), msg(1)), draft);
+    state = receive(state, msg(2));
+    expect(seqs(state)).toEqual([1, 'local-1', 2]);
+  });
+});
+
+describe('재연결 뒤 이어받을 afterSeq', () => {
+  test('끊기기 직전 10초 안에 받은 것 중 가장 작은 seq 로 묻는다 — 그 앞 seq 가 아직 오는 중이었을 수 있다', () => {
+    let receipts = noteReceipt([], 10, 1_000);
+    receipts = noteReceipt(receipts, 13, 20_000);
+    receipts = noteReceipt(receipts, 12, 25_000);
+    expect(resumeSeq(receipts, 28_000, 13)).toBe(12);
+  });
+
+  test('10초 안에 받은 것이 없으면 마지막 seq 로 묻는다', () => {
+    const receipts = noteReceipt([], 10, 1_000);
+    expect(resumeSeq(receipts, 30_000, 10)).toBe(10);
+    expect(resumeSeq([], 30_000, 0)).toBe(0);
+  });
+
+  test('오래된 기록은 쌓지 않는다', () => {
+    let receipts = noteReceipt([], 1, 0);
+    receipts = noteReceipt(receipts, 2, 20_000);
+    expect(receipts).toEqual([{ seq: 2, at: 20_000 }]);
   });
 });
 

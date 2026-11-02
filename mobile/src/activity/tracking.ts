@@ -5,6 +5,7 @@ import * as TaskManager from 'expo-task-manager';
 import { updateTrackingNotification } from '../../modules/tracking-notification';
 import { ApiError, type ApiClient } from '../api/client';
 import { createApiClient } from '../api/config';
+import { reportLive } from '../realtime/crew-socket';
 import { healthConnect } from './health-connect';
 import { flush, type Op } from './outbox';
 import { fixLogLine } from './fix-log';
@@ -16,7 +17,6 @@ import { getStored, loadLastAccount, updateStored } from './store';
 export const TRACKING_TASK = 'gachi-activity-tracking';
 const LIVE_EVERY_MS = 5_000;
 
-// ponytail: 실 API·소켓(/app/crew/live)은 W3. 그 전까지 배경 보고 경로만 목으로 부른다
 const api: ApiClient = createApiClient({ activityTotals: () => getStored().session });
 
 let lastLiveAt = 0;
@@ -59,10 +59,10 @@ export async function tick(now: number) {
     Location.hasServicesEnabledAsync().catch(() => false),
   ]);
   if (getStored().ended || getStored().session?.activityId !== session.activityId) return;
-  const { activityId, ...live } = livePayload(shown, at);
+  const live = livePayload(shown, at);
   if (!permission?.granted || !enabled) live.location = null;
   // 위치 전송은 쌓아 두지 않는다 — 마지막 값만 의미가 있다
-  await api.mutate('POST /activities/{id}/live', { id: activityId, ...live }).catch(() => {});
+  await reportLive(live).catch(() => {});
 }
 
 let readingSteps: Promise<void> | null = null;

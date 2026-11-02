@@ -11,7 +11,6 @@ jest.mock('expo-secure-store', () => ({
   deleteItemAsync: async (k: string) => { mockSecure.delete(k); },
 }));
 import { ApiError, createMockClient } from './client';
-import { MOCKS } from './mocks.generated';
 
 process.env.EXPO_PUBLIC_API_MODE = 'real';
 const { apiConfig, createApiClient } = require('./config') as typeof import('./config');
@@ -34,7 +33,7 @@ test('실 모드에서 백엔드에 있는 경로는 실서버로 보낸다', as
 test('실 모드에서도 백엔드에 없는 경로는 목 응답을 준다', async () => {
   const api = createApiClient();
   await expect(api.get('GET /notifications')).resolves.toEqual(await createMockClient().get('GET /notifications'));
-  await expect(api.mutate('POST /crew/notices', { title: '공지' })).resolves.toBe(MOCKS['POST /crew/notices']);
+  await expect(api.mutate('PUT /users/me/agreements', { items: [] })).resolves.toEqual(await createMockClient().mutate('PUT /users/me/agreements', { items: [] }));
   expect(fetch).not.toHaveBeenCalled();
 });
 
@@ -53,6 +52,26 @@ test('게시물·댓글·좋아요와 크루원 게시물은 실서버로 보낸
   expect(fetch.mock.calls.map(([url, init]) => `${init?.method} ${url.replace('https://api.test/api/v1', '')}`)).toEqual([
     'GET /crew/posts?scope=MINE', 'POST /crew/posts', 'GET /posts/p1', 'PUT /posts/p1/like', 'DELETE /posts/p1/like',
     'GET /posts/p1/comments?cursor=c', 'POST /posts/p1/comments', 'DELETE /comments/c1', 'DELETE /posts/p1', 'GET /crew/members/u2/posts',
+  ]);
+});
+
+test('공지·채팅 이력·활동 중 위치는 실서버로 보낸다 — 실시간 소켓과 같은 서버의 seq·활동 id 를 써야 이어진다', async () => {
+  const api = createApiClient();
+  await api.get('GET /crew/notices', { cursor: 'n' });
+  await api.mutate('POST /crew/notices', { id: 'n1', title: '공지', body: '본문' });
+  await api.get('GET /notices/{noticeId}', { noticeId: 'n1' });
+  await api.mutate('PATCH /notices/{noticeId}', { noticeId: 'n1', title: '바꾼 공지' });
+  await api.mutate('POST /notices/{noticeId}/comments', { noticeId: 'n1', id: 'c1', text: '확인' });
+  await api.mutate('DELETE /notice-comments/{commentId}', { commentId: 'c1' });
+  await api.mutate('DELETE /notices/{noticeId}', { noticeId: 'n1' });
+  await api.get('GET /crew/chat/messages', { afterSeq: 7, limit: 50 });
+  await api.mutate('PUT /crew/chat/read', { lastSeq: 9 });
+  await api.get('GET /crew/live');
+  await api.mutate('POST /activities/{id}/live', { id: 'a1', location: null, distanceM: 0, itemCount: 0, elapsedSec: 5, paused: false });
+  expect(fetch.mock.calls.map(([url, init]) => `${init?.method} ${url.replace('https://api.test/api/v1', '')}`)).toEqual([
+    'GET /crew/notices?cursor=n', 'POST /crew/notices', 'GET /notices/n1', 'PATCH /notices/n1', 'POST /notices/n1/comments',
+    'DELETE /notice-comments/c1', 'DELETE /notices/n1', 'GET /crew/chat/messages?afterSeq=7&limit=50', 'PUT /crew/chat/read',
+    'GET /crew/live', 'POST /activities/a1/live',
   ]);
 });
 

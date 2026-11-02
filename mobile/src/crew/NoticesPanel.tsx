@@ -2,12 +2,11 @@ import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 import { Banner, Button, Card, EmptyState, ErrorState, Icon, ListRow, Loading, Txt, space } from 'design-system/src';
-import { type ApiClient } from '../api/client';
+import { type ApiClient, type ApiResponse } from '../api/client';
 import { createApiClient } from '../api/config';
-import type { MOCKS } from '../api/mocks.generated';
 import { monthDay } from './crew';
 
-type Notice = (typeof MOCKS)['GET /crew/notices']['data']['items'][number];
+type Notice = ApiResponse<'GET /crew/notices'>['data']['items'][number];
 
 const api: ApiClient = createApiClient({ delayMs: 300 });
 
