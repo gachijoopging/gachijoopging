@@ -1,5 +1,6 @@
 import { Client } from '@stomp/stompjs';
 import { NetworkError } from '../api/errors';
+import type { components } from '../api/contract.generated';
 import { reconnectWithBackoff, type ChatSocket, type ChatSocketEvent, type ChatSocketStatus } from '../crew/chat-socket';
 
 /** `/app/crew/live` 와 `POST /activities/{id}/live` 가 같은 body 를 쓴다 (docs/realtime.md) */
@@ -14,7 +15,7 @@ export type LiveBody = {
 
 /** 구독 `/user/queue/crew` 중 위치 세 가지. data 모양은 docs/realtime.md 표 */
 export type LiveEvent =
-  | { type: 'LIVE_STARTED'; data: unknown }
+  | { type: 'LIVE_STARTED'; data: components['schemas']['LiveMember'] }
   | { type: 'LIVE_UPDATE'; data: { userId: string; locationShared: boolean; location: { lng: number; lat: number } | null; distanceM: number; itemCount: number; elapsedSec: number; paused: boolean } }
   | { type: 'LIVE_ENDED'; data: { userId: string; activityId: string } };
 

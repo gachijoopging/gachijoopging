@@ -36,6 +36,12 @@ public class MeController {
     return ApiResponse.of(userService.updateMe(me, request));
   }
 
+  @DeleteMapping("/users/me")
+  @ResponseStatus(HttpStatus.NO_CONTENT)
+  public void withdraw(@CurrentUser UUID me) {
+    userService.withdraw(me);
+  }
+
   @PutMapping("/users/me/devices")
   @ResponseStatus(HttpStatus.NO_CONTENT)
   public void registerDevice(@CurrentUser UUID me, @Valid @RequestBody DeviceRequest request) {

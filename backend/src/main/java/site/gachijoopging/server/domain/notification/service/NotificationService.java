@@ -73,6 +73,11 @@ public class NotificationService {
   }
 
   @Transactional(propagation = Propagation.MANDATORY)
+  public void withdraw(UUID me) {
+    repository.deleteAllOf(me);
+  }
+
+  @Transactional(propagation = Propagation.MANDATORY)
   public void joinRequested(UUID leaderId, UUID applicantId, UUID requestId) {
     created(repository.insertJoinRequest(leaderId, applicantId, requestId, clock.instant()));
   }

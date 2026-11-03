@@ -5,9 +5,12 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,9 +20,11 @@ import site.gachijoopging.server.domain.media.dto.MediaSummary;
 import site.gachijoopging.server.domain.media.dto.MediaUpload;
 import site.gachijoopging.server.domain.media.entity.Media;
 import site.gachijoopging.server.domain.media.entity.MediaPurpose;
+import site.gachijoopging.server.domain.media.event.MediaPurgeEvent;
 import site.gachijoopging.server.domain.media.repository.MediaRepository;
 import site.gachijoopging.server.global.error.BusinessException;
 import site.gachijoopging.server.global.error.ErrorCode;
+import site.gachijoopging.server.global.lock.UserLock;
 import site.gachijoopging.server.global.ratelimit.RateLimiter;
 
 @Service
@@ -34,6 +39,8 @@ public class MediaService {
   private final MediaRepository mediaRepository;
   private final ActivityService activityService;
   private final RateLimiter rateLimiter;
+  private final UserLock userLock;
+  private final ApplicationEventPublisher events;
   private final Clock clock;
 
   public Optional<MediaSummary> find(UUID mediaId) {
@@ -85,6 +92,7 @@ public class MediaService {
       String objectKey,
       String thumbKey,
       NewActivityPhoto photo) {
+    userLock.lock(ownerId);
     mediaRepository.insertIfAbsent(
         mediaId, ownerId, purpose.name(), objectKey, thumbKey, clock.instant());
     Media media =
@@ -121,6 +129,23 @@ public class MediaService {
     activityService.removePhoto(me, mediaId);
     mediaRepository.delete(media);
     return Optional.of(MediaSummary.from(media));
+  }
+
+  // 탈퇴하면 지체 없이, 복구할 수 없게 지운다 (privacy §2·§6) — deleted/ 로 옮겨 유예하지 않는다.
+  // 활동 사진 행은 활동과 함께 먼저 지워져 있어야 한다
+  @Transactional(propagation = Propagation.MANDATORY)
+  public void withdraw(UUID me) {
+    List<String> keys = new ArrayList<>();
+    mediaRepository
+        .deletePersonalOf(me)
+        .forEach(
+            row -> {
+              keys.add(row.getObjectKey());
+              keys.add(row.getThumbKey());
+              mediaRepository.enqueuePurge(row.getObjectKey());
+              mediaRepository.enqueuePurge(row.getThumbKey());
+            });
+    events.publishEvent(new MediaPurgeEvent(keys));
   }
 
   @Transactional(propagation = Propagation.REQUIRES_NEW)

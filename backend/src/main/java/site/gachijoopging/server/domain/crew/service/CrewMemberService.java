@@ -10,6 +10,7 @@ import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import site.gachijoopging.server.domain.crew.dto.MemberProfileResponse;
 import site.gachijoopging.server.domain.crew.dto.MemberResponse;
@@ -102,12 +103,33 @@ public class CrewMemberService {
     if (crewRepository.hasActivityInProgress(me)) {
       throw new BusinessException(ErrorCode.CONFLICT, "진행 중인 활동을 끝낸 뒤 나갈 수 있다");
     }
+    if (!depart(me, crew)) {
+      throw new BusinessException(ErrorCode.NO_CREW, "소속 크루가 없다");
+    }
+  }
+
+  // 사용자 잠금과 진행 중 활동 확인은 부른 쪽이 먼저 한다
+  @Transactional(propagation = Propagation.MANDATORY)
+  public void withdraw(UUID me) {
+    // 승인과 엇갈리면 이 신청 행의 잠금에서 한쪽만 이긴다. 승인이 먼저 커밋됐으면 아래에서 크루원으로 나간다
+    joinRequestRepository.cancelPending(me, clock.instant());
+    crewRepository
+        .findMembership(me)
+        .flatMap(row -> crewRepository.findActiveForUpdate(row.getCrewId()))
+        .ifPresent(crew -> depart(me, crew));
+    // 재가입은 새 계정이라 이어받을 것이 없고, 개인정보는 최소로 보관한다 (feature-scope §회원 탈퇴)
+    crewRepository.deleteExpulsions(me);
+    joinRequestRepository.deleteUnreadRejections(me);
+  }
+
+  /** 잠근 크루에서 나간다. 그사이 추방돼 이미 크루원이 아니면 false 다. */
+  private boolean depart(UUID me, Crew crew) {
     boolean leader = crew.ledBy(me);
     if (leader && crewRepository.countMembers(crew.getId()) > 1) {
       throw new BusinessException(ErrorCode.LEADER_MUST_DELEGATE, "다른 크루원에게 크루장을 위임한 뒤 나갈 수 있다");
     }
     if (crewRepository.deleteMember(crew.getId(), me) == 0) {
-      throw new BusinessException(ErrorCode.NO_CREW, "소속 크루가 없다");
+      return false;
     }
     if (leader) {
       Instant now = clock.instant();
@@ -115,6 +137,7 @@ public class CrewMemberService {
       joinRequestRepository.cancelPendingForCrew(crew.getId(), now);
       crew.dissolve(now);
     }
+    return true;
   }
 
   // 위임·추방·나가기가 서로 엇갈리지 않도록 크루 행을 잠그고, 잠근 뒤의 leader_id 로 다시 대조한다

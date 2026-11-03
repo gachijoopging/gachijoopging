@@ -41,6 +41,12 @@ public class BlockRepository {
         .update();
   }
 
+  public void deleteAllOf(UUID userId) {
+    jdbc.sql("DELETE FROM blocks WHERE blocker_id = :userId OR blocked_id = :userId")
+        .param("userId", userId)
+        .update();
+  }
+
   /** 최근 차단부터 limit 개. (beforeCreatedAt, beforeId) 가 있으면 그보다 먼저 차단한 것만. */
   public List<BlockedRow> findPage(
       UUID blockerId, Instant beforeCreatedAt, UUID beforeId, int limit) {

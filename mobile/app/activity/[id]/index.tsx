@@ -36,7 +36,6 @@ import {
 import { KakaoMapView } from '../../../modules/kakao-map';
 import { type ApiClient } from '../../../src/api/client';
 import { createApiClient } from '../../../src/api/config';
-import type { MOCKS } from '../../../src/api/mocks.generated';
 import { enqueue } from '../../../src/activity/outbox';
 import { endActivity, isActivityOpen } from '../../../src/activity/actions';
 import { QuickPickupSheet } from '../../../src/activity/QuickPickupSheet';
@@ -58,11 +57,12 @@ import {
 import { getStored, loadAccount, loadLastAccount, subscribe, updateStored } from '../../../src/activity/store';
 import { refreshSteps, startTracking, syncOutbox, tick } from '../../../src/activity/tracking';
 import { formatClock, formatDistance } from '../../../src/format';
-import { crewMarkers } from '../../../src/live/live';
+import { applyLiveEvent, crewMarkers, type CrewLive } from '../../../src/live/live';
+import { useLiveEvents } from '../../../src/live/useLiveEvents';
 import { useBlockedUsers } from '../../../src/profile/blocked-users';
 import { useFlash } from '../../../src/ui/useFlash';
 
-type Member = (typeof MOCKS)['GET /crew/live']['data'][number];
+type Member = CrewLive;
 
 const api: ApiClient = createApiClient({ delayMs: 300 });
 const BUBBLE_MS = 3_000;
@@ -217,18 +217,20 @@ export default function ActivityInProgressScreen() {
     return () => clearInterval(timer);
   }, []);
 
+  const { refresh: loadMembers, connected } = useLiveEvents(
+    (event) => setMembers((current) => (current ? applyLiveEvent(current, event) : current)),
+    setMembers,
+  );
+
   // 돌아올 때마다 크루원을 조용히 다시 받는다. 실패하면 "–" 로 두고 다음 복귀에 다시 받는다
   useFocusEffect(
     useCallback(() => {
-      api
-        .get('GET /crew/live')
-        .then(({ data }) => setMembers(data))
-        .catch(() => setMembers(null));
+      void loadMembers().catch(() => setMembers(null));
       api
         .get('GET /crew')
         .then(({ data }) => setUnreadChat(data.unreadChat > 0))
         .catch(() => {});
-    }, []),
+    }, [loadMembers]),
   );
 
   // 앱이 앞에 올 때마다 추적을 다시 요청한다. 포그라운드 서비스는 앱이 앞에 있을 때만 시작되므로,
@@ -296,7 +298,7 @@ export default function ActivityInProgressScreen() {
   }, [focused, now, session, ended]);
 
   const status = session ? gpsStatus(session, now) : 'searching';
-  const banner = bannerFor({ locationOff, offline, connecting: false, gps: status, paused: !!session?.paused });
+  const banner = bannerFor({ locationOff, offline, connecting: !connected, gps: status, paused: !!session?.paused });
   const paused = !!session?.paused;
   const here = session?.here ?? null;
   // 자동 종료 저장에 실패해 활동이 남아 있어도 기록은 24시간까지다. 화면도 거기서 멈춘다

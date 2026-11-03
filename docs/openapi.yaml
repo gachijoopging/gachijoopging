@@ -1064,6 +1064,7 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [data]
                 properties:
                   data: { type: array, items: { $ref: '#/components/schemas/LiveMember' } }
               example:
@@ -1318,9 +1319,11 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [data]
                 properties:
                   data:
                     type: object
+                    required: [items, nextCursor]
                     properties:
                       items: { type: array, items: { $ref: '#/components/schemas/Notice' } }
                       nextCursor: { type: string, nullable: true }
@@ -1349,7 +1352,7 @@ paths:
           description: 생성
           content:
             application/json:
-              schema: { type: object, properties: { data: { $ref: '#/components/schemas/Notice' } } }
+              schema: { type: object, required: [data], properties: { data: { $ref: '#/components/schemas/Notice' } } }
               example:
                 data: { id: n02, title: 10월 정기 활동 안내, preview: 10월 첫째 주 토요일에 모여요., pinned: true, commentCount: 0, createdAt: 2026-09-28T09:00:00Z }
   /notices/{noticeId}:
@@ -1364,11 +1367,13 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [data]
                 properties:
                   data:
                     allOf:
                       - $ref: '#/components/schemas/Notice'
                       - type: object
+                        required: [body, comments]
                         properties:
                           body: { type: string }
                           comments: { type: array, items: { $ref: '#/components/schemas/Comment' } }
@@ -1408,7 +1413,7 @@ paths:
           description: 생성
           content:
             application/json:
-              schema: { type: object, properties: { data: { $ref: '#/components/schemas/Comment' } } }
+              schema: { type: object, required: [data], properties: { data: { $ref: '#/components/schemas/Comment' } } }
               example:
                 data: { id: 00000000-0000-4000-8000-0000000000c3, author: { id: 6f1c…, nickname: 관열, photoUrl: null, withdrawn: false }, text: 저도 참여할게요., createdAt: 2026-09-01T12:00:00Z }
   /notice-comments/{commentId}:
@@ -1438,9 +1443,11 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [data]
                 properties:
                   data:
                     type: object
+                    required: [items, hasMore]
                     properties:
                       items: { type: array, items: { $ref: '#/components/schemas/ChatMessage' } }
                       hasMore: { type: boolean, description: "beforeSeq 면 더 오래된 메시지가, afterSeq 면 더 새로운 메시지가 남았는가" }
@@ -1912,7 +1919,7 @@ components:
       enum: [CIGARETTE, CAN, PLASTIC, PAPER, GLASS, VINYL, GENERAL]
     UserBrief:
       type: object
-      required: [id, nickname, withdrawn]
+      required: [id, nickname, photoUrl, withdrawn]
       properties:
         id: { type: string }
         nickname: { type: string, description: 탈퇴했으면 "탈퇴한 크루원" }
@@ -2164,7 +2171,7 @@ components:
         items: { type: array, items: { $ref: '#/components/schemas/Item' } }
     LiveMember:
       type: object
-      required: [locationShared]
+      required: [user, activityId, startedAt, elapsedSec, distanceM, itemCount, paused, locationShared, location]
       properties:
         user: { $ref: '#/components/schemas/UserBrief' }
         activityId: { type: string }
@@ -2178,6 +2185,7 @@ components:
           type: object
           nullable: true
           description: IN_PROGRESS이며 locationShared=true인 대상만 좌표 제공. 그 외 null
+          required: [lng, lat]
           properties: { lng: { type: number }, lat: { type: number } }
     MediaResult:
       type: object
@@ -2234,6 +2242,7 @@ components:
         createdAt: { type: string, format: date-time }
     Notice:
       type: object
+      required: [id, title, preview, pinned, commentCount, createdAt]
       properties:
         id: { type: string }
         title: { type: string }
@@ -2243,6 +2252,7 @@ components:
         createdAt: { type: string, format: date-time }
     ChatMessage:
       type: object
+      required: [seq, id, author, text, createdAt]
       properties:
         seq: { type: integer }
         id: { type: string }

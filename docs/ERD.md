@@ -404,7 +404,9 @@ meets · meet_members · meet_invites · meet_join_requests · friendships · ne
 
 | 대상 | 언제 | 무엇을 | 상태 |
 |---|---|---|---|
-| `refresh_tokens` | 로그아웃·탈퇴 때 | 로그아웃은 그 토큰 행, 탈퇴는 그 사람의 모든 행을 삭제 | 구현 전 (로그아웃 GAC-140 · 탈퇴 GAC-73). 지금 로그아웃은 revoke 만 한다 |
+| `refresh_tokens` | 로그아웃·탈퇴 때 | 로그아웃은 그 토큰 행, 탈퇴는 그 사람의 모든 행을 삭제 | 탈퇴는 있음 (GAC-73). 로그아웃은 구현 전 (GAC-140) — 지금은 revoke 만 한다 |
+| 탈퇴한 사람의 데이터 | 탈퇴 때 | 활동(경로·줍기·활동 사진 행)·활동·프로필 사진의 `media` 행·기기·팔로우·차단·받은 알림·재설정 토큰·추방 이력·미확인 거절 안내를 삭제하고, 사진 파일은 커밋 뒤 원본·썸네일(`deleted/` 에 옮겨진 것 포함)을 지운다. 직접 지워 유예 중인 활동도 함께 지운다. 게시물·크루 사진, 쓴 신고, `crew_daily_stats` 는 남긴다 | 있음 (GAC-73) |
+| `media_purge_queue` | 탈퇴 커밋 뒤 즉시, 실패 시 1분마다 | 삭제할 사진 키를 보관하고 원본·격리본을 모두 지운 뒤 행을 삭제한다 | 있음 (GAC-73) |
 | `refresh_tokens` | 매일 04:00 KST | 만료된 행 삭제 (`RefreshTokenCleanupJob`) | 있음. 지금은 만료 후 30일 지난 행만 지운다 — 만료 즉시로 바꾼다 |
 | 삭제된 콘텐츠의 사진 | 삭제 커밋 뒤 | 스토리지에서 `deleted/` 경로로 옮긴다 (`MediaQuarantineListener`) | 활동 삭제(GAC-88)·게시물 삭제(GAC-91)가 발행한다. 나머지 도메인은 삭제를 만들 때 발행한다 |
 | `live_locations` | 활동 종료 때 | 그 사람의 행 삭제 | 있음 — 종료 트랜잭션 안에서 `LiveService.ended` |

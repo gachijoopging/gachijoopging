@@ -45,8 +45,7 @@ class OpenApiContractTest extends IntegrationTest {
 
   // 구현되면 이 표에서 지운다
   private static final Map<String, String> 미구현_연산 =
-      Map.ofEntries(
-          Map.entry("DELETE /users/me", "GAC-73"), Map.entry("GET /crew/export", "GAC-97"));
+      Map.ofEntries(Map.entry("GET /crew/export", "GAC-97"));
 
   private static final Map<String, String> 미구현_스키마 = Map.of();
 

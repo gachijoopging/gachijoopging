@@ -224,6 +224,10 @@ public class NotificationRepository {
     return statement.query(NotificationRepository::row).list();
   }
 
+  public void deleteAllOf(UUID userId) {
+    jdbc.sql("DELETE FROM notifications WHERE user_id = :userId").param("userId", userId).update();
+  }
+
   public void markAllRead(UUID userId) {
     jdbc.sql("UPDATE notifications SET unread = false WHERE user_id = :userId AND unread")
         .param("userId", userId)

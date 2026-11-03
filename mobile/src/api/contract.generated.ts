@@ -2780,7 +2780,7 @@ export interface paths {
                          *     }
                          */
                         readonly "application/json": {
-                            readonly data?: readonly components["schemas"]["LiveMember"][];
+                            readonly data: readonly components["schemas"]["LiveMember"][];
                         };
                     };
                 };
@@ -3426,9 +3426,9 @@ export interface paths {
                          *     }
                          */
                         readonly "application/json": {
-                            readonly data?: {
-                                readonly items?: readonly components["schemas"]["Notice"][];
-                                readonly nextCursor?: string | null;
+                            readonly data: {
+                                readonly items: readonly components["schemas"]["Notice"][];
+                                readonly nextCursor: string | null;
                             };
                         };
                     };
@@ -3477,7 +3477,7 @@ export interface paths {
                          *     }
                          */
                         readonly "application/json": {
-                            readonly data?: components["schemas"]["Notice"];
+                            readonly data: components["schemas"]["Notice"];
                         };
                     };
                 };
@@ -3552,9 +3552,9 @@ export interface paths {
                          *     }
                          */
                         readonly "application/json": {
-                            readonly data?: components["schemas"]["Notice"] & {
-                                readonly body?: string;
-                                readonly comments?: readonly components["schemas"]["Comment"][];
+                            readonly data: components["schemas"]["Notice"] & {
+                                readonly body: string;
+                                readonly comments: readonly components["schemas"]["Comment"][];
                             };
                         };
                     };
@@ -3652,7 +3652,7 @@ export interface paths {
                          *     }
                          */
                         readonly "application/json": {
-                            readonly data?: components["schemas"]["Comment"];
+                            readonly data: components["schemas"]["Comment"];
                         };
                     };
                 };
@@ -3773,10 +3773,10 @@ export interface paths {
                          *     }
                          */
                         readonly "application/json": {
-                            readonly data?: {
-                                readonly items?: readonly components["schemas"]["ChatMessage"][];
+                            readonly data: {
+                                readonly items: readonly components["schemas"]["ChatMessage"][];
                                 /** @description beforeSeq 면 더 오래된 메시지가, afterSeq 면 더 새로운 메시지가 남았는가 */
-                                readonly hasMore?: boolean;
+                                readonly hasMore: boolean;
                             };
                         };
                     };
@@ -4562,7 +4562,7 @@ export interface components {
             readonly id: string;
             /** @description 탈퇴했으면 "탈퇴한 크루원" */
             readonly nickname: string;
-            readonly photoUrl?: string | null;
+            readonly photoUrl: string | null;
             /**
              * @description 탈퇴 여부. 닉네임 문자열로 판별하지 않는다 — 같은 닉네임의 살아 있는 계정과
              *     구별되지 않는다. true 면 프로필 열기·팔로우·차단 등 그 사람을 향한 행동을 감춘다
@@ -4807,20 +4807,20 @@ export interface components {
             readonly items: readonly components["schemas"]["Item"][];
         };
         readonly LiveMember: {
-            readonly user?: components["schemas"]["UserBrief"];
-            readonly activityId?: string;
+            readonly user: components["schemas"]["UserBrief"];
+            readonly activityId: string;
             /** Format: date-time */
-            readonly startedAt?: string;
-            readonly elapsedSec?: number;
-            readonly distanceM?: number;
-            readonly itemCount?: number;
-            readonly paused?: boolean;
+            readonly startedAt: string;
+            readonly elapsedSec: number;
+            readonly distanceM: number;
+            readonly itemCount: number;
+            readonly paused: boolean;
             /** @description false는 공유 끔. true인데 location=null이면 좌표 확인 중 */
             readonly locationShared: boolean;
             /** @description IN_PROGRESS이며 locationShared=true인 대상만 좌표 제공. 그 외 null */
-            readonly location?: {
-                readonly lng?: number;
-                readonly lat?: number;
+            readonly location: {
+                readonly lng: number;
+                readonly lat: number;
             } | null;
         };
         readonly MediaResult: {
@@ -4868,23 +4868,23 @@ export interface components {
             readonly createdAt: string;
         };
         readonly Notice: {
-            readonly id?: string;
-            readonly title?: string;
+            readonly id: string;
+            readonly title: string;
             /** @description 본문 앞 100자. 줄바꿈은 공백으로 바꾼다 */
-            readonly preview?: string;
+            readonly preview: string;
             /** @description 최신 공지 한 건이면 true인 파생 값. 수동 설정 불가 */
-            readonly pinned?: boolean;
-            readonly commentCount?: number;
+            readonly pinned: boolean;
+            readonly commentCount: number;
             /** Format: date-time */
-            readonly createdAt?: string;
+            readonly createdAt: string;
         };
         readonly ChatMessage: {
-            readonly seq?: number;
-            readonly id?: string;
-            readonly author?: components["schemas"]["UserBrief"];
-            readonly text?: string;
+            readonly seq: number;
+            readonly id: string;
+            readonly author: components["schemas"]["UserBrief"];
+            readonly text: string;
             /** Format: date-time */
-            readonly createdAt?: string;
+            readonly createdAt: string;
         };
         readonly Notification: {
             readonly id?: number;

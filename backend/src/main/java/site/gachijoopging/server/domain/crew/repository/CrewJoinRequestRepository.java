@@ -120,6 +120,16 @@ public interface CrewJoinRequestRepository extends JpaRepository<CrewJoinRequest
   int markRejectionRead(
       @Param("id") UUID id, @Param("userId") UUID userId, @Param("now") Instant now);
 
+  @Modifying
+  @Query(
+      value =
+          """
+          DELETE FROM crew_join_requests
+          WHERE user_id = :userId AND status = 'REJECTED' AND rejection_read_at IS NULL
+          """,
+      nativeQuery = true)
+  void deleteUnreadRejections(@Param("userId") UUID userId);
+
   interface ApprovedRow {
     UUID getRequestId();
 

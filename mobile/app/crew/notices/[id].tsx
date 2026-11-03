@@ -22,9 +22,8 @@ import {
   Txt,
   space,
 } from 'design-system/src';
-import { ApiError, forget, peek, type ApiClient } from '../../../src/api/client';
+import { ApiError, forget, peek, type ApiClient, type ApiResponse } from '../../../src/api/client';
 import { createApiClient } from '../../../src/api/config';
-import type { MOCKS } from '../../../src/api/mocks.generated';
 import { clearDraft, draftFor, editDraft, requestIdFor } from '../../../src/crew/comment-draft';
 import { monthDay } from '../../../src/crew/crew';
 import { COMMENT_MAX, canSendComment, commentAction, visibleComments } from '../../../src/crew/notice';
@@ -32,7 +31,7 @@ import { leaveForMembership } from '../../../src/feed/leave';
 import { useBlockedUsers } from '../../../src/profile/blocked-users';
 import { useFlash } from '../../../src/ui/useFlash';
 
-type Detail = (typeof MOCKS)['GET /notices/{noticeId}']['data'];
+type Detail = ApiResponse<'GET /notices/{noticeId}'>['data'];
 type Comment = { id: string; author: { id: string; nickname: string; photoUrl: string | null }; text: string; createdAt: string };
 
 const api: ApiClient = createApiClient({ delayMs: 300 });
