@@ -25,13 +25,13 @@ import {
 import { KakaoMapView } from '../../modules/kakao-map';
 import { type ApiClient } from '../../src/api/client';
 import { createApiClient } from '../../src/api/config';
-import { MOCKS } from '../../src/api/mocks.generated';
 import { spokenDistance } from '../../src/crew/records';
 import { formatDistance, formatElapsed } from '../../src/format';
-import { crewMarkers, locationShareLabel } from '../../src/live/live';
+import { applyLiveEvent, crewMarkers, locationShareLabel, type CrewLive } from '../../src/live/live';
+import { useLiveEvents } from '../../src/live/useLiveEvents';
 import { useBlockedUsers } from '../../src/profile/blocked-users';
 
-type Member = (typeof MOCKS)['GET /crew/live']['data'][number];
+type Member = CrewLive;
 
 const api: ApiClient = createApiClient({ delayMs: 300 });
 
@@ -50,18 +50,21 @@ export default function ActiveCrewMembersScreen() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [mapFailed, setMapFailed] = useState(false);
 
+  const { refresh, connected } = useLiveEvents(
+    (event) => setMembers((current) => (current ? applyLiveEvent(current, event) : current)),
+    setMembers,
+  );
   const load = useCallback(async () => {
     setRefreshing(true);
     try {
-      const res = await api.get('GET /crew/live');
-      setMembers(res.data);
+      await refresh();
       setFailed(false);
     } catch {
       setFailed(true);
     } finally {
       setRefreshing(false);
     }
-  }, []);
+  }, [refresh]);
 
   useEffect(() => void load(), [load]);
   useEffect(() => { void api.get('GET /users/me').then(({ data }) => setMeId(data.id)).catch(() => {}); }, []);
@@ -91,6 +94,7 @@ export default function ActiveCrewMembersScreen() {
   return (
     <Screen scroll refreshControl={<RefreshControl refreshing={refreshing} onRefresh={load} />}>
       {header}
+      {!connected ? <Banner tone="warn">실시간 연결이 끊겼어요. 다시 연결하고 있어요.</Banner> : null}
       {failed ? <Banner tone="warn">인터넷 연결을 확인해 주세요.</Banner> : null}
 
       {members.length === 0 ? (

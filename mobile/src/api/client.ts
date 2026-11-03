@@ -18,7 +18,9 @@ type ContractKey =
   | 'POST /activities' | 'GET /activities/current' | 'POST /activities/{id}/items' | 'PATCH /activities/{id}/items/{itemId}'
   | 'POST /activities/{id}/end' | 'GET /activities/{id}' | 'GET /users/me/activities' | 'POST /media'
   | 'GET /crew/posts' | 'POST /crew/posts' | 'GET /posts/{postId}' | 'GET /posts/{postId}/comments' | 'POST /posts/{postId}/comments'
-  | 'GET /crew/members/{userId}/posts';
+  | 'GET /crew/members/{userId}/posts'
+  | 'GET /crew/notices' | 'POST /crew/notices' | 'GET /notices/{noticeId}' | 'POST /notices/{noticeId}/comments'
+  | 'GET /crew/chat/messages' | 'GET /crew/live';
 type JsonOf<R> = R extends { content: { 'application/json': infer B } } ? B : never;
 type ContractResponse<K extends ContractKey> = K extends `${infer M} ${infer P extends keyof paths}`
   ? paths[P][Lowercase<M> & keyof paths[P]] extends { responses: infer R } ? JsonOf<R[Extract<keyof R, 200 | 201>]> : never
@@ -239,7 +241,7 @@ export function createMockClient({ delayMs = 0, failing = [], activityTotals }: 
 }
 
 /** 로그아웃 상태로. 남은 토큰·계정·기억한 응답이 다음 계정에 보이면 안 된다 */
-async function signOut(): Promise<void> {
+export async function signOut(): Promise<void> {
   session += 1;
   lastResponses.clear();
   responsesOwner = null;

@@ -55,15 +55,19 @@ import {
   markDeleted,
   markFailed,
   mergeHistory,
+  noteReceipt,
   receive,
+  resumeSeq,
   retry,
   saveChatSession,
   type ChatItem,
   type ChatMessage,
   type ChatRow,
   type ChatState,
+  type Receipt,
 } from '../../src/crew/chat';
 import { createMockChatSocket, type ChatSocket, type ChatSocketEvent } from '../../src/crew/chat-socket';
+import { acquireCrewSocket } from '../../src/realtime/crew-socket';
 import { useFlash } from '../../src/ui/useFlash';
 
 const api: ApiClient = createApiClient({ delayMs: 300 });
@@ -113,8 +117,14 @@ export default function CrewChatScreen() {
   const socketRef = useRef<ChatSocket | null>(null);
   const listRef = useRef<FlatList<ChatRow>>(null);
   const atBottom = useRef(true);
-  const timers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
+  // 서버는 한 연결의 메시지를 병렬로 처리해 뒤에 보낸 것이 먼저 seq 를 받을 수 있다. 앞 메시지의 echo 를 받은 뒤 다음을 보낸다
+  const inFlight = useRef<{ id: string; timer: ReturnType<typeof setTimeout> } | null>(null);
   const socketOpen = useRef(false);
+  const receipts = useRef<Receipt[]>([]);
+  const disconnectedAt = useRef(0);
+  const gapFrom = useRef<number | null>(null);
+  const gapGeneration = useRef(0);
+  const gapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const alive = useRef(true);
   const initialScrolled = useRef(false);
   const readTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -136,31 +146,38 @@ export default function CrewChatScreen() {
     }, READ_DEBOUNCE_MS);
   }, []);
 
-  const transmit = useCallback(
-    (id: string, body: string) => {
-      clearTimeout(timers.current.get(id));
-      timers.current.delete(id);
-      // 끊긴 동안은 보내지 않고 전송 중으로 큐에 둔다. 실패는 연결된 채 echo 가 없을 때만이다
-      if (!socketOpen.current) return;
-      socketRef.current?.send({ id, text: body });
-      timers.current.set(
-        id,
-        setTimeout(() => {
-          timers.current.delete(id);
-          update((s) => markFailed(s, id));
-        }, SEND_TIMEOUT_MS),
-      );
-    },
-    [update],
-  );
+  /** 전송 중 맨 앞 하나를 보낸다. 끊긴 동안은 보내지 않고 큐에 둔다. 실패는 연결된 채 echo 가 없을 때만이다 */
+  const pump = useCallback(() => {
+    if (!socketOpen.current || inFlight.current) return;
+    const next = chatRef.current.items.find((i) => i.status === 'sending');
+    if (!next) return;
+    socketRef.current?.send({ id: next.id, text: next.text });
+    inFlight.current = {
+      id: next.id,
+      timer: setTimeout(() => {
+        inFlight.current = null;
+        update((s) => markFailed(s, next.id));
+        pump();
+      }, SEND_TIMEOUT_MS),
+    };
+  }, [update]);
+
+  /** 끊기면 기다리던 echo 를 놓는다. 그 메시지는 전송 중으로 남아 다시 붙은 뒤 같은 id 로 다시 나간다 */
+  const dropInFlight = useCallback(() => {
+    if (inFlight.current) clearTimeout(inFlight.current.timer);
+    inFlight.current = null;
+  }, []);
 
   const onEvent = useCallback(
     (event: ChatSocketEvent) => {
       if (event.type === 'CHAT_DELETED') return update((s) => markDeleted(s, event.data.seq));
       const fromOther = event.data.author.id !== meRef.current?.author.id;
-      clearTimeout(timers.current.get(event.data.id));
-      timers.current.delete(event.data.id);
+      receipts.current = noteReceipt(receipts.current, event.data.seq, Date.now());
       update((s) => receive(s, event.data));
+      if (inFlight.current?.id === event.data.id) {
+        dropInFlight();
+        pump();
+      }
       if (blockedRef.current.has(event.data.author.id)) return;
       if (!fromOther) return;
       if (atBottom.current) markRead();
@@ -169,15 +186,16 @@ export default function CrewChatScreen() {
         AccessibilityInfo.announceForAccessibility('새 메시지가 도착했어요');
       }
     },
-    [markRead, update],
+    [dropInFlight, markRead, pump, update],
   );
 
-  const fillGap = useCallback(async () => {
-    for (;;) {
-      const afterSeq = lastSeqOf(chatRef.current.items);
+  const fillGap = useCallback(async (from: number) => {
+    for (let afterSeq = from; ; ) {
       const { data } = await api.get('GET /crew/chat/messages', { afterSeq, limit: PAGE });
+      if (!alive.current) return;
       update((s) => mergeHistory(s, 'after', data));
       if (!data.hasMore || !data.items.length) return;
+      afterSeq = Math.max(...data.items.map((m) => m.seq));
     }
   }, [update]);
 
@@ -214,33 +232,56 @@ export default function CrewChatScreen() {
       textRef.current = session.draft;
       setText(session.draft);
 
-      const socket = createMockChatSocket({ ...MOCK_SOCKET, author: nextMe.author, lastSeq: lastSeqOf(chatRef.current.items) });
+      const socket = acquireCrewSocket() ?? createMockChatSocket({ ...MOCK_SOCKET, author: nextMe.author, lastSeq: lastSeqOf(chatRef.current.items) });
       socketRef.current = socket;
       socket.subscribe(onEvent);
       let wasConnecting = false;
+      let opened = false;
+      const recoverGap = (from: number, generation: number, notify: boolean) => {
+        void fillGap(from).then(() => {
+          if (!alive.current || generation !== gapGeneration.current) return;
+          gapFrom.current = null;
+          if (notify) setSnackbar('연결이 복구됐어요.');
+        }).catch(() => {
+          if (!alive.current || generation !== gapGeneration.current) return;
+          setSnackbar('메시지를 다시 불러오고 있어요.');
+          gapTimer.current = setTimeout(() => recoverGap(from, generation, notify), 5000);
+        });
+      };
       socket.onStatus((status) => {
         socketOpen.current = status === 'open';
         if (typeof status === 'object') return void onClosed(status.closed);
         if (status === 'connecting') {
+          if (!wasConnecting) {
+            disconnectedAt.current = Date.now();
+            gapGeneration.current += 1;
+            if (gapTimer.current) clearTimeout(gapTimer.current);
+          }
           wasConnecting = true;
+          dropInFlight();
           setConnected(false);
           return;
         }
         setConnected(true);
-        if (!wasConnecting) return;
+        const first = !opened;
+        const recovered = wasConnecting;
+        opened = true;
         wasConnecting = false;
-        setSnackbar('연결이 복구됐어요.');
-        fillGap().catch(() => {});
-        chatRef.current.items.forEach((i) => i.status === 'sending' && transmit(i.id, i.text));
+        // 처음 붙을 때도 이력을 받은 뒤 구독하기 전에 온 메시지를 채운다
+        if (first || recovered) {
+          const from = resumeSeq(receipts.current, disconnectedAt.current, lastSeqOf(chatRef.current.items));
+          gapFrom.current = Math.min(gapFrom.current ?? from, from);
+          recoverGap(gapFrom.current, gapGeneration.current, recovered && !first);
+        }
+        pump();
       });
-      session.unsent.forEach((i) => i.status === 'sending' && transmit(i.id, i.text));
 
       setPhase('ready');
       markRead();
     } catch {
       setPhase('error');
     }
-  }, [fillGap, markRead, onClosed, onEvent, transmit, update]);
+  }, [dropInFlight, fillGap, markRead, onClosed, onEvent, pump, update]);
 
   useEffect(() => {
     void load();
@@ -250,9 +291,11 @@ export default function CrewChatScreen() {
   useEffect(
     () => () => {
       alive.current = false;
+      gapGeneration.current += 1;
+      if (gapTimer.current) clearTimeout(gapTimer.current);
       const current = meRef.current;
       if (current) saveChatSession({ meId: current.author.id, crewId: current.crewId }, chatRef.current, textRef.current);
-      timers.current.forEach(clearTimeout);
+      if (inFlight.current) clearTimeout(inFlight.current.timer);
       if (readTimer.current) clearTimeout(readTimer.current);
       const lastSeq = seenSeq.current;
       if (lastSeq > 0) api.mutate('PUT /crew/chat/read', { lastSeq }).catch(() => {});
@@ -288,12 +331,12 @@ export default function CrewChatScreen() {
     update((s) => enqueue(s, { id, author: me.author, text: body, createdAt: new Date().toISOString() }));
     atBottom.current = true;
     setPill(false);
-    transmit(id, body);
+    pump();
   };
 
   const resend = (item: ChatItem) => {
     update((s) => retry(s, item.id));
-    transmit(item.id, item.text);
+    pump();
   };
 
   const scrollToBottom = () => {

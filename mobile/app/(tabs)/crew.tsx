@@ -1,6 +1,6 @@
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { RefreshControl, View } from 'react-native';
+import { RefreshControl, ScrollView, View } from 'react-native';
 import {
   Avatar,
   Badge,
@@ -57,6 +57,7 @@ export default function CrewScreen() {
   const { tab } = useLocalSearchParams<{ tab?: string }>();
   const [panel, setPanel] = useState<Panel>('calendar');
   const [refreshKey, setRefreshKey] = useState(0);
+  const [noticeEnd, setNoticeEnd] = useState(0);
   const [snackbar, setSnackbar] = useFlash();
 
   // 홈의 "크루 기록 보기" 는 기록 탭으로, 공지를 쓰거나 지우고 돌아오면 공지 탭으로 들어온다. 한 번 반영하면 지워 다음 진입은 달력부터다
@@ -83,9 +84,13 @@ export default function CrewScreen() {
   useFocusEffect(useCallback(() => void load('quiet'), [load]));
 
   return (
-    <Screen
-      scroll
-      edges={['top', 'left', 'right']}
+    <Screen edges={['top', 'left', 'right']}>
+      <ScrollView
+      contentContainerStyle={{ gap: space.md, paddingBottom: space['3xl'] }}
+      scrollEventThrottle={100}
+      onScroll={({ nativeEvent }) => {
+        if (panel === 'notices' && nativeEvent.contentOffset.y + nativeEvent.layoutMeasurement.height >= nativeEvent.contentSize.height - 80) setNoticeEnd((n) => n + 1);
+      }}
       refreshControl={
         <RefreshControl
           refreshing={refreshing}
@@ -174,7 +179,7 @@ export default function CrewScreen() {
           ) : panel === 'records' ? (
             <RecordsPanel refreshKey={refreshKey} />
           ) : (
-            <NoticesPanel isLeader={crew.isLeader} refreshKey={refreshKey} />
+            <NoticesPanel isLeader={crew.isLeader} refreshKey={refreshKey} endReached={noticeEnd} />
           )}
         </>
       ) : failed ? (
@@ -182,6 +187,7 @@ export default function CrewScreen() {
       ) : (
         <Loading label="크루를 불러오고 있어요" />
       )}
+      </ScrollView>
       <Snackbar visible={snackbar != null} message={snackbar ?? ''} onDismiss={() => setSnackbar(null)} />
     </Screen>
   );
