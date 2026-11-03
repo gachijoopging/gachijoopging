@@ -6,6 +6,7 @@ import java.util.Objects;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import site.gachijoopging.server.domain.crew.dto.UserBriefResponse;
 import site.gachijoopging.server.domain.media.service.MediaSignedUrl;
@@ -34,6 +35,11 @@ public class BlockService {
   @Transactional
   public void unblock(UUID me, UUID userId) {
     blockRepository.delete(me, userId);
+  }
+
+  @Transactional(propagation = Propagation.MANDATORY)
+  public void withdraw(UUID me) {
+    blockRepository.deleteAllOf(me);
   }
 
   public BlockedUsersResponse blocked(UUID me, String cursor, int limit) {

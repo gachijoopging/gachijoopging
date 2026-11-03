@@ -67,6 +67,16 @@ public interface UserRepository extends JpaRepository<User, UUID> {
       @Param("nickname") String nickname,
       @Param("now") Instant now);
 
+  @Modifying
+  @Query(value = "DELETE FROM devices WHERE user_id = :userId", nativeQuery = true)
+  void deleteDevicesOf(@Param("userId") UUID userId);
+
+  @Modifying
+  @Query(
+      value = "DELETE FROM follows WHERE follower_id = :userId OR followee_id = :userId",
+      nativeQuery = true)
+  void deleteFollowsOf(@Param("userId") UUID userId);
+
   // 같은 기기에 다른 계정으로 로그인하면 토큰의 주인이 바뀐다
   @Modifying
   @Query(

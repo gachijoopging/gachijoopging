@@ -16,6 +16,7 @@ import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import site.gachijoopging.server.domain.activity.dto.ActivityCardResponse;
 import site.gachijoopging.server.domain.activity.dto.ActivityPhotoRef;
@@ -249,6 +250,15 @@ public class ActivityService {
               keys.add(photo.getThumbKey());
             });
     events.publishEvent(new MediaQuarantineEvent(keys));
+  }
+
+  // 크루 합산은 crew_daily_stats 에 적립된 그대로 둔다 — 개인을 식별할 수 없는 합계라 탈퇴해도 남긴다 (privacy §2)
+  @Transactional(propagation = Propagation.MANDATORY)
+  public void withdraw(UUID me) {
+    if (hasInProgress(me)) {
+      throw new BusinessException(ErrorCode.CONFLICT, "진행 중인 활동을 끝낸 뒤 탈퇴할 수 있다");
+    }
+    activityRepository.deleteAllOf(me);
   }
 
   public CursorPage<ActivityCardResponse> mine(UUID me, String cursor, int limit) {

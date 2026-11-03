@@ -27,6 +27,10 @@ public interface ActivityRepository extends JpaRepository<Activity, UUID> {
           + " WHERE a.userId = :userId AND a.status = 'IN_PROGRESS' AND a.deletedAt IS NULL")
   Optional<Activity> findInProgress(@Param("userId") UUID userId);
 
+  @Modifying(clearAutomatically = true, flushAutomatically = true)
+  @Query(value = "DELETE FROM activities WHERE user_id = :userId", nativeQuery = true)
+  void deleteAllOf(@Param("userId") UUID userId);
+
   boolean existsByUserIdAndStatusAndDeletedAtIsNull(UUID userId, ActivityStatus status);
 
   // 시작 시점의 소속을 사용자 잠금 뒤에 다시 읽는다. 나가기가 같은 잠금을 잡으므로 이 값은 커밋까지 유효하다

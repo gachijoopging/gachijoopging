@@ -6,6 +6,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import site.gachijoopging.server.global.error.BusinessException;
+import site.gachijoopging.server.global.error.ErrorCode;
 
 // 소속·대기 신청·진행 중 활동은 사람 단위 불변식이라 한 사람의 가입·신청·만들기·나가기·활동 시작을 줄 세운다.
 // 크루 잠금보다 먼저 잡는다. users 는 user 도메인 테이블이라 행 잠금 대신 advisory lock 을 쓰고,
@@ -24,5 +26,16 @@ public class UserLock {
             "SELECT 1 FROM (SELECT pg_advisory_xact_lock(hashtextextended(CAST(:userId AS text), 0))) l")
         .setParameter("userId", userId)
         .getSingleResult();
+    // 인증 필터를 통과한 뒤 잠금을 기다리는 사이 탈퇴가 커밋됐을 수 있다. 그대로 진행하면 탈퇴한 사람이
+    // 크루에 들어가거나 크루를 만든다
+    boolean active =
+        !entityManager
+            .createNativeQuery("SELECT 1 FROM users WHERE id = :userId AND status = 'ACTIVE'")
+            .setParameter("userId", userId)
+            .getResultList()
+            .isEmpty();
+    if (!active) {
+      throw new BusinessException(ErrorCode.INVALID_CREDENTIALS, "쓸 수 없는 계정이다");
+    }
   }
 }

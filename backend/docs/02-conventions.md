@@ -88,7 +88,7 @@ JSON 필드명은 openapi.yaml 이 정본이다 — camelCase, 철자 하나도 
   반환. 재시도·타임아웃은 클라이언트 안에서 끝낸다 — 호출부로 새 나가지 않게.
   **서비스는 이것을 모른다.** 부르는 것은 `facade/` 와 `event/` 의 커밋 후 리스너뿐이다 — 둘 다 트랜잭션 밖이다.
 - **`event/`** — 도메인 이벤트 record 와 `@TransactionalEventListener(AFTER_COMMIT)` 리스너(§10 나).
-  발행 트랜잭션 안에서 받아야 하는 쓰기(알림 행 INSERT)만 동기 `@EventListener` 로 받고, 이 리스너는 자기 도메인 서비스만 부른다 — client 를 부르면 트랜잭션 안의 외부 호출이 된다.
+  발행 트랜잭션 안에서 받아야 하는 쓰기(알림 행 INSERT, 서비스 주입이 순환해 이벤트로만 부를 수 있는 탈퇴 때 auth 토큰 삭제)만 동기 `@EventListener` 로 받고, 이 리스너는 자기 도메인 서비스만 부른다 — client 를 부르면 트랜잭션 안의 외부 호출이 된다.
 - **`query/`** — 타 도메인이 재사용하는 QueryDSL `BooleanExpression` 만. 도메인이 밖에 공개하는
   읽기 계약이라 안쪽으로 내리지 않는다.
 

@@ -107,6 +107,10 @@ public interface CrewRepository extends JpaRepository<Crew, UUID> {
       @Param("expelledBy") UUID expelledBy,
       @Param("now") Instant now);
 
+  @Modifying
+  @Query(value = "DELETE FROM crew_expulsions WHERE user_id = :userId", nativeQuery = true)
+  void deleteExpulsions(@Param("userId") UUID userId);
+
   @Query(
       value =
           """

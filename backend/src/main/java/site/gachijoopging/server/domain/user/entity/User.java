@@ -107,6 +107,20 @@ public class User {
     this.updatedAt = now;
   }
 
+  // 행은 "탈퇴한 크루원" 게시물·댓글이 가리키므로 남기고 개인정보만 지운다 (ERD §회원 탈퇴 때)
+  public void withdraw(Instant now) {
+    this.email = null;
+    this.passwordHash = null;
+    this.kakaoId = null;
+    this.googleSub = null;
+    this.nickname = null;
+    this.intro = "";
+    this.photoMediaId = null;
+    this.status = UserStatus.DELETED;
+    this.deletedAt = now;
+    this.updatedAt = now;
+  }
+
   public void changePassword(String passwordHash, Instant now) {
     this.passwordHash = requireNonNull(passwordHash, "passwordHash");
     this.sessionVersion++;

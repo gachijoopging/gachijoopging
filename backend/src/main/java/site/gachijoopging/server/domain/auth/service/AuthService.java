@@ -7,6 +7,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import site.gachijoopging.server.domain.activity.service.ActivityService;
 import site.gachijoopging.server.domain.auth.dto.AuthDtos.TokenPairResponse;
@@ -94,6 +95,8 @@ public class AuthService {
             .findByTokenHash(OpaqueToken.hash(rawToken))
             .orElseThrow(() -> reject("모르는 refreshToken"));
 
+    userLock.lock(stored.getUserId());
+
     Instant now = clock.instant();
 
     if (stored.revoked()) {
@@ -121,6 +124,11 @@ public class AuthService {
         false);
   }
 
+  @Transactional(propagation = Propagation.MANDATORY)
+  public void withdraw(UUID userId) {
+    refreshTokenRepository.deleteAllByUserId(userId);
+  }
+
   @Transactional
   public void logout(String rawToken) {
     if (rawToken == null || rawToken.isBlank()) {
@@ -145,6 +153,7 @@ public class AuthService {
   }
 
   private TokenPairResponse newSession(UserAccount account) {
+    userLock.lock(account.id());
     return new TokenPairResponse(
         jwtIssuer.issue(account.id()),
         issueRefreshToken(account.id(), UUID.randomUUID(), account.sessionVersion()),
