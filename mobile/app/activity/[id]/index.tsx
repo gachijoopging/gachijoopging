@@ -217,18 +217,15 @@ export default function ActivityInProgressScreen() {
     return () => clearInterval(timer);
   }, []);
 
-  const loadMembers = useCallback(() => {
-    api
-      .get('GET /crew/live')
-      .then(({ data }) => setMembers(data))
-      .catch(() => setMembers(null));
-  }, []);
-  useLiveEvents((event) => setMembers((current) => (current ? applyLiveEvent(current, event) : current)), loadMembers);
+  const { refresh: loadMembers, connected } = useLiveEvents(
+    (event) => setMembers((current) => (current ? applyLiveEvent(current, event) : current)),
+    setMembers,
+  );
 
   // 돌아올 때마다 크루원을 조용히 다시 받는다. 실패하면 "–" 로 두고 다음 복귀에 다시 받는다
   useFocusEffect(
     useCallback(() => {
-      loadMembers();
+      void loadMembers().catch(() => setMembers(null));
       api
         .get('GET /crew')
         .then(({ data }) => setUnreadChat(data.unreadChat > 0))
@@ -301,7 +298,7 @@ export default function ActivityInProgressScreen() {
   }, [focused, now, session, ended]);
 
   const status = session ? gpsStatus(session, now) : 'searching';
-  const banner = bannerFor({ locationOff, offline, connecting: false, gps: status, paused: !!session?.paused });
+  const banner = bannerFor({ locationOff, offline, connecting: !connected, gps: status, paused: !!session?.paused });
   const paused = !!session?.paused;
   const here = session?.here ?? null;
   // 자동 종료 저장에 실패해 활동이 남아 있어도 기록은 24시간까지다. 화면도 거기서 멈춘다

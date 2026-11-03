@@ -111,3 +111,14 @@ test('다시 붙으면 끊기기 직전 10초 안에 받은 가장 작은 seq �
   expect(mockGet).toHaveBeenCalledWith('GET /crew/chat/messages', { afterSeq: 3, limit: 50 });
   expect(byType('Snackbar')[0].props.message).toBe('연결이 복구됐어요.');
 });
+
+test('이력 보충이 실패해도 같은 기준으로 다시 요청한다', async () => {
+  await open();
+  mockGet.mockRejectedValueOnce(new Error('offline'));
+  await act(async () => mockSocket.setStatus('open'));
+  expect(byType('Snackbar')[0].props.message).toBe('메시지를 다시 불러오고 있어요.');
+  await act(async () => mockSocket.emit({ type: 'CHAT', data: message(10) }));
+  mockGet.mockClear();
+  await act(async () => { jest.advanceTimersByTime(5000); });
+  expect(mockGet).toHaveBeenCalledWith('GET /crew/chat/messages', { afterSeq: 1, limit: 50 });
+});

@@ -74,6 +74,13 @@ describe('보내기와 echo', () => {
     expect(state.items).toHaveLength(1);
     expect(state.items[0]).toMatchObject({ status: 'sent', seq: 9 });
   });
+
+  test('상대 메시지가 먼저 오면 내 echo 도 seq 순서에 놓는다', () => {
+    let state = enqueue(emptyChat(), draft);
+    state = receive(state, msg(10));
+    state = receive(state, { ...echo, seq: 11 });
+    expect(seqs(state)).toEqual([10, 11]);
+  });
 });
 
 describe('전송 실패와 다시 보내기', () => {

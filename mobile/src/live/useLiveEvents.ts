@@ -1,28 +1,60 @@
-import { useEffect, useRef } from 'react';
+import { router } from 'expo-router';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { createApiClient } from '../api/config';
+import { leaveForMembership } from '../feed/leave';
 import { acquireCrewSocket } from '../realtime/crew-socket';
 import type { LiveEvent } from '../realtime/stomp';
+import type { CrewLive } from './live';
 
-/**
- * 화면이 떠 있는 동안 소켓 LIVE_* 를 받는다. 소켓은 이후 변경만 주므로, 붙을 때마다(처음 포함) refetch 로 전체를 다시 받는다
- * (docs/realtime.md §끊김과 이어받기). 목으로 돌 때는 아무것도 하지 않는다
- */
-export function useLiveEvents(onEvent: (event: LiveEvent) => void, refetch: () => void): void {
-  const latest = useRef({ onEvent, refetch });
-  latest.current = { onEvent, refetch };
+const api = createApiClient();
+
+export function useLiveEvents(onEvent: (event: LiveEvent) => void, onSnapshot: (members: readonly CrewLive[]) => void) {
+  const latest = useRef({ onEvent, onSnapshot });
+  latest.current = { onEvent, onSnapshot };
+  const pending = useRef<{ events: LiveEvent[] } | null>(null);
+  const alive = useRef(false);
+  const [connected, setConnected] = useState(true);
+
+  const refresh = useCallback(async () => {
+    const request = { events: [] as LiveEvent[] };
+    pending.current = request;
+    try {
+      const { data } = await api.get('GET /crew/live');
+      if (alive.current && pending.current === request) latest.current.onSnapshot(data);
+    } catch (error) {
+      if (pending.current === request) throw error;
+    } finally {
+      if (alive.current && pending.current === request) {
+        pending.current = null;
+        request.events.forEach((event) => latest.current.onEvent(event));
+      }
+    }
+  }, []);
+
   useEffect(() => {
+    alive.current = true;
     const socket = acquireCrewSocket();
-    if (!socket) return;
-    socket.onLive((event) => latest.current.onEvent(event));
+    if (!socket) return () => { alive.current = false; };
+    socket.onLive((event) => {
+      if (pending.current) pending.current.events.push(event);
+      else latest.current.onEvent(event);
+    });
     let down = true;
     socket.onStatus((status) => {
-      if (status !== 'open') {
-        down = true;
+      setConnected(status === 'open');
+      if (typeof status === 'object') {
+        pending.current = null;
+        latest.current.onSnapshot([]);
+        if (status.closed === 4403) void leaveForMembership();
+        else router.dismissTo('/start');
         return;
       }
+      if (status !== 'open') { down = true; return; }
       if (!down) return;
       down = false;
-      latest.current.refetch();
+      void refresh().catch(() => {});
     });
-    return () => socket.close();
-  }, []);
+    return () => { alive.current = false; pending.current = null; socket.close(); };
+  }, [refresh]);
+  return { refresh, connected };
 }

@@ -40,6 +40,7 @@ jest.mock('./store', () => ({
 jest.mock('./tracking', () => ({ finalSteps: jest.fn(async () => {}), refreshSteps: jest.fn(async () => {}), startTracking: jest.fn(async () => {}), stopTracking: jest.fn(async () => {}), syncOutbox: jest.fn(async () => {}), tick: jest.fn() }));
 jest.mock('./QuickPickupSheet', () => ({ QuickPickupSheet: 'QuickPickupSheet' }));
 jest.mock('../profile/blocked-users', () => ({ useBlockedUsers: () => new Set() }));
+jest.mock('../feed/leave', () => ({ leaveForMembership: jest.fn() }));
 jest.mock('design-system/src', () => new Proxy(
   { space: {}, size: {}, radius: {}, depth: () => ({}), useTheme: () => ({ colors: {}, shadows: {} }), useReduceMotion: () => true, useRipple: () => undefined },
   { get: (target, key) => (key in target ? target[key as keyof typeof target] : String(key)) },

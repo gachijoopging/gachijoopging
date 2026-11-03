@@ -11,18 +11,58 @@ type Notice = ApiResponse<'GET /crew/notices'>['data']['items'][number];
 const api: ApiClient = createApiClient({ delayMs: 300 });
 
 /** 모이깅의 공지 패널(3-5). 쓰기는 크루장만 */
-export function NoticesPanel({ isLeader, refreshKey }: { isLeader: boolean; refreshKey: number }) {
+export function NoticesPanel({ isLeader, refreshKey, endReached = 0 }: { isLeader: boolean; refreshKey: number; endReached?: number }) {
   const [notices, setNotices] = useState<readonly Notice[] | null>(null);
   const [failed, setFailed] = useState(false);
+  const [cursor, setCursor] = useState<string | null>(null);
+  const [moreFailed, setMoreFailed] = useState(false);
+  const [moreLoading, setMoreLoading] = useState(false);
+  const pending = useRef(false);
+  const generation = useRef(0);
+  const processedEnd = useRef(0);
 
   const load = useCallback(async () => {
+    const request = ++generation.current;
+    pending.current = false;
     try {
-      setNotices((await api.get('GET /crew/notices')).data.items);
+      const { data } = await api.get('GET /crew/notices');
+      if (request !== generation.current) return;
+      setNotices(data.items);
+      setCursor(data.nextCursor);
+      setMoreFailed(false);
+      setMoreLoading(false);
       setFailed(false);
     } catch {
-      setFailed(true);
+      if (request === generation.current) setFailed(true);
     }
   }, []);
+
+  const loadMore = useCallback(async () => {
+    if (!cursor || pending.current) return;
+    const request = generation.current;
+    pending.current = true;
+    setMoreLoading(true);
+    try {
+      const { data } = await api.get('GET /crew/notices', { cursor });
+      if (request !== generation.current) return;
+      setNotices((items) => {
+        const ids = new Set(items?.map((item) => item.id));
+        return [...(items ?? []), ...data.items.filter((item) => !ids.has(item.id))];
+      });
+      setCursor(data.nextCursor);
+      setMoreFailed(false);
+    } catch {
+      if (request === generation.current) setMoreFailed(true);
+    } finally {
+      if (request === generation.current) { pending.current = false; setMoreLoading(false); }
+    }
+  }, [cursor]);
+
+  useEffect(() => {
+    if (!endReached || processedEnd.current === endReached) return;
+    processedEnd.current = endReached;
+    if (!moreFailed) void loadMore();
+  }, [endReached, loadMore, moreFailed]);
 
   // 작성·삭제하고 돌아오면 첫 페이지부터 다시 받는다
   useFocusEffect(useCallback(() => void load(), [load]));
@@ -75,7 +115,8 @@ export function NoticesPanel({ isLeader, refreshKey }: { isLeader: boolean; refr
           ),
         )
       )}
-      {/* ponytail: nextCursor 로 다음 장 받기는 목이 한 장뿐이라 백엔드 연결 때 붙인다 */}
+      {moreLoading ? <Loading label="공지를 더 불러오고 있어요" /> : null}
+      {moreFailed ? <><Txt>더 불러오지 못했어요.</Txt><Button label="다시 시도" onPress={() => void loadMore()} /></> : null}
     </View>
   );
 }

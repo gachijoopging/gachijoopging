@@ -122,6 +122,9 @@ export default function CrewChatScreen() {
   const socketOpen = useRef(false);
   const receipts = useRef<Receipt[]>([]);
   const disconnectedAt = useRef(0);
+  const gapFrom = useRef<number | null>(null);
+  const gapGeneration = useRef(0);
+  const gapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const alive = useRef(true);
   const initialScrolled = useRef(false);
   const readTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -189,6 +192,7 @@ export default function CrewChatScreen() {
   const fillGap = useCallback(async (from: number) => {
     for (let afterSeq = from; ; ) {
       const { data } = await api.get('GET /crew/chat/messages', { afterSeq, limit: PAGE });
+      if (!alive.current) return;
       update((s) => mergeHistory(s, 'after', data));
       if (!data.hasMore || !data.items.length) return;
       afterSeq = Math.max(...data.items.map((m) => m.seq));
@@ -233,11 +237,26 @@ export default function CrewChatScreen() {
       socket.subscribe(onEvent);
       let wasConnecting = false;
       let opened = false;
+      const recoverGap = (from: number, generation: number, notify: boolean) => {
+        void fillGap(from).then(() => {
+          if (!alive.current || generation !== gapGeneration.current) return;
+          gapFrom.current = null;
+          if (notify) setSnackbar('연결이 복구됐어요.');
+        }).catch(() => {
+          if (!alive.current || generation !== gapGeneration.current) return;
+          setSnackbar('메시지를 다시 불러오고 있어요.');
+          gapTimer.current = setTimeout(() => recoverGap(from, generation, notify), 5000);
+        });
+      };
       socket.onStatus((status) => {
         socketOpen.current = status === 'open';
         if (typeof status === 'object') return void onClosed(status.closed);
         if (status === 'connecting') {
-          if (!wasConnecting) disconnectedAt.current = Date.now();
+          if (!wasConnecting) {
+            disconnectedAt.current = Date.now();
+            gapGeneration.current += 1;
+            if (gapTimer.current) clearTimeout(gapTimer.current);
+          }
           wasConnecting = true;
           dropInFlight();
           setConnected(false);
@@ -248,9 +267,12 @@ export default function CrewChatScreen() {
         const recovered = wasConnecting;
         opened = true;
         wasConnecting = false;
-        if (recovered && !first) setSnackbar('연결이 복구됐어요.');
         // 처음 붙을 때도 이력을 받은 뒤 구독하기 전에 온 메시지를 채운다
-        if (first || recovered) fillGap(resumeSeq(receipts.current, disconnectedAt.current, lastSeqOf(chatRef.current.items))).catch(() => {});
+        if (first || recovered) {
+          const from = resumeSeq(receipts.current, disconnectedAt.current, lastSeqOf(chatRef.current.items));
+          gapFrom.current = Math.min(gapFrom.current ?? from, from);
+          recoverGap(gapFrom.current, gapGeneration.current, recovered && !first);
+        }
         pump();
       });
 
@@ -269,6 +291,8 @@ export default function CrewChatScreen() {
   useEffect(
     () => () => {
       alive.current = false;
+      gapGeneration.current += 1;
+      if (gapTimer.current) clearTimeout(gapTimer.current);
       const current = meRef.current;
       if (current) saveChatSession({ meId: current.author.id, crewId: current.crewId }, chatRef.current, textRef.current);
       if (inFlight.current) clearTimeout(inFlight.current.timer);

@@ -50,24 +50,23 @@ export default function ActiveCrewMembersScreen() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [mapFailed, setMapFailed] = useState(false);
 
+  const { refresh, connected } = useLiveEvents(
+    (event) => setMembers((current) => (current ? applyLiveEvent(current, event) : current)),
+    setMembers,
+  );
   const load = useCallback(async () => {
     setRefreshing(true);
     try {
-      const res = await api.get('GET /crew/live');
-      setMembers(res.data);
+      await refresh();
       setFailed(false);
     } catch {
       setFailed(true);
     } finally {
       setRefreshing(false);
     }
-  }, []);
+  }, [refresh]);
 
   useEffect(() => void load(), [load]);
-  useLiveEvents(
-    (event) => setMembers((current) => (current ? applyLiveEvent(current, event) : current)),
-    () => void api.get('GET /crew/live').then(({ data }) => setMembers(data)).catch(() => {}),
-  );
   useEffect(() => { void api.get('GET /users/me').then(({ data }) => setMeId(data.id)).catch(() => {}); }, []);
 
   const markers = members ? crewMarkers([...members]) : [];
@@ -95,6 +94,7 @@ export default function ActiveCrewMembersScreen() {
   return (
     <Screen scroll refreshControl={<RefreshControl refreshing={refreshing} onRefresh={load} />}>
       {header}
+      {!connected ? <Banner tone="warn">실시간 연결이 끊겼어요. 다시 연결하고 있어요.</Banner> : null}
       {failed ? <Banner tone="warn">인터넷 연결을 확인해 주세요.</Banner> : null}
 
       {members.length === 0 ? (

@@ -12,7 +12,7 @@ jest.mock('expo-router', () => ({
   useLocalSearchParams: () => mockParams,
   useFocusEffect: (fn: () => void) => require('react').useEffect(fn, [fn]),
 }));
-jest.mock('react-native', () => ({ View: 'View', RefreshControl: 'RefreshControl' }));
+jest.mock('react-native', () => ({ View: 'View', ScrollView: 'ScrollView', RefreshControl: 'RefreshControl' }));
 jest.mock('./CalendarPanel', () => ({ CalendarPanel: 'CalendarPanel' }));
 jest.mock('./RecordsPanel', () => ({ RecordsPanel: 'RecordsPanel' }));
 jest.mock('../feed/leave', () => ({ leaveForMembership: jest.fn() }));
@@ -66,4 +66,24 @@ test('크루장만 공지를 쓸 수 있다', async () => {
   await mount(true, { tab: 'notices' });
   act(() => write()[0].props.onPress());
   expect(mockPush).toHaveBeenCalledWith('/crew/notices/edit');
+});
+
+test('목록 끝에서 다음 공지를 받고 실패하면 같은 cursor를 다시 시도한다', async () => {
+  await mount(false, { tab: 'notices' });
+  let attempts = 0;
+  mockGet.mockImplementation((key: string, query?: { cursor?: string }) => {
+    if (key !== 'GET /crew/notices') return Promise.resolve({ data: { unreadNotifications: 0 } });
+    if (!query?.cursor) return Promise.resolve({ data: { ...notices.data, nextCursor: 'next' } });
+    attempts += 1;
+    if (attempts === 1) return Promise.reject(new Error('offline'));
+    return Promise.resolve({ data: { items: [{ ...notices.data.items[1], id: 'n3', title: '이전 공지' }], nextCursor: null } });
+  });
+  const scroll = tree.root.findByType('ScrollView' as never);
+  await act(async () => scroll.props.refreshControl.props.onRefresh());
+  await act(async () => scroll.props.onScroll({ nativeEvent: { contentOffset: { y: 900 }, layoutMeasurement: { height: 100 }, contentSize: { height: 1000 } } }));
+  expect(titles()).toContain('더 불러오지 못했어요.');
+  const retry = tree.root.find((n) => (n.type as unknown) === 'Button' && n.props.label === '다시 시도');
+  await act(async () => retry.props.onPress());
+  expect(titles()).toContain('이전 공지');
+  expect(attempts).toBe(2);
 });

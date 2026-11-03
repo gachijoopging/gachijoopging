@@ -47,10 +47,9 @@ export function mergeHistory(
   };
 }
 
-/** 내가 보낸 메시지의 echo 면 그 자리의 전송 중을 보냄으로 바꾼다 */
 function confirm(state: ChatState, message: ChatMessage): ChatState {
   if (!state.items.some((i) => i.id === message.id && i.status !== 'sent')) return state;
-  return { ...state, items: state.items.map((i) => (i.id === message.id ? toSent(state, message) : i)) };
+  return { ...state, items: insertBySeq(state.items.filter((i) => i.id !== message.id), toSent(state, message)) };
 }
 
 export function receive(state: ChatState, message: ChatMessage): ChatState {
