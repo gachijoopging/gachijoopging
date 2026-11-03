@@ -892,7 +892,7 @@ tail -50 /var/log/gachijoopging-watch.log
 | `FCM_CREDENTIALS` | 백엔드 | 푸시 |
 | `DEMO_SEED_ENABLED` · `DEMO_MEMBER_EMAIL` · `DEMO_MEMBER_PASSWORD` · `DEMO_GUEST_EMAIL` · `DEMO_GUEST_PASSWORD` | 백엔드 | 데모 시드. 스테이징이 없어(ADR-0005) 운영에서 이 플래그로만 켠다. 자세한 것은 §데모 계정 |
 | `AI_BASE_URL` · `AI_SECRET` | 백엔드 | AI 서버. `ai/.env` 의 `NGROK_DOMAIN`·`AI_SECRET` 과 짝이다 — `AI_SECRET` 이 다르면 호출이 전부 401 인데 백엔드가 401 을 `UNAVAILABLE` 로 내려 "AI 서버 다운" 과 구별되지 않는다. 확인 절차는 §AI 서버 연결 |
-| `AGREEMENTS_VERSION` · `TERMS_URL` · `PRIVACY_URL` · `MARKETING_URL` | **아직 없음** | 현재 동의 버전과 공개 전문 URL. 계약(`openapi.yaml` `/agreements`)과 테이블(`user_agreements`)은 있지만 **백엔드가 아직 읽지 않는다** — 동의 API 를 구현할 때 들어온다. 전문 정본은 `docs/legal/`, 버전은 각 문서 머리의 값(지금 `2026-10`). 주소는 `https://www.gachijoopging.site/{terms,privacy,marketing}` 이고 Nginx 가 직접 보낸다 — §약관 전문 |
+| `AGREEMENTS_VERSION` · `TERMS_URL` · `PRIVACY_URL` · `MARKETING_URL` | 백엔드 | 현재 동의 버전과 공개 전문 URL. 넷 중 하나라도 비면 동의 경로(`/agreements` · `/users/me/agreements`)가 503 `UNAVAILABLE` 이고 가입을 마칠 수 없다 — 기동은 한다. 전문 정본은 `docs/legal/`, 버전은 각 문서 머리의 값(지금 `2026-10`). 주소는 `https://www.gachijoopging.site/{terms,privacy,marketing}` 이고 Nginx 가 직접 보낸다 — §약관 전문 |
 
 없어지는 키: `LIVEKIT_*` · `GRAFANA_ADMIN_PASSWORD` · `ADMIN_WEB_TAG` · `POSTGRES_*` ·
 `KAKAO_REST_API_KEY`(auth 를 계약 기준으로 다시 쓰면서 카카오 좌표 조회가 빠졌다).

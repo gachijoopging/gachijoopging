@@ -46,16 +46,9 @@ class OpenApiContractTest extends IntegrationTest {
   // 구현되면 이 표에서 지운다
   private static final Map<String, String> 미구현_연산 =
       Map.ofEntries(
-          Map.entry("DELETE /users/me", "GAC-73"),
-          Map.entry("GET /agreements", "GAC-82"),
-          Map.entry("GET /users/me/agreements", "GAC-82"),
-          Map.entry("PUT /users/me/agreements", "GAC-82"),
-          Map.entry("GET /crew/export", "GAC-97"));
+          Map.entry("DELETE /users/me", "GAC-73"), Map.entry("GET /crew/export", "GAC-97"));
 
-  private static final Map<String, String> 미구현_스키마 =
-      Map.of(
-          "AgreementCatalog", "GAC-82",
-          "Agreements", "GAC-82");
+  private static final Map<String, String> 미구현_스키마 = Map.of();
 
   private static JsonNode 산출물_문서;
 
@@ -107,6 +100,8 @@ class OpenApiContractTest extends IntegrationTest {
   private static final Map<String, String> 모바일_스키마_매핑 =
       Map.ofEntries(
           Map.entry("Activity", "ActivityResponse"),
+          Map.entry("AgreementCatalog", "AgreementCatalogResponse"),
+          Map.entry("Agreements", "AgreementsResponse"),
           Map.entry("ActivityCard", "ActivityCardResponse"),
           Map.entry("ActivitySummary", "ActivitySummaryResponse"),
           Map.entry("Bbox", "BboxResponse"),
