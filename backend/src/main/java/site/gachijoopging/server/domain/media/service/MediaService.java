@@ -24,6 +24,7 @@ import site.gachijoopging.server.domain.media.event.MediaPurgeEvent;
 import site.gachijoopging.server.domain.media.repository.MediaRepository;
 import site.gachijoopging.server.global.error.BusinessException;
 import site.gachijoopging.server.global.error.ErrorCode;
+import site.gachijoopging.server.global.lock.UserLock;
 import site.gachijoopging.server.global.ratelimit.RateLimiter;
 
 @Service
@@ -38,6 +39,7 @@ public class MediaService {
   private final MediaRepository mediaRepository;
   private final ActivityService activityService;
   private final RateLimiter rateLimiter;
+  private final UserLock userLock;
   private final ApplicationEventPublisher events;
   private final Clock clock;
 
@@ -90,6 +92,7 @@ public class MediaService {
       String objectKey,
       String thumbKey,
       NewActivityPhoto photo) {
+    userLock.lock(ownerId);
     mediaRepository.insertIfAbsent(
         mediaId, ownerId, purpose.name(), objectKey, thumbKey, clock.instant());
     Media media =
@@ -139,6 +142,8 @@ public class MediaService {
             row -> {
               keys.add(row.getObjectKey());
               keys.add(row.getThumbKey());
+              mediaRepository.enqueuePurge(row.getObjectKey());
+              mediaRepository.enqueuePurge(row.getThumbKey());
             });
     events.publishEvent(new MediaPurgeEvent(keys));
   }

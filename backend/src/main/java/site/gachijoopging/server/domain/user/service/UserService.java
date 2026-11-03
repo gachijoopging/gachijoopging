@@ -113,6 +113,7 @@ public class UserService implements AccountAuthorityLoader, SessionVersionLoader
 
   @Transactional
   public void linkKakao(UUID userId, String kakaoId) {
+    userLock.lock(userId);
     User me = activeUser(userId);
     if (kakaoId.equals(me.getKakaoId())) {
       return;
@@ -125,6 +126,7 @@ public class UserService implements AccountAuthorityLoader, SessionVersionLoader
 
   @Transactional
   public void linkGoogle(UUID userId, String googleSub) {
+    userLock.lock(userId);
     User me = activeUser(userId);
     if (googleSub.equals(me.getGoogleSub())) {
       return;
@@ -201,6 +203,7 @@ public class UserService implements AccountAuthorityLoader, SessionVersionLoader
 
   @Transactional
   public MeResponse updateMe(UUID userId, MeUpdateRequest request) {
+    userLock.lock(userId);
     User me = activeUser(userId);
     if (request.nickname() != null
         && userRepository.existsByNicknameAndIdNot(request.nickname(), userId)) {
@@ -266,6 +269,7 @@ public class UserService implements AccountAuthorityLoader, SessionVersionLoader
 
   @Transactional
   public void changePassword(UUID userId, String newPassword) {
+    userLock.lock(userId);
     activeUser(userId).changePassword(passwordEncoder.encode(newPassword), clock.instant());
   }
 

@@ -73,6 +73,12 @@ public interface MediaRepository extends JpaRepository<Media, UUID> {
       nativeQuery = true)
   List<KeyRow> deletePersonalOf(@Param("ownerId") UUID ownerId);
 
+  @Modifying
+  @Query(
+      value = "INSERT INTO media_purge_queue (object_key) VALUES (:key) ON CONFLICT DO NOTHING",
+      nativeQuery = true)
+  void enqueuePurge(@Param("key") String key);
+
   interface KeyRow {
     String getObjectKey();
 

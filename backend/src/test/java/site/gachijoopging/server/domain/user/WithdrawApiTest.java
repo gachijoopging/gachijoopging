@@ -19,6 +19,9 @@ import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -29,6 +32,10 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.transaction.support.TransactionTemplate;
+import site.gachijoopging.server.domain.media.entity.MediaPurpose;
+import site.gachijoopging.server.domain.media.event.MediaPurgeListener;
+import site.gachijoopging.server.domain.media.service.MediaService;
+import site.gachijoopging.server.domain.user.service.UserService;
 import site.gachijoopging.server.global.error.BusinessException;
 import site.gachijoopging.server.global.error.ErrorCode;
 import site.gachijoopging.server.global.lock.UserLock;
@@ -42,9 +49,81 @@ class WithdrawApiTest extends IntegrationTest {
   @Autowired private JdbcTemplate jdbcTemplate;
   @Autowired private TransactionTemplate transactionTemplate;
   @Autowired private UserLock userLock;
+  @Autowired private UserService userService;
+  @Autowired private MediaService mediaService;
+  @Autowired private MediaPurgeListener mediaPurgeListener;
 
   @Value("${app.media.root}")
   private Path 업로드_루트;
+
+  @Test
+  void 탈퇴와_겹친_계정_수정과_사진_등록은_탈퇴_뒤_거부된다() throws Exception {
+    TestAccount 나 = 가입한다(mockMvc, "withdraw-race@test.io");
+    CountDownLatch 잠김 = new CountDownLatch(1);
+    CountDownLatch 진행 = new CountDownLatch(1);
+    CompletableFuture<Void> 탈퇴 =
+        CompletableFuture.runAsync(
+            () ->
+                transactionTemplate.executeWithoutResult(
+                    status -> {
+                      userLock.lock(나.id());
+                      userService.withdraw(나.id());
+                      잠김.countDown();
+                      try {
+                        if (!진행.await(10, TimeUnit.SECONDS))
+                          throw new IllegalStateException("timeout");
+                      } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        throw new IllegalStateException(e);
+                      }
+                    }));
+    assertThat(잠김.await(10, TimeUnit.SECONDS)).isTrue();
+    CompletableFuture<Throwable> 수정 =
+        CompletableFuture.supplyAsync(
+            () -> {
+              try {
+                userService.linkKakao(나.id(), "late-kakao");
+                return null;
+              } catch (Throwable e) {
+                return e;
+              }
+            });
+    CompletableFuture<Throwable> 업로드 =
+        CompletableFuture.supplyAsync(
+            () -> {
+              try {
+                mediaService.create(
+                    UUID.randomUUID(), 나.id(), MediaPurpose.PROFILE, "late", "late-t", null);
+                return null;
+              } catch (Throwable e) {
+                return e;
+              }
+            });
+    진행.countDown();
+    탈퇴.get(10, TimeUnit.SECONDS);
+    assertThat(수정.get(10, TimeUnit.SECONDS)).isInstanceOf(BusinessException.class);
+    assertThat(업로드.get(10, TimeUnit.SECONDS)).isInstanceOf(BusinessException.class);
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT status FROM users WHERE id = ?", String.class, 나.id()))
+        .isEqualTo("DELETED");
+    assertThat(개수("SELECT count(*) FROM media WHERE owner_id = ?", 나.id())).isZero();
+  }
+
+  @Test
+  void 파일_삭제가_실패하면_키를_남기고_다시_지운다() throws Exception {
+    String 키 = "withdraw-retry/" + UUID.randomUUID();
+    Path 디렉터리 = 파일(키);
+    Files.createDirectories(디렉터리);
+    Path 자식 = Files.writeString(디렉터리.resolve("child"), "x");
+    jdbcTemplate.update("INSERT INTO media_purge_queue (object_key) VALUES (?)", 키);
+    mediaPurgeListener.purgePending();
+    assertThat(개수("SELECT count(*) FROM media_purge_queue WHERE object_key = ?", 키)).isEqualTo(1);
+    Files.delete(자식);
+    mediaPurgeListener.purgePending();
+    assertThat(디렉터리).doesNotExist();
+    assertThat(개수("SELECT count(*) FROM media_purge_queue WHERE object_key = ?", 키)).isZero();
+  }
 
   @Test
   void 크루원이_탈퇴하면_개인정보와_활동이_지워지고_크루_합산과_게시물_사진은_남는다() throws Exception {

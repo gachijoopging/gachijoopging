@@ -95,6 +95,8 @@ public class AuthService {
             .findByTokenHash(OpaqueToken.hash(rawToken))
             .orElseThrow(() -> reject("모르는 refreshToken"));
 
+    userLock.lock(stored.getUserId());
+
     Instant now = clock.instant();
 
     if (stored.revoked()) {
@@ -151,6 +153,7 @@ public class AuthService {
   }
 
   private TokenPairResponse newSession(UserAccount account) {
+    userLock.lock(account.id());
     return new TokenPairResponse(
         jwtIssuer.issue(account.id()),
         issueRefreshToken(account.id(), UUID.randomUUID(), account.sessionVersion()),

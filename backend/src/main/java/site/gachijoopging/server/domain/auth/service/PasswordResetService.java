@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import site.gachijoopging.server.domain.auth.entity.PasswordResetToken;
 import site.gachijoopging.server.domain.auth.repository.PasswordResetTokenRepository;
 import site.gachijoopging.server.domain.user.service.UserService;
+import site.gachijoopging.server.global.lock.UserLock;
 
 @Service
 @RequiredArgsConstructor
@@ -25,6 +26,7 @@ public class PasswordResetService {
   private final PasswordResetTokenRepository tokenRepository;
   private final UserService userService;
   private final AuthService authService;
+  private final UserLock userLock;
   private final PasswordResetProperties properties;
   private final Clock clock;
 
@@ -47,6 +49,7 @@ public class PasswordResetService {
       return false;
     }
     UUID userId = owner.get();
+    userLock.lock(userId);
     Optional<PasswordResetToken> token =
         tokenRepository.findFirstByUserIdAndUsedAtIsNullAndExpiresAtAfterOrderByIdDesc(userId, now);
     if (token.isEmpty()) {
@@ -65,6 +68,7 @@ public class PasswordResetService {
   }
 
   private String issueFor(UUID userId) {
+    userLock.lock(userId);
     Instant now = clock.instant();
     tokenRepository.expireUnusedByUserId(userId, now);
     String code = "%06d".formatted(RANDOM.nextInt(1_000_000));

@@ -22,6 +22,7 @@ import site.gachijoopging.server.domain.activity.service.ActivityService;
 import site.gachijoopging.server.domain.media.repository.MediaRepository;
 import site.gachijoopging.server.global.error.BusinessException;
 import site.gachijoopging.server.global.error.ErrorCode;
+import site.gachijoopging.server.global.lock.UserLock;
 import site.gachijoopging.server.global.ratelimit.RateLimiter;
 
 @ExtendWith(MockitoExtension.class)
@@ -34,12 +35,14 @@ class MediaServiceTest {
   @Mock private MediaRepository mediaRepository;
   @Mock private ActivityService activityService;
   @Mock private RateLimiter rateLimiter;
+  @Mock private UserLock userLock;
 
   private MediaService mediaService() {
     return new MediaService(
         mediaRepository,
         activityService,
         rateLimiter,
+        userLock,
         event -> {},
         Clock.fixed(NOW, ZoneOffset.UTC));
   }
