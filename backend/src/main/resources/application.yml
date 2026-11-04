@@ -166,6 +166,12 @@ app:
       - 어드민
       - admin
       - 가치줍깅
+  agreements:
+    # 설정 누락으로 동의와 무관한 경로까지 죽지 않게 기본값을 비운다. 버전은 docs/legal/ 머리의 값
+    version: ${AGREEMENTS_VERSION:}
+    terms-url: ${TERMS_URL:}
+    privacy-url: ${PRIVACY_URL:}
+    marketing-url: ${MARKETING_URL:}
   seed:
     demo:
       # 데모 계정·크루를 넣는 러너. 스테이징이 없어(ADR-0005) 운영 서버에서 이 플래그로만 켠다

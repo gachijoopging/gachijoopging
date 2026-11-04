@@ -594,11 +594,12 @@ export interface paths {
                         };
                     };
                 };
+                readonly 503: components["responses"]["Error"];
             };
         };
         /**
          * 동의 저장 — 보낸 항목만 갱신, 같은 내용 재전송은 200
-         * @description version 이 현재 버전과 다르면 422 fields [{ field: items, code: FORMAT }] — 앱은 GET 으로 다시 받아 보인다. 선택 항목은 false 로 철회할 수 있다
+         * @description version 이 현재 버전과 다르면 422 fields [{ field: items, code: FORMAT }] — 앱은 GET 으로 다시 받아 보인다. 선택 항목은 false 로 철회할 수 있다. 필수 항목을 false 로 보내거나 같은 type 을 두 번 보내면 같은 422
          */
         readonly put: {
             readonly parameters: {
@@ -4970,7 +4971,7 @@ export interface components {
          * @description 공통 오류. TOKEN_EXPIRED 401 · INVALID_CREDENTIALS 401 · FORBIDDEN 403 · NO_CREW 403 ·
          *     LEADER_MUST_DELEGATE 403 · EXPELLED_FROM_CREW 403 · NOT_FOUND 404 · CONFLICT 409 · EMAIL_TAKEN 409 · NICKNAME_TAKEN 409 · CREW_NAME_TAKEN 409 · ALREADY_IN_CREW 409 ·
          *     JOIN_REQUEST_PENDING 409 · CREW_FULL 409 ·
-         *     PAYLOAD_TOO_LARGE 413 · VALIDATION 422 · RATE_LIMITED 429 · INTERNAL 500. message 는 개발자용
+         *     PAYLOAD_TOO_LARGE 413 · VALIDATION 422 · RATE_LIMITED 429 · INTERNAL 500 · UNAVAILABLE 503. message 는 개발자용
          */
         readonly Error: {
             headers: {

@@ -29,10 +29,11 @@ class ErrorCodeTest {
     assertThat(ErrorCode.RATE_LIMITED.status()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
     assertThat(ErrorCode.PAYLOAD_TOO_LARGE.status()).isEqualTo(HttpStatus.PAYLOAD_TOO_LARGE);
     assertThat(ErrorCode.INTERNAL.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+    assertThat(ErrorCode.UNAVAILABLE.status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
   }
 
   @Test
-  void 코드는_스무_종뿐이다() {
-    assertThat(ErrorCode.values()).hasSize(20);
+  void 코드는_스물한_종뿐이다() {
+    assertThat(ErrorCode.values()).hasSize(21);
   }
 }
