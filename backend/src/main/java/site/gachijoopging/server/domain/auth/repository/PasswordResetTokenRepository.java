@@ -19,30 +19,26 @@ public interface PasswordResetTokenRepository extends JpaRepository<PasswordRese
   void deleteAllByUserId(@Param("userId") UUID userId);
 
   @Modifying(clearAutomatically = true, flushAutomatically = true)
-  @Query(
-      """
-      UPDATE PasswordResetToken t SET t.usedAt = :now
-      WHERE t.userId = :userId AND t.usedAt IS NULL
-      """)
-  int expireUnusedByUserId(@Param("userId") UUID userId, @Param("now") Instant now);
+  @Query("DELETE FROM PasswordResetToken t WHERE t.id = :id AND t.expiresAt > :now")
+  int consume(@Param("id") Long id, @Param("now") Instant now);
 
   @Modifying(clearAutomatically = true, flushAutomatically = true)
   @Query(
-      """
-      UPDATE PasswordResetToken t SET t.usedAt = :now
-      WHERE t.id = :id AND t.usedAt IS NULL AND t.expiresAt > :now
-      """)
-  int consume(@Param("id") Long id, @Param("now") Instant now);
+      "DELETE FROM PasswordResetToken t WHERE t.id = :id AND t.failedAttempts + 1 >= :maxAttempts")
+  int deleteIfLastAttempt(@Param("id") Long id, @Param("maxAttempts") int maxAttempts);
 
   // 동시에 틀린 요청이 와도 오답 횟수를 놓치면 한도가 뚫린다
   @Modifying(clearAutomatically = true, flushAutomatically = true)
+  @Query("UPDATE PasswordResetToken t SET t.failedAttempts = t.failedAttempts + 1 WHERE t.id = :id")
+  int recordFailure(@Param("id") Long id);
+
+  @Modifying
   @Query(
-      """
-      UPDATE PasswordResetToken t
-      SET t.failedAttempts = t.failedAttempts + 1,
-          t.usedAt = CASE WHEN t.failedAttempts + 1 >= :maxAttempts THEN :now ELSE t.usedAt END
-      WHERE t.id = :id AND t.usedAt IS NULL
-      """)
-  int recordFailure(
-      @Param("id") Long id, @Param("maxAttempts") int maxAttempts, @Param("now") Instant now);
+      value =
+          """
+          DELETE FROM password_reset_tokens WHERE id IN (
+            SELECT id FROM password_reset_tokens WHERE expires_at <= :now LIMIT :limit)
+          """,
+      nativeQuery = true)
+  int deleteExpired(@Param("now") Instant now, @Param("limit") int limit);
 }

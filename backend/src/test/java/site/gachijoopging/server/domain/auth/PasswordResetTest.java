@@ -158,6 +158,7 @@ class PasswordResetTest extends IntegrationTest {
     가입한다("once@test.io");
     String 코드 = 코드를_받는다("once@test.io");
     mockMvc.perform(확인요청("once@test.io", 코드, "newpassword123")).andExpect(status().isNoContent());
+    assertThat(남은_코드("once@test.io")).isZero();
 
     코드_오류다(mockMvc.perform(확인요청("once@test.io", 코드, "another-password")));
   }
@@ -189,6 +190,7 @@ class PasswordResetTest extends IntegrationTest {
     String 옛_코드 = 코드를_받는다("reissue@test.io");
     제한을_비운다();
     String 새_코드 = 코드를_받는다("reissue@test.io");
+    assertThat(남은_코드("reissue@test.io")).isOne();
 
     // 두 코드가 우연히 같으면(백만분의 일) 옛 코드 거부는 확인할 수 없다
     if (!옛_코드.equals(새_코드)) {
@@ -219,6 +221,7 @@ class PasswordResetTest extends IntegrationTest {
     for (int i = 0; i < 5; i++) {
       코드_오류다(mockMvc.perform(확인요청("five@test.io", 다른_코드(코드), "newpassword123")));
     }
+    assertThat(남은_코드("five@test.io")).isZero();
 
     코드_오류다(mockMvc.perform(확인요청("five@test.io", 코드, "newpassword123")));
     mockMvc.perform(로그인("five@test.io", "password123")).andExpect(status().isOk());
@@ -231,6 +234,7 @@ class PasswordResetTest extends IntegrationTest {
     for (int i = 0; i < 4; i++) {
       코드_오류다(mockMvc.perform(확인요청("four@test.io", 다른_코드(코드), "newpassword123")));
     }
+    assertThat(남은_코드("four@test.io")).isOne();
 
     mockMvc.perform(확인요청("four@test.io", 코드, "newpassword123")).andExpect(status().isNoContent());
   }
@@ -320,6 +324,16 @@ class PasswordResetTest extends IntegrationTest {
         .andExpect(jsonPath("$.code").value("VALIDATION"))
         .andExpect(jsonPath("$.fields[0].field").value("code"))
         .andExpect(jsonPath("$.fields[0].code").value("INVALID"));
+  }
+
+  private int 남은_코드(String 이메일) {
+    return jdbcTemplate.queryForObject(
+        """
+        SELECT count(*) FROM password_reset_tokens
+        WHERE user_id = (SELECT id FROM users WHERE email = ?)
+        """,
+        Integer.class,
+        이메일);
   }
 
   private static String 다른_코드(String 코드) {

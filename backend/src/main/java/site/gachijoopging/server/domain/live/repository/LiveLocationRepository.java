@@ -101,6 +101,20 @@ public class LiveLocationRepository {
         .update();
   }
 
+  // 고르는 사이 갱신된 행은 다시 살아난 활동이라 바깥 DELETE 에서도 시각을 다시 본다
+  public int deleteStale(Instant threshold, int limit) {
+    OffsetDateTime before = OffsetDateTime.ofInstant(threshold, ZoneOffset.UTC);
+    return jdbc.sql(
+            """
+            DELETE FROM live_locations
+            WHERE updated_at < :before AND user_id IN (
+              SELECT user_id FROM live_locations WHERE updated_at < :before LIMIT :limit)
+            """)
+        .param("before", before)
+        .param("limit", limit)
+        .update();
+  }
+
   public void delete(UUID userId, UUID activityId) {
     jdbc.sql("DELETE FROM live_locations WHERE user_id = :userId AND activity_id = :activityId")
         .param("userId", userId)

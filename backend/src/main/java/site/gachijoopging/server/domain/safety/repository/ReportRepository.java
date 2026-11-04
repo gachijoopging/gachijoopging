@@ -46,4 +46,14 @@ public interface ReportRepository extends JpaRepository<Report, UUID> {
       @Param("crewId") UUID crewId,
       @Param("targetType") ReportTargetType targetType,
       @Param("targetId") String targetId);
+
+  @Modifying
+  @Query(
+      value =
+          """
+          DELETE FROM reports WHERE id IN (
+            SELECT id FROM reports WHERE status = 'RESOLVED' AND resolved_at < :threshold LIMIT :limit)
+          """,
+      nativeQuery = true)
+  int deleteResolvedBefore(@Param("threshold") Instant threshold, @Param("limit") int limit);
 }

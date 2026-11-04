@@ -84,6 +84,12 @@ class AuthRefreshLogoutTest extends IntegrationTest {
     String 기기B = 로그인한다("two-devices@test.io").get("refreshToken").asText();
 
     mockMvc.perform(logout(기기A)).andExpect(status().isNoContent());
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM refresh_tokens t JOIN users u ON u.id = t.user_id"
+                    + " WHERE u.email = 'two-devices@test.io'",
+                Integer.class))
+        .isOne();
 
     mockMvc.perform(refresh(기기A)).andExpect(status().isUnauthorized());
     mockMvc.perform(refresh(기기B)).andExpect(status().isOk());
