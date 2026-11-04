@@ -12,6 +12,7 @@
 | 스킬 | 언제 쓰나 |
 |---|---|
 | `/create-issue <작업 설명>` | Linear 일감을 만들 때. 중복 검사 후 폴더 오너에게 배정한다 |
+| `/review-pr [번호\|URL ...] [초안만]` | 열린 PR/MR 을 골라 리뷰하고 요약 코멘트를 하나씩 단다. 승인·머지는 하지 않는다 |
 
 Linear 접근은 각자 OAuth 로 붙인다. 연결 방법은 `docs/conventions.md` §Linear 연결.
 
