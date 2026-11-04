@@ -87,6 +87,16 @@ public abstract class IntegrationTest {
     registry.add("app.ai.base-url", () -> "");
   }
 
+  // 설정 누락 503 은 AgreementUnconfiguredTest(슬라이스)가 본다 — 여기서 비우려고 컨텍스트를 하나 더
+  // 띄우면 테스트 Postgres 의 max_connections 를 넘는다
+  @DynamicPropertySource
+  static void agreementProperties(DynamicPropertyRegistry registry) {
+    registry.add("app.agreements.version", () -> "2026-10");
+    registry.add("app.agreements.terms-url", () -> "https://legal.test/terms");
+    registry.add("app.agreements.privacy-url", () -> "https://legal.test/privacy");
+    registry.add("app.agreements.marketing-url", () -> "https://legal.test/marketing");
+  }
+
   public static final String MEDIA_BASE_URL = "https://media.test";
 
   static final Path UPLOAD_ROOT = 임시_업로드_디렉터리();

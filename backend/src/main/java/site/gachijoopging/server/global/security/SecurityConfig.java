@@ -20,6 +20,7 @@ public class SecurityConfig {
   static final String[] OPEN_PATHS = {
     WebConfig.API_BASE_PATH + "/health",
     WebConfig.API_BASE_PATH + "/auth/**",
+    WebConfig.API_BASE_PATH + "/agreements",
     WebSocketConfig.ENDPOINT,
     "/actuator/**"
   };

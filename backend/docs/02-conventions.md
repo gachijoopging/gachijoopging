@@ -174,6 +174,7 @@ JSON 필드명은 openapi.yaml 이 정본이다 — camelCase, 철자 하나도 
   | VALIDATION | 422 | 앱은 재시도 금지 |
   | RATE_LIMITED | 429 | Retry-After 헤더 필수 |
   | INTERNAL | 500 | |
+  | UNAVAILABLE | 503 | 서버 설정이 없어 응답할 수 없음(약관 버전·URL) |
 
   계약에 없는 코드가 enum 에 둘 남아 있다 — `METHOD_NOT_ALLOWED`(405, 프레임워크가 내는 응답)와
   `MEET_FULL`(옛 모임 기능).
