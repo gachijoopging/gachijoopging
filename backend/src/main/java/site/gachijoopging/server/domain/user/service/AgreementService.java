@@ -3,8 +3,10 @@ package site.gachijoopging.server.domain.user.service;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -70,7 +72,13 @@ public class AgreementService {
   @Transactional
   public AgreementsResponse update(UUID me, AgreementsUpdateRequest request) {
     requireConfigured();
+    Set<AgreementType> seen = EnumSet.noneOf(AgreementType.class);
     for (AgreementsUpdateRequest.Item item : request.items()) {
+      // 같은 항목이 두 번 오면 어느 값이 저장됐는지 앱이 알 수 없다
+      if (!seen.add(item.type())) {
+        throw new BusinessException(
+            ErrorCode.VALIDATION, "같은 항목이 두 번 왔다: " + item.type(), ITEMS_FORMAT);
+      }
       if (!item.version().equals(properties.version())) {
         throw new BusinessException(
             ErrorCode.VALIDATION, "현재 동의 버전이 아니다: " + item.version(), ITEMS_FORMAT);

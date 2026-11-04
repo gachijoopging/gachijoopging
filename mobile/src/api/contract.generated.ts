@@ -599,7 +599,7 @@ export interface paths {
         };
         /**
          * 동의 저장 — 보낸 항목만 갱신, 같은 내용 재전송은 200
-         * @description version 이 현재 버전과 다르면 422 fields [{ field: items, code: FORMAT }] — 앱은 GET 으로 다시 받아 보인다. 선택 항목은 false 로 철회할 수 있다. 필수 항목을 false 로 보내면 같은 422
+         * @description version 이 현재 버전과 다르면 422 fields [{ field: items, code: FORMAT }] — 앱은 GET 으로 다시 받아 보인다. 선택 항목은 false 로 철회할 수 있다. 필수 항목을 false 로 보내거나 같은 type 을 두 번 보내면 같은 422
          */
         readonly put: {
             readonly parameters: {

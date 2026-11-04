@@ -116,6 +116,27 @@ class AgreementApiTest extends IntegrationTest {
   }
 
   @Test
+  void 같은_항목이_두_번_오면_422_이고_아무것도_저장하지_않는다() throws Exception {
+    TestAccount 나 = 가입한다(mockMvc, "agree-dup@test.io");
+
+    mockMvc
+        .perform(
+            저장(
+                나,
+                """
+                {"items":[
+                  {"type":"MARKETING","version":"2026-10","agreed":true},
+                  {"type":"MARKETING","version":"2026-10","agreed":false}]}
+                """))
+        .andExpect(status().isUnprocessableEntity())
+        .andExpect(jsonPath("$.code").value("VALIDATION"))
+        .andExpect(jsonPath("$.fields[0].field").value("items"))
+        .andExpect(jsonPath("$.fields[0].code").value("FORMAT"));
+
+    mockMvc.perform(조회(나)).andExpect(jsonPath("$.data.items[2].agreed").value(false));
+  }
+
+  @Test
   void 필수_항목은_PUT_으로_철회할_수_없다() throws Exception {
     TestAccount 나 = 가입한다(mockMvc, "agree-required-off@test.io");
     mockMvc.perform(저장(나, 전부_동의));
