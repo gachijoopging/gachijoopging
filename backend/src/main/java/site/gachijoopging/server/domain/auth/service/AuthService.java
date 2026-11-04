@@ -130,7 +130,7 @@ public class AuthService {
   }
 
   @Transactional
-  public void logout(String rawToken) {
+  public void logout(String rawToken, String pushToken) {
     if (rawToken == null || rawToken.isBlank()) {
       return;
     }
@@ -144,6 +144,9 @@ public class AuthService {
                 throw new BusinessException(ErrorCode.CONFLICT, "진행 중인 활동을 끝낸 뒤 로그아웃할 수 있다");
               }
               token.revoke(clock.instant());
+              if (pushToken != null) {
+                userService.deleteDevice(token.getUserId(), pushToken);
+              }
             });
   }
 

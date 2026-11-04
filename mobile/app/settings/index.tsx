@@ -1,6 +1,7 @@
 // 화면 5-7 · docs/screens/5-7-settings.md
 import Constants from 'expo-constants';
 import { useNetworkState } from 'expo-network';
+import { getDevicePushTokenAsync } from 'expo-notifications';
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 import { Pressable, View } from 'react-native';
@@ -213,7 +214,9 @@ export default function SettingsScreen() {
         return router.dismissTo({ pathname: '/start', params: { flash: '탈퇴가 완료됐어요.' } });
       }
       // 세션 종료 요청이 실패해도 이 기기의 로그아웃은 끝낸다 — 활동·큐는 위에서 이미 비어 있음을 확인했다
-      await api.mutate('POST /auth/logout').catch(() => {});
+      // 토큰을 못 얻어도 로그아웃은 막지 않는다 — 서버는 pushToken 없이도 204 다
+      const pushToken = await getDevicePushTokenAsync().then((t) => String(t.data), () => undefined);
+      await api.mutate('POST /auth/logout', { pushToken }).catch(() => {});
       forgetAccount();
       setModal(null);
       return router.dismissTo('/start');

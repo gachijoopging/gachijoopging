@@ -91,6 +91,7 @@ erDiagram
 | created_at | timestamptz | NOT NULL |
 
 **devices** — `PUT /users/me/devices`. 같은 기기에 다른 계정으로 로그인하면 토큰의 주인이 바뀐다.
+로그아웃에 `pushToken` 이 오면 호출자 소유 행만 지우고, 탈퇴하면 그 사용자의 행을 모두 지운다.
 
 | 컬럼 | 타입 | 제약 |
 |---|---|---|

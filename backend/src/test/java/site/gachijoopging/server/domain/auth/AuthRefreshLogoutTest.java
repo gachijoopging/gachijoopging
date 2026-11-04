@@ -2,6 +2,7 @@ package site.gachijoopging.server.domain.auth;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -95,6 +96,59 @@ class AuthRefreshLogoutTest extends IntegrationTest {
         .andExpect(status().isNoContent());
   }
 
+  @Test
+  void 로그아웃에_푸시토큰을_주면_내_기기_토큰이_지워진다() throws Exception {
+    JsonNode 나 = 가입한다("push-mine@test.io");
+    기기를_등록한다(나, "push-mine");
+
+    mockMvc
+        .perform(logout(나.get("refreshToken").asText(), "push-mine"))
+        .andExpect(status().isNoContent());
+
+    assertThat(기기_주인("push-mine")).isEmpty();
+  }
+
+  @Test
+  void 남의_푸시토큰은_지우지_않는다() throws Exception {
+    JsonNode 남 = 가입한다("push-owner@test.io");
+    기기를_등록한다(남, "push-others");
+    JsonNode 나 = 가입한다("push-thief@test.io");
+
+    mockMvc
+        .perform(logout(나.get("refreshToken").asText(), "push-others"))
+        .andExpect(status().isNoContent());
+
+    assertThat(기기_주인("push-others")).containsExactly("push-owner@test.io");
+  }
+
+  @Test
+  void 푸시토큰_없이도_로그아웃된다() throws Exception {
+    JsonNode 나 = 가입한다("push-none@test.io");
+    기기를_등록한다(나, "push-kept");
+
+    mockMvc.perform(logout(나.get("refreshToken").asText())).andExpect(status().isNoContent());
+
+    mockMvc.perform(refresh(나.get("refreshToken").asText())).andExpect(status().isUnauthorized());
+    assertThat(기기_주인("push-kept")).containsExactly("push-none@test.io");
+  }
+
+  private void 기기를_등록한다(JsonNode 계정, String pushToken) throws Exception {
+    mockMvc
+        .perform(
+            put("/api/v1/users/me/devices")
+                .header("Authorization", "Bearer " + 계정.get("accessToken").asText())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"pushToken\":\"%s\",\"platform\":\"ANDROID\"}".formatted(pushToken)))
+        .andExpect(status().isNoContent());
+  }
+
+  private java.util.List<String> 기기_주인(String pushToken) {
+    return jdbcTemplate.queryForList(
+        "SELECT u.email FROM devices d JOIN users u ON u.id = d.user_id WHERE d.push_token = ?",
+        String.class,
+        pushToken);
+  }
+
   private JsonNode 가입한다(String 이메일) throws Exception {
     return 본문(
         mockMvc
@@ -127,6 +181,13 @@ class AuthRefreshLogoutTest extends IntegrationTest {
     return post("/api/v1/auth/logout")
         .contentType(MediaType.APPLICATION_JSON)
         .content("{\"refreshToken\":\"%s\"}".formatted(token));
+  }
+
+  private org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder logout(
+      String token, String pushToken) {
+    return post("/api/v1/auth/logout")
+        .contentType(MediaType.APPLICATION_JSON)
+        .content("{\"refreshToken\":\"%s\",\"pushToken\":\"%s\"}".formatted(token, pushToken));
   }
 
   private JsonNode 본문(org.springframework.test.web.servlet.ResultActions actions) throws Exception {

@@ -197,6 +197,8 @@ export interface paths {
                 readonly content: {
                     readonly "application/json": {
                         readonly refreshToken?: string;
+                        /** @description 주면 그 기기 토큰을 devices 에서 지운다. 호출자 소유가 아니면 무시한다 */
+                        readonly pushToken?: string;
                     };
                 };
             };

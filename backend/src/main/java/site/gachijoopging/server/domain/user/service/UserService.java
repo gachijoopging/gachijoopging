@@ -232,6 +232,11 @@ public class UserService implements AccountAuthorityLoader, SessionVersionLoader
   }
 
   @Transactional
+  public void deleteDevice(UUID userId, String pushToken) {
+    userRepository.deleteDevice(userId, pushToken);
+  }
+
+  @Transactional
   public void follow(UUID me, UUID userId) {
     userRepository.followIfSameCrew(me, userId, clock.instant());
   }

@@ -73,6 +73,12 @@ public interface UserRepository extends JpaRepository<User, UUID> {
 
   @Modifying
   @Query(
+      value = "DELETE FROM devices WHERE push_token = :pushToken AND user_id = :userId",
+      nativeQuery = true)
+  void deleteDevice(@Param("userId") UUID userId, @Param("pushToken") String pushToken);
+
+  @Modifying
+  @Query(
       value = "DELETE FROM follows WHERE follower_id = :userId OR followee_id = :userId",
       nativeQuery = true)
   void deleteFollowsOf(@Param("userId") UUID userId);

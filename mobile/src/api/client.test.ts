@@ -417,6 +417,15 @@ describe('실 API 클라이언트', () => {
     await expect(getTokens()).resolves.toBeNull();
   });
 
+  test('로그아웃에 푸시 토큰을 주면 refreshToken 과 함께 본문에 싣는다', async () => {
+    const { calls, api } = server((c) => (c.url.endsWith('/auth/login')
+      ? json(200, { data: { accessToken: 'a2', refreshToken: 'r2', isNew: false } })
+      : json(204)));
+    await api.mutate('POST /auth/login', { email: 'a@b.c', password: 'p' });
+    await api.mutate('POST /auth/logout', { pushToken: 'fcm-1' });
+    expect(JSON.parse(calls[1].body as string)).toEqual({ refreshToken: 'r2', pushToken: 'fcm-1' });
+  });
+
   test('refresh 를 기다리는 사이 로그아웃·재로그인했으면 늦게 온 결과가 새 세션을 건드리지 않는다', async () => {
     let answer!: (r: Response) => void;
     const { calls, api } = server((c) => {

@@ -61,7 +61,9 @@ public class AuthController {
   @PostMapping("/logout")
   @ResponseStatus(HttpStatus.NO_CONTENT)
   public void logout(@RequestBody(required = false) LogoutRequest request) {
-    authService.logout(request == null ? null : request.refreshToken());
+    if (request != null) {
+      authService.logout(request.refreshToken(), request.pushToken());
+    }
   }
 
   @PostMapping("/password-reset")

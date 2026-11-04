@@ -21,7 +21,9 @@ jest.mock('expo-image-picker', () => ({ launchImageLibraryAsync: async () => ({ 
 jest.mock('../auth/social', () => ({ PROVIDER_KEY: { kakao: 'KAKAO', google: 'GOOGLE' }, providerToken: (...args: unknown[]) => mockToken(...args) }));
 jest.mock('../auth/usePreventBack', () => ({ usePreventBack: jest.fn() }));
 jest.mock('expo-constants', () => ({ default: { expoConfig: {} } }));
-jest.mock('expo-network', () => ({ useNetworkState: () => ({ isConnected: !mockOffline }) }));
+const mockPushToken = jest.fn(async () => ({ type: 'android', data: 'fcm-1' }));
+jest.mock('expo-notifications', () => ({ getDevicePushTokenAsync: () => mockPushToken() }));
+jest.mock('expo-network',() => ({ useNetworkState: () => ({ isConnected: !mockOffline }) }));
 jest.mock('../activity/store', () => ({ getStored: () => mockStored, loadLastAccount: () => mockStored, loadAccount: jest.fn() }));
 jest.mock('../auth/account', () => ({ currentAccount: () => ({ id: 'u1' }), rememberAccount: (...args: unknown[]) => mockRemember(...args), forgetAccount: () => mockForget() }));
 jest.mock('design-system/src', () => new Proxy({ space: {}, size: {}, borderWidth: {}, radius: {}, useTheme: () => ({ colors: {} }), pressedOpacity: () => 1, useRipple: () => undefined }, { get: (target, key) => key === 'Dialog' ? (props: any) => require('react').createElement('Dialog', props, props.children, props.actions) : key in target ? target[key as keyof typeof target] : String(key) }));
@@ -75,11 +77,20 @@ test('재실행 뒤 복구된 큐가 남으면 로그아웃과 계정 삭제를 
 
 test('로그아웃 요청이 실패해도 사전 검증 완료 후 로컬 계정을 해제한다', async () => {
   mockMutate.mockRejectedValue(new Error('network'));
+  mockPushToken.mockRejectedValueOnce(new Error('no firebase'));
   await mount();
   await act(async () => row('로그아웃').props.onPress());
   await act(async () => button('로그아웃').props.onPress());
   expect(mockForget).toHaveBeenCalledTimes(1);
   expect(mockDismiss).toHaveBeenCalledWith('/start');
+});
+
+test('로그아웃은 이 기기의 푸시 토큰을 실어 보낸다', async () => {
+  mockMutate.mockResolvedValue(undefined);
+  await mount();
+  await act(async () => row('로그아웃').props.onPress());
+  await act(async () => button('로그아웃').props.onPress());
+  expect(mockMutate).toHaveBeenCalledWith('POST /auth/logout', { pushToken: 'fcm-1' });
 });
 
 test('프로필 사진 업로드 응답이 유실돼도 같은 업로드 id로 재시도한다', async () => {
