@@ -33,6 +33,8 @@ public class LiveLocationRepository {
 
   public record ActivityRow(UUID userId, UUID crewId, boolean locationShared) {}
 
+  public record StaleRow(UUID userId, UUID activityId, UUID crewId) {}
+
   public record LiveMemberRow(
       UUID userId,
       String nickname,
@@ -64,8 +66,9 @@ public class LiveLocationRepository {
   }
 
   // 종료와 엇갈린 보고가 끝난 활동의 행을 되살리지 않게 한다. FOR SHARE 가 종료의 FOR UPDATE 커밋을
-  // 기다린 뒤 상태를 다시 판정한다 — 없으면 READ COMMITTED 스냅샷이 진행 중으로 보고 INSERT 한다
-  public int upsertIfInProgress(
+  // 기다린 뒤 상태를 다시 판정한다 — 없으면 READ COMMITTED 스냅샷이 진행 중으로 보고 INSERT 한다.
+  // 진행 중이 아니면 비고, 행을 새로 만들었으면 true 다
+  public Optional<Boolean> upsertIfInProgress(
       UUID activityId,
       LngLat location,
       int distanceM,
@@ -89,6 +92,7 @@ public class LiveLocationRepository {
               point = EXCLUDED.point, paused = EXCLUDED.paused, distance_m = EXCLUDED.distance_m,
               item_count = EXCLUDED.item_count, elapsed_sec = EXCLUDED.elapsed_sec,
               updated_at = EXCLUDED.updated_at
+            RETURNING (xmax = 0) AS inserted
             """)
         .param("activityId", activityId)
         .param("lng", location == null ? null : location.lng())
@@ -98,21 +102,29 @@ public class LiveLocationRepository {
         .param("itemCount", itemCount)
         .param("elapsedSec", elapsedSec)
         .param("now", OffsetDateTime.ofInstant(now, ZoneOffset.UTC))
-        .update();
+        .query(Boolean.class)
+        .optional();
   }
 
   // 고르는 사이 갱신된 행은 다시 살아난 활동이라 바깥 DELETE 에서도 시각을 다시 본다
-  public int deleteStale(Instant threshold, int limit) {
+  public List<StaleRow> deleteStale(Instant threshold, int limit) {
     OffsetDateTime before = OffsetDateTime.ofInstant(threshold, ZoneOffset.UTC);
     return jdbc.sql(
             """
             DELETE FROM live_locations
             WHERE updated_at < :before AND user_id IN (
               SELECT user_id FROM live_locations WHERE updated_at < :before LIMIT :limit)
+            RETURNING user_id, activity_id, crew_id
             """)
         .param("before", before)
         .param("limit", limit)
-        .update();
+        .query(
+            (rs, i) ->
+                new StaleRow(
+                    rs.getObject("user_id", UUID.class),
+                    rs.getObject("activity_id", UUID.class),
+                    rs.getObject("crew_id", UUID.class)))
+        .list();
   }
 
   public void delete(UUID userId, UUID activityId) {

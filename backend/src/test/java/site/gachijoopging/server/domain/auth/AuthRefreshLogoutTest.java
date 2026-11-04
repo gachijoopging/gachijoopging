@@ -8,12 +8,20 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
+import site.gachijoopging.server.domain.auth.service.AuthService;
+import site.gachijoopging.server.global.lock.UserLock;
 import site.gachijoopging.server.support.IntegrationTest;
 import site.gachijoopging.server.support.TestAccounts;
 
@@ -23,6 +31,9 @@ class AuthRefreshLogoutTest extends IntegrationTest {
   @Autowired private MockMvc mockMvc;
   @Autowired private ObjectMapper objectMapper;
   @Autowired private JdbcTemplate jdbcTemplate;
+  @Autowired private AuthService authService;
+  @Autowired private UserLock userLock;
+  @Autowired private PlatformTransactionManager transactionManager;
 
   @Test
   void 회전하면_새_토큰_쌍이_나온다() throws Exception {
@@ -148,6 +159,55 @@ class AuthRefreshLogoutTest extends IntegrationTest {
 
     mockMvc.perform(refresh(나.get("refreshToken").asText())).andExpect(status().isUnauthorized());
     assertThat(기기_주인("push-kept")).containsExactly("push-none@test.io");
+  }
+
+  @Test
+  void 로그아웃이_잠금을_기다리는_사이_회전되면_회전_기록과_기기를_지우지_않는다() throws Exception {
+    JsonNode 나 = 가입한다("logout-race@test.io");
+    String 옛_refresh = 나.get("refreshToken").asText();
+    기기를_등록한다(나, "push-race");
+    UUID 사용자 =
+        jdbcTemplate.queryForObject(
+            "SELECT id FROM users WHERE email = 'logout-race@test.io'", UUID.class);
+    TransactionTemplate tx = new TransactionTemplate(transactionManager);
+    AtomicReference<String> 새_refresh = new AtomicReference<>();
+
+    CompletableFuture<Void> 로그아웃 =
+        tx.execute(
+            status -> {
+              userLock.lock(사용자);
+              CompletableFuture<Void> 대기 =
+                  CompletableFuture.runAsync(() -> authService.logout(옛_refresh, "push-race"));
+              잠금_대기가_생길_때까지_기다린다();
+              새_refresh.set(authService.refresh(옛_refresh).refreshToken());
+              return 대기;
+            });
+    로그아웃.get(5, TimeUnit.SECONDS);
+
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM refresh_tokens WHERE user_id = ? AND revoked_at IS NOT NULL",
+                Integer.class,
+                사용자))
+        .isOne();
+    assertThat(기기_주인("push-race")).containsExactly("logout-race@test.io");
+    mockMvc.perform(refresh(옛_refresh)).andExpect(status().isUnauthorized());
+    mockMvc.perform(refresh(새_refresh.get())).andExpect(status().isUnauthorized());
+  }
+
+  private void 잠금_대기가_생길_때까지_기다린다() {
+    long 기한 = System.currentTimeMillis() + 5_000;
+    while (System.currentTimeMillis() < 기한) {
+      Integer 대기 =
+          jdbcTemplate.queryForObject(
+              "SELECT count(*) FROM pg_locks WHERE locktype = 'advisory' AND NOT granted",
+              Integer.class);
+      if (대기 > 0) {
+        return;
+      }
+      Thread.onSpinWait();
+    }
+    throw new AssertionError("로그아웃이 잠금을 기다리지 않았다");
   }
 
   private void 기기를_등록한다(JsonNode 계정, String pushToken) throws Exception {

@@ -35,6 +35,14 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, Long
   @Modifying(clearAutomatically = true, flushAutomatically = true)
   @Query(
       """
+      DELETE FROM RefreshToken t
+      WHERE t.tokenHash = :tokenHash AND t.revokedAt IS NULL AND t.expiresAt > :now
+      """)
+  int deleteIfActive(@Param("tokenHash") String tokenHash, @Param("now") Instant now);
+
+  @Modifying(clearAutomatically = true, flushAutomatically = true)
+  @Query(
+      """
       UPDATE RefreshToken t SET t.revokedAt = :now
       WHERE t.userId = :userId AND t.revokedAt IS NULL
       """)

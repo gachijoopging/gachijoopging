@@ -19,14 +19,17 @@ public class BatchDelete {
     this.tx.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
   }
 
-  /** {@code deleteUpTo} 는 최대 n 행을 지우고 지운 수를 돌려준다. */
+  /**
+   * {@code deleteUpTo} 는 최대 n 행을 지우고 지운 수를 돌려준다. 고른 행이 동시에 바뀌면 덜 찬 배치도 후보가 남았을 수 있어, 한 행도 못 지울 때까지
+   * 돈다.
+   */
   public int untilDone(IntUnaryOperator deleteUpTo) {
     int total = 0;
     int removed;
     do {
       removed = tx.execute(status -> deleteUpTo.applyAsInt(SIZE));
       total += removed;
-    } while (removed == SIZE);
+    } while (removed > 0);
     return total;
   }
 }

@@ -30,8 +30,15 @@ public class LiveBroadcaster {
     pending.put(userId, new Pending(crewId, activityId, update));
   }
 
-  public void started(UUID crewId, UUID userId, LiveMemberResponse member) {
+  public synchronized void started(UUID crewId, UUID userId, LiveMemberResponse member) {
     send(crewId, userId, "LIVE_STARTED", member);
+  }
+
+  // 정리와 보고 재개가 엇갈려 LIVE_STARTED 가 먼저 나갔으면, 뒤늦은 LIVE_ENDED 가 이어진 활동을 목록에서 지운다
+  public synchronized void endedIfGone(UUID crewId, UUID userId, UUID activityId) {
+    if (!repository.exists(userId, activityId)) {
+      ended(crewId, userId, activityId);
+    }
   }
 
   // 끝난 뒤 묶여 있던 갱신이 나가면 앱 목록에 그 사람이 다시 생긴다

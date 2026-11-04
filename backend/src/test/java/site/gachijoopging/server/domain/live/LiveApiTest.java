@@ -9,7 +9,9 @@ import static site.gachijoopging.server.support.TestAccounts.가입한다;
 
 import com.jayway.jsonpath.JsonPath;
 import java.lang.reflect.Type;
+import java.sql.Timestamp;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
@@ -46,6 +48,7 @@ import org.springframework.web.socket.handler.AbstractWebSocketHandler;
 import org.springframework.web.socket.messaging.WebSocketStompClient;
 import site.gachijoopging.server.domain.live.dto.LiveUpdateResponse;
 import site.gachijoopging.server.domain.live.service.LiveBroadcaster;
+import site.gachijoopging.server.domain.live.service.LiveLocationCleanupJob;
 import site.gachijoopging.server.global.security.SessionVersionLoader;
 import site.gachijoopging.server.global.security.jwt.JwtIssuer;
 import site.gachijoopging.server.global.security.jwt.JwtProperties;
@@ -63,6 +66,8 @@ class LiveApiTest extends IntegrationTest {
   @Autowired private MockMvc mockMvc;
   @Autowired private JdbcTemplate jdbcTemplate;
   @Autowired private LiveBroadcaster broadcaster;
+  @Autowired private LiveLocationCleanupJob liveLocationCleanupJob;
+  @Autowired private Clock clock;
   @Autowired private JwtProperties jwtProperties;
   @Autowired private SessionVersionLoader sessionVersionLoader;
   @Autowired private SimpUserRegistry userRegistry;
@@ -158,6 +163,57 @@ class LiveApiTest extends IntegrationTest {
     받는다(크루원_수신, "LIVE_STARTED");
     받는다(크루원_수신, "LIVE_ENDED");
     받는다(크루원_수신, "LIVE_STARTED");
+    assertThat(크루원_수신.poll(500, TimeUnit.MILLISECONDS)).isNull();
+  }
+
+  @Test
+  void 끊겨_정리된_위치는_LIVE_ENDED_로_빠지고_보고가_이어지면_LIVE_STARTED_로_돌아온다() throws Exception {
+    TestAccount 나 = 크루원이_된다("live-resume@test.io");
+    TestAccount 크루원 = 같은_크루에_넣는다(나, "live-resume-mate@test.io");
+    BlockingQueue<Map<String, Object>> 크루원_수신 = 구독한다(크루원);
+    UUID 활동 = 시작한다(나, true);
+    받는다(크루원_수신, "LIVE_STARTED");
+    mockMvc.perform(활동_중(크루원)).andExpect(jsonPath("$.data.length()").value(1));
+
+    jdbcTemplate.update(
+        "UPDATE live_locations SET updated_at = ? WHERE user_id = ?",
+        Timestamp.from(clock.instant().minus(Duration.ofMinutes(26))),
+        나.id());
+    liveLocationCleanupJob.removeStaleLocations();
+
+    Map<String, Object> 정리 = 받는다(크루원_수신, "LIVE_ENDED");
+    assertThat(JsonPath.<String>read(정리, "$.data.userId")).isEqualTo(나.id().toString());
+    assertThat(JsonPath.<String>read(정리, "$.data.activityId")).isEqualTo(활동.toString());
+    mockMvc.perform(활동_중(크루원)).andExpect(jsonPath("$.data.length()").value(0));
+
+    보고한다(나, 활동, 700, 126.9, 37.5).andExpect(status().isNoContent());
+
+    Map<String, Object> 복귀 = 받는다(크루원_수신, "LIVE_STARTED");
+    assertThat(JsonPath.<String>read(복귀, "$.data.user.id")).isEqualTo(나.id().toString());
+    assertThat(JsonPath.<String>read(복귀, "$.data.activityId")).isEqualTo(활동.toString());
+    assertThat(JsonPath.<Integer>read(복귀, "$.data.distanceM")).isEqualTo(700);
+    assertThat(JsonPath.<Double>read(복귀, "$.data.location.lng")).isEqualTo(126.9);
+    mockMvc
+        .perform(활동_중(크루원))
+        .andExpect(jsonPath("$.data.length()").value(1))
+        .andExpect(jsonPath("$.data[0].distanceM").value(700));
+    broadcaster.flush();
+    assertThat(크루원_수신.poll(500, TimeUnit.MILLISECONDS)).isNull();
+  }
+
+  @Test
+  void 정리와_엇갈려_보고가_먼저_행을_되살렸으면_LIVE_ENDED_를_보내지_않는다() throws Exception {
+    TestAccount 나 = 크루원이_된다("live-resume-race@test.io");
+    TestAccount 크루원 = 같은_크루에_넣는다(나, "live-resume-race-mate@test.io");
+    BlockingQueue<Map<String, Object>> 크루원_수신 = 구독한다(크루원);
+    UUID 활동 = 시작한다(나, true);
+    받는다(크루원_수신, "LIVE_STARTED");
+    UUID 크루 =
+        jdbcTemplate.queryForObject(
+            "SELECT crew_id FROM crew_members WHERE user_id = ?", UUID.class, 나.id());
+
+    broadcaster.endedIfGone(크루, 나.id(), 활동);
+
     assertThat(크루원_수신.poll(500, TimeUnit.MILLISECONDS)).isNull();
   }
 

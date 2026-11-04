@@ -411,7 +411,7 @@ meets · meet_members · meet_invites · meet_join_requests · friendships · ne
 | `refresh_tokens` | 매일 04:00 KST | 만료된 행 삭제 (`RefreshTokenCleanupJob`) | 있음 |
 | 삭제된 콘텐츠의 사진 | 삭제 커밋 뒤 | 스토리지에서 `deleted/` 경로로 옮긴다 (`MediaQuarantineListener`) | 활동 삭제(GAC-88)·게시물 삭제(GAC-91)가 발행한다. 나머지 도메인은 삭제를 만들 때 발행한다 |
 | `live_locations` | 활동 종료 때 | 그 사람의 행 삭제 | 있음 — 종료 트랜잭션 안에서 `LiveService.ended` |
-| 종료 없이 끊긴 `live_locations` | 5분마다 | `updated_at` 이 25분 넘게 지난 행 삭제 — 늦어도 30분 안에 지워진다. 활동이 이어지면 다음 갱신이 행을 다시 만든다. 활동이 끝난 게 아니라 `LIVE_ENDED` 는 보내지 않는다 (`LiveLocationCleanupJob`) | 있음 |
+| 종료 없이 끊긴 `live_locations` | 5분마다 | `updated_at` 이 25분 넘게 지난 행 삭제 — 늦어도 30분 안에 지워진다. 지운 행은 `LIVE_ENDED` 로 알리고, 활동이 이어지면 다음 갱신이 행을 다시 만들며 `LIVE_STARTED` 로 알린다 (`LiveLocationCleanupJob`) | 있음 |
 | `password_reset_tokens` | 사용·폐기 때 · 매일 04:00 KST | 사용·재발급·오답 한도로 폐기되는 행은 그때 삭제, 쓰지 않고 만료된 행은 매일 삭제 (`PasswordResetTokenCleanupJob`) | 있음 |
 | 처리 끝난 `reports` | 매일 04:00 KST | `resolved_at` 이 364일 지난 행 삭제 — 늦어도 1년 안에 지워진다 (`ReportCleanupJob`) | 있음 |
 | `deleted_at` 이 찍힌 콘텐츠 행 (`activities`·`posts`·`comments`·`notices`·`chat_messages`) | 매일 04:00 KST | `deleted_at` 이 29일 지난 행과 그 행에 딸린 행(댓글·좋아요·사진 연결 등)을 물리 삭제. 사진 파일은 `deleted/` 에서 함께 지운다 | 구현 전 |

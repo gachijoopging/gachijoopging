@@ -144,18 +144,18 @@ public class AuthService {
                 throw new BusinessException(ErrorCode.CONFLICT, "진행 중인 활동을 끝낸 뒤 로그아웃할 수 있다");
               }
               // 폐기·만료된 옛 refreshToken 이 재로그인 뒤 등록한 기기 행을 지우지 못하게, 살아 있는 세션만 지운다.
-              // 회전돼 폐기된 행은 재사용 탐지에 쓰여 만료 정리까지 남긴다
-              boolean live =
-                  !token.revoked()
-                      && !token.expiredAt(clock.instant())
-                      && userService
-                          .sessionVersionOf(token.getUserId())
-                          .filter(v -> v == token.getSessionVersion())
-                          .isPresent();
-              if (!live) {
+              // 회전돼 폐기된 행은 재사용 탐지에 쓰여 만료 정리까지 남긴다. 잠금을 기다리는 사이 refresh 가
+              // 회전했을 수 있어 잠금 전에 읽은 상태가 아니라 DB 조건으로 지운다
+              boolean sameSession =
+                  userService
+                      .sessionVersionOf(token.getUserId())
+                      .filter(v -> v == token.getSessionVersion())
+                      .isPresent();
+              if (!sameSession
+                  || refreshTokenRepository.deleteIfActive(token.getTokenHash(), clock.instant())
+                      == 0) {
                 return;
               }
-              refreshTokenRepository.delete(token);
               if (pushToken != null) {
                 userService.deleteDevice(token.getUserId(), pushToken);
               }
