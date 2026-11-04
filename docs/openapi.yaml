@@ -142,7 +142,9 @@ paths:
           application/json:
             schema:
               type: object
-              properties: { refreshToken: { type: string } }
+              properties:
+                refreshToken: { type: string }
+                pushToken: { type: string, description: 주면 그 기기 토큰을 devices 에서 지운다. 호출자 소유가 아니면 무시한다 }
       responses:
         '204': { description: 완료 }
         '409': { $ref: '#/components/responses/Error' }

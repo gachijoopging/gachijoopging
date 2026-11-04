@@ -42,7 +42,7 @@ public final class AuthDtos {
 
   public record RefreshRequest(@NotBlank String refreshToken) {}
 
-  public record LogoutRequest(String refreshToken) {}
+  public record LogoutRequest(String refreshToken, String pushToken) {}
 
   public record PasswordResetRequest(@NotBlank @Email String email) {}
 
