@@ -122,6 +122,18 @@ class AuthRefreshLogoutTest extends IntegrationTest {
   }
 
   @Test
+  void 회전된_옛_refreshToken_으로는_지금_기기_토큰을_지우지_않는다() throws Exception {
+    JsonNode 나 = 가입한다("push-stale@test.io");
+    String 옛_refresh = 나.get("refreshToken").asText();
+    JsonNode 새_세션 = 본문(mockMvc.perform(refresh(옛_refresh)).andExpect(status().isOk()));
+    기기를_등록한다(새_세션, "push-current");
+
+    mockMvc.perform(logout(옛_refresh, "push-current")).andExpect(status().isNoContent());
+
+    assertThat(기기_주인("push-current")).containsExactly("push-stale@test.io");
+  }
+
+  @Test
   void 푸시토큰_없이도_로그아웃된다() throws Exception {
     JsonNode 나 = 가입한다("push-none@test.io");
     기기를_등록한다(나, "push-kept");

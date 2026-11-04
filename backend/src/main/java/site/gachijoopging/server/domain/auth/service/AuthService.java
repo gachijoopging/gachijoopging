@@ -143,8 +143,17 @@ public class AuthService {
               if (activityService.hasInProgress(token.getUserId())) {
                 throw new BusinessException(ErrorCode.CONFLICT, "진행 중인 활동을 끝낸 뒤 로그아웃할 수 있다");
               }
-              token.revoke(clock.instant());
-              if (pushToken != null) {
+              Instant now = clock.instant();
+              // 폐기·만료된 옛 refreshToken 이 재로그인 뒤 등록한 기기 행을 지우지 못하게, 살아 있는 세션만 기기를 지운다
+              boolean live =
+                  !token.revoked()
+                      && !token.expiredAt(now)
+                      && userService
+                          .sessionVersionOf(token.getUserId())
+                          .filter(v -> v == token.getSessionVersion())
+                          .isPresent();
+              token.revoke(now);
+              if (live && pushToken != null) {
                 userService.deleteDevice(token.getUserId(), pushToken);
               }
             });
