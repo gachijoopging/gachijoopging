@@ -50,7 +50,7 @@ class LiveLocationCleanupJobTest extends IntegrationTest {
     assertThat(남아_있나(사용자)).isTrue();
   }
 
-  // 리뷰 재현: 배치 크기 1, 오래된 행 둘. 먼저 고를 행이 고르는 사이 갱신돼도 다음 후보를 지워야 한다
+  // 배치 크기 1, 오래된 행 둘. 먼저 고를 행이 고르는 사이 갱신돼도 다음 후보를 지워야 한다
   @Test
   void 고른_후보가_동시에_갱신되면_다음_오래된_행을_지운다() throws Exception {
     liveLocationCleanupJob.removeStaleLocations();

@@ -3,6 +3,7 @@ package site.gachijoopging.server.domain.live;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -38,5 +39,29 @@ class LiveLocationCleanupBatchFailureTest {
     assertThatThrownBy(job::removeStaleLocations).hasMessage("DB 장애");
 
     verify(broadcaster).endedIfGone(지운_행.crewId(), 지운_행.userId(), 지운_행.activityId());
+  }
+
+  @Test
+  void 한_행의_종료_알림이_실패해도_나머지_행은_알린다() {
+    LiveLocationRepository repository = mock(LiveLocationRepository.class);
+    LiveBroadcaster broadcaster = mock(LiveBroadcaster.class);
+    StaleRow 실패할_행 = new StaleRow(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID());
+    StaleRow 다음_행 = new StaleRow(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID());
+    when(repository.deleteStale(any(), anyInt()))
+        .thenReturn(List.of(실패할_행, 다음_행))
+        .thenReturn(List.of());
+    doThrow(new IllegalStateException("DB 장애"))
+        .when(broadcaster)
+        .endedIfGone(실패할_행.crewId(), 실패할_행.userId(), 실패할_행.activityId());
+    var job =
+        new LiveLocationCleanupJob(
+            repository,
+            broadcaster,
+            new BatchDelete(mock(PlatformTransactionManager.class)),
+            Clock.systemUTC());
+
+    job.removeStaleLocations();
+
+    verify(broadcaster).endedIfGone(다음_행.crewId(), 다음_행.userId(), 다음_행.activityId());
   }
 }

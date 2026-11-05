@@ -8,7 +8,6 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import site.gachijoopging.server.domain.live.dto.LiveEndedResponse;
-import site.gachijoopging.server.domain.live.dto.LiveMemberResponse;
 import site.gachijoopging.server.domain.live.dto.LiveUpdateResponse;
 import site.gachijoopging.server.domain.live.repository.LiveLocationRepository;
 import site.gachijoopging.server.global.websocket.SocketMessage;
@@ -24,14 +23,16 @@ public class LiveBroadcaster {
 
   private final LiveLocationRepository repository;
   private final SimpMessagingTemplate messaging;
+  private final LiveService liveService;
   private final Map<UUID, Pending> pending = new ConcurrentHashMap<>();
 
   public void update(UUID crewId, UUID userId, UUID activityId, LiveUpdateResponse update) {
     pending.put(userId, new Pending(crewId, activityId, update));
   }
 
-  public synchronized void started(UUID crewId, UUID userId, LiveMemberResponse member) {
-    send(crewId, userId, "LIVE_STARTED", member);
+  // 조회를 잠금 밖에서 하면, 조회 뒤 커밋된 종료의 LIVE_ENDED 가 먼저 나가고 끝난 활동이 목록에 되살아난다
+  public synchronized void started(UUID crewId, UUID userId) {
+    liveService.member(userId).ifPresent(member -> send(crewId, userId, "LIVE_STARTED", member));
   }
 
   // 정리와 보고 재개가 엇갈려 LIVE_STARTED 가 먼저 나갔으면, 뒤늦은 LIVE_ENDED 가 이어진 활동을 목록에서 지운다

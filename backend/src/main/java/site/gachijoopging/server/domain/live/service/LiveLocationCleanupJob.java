@@ -41,7 +41,14 @@ public class LiveLocationCleanupJob {
             return rows.size();
           });
     } finally {
-      removed.forEach(r -> broadcaster.endedIfGone(r.crewId(), r.userId(), r.activityId()));
+      // 지운 행은 다음 정리에서 다시 못 찾으므로, 한 행의 알림이 실패해도 나머지는 보낸다
+      for (StaleRow r : removed) {
+        try {
+          broadcaster.endedIfGone(r.crewId(), r.userId(), r.activityId());
+        } catch (RuntimeException e) {
+          log.warn("정리한 실시간 위치의 종료 알림 실패 — activityId={}", r.activityId(), e);
+        }
+      }
     }
     if (!removed.isEmpty()) {
       log.info("갱신이 끊긴 실시간 위치 정리 — {}행", removed.size());
