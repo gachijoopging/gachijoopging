@@ -1,5 +1,6 @@
 package site.gachijoopging.server.domain.live.event;
 
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
@@ -17,9 +18,12 @@ public class LiveEventListener {
 
   @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
   public void onStarted(LiveStartedEvent event) {
-    liveService
-        .member(event.userId())
-        .ifPresent(member -> broadcaster.started(event.crewId(), event.userId(), member));
+    started(event.crewId(), event.userId());
+  }
+
+  @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+  public void onResumed(LiveResumedEvent event) {
+    started(event.crewId(), event.userId());
   }
 
   @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
@@ -30,5 +34,9 @@ public class LiveEventListener {
   @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
   public void onEnded(LiveEndedEvent event) {
     broadcaster.ended(event.crewId(), event.userId(), event.activityId());
+  }
+
+  private void started(UUID crewId, UUID userId) {
+    liveService.member(userId).ifPresent(member -> broadcaster.started(crewId, userId, member));
   }
 }

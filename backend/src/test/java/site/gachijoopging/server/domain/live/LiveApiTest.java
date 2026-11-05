@@ -33,6 +33,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.messaging.converter.MappingJackson2MessageConverter;
+import org.springframework.messaging.simp.broker.SimpleBrokerMessageHandler;
 import org.springframework.messaging.simp.stomp.StompFrameHandler;
 import org.springframework.messaging.simp.stomp.StompHeaders;
 import org.springframework.messaging.simp.stomp.StompSession;
@@ -71,6 +72,7 @@ class LiveApiTest extends IntegrationTest {
   @Autowired private JwtProperties jwtProperties;
   @Autowired private SessionVersionLoader sessionVersionLoader;
   @Autowired private SimpUserRegistry userRegistry;
+  @Autowired private SimpleBrokerMessageHandler simpleBroker;
 
   private final WebSocketStompClient stompClient = stompClient();
   private final List<StompSession> sessions = new ArrayList<>();
@@ -199,6 +201,13 @@ class LiveApiTest extends IntegrationTest {
         .andExpect(jsonPath("$.data[0].distanceM").value(700));
     broadcaster.flush();
     assertThat(크루원_수신.poll(500, TimeUnit.MILLISECONDS)).isNull();
+  }
+
+  // 발송 스레드 풀이 순서를 섞으면 정리의 LIVE_ENDED 가 복귀의 LIVE_STARTED 뒤에 도착해 목록에서 지운다.
+  // 역전은 드물어 메시지를 많이 보내도 재현되지 않아, 순서를 지키는 설정을 직접 본다
+  @Test
+  void 브로커는_세션마다_보낸_순서대로_전달한다() {
+    assertThat(simpleBroker.isPreservePublishOrder()).isTrue();
   }
 
   @Test

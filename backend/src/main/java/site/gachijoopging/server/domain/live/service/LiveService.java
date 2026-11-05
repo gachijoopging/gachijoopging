@@ -16,11 +16,13 @@ import site.gachijoopging.server.domain.live.dto.LiveUpdateResponse;
 import site.gachijoopging.server.domain.live.dto.LngLat;
 import site.gachijoopging.server.domain.live.dto.ReportLiveRequest;
 import site.gachijoopging.server.domain.live.event.LiveEndedEvent;
+import site.gachijoopging.server.domain.live.event.LiveResumedEvent;
 import site.gachijoopging.server.domain.live.event.LiveStartedEvent;
 import site.gachijoopging.server.domain.live.event.LiveUpdatedEvent;
 import site.gachijoopging.server.domain.live.repository.LiveLocationRepository;
 import site.gachijoopging.server.domain.live.repository.LiveLocationRepository.ActivityRow;
 import site.gachijoopging.server.domain.live.repository.LiveLocationRepository.LiveMemberRow;
+import site.gachijoopging.server.domain.live.repository.LiveLocationRepository.Upsert;
 import site.gachijoopging.server.domain.media.service.MediaSignedUrl;
 import site.gachijoopging.server.global.error.BusinessException;
 import site.gachijoopging.server.global.error.ErrorCode;
@@ -52,7 +54,7 @@ public class LiveService {
       throw new BusinessException(ErrorCode.FORBIDDEN, "남의 활동이다");
     }
     LngLat location = activity.locationShared() ? request.location() : null;
-    Optional<Boolean> inserted =
+    Upsert result =
         repository.upsertIfInProgress(
             activityId,
             location,
@@ -61,13 +63,17 @@ public class LiveService {
             request.elapsedSec(),
             request.paused(),
             clock.instant());
-    if (inserted.isEmpty()) {
-      return;
-    }
-    // 갱신이 끊겨 정리된 뒤 이어진 보고다. 목록에서 빠진 사람은 LIVE_UPDATE 로는 되돌아오지 않는다
-    if (inserted.get()) {
-      events.publishEvent(new LiveStartedEvent(activity.crewId(), me, activityId));
-      return;
+    switch (result) {
+      case NOT_IN_PROGRESS -> {
+        return;
+      }
+        // 갱신이 끊겨 정리된 뒤 이어진 보고다. 목록에서 빠진 사람은 LIVE_UPDATE 로는 되돌아오지 않는다.
+        // 시작이 아니라서 팔로워에게 활동 시작 알림을 다시 보내지 않는다
+      case INSERTED -> {
+        events.publishEvent(new LiveResumedEvent(activity.crewId(), me, activityId));
+        return;
+      }
+      case UPDATED -> {}
     }
     events.publishEvent(
         new LiveUpdatedEvent(

@@ -31,13 +31,18 @@ public class LiveLocationCleanupJob {
   public int removeStaleLocations() {
     var threshold = clock.instant().minus(STALE_AFTER);
     List<StaleRow> removed = new ArrayList<>();
-    batchDelete.untilDone(
-        n -> {
-          List<StaleRow> rows = liveLocationRepository.deleteStale(threshold, n);
-          removed.addAll(rows);
-          return rows.size();
-        });
-    removed.forEach(r -> broadcaster.endedIfGone(r.crewId(), r.userId(), r.activityId()));
+    // 배치마다 따로 커밋하므로, 뒤 배치가 실패해도 앞서 지운 행은 알린다. 실패한 배치의 행은 롤백돼
+    // 남아 있어 endedIfGone 이 거른다
+    try {
+      batchDelete.untilDone(
+          n -> {
+            List<StaleRow> rows = liveLocationRepository.deleteStale(threshold, n);
+            removed.addAll(rows);
+            return rows.size();
+          });
+    } finally {
+      removed.forEach(r -> broadcaster.endedIfGone(r.crewId(), r.userId(), r.activityId()));
+    }
     if (!removed.isEmpty()) {
       log.info("갱신이 끊긴 실시간 위치 정리 — {}행", removed.size());
     }

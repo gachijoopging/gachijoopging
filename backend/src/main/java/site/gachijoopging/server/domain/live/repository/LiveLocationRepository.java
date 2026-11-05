@@ -35,6 +35,12 @@ public class LiveLocationRepository {
 
   public record StaleRow(UUID userId, UUID activityId, UUID crewId) {}
 
+  public enum Upsert {
+    NOT_IN_PROGRESS,
+    INSERTED,
+    UPDATED
+  }
+
   public record LiveMemberRow(
       UUID userId,
       String nickname,
@@ -66,9 +72,8 @@ public class LiveLocationRepository {
   }
 
   // 종료와 엇갈린 보고가 끝난 활동의 행을 되살리지 않게 한다. FOR SHARE 가 종료의 FOR UPDATE 커밋을
-  // 기다린 뒤 상태를 다시 판정한다 — 없으면 READ COMMITTED 스냅샷이 진행 중으로 보고 INSERT 한다.
-  // 진행 중이 아니면 비고, 행을 새로 만들었으면 true 다
-  public Optional<Boolean> upsertIfInProgress(
+  // 기다린 뒤 상태를 다시 판정한다 — 없으면 READ COMMITTED 스냅샷이 진행 중으로 보고 INSERT 한다
+  public Upsert upsertIfInProgress(
       UUID activityId,
       LngLat location,
       int distanceM,
@@ -103,17 +108,21 @@ public class LiveLocationRepository {
         .param("elapsedSec", elapsedSec)
         .param("now", OffsetDateTime.ofInstant(now, ZoneOffset.UTC))
         .query(Boolean.class)
-        .optional();
+        .optional()
+        .map(inserted -> inserted ? Upsert.INSERTED : Upsert.UPDATED)
+        .orElse(Upsert.NOT_IN_PROGRESS);
   }
 
-  // 고르는 사이 갱신된 행은 다시 살아난 활동이라 바깥 DELETE 에서도 시각을 다시 본다
+  // 후보를 잠근 채 시각을 다시 본다. 잠그지 않으면 고른 행이 모두 동시에 갱신됐을 때 0행을 지우고,
+  // 뒤에 오래된 행이 남았는데도 BatchDelete 가 멈춘다. 잠그면 0행은 후보가 바닥났다는 뜻이다
   public List<StaleRow> deleteStale(Instant threshold, int limit) {
     OffsetDateTime before = OffsetDateTime.ofInstant(threshold, ZoneOffset.UTC);
     return jdbc.sql(
             """
             DELETE FROM live_locations
             WHERE updated_at < :before AND user_id IN (
-              SELECT user_id FROM live_locations WHERE updated_at < :before LIMIT :limit)
+              SELECT user_id FROM live_locations WHERE updated_at < :before
+              ORDER BY updated_at LIMIT :limit FOR UPDATE)
             RETURNING user_id, activity_id, crew_id
             """)
         .param("before", before)
