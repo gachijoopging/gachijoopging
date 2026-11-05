@@ -26,6 +26,7 @@ preview.html
 *.keystore
 *.pem
 local.properties
+mobile/google-services.json
 
 # OS
 .DS_Store

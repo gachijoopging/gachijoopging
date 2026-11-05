@@ -702,6 +702,61 @@ cd ai && uv run --no-project --with requests --with pillow python scripts/smoke.
 `AI_BASE_URL` 이 **비어 있어도** 같은 폴백이 돈다 — 백엔드가 아예 호출하지 않는다. 그래서 주소를
 모르는 동안에도 배포가 막히지 않는다.
 
+## 푸시
+
+Firebase 프로젝트 `gachi-joopging`, Android 패키지 `site.gachijoopging.app`. 서버는 서비스 계정 키
+(`FCM_CREDENTIALS`)로 보내고, 앱은 `google-services.json` 으로 받는다. **둘 다 커밋하지 않는다.**
+
+`FCM_CREDENTIALS` 가 비어 있거나 잘못돼도 백엔드는 기동한다. 알림 목록에는 남고 푸시만 빠진다
+(`application.yml` `app.fcm`). 그래서 **기동했다고 자격이 맞는 것이 아니다** — 아래 ③ 으로 본다.
+
+### 서버 자격 넣기
+
+1. Firebase 콘솔 → 프로젝트 설정 → 서비스 계정 → **새 비공개 키 생성**. JSON 파일 하나가 받아진다
+2. 그 JSON 을 **한 줄로** `infra/.env` 의 `FCM_CREDENTIALS=` 에 넣는다. 값은 파일 경로가 아니라 JSON 본문이다.
+   손으로 붙여 넣지 않는다 — 여러 줄 JSON 이 그대로 들어가면 첫 줄 `{` 만 값이 된다
+
+   ```powershell
+   # 저장소 루트에서. 있는 줄은 바꾸고 없으면 붙인다. LF 로 쓴다
+   node -e "const fs=require('fs'),f='infra/.env',v='FCM_CREDENTIALS='+JSON.stringify(JSON.parse(fs.readFileSync(process.argv[1],'utf8'))),t=fs.readFileSync(f,'utf8'),re=/^FCM_CREDENTIALS=.*$/m;fs.writeFileSync(f,re.test(t)?t.replace(re,()=>v):t+v+'\n')" "<받은 키>.json"
+   ```
+
+3. `dev-env.ps1` 로 올리고 컨테이너를 다시 만든다(§서버 `.env` 를 올릴 때). 받은 JSON 파일은 지운다
+
+### 확인
+
+```sh
+# ① 백엔드가 자격을 읽었나. 아무것도 안 나와야 한다
+docker compose logs backend | grep 'FCM 자격'
+
+# ② ③ 은 로컬(Git Bash)에서. 스크립트가 서버의 .env 에서 자격을 읽는다 — 값이 명령줄에 오지 않는다
+ssh <서버> sh -s < infra/fcm-check.sh                  # ② 토픽 fcm-check 로. 구독자가 없어 아무도 안 받는다
+ssh <서버> sh -s -- <기기 토큰> < infra/fcm-check.sh    # ③ 그 기기로
+#   {"name": "projects/gachi-joopging/messages/..."}
+#   HTTP 200
+```
+
+②가 200 이면 자격이 살아 있다. 백엔드를 거치지 않으므로, 여기는 200 인데 앱에 안 오면 백엔드·앱 쪽이다.
+
+| 응답 | 뜻 |
+|---|---|
+| `토큰 교환 실패: invalid_grant` | 키가 지워졌거나(콘솔에서 회전) JSON 이 깨졌다 |
+| 403 `PERMISSION_DENIED` | 다른 프로젝트의 키다 |
+| 400 `INVALID_ARGUMENT` · 404 `UNREGISTERED` | 기기 토큰이 틀렸거나 앱이 지워졌다. 자격은 맞다 |
+
+### `google-services.json` (앱)
+
+비밀값은 아니지만 커밋하지 않는다(`.gitignore`). Firebase 콘솔 → 프로젝트 설정 → 내 앱 → Android 에서 받거나
+팀 채널로 받아 **`mobile/google-services.json`** 에 둔다.
+
+`mobile/android/app/` 에 두지 않는다. `android/` 는 `prebuild --clean` 이 지우고 다시 만든다.
+`app.json` 의 `android.googleServicesFile: "./google-services.json"` 이 이 파일을 prebuild 때 그 자리로
+복사한다 — 이 설정은 앱 쪽 FCM 연결(GAC-123)에서 들어간다.
+
+### 회전
+
+콘솔 → 서비스 계정 → 키 관리에서 새 키를 만들어 위 1~3 을 하고, ② 가 200 인 것을 본 **뒤에** 옛 키를 지운다.
+
 ## 감시
 
 헬스체크와 바깥에서 찌르는 것, 둘을 함께 쓴다. 서버가 통째로 꺼지면 자기 자신에게 묻는 헬스체크도 같이
@@ -897,7 +952,7 @@ tail -50 /var/log/gachijoopging-watch.log
 없어지는 키: `LIVEKIT_*` · `GRAFANA_ADMIN_PASSWORD` · `ADMIN_WEB_TAG` · `POSTGRES_*` ·
 `KAKAO_REST_API_KEY`(auth 를 계약 기준으로 다시 쓰면서 카카오 좌표 조회가 빠졌다).
 
-푸시(FCM)는 Firebase 프로젝트 `gachi-joopging`, Android 패키지 `site.gachijoopging.app` 으로 등록돼 있다. `google-services.json` 은 Firebase 콘솔에서 내려받는다.
+푸시(FCM) 자격을 넣는 법과 `google-services.json` 은 §푸시.
 
 `.env` 를 고칠 때는 **바이너리로 다룬다.** PEM 값에 CR 이 섞이면 docker compose 는 통과시키고 Spring 만 `Missing key encoding` 으로 죽는다. Windows 편집기로 열지 않고 `infra/dev-env.ps1` 로 올린다(§시크릿).
 
