@@ -704,7 +704,7 @@ cd ai && uv run --no-project --with requests --with pillow python scripts/smoke.
 
 ## 푸시
 
-Firebase 프로젝트 `gachi-joopging`, Android 패키지 `site.gachijoopging.app`. 서버는 서비스 계정 키
+Firebase 프로젝트 `gachi-joopging-b9518`(표시 이름 gachi-joopging · 팀 계정 joopginggachi@gmail.com), Android 패키지 `site.gachijoopging.app`. 서버는 서비스 계정 키
 (`FCM_CREDENTIALS`)로 보내고, 앱은 `google-services.json` 으로 받는다. **둘 다 커밋하지 않는다.**
 
 `FCM_CREDENTIALS` 가 비어 있거나 잘못돼도 백엔드는 기동한다. 알림 목록에는 남고 푸시만 빠진다
@@ -732,7 +732,7 @@ docker compose logs backend | grep 'FCM 자격'
 # ② ③ 은 로컬(Git Bash)에서. 스크립트가 서버의 .env 에서 자격을 읽는다 — 값이 명령줄에 오지 않는다
 ssh <서버> sh -s < infra/fcm-check.sh                  # ② 토픽 fcm-check 로. 구독자가 없어 아무도 안 받는다
 ssh <서버> sh -s -- <기기 토큰> < infra/fcm-check.sh    # ③ 그 기기로
-#   {"name": "projects/gachi-joopging/messages/..."}
+#   {"name": "projects/gachi-joopging-b9518/messages/..."}
 #   HTTP 200
 ```
 
