@@ -19,6 +19,13 @@ export CRED TARGET="${1:-}"
 field() { python3 -c 'import json,os,sys;print(json.loads(os.environ["CRED"])[sys.argv[1]],end="")' "$1"; }
 b64url() { openssl base64 -A | tr '+/' '-_' | tr -d '='; }
 
+# 발송 대상 프로젝트는 키가 정한다. 다른 프로젝트의 키여도 그 프로젝트로 200 이 나므로 여기서 막는다
+PROJECT=gachi-joopging-b9518
+if [ "$(field project_id)" != "$PROJECT" ]; then
+  echo "다른 Firebase 프로젝트의 키다: $(field project_id) (기대: $PROJECT)" >&2
+  exit 1
+fi
+
 # mktemp 는 0600 으로 만든다. 개인키가 남에게 읽히는 틈을 두지 않는다
 TMP=$(mktemp)
 trap 'rm -f "$TMP"' EXIT
@@ -44,6 +51,6 @@ print(json.dumps({"message":m}))' > "$TMP"
 
 OUT=$(printf 'Authorization: Bearer %s\n' "$ACCESS" \
   | curl -sS -w '\nHTTP %{http_code}' -H @- -H 'Content-Type: application/json' \
-      -d @"$TMP" "https://fcm.googleapis.com/v1/projects/$(field project_id)/messages:send")
+      -d @"$TMP" "https://fcm.googleapis.com/v1/projects/$PROJECT/messages:send")
 echo "$OUT"
 case "$OUT" in *"HTTP 200") ;; *) exit 1 ;; esac

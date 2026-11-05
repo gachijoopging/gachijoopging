@@ -741,7 +741,7 @@ ssh <서버> sh -s -- <기기 토큰> < infra/fcm-check.sh    # ③ 그 기기�
 | 응답 | 뜻 |
 |---|---|
 | `토큰 교환 실패: invalid_grant` | 키가 지워졌거나(콘솔에서 회전) JSON 이 깨졌다 |
-| 403 `PERMISSION_DENIED` | 다른 프로젝트의 키다 |
+| `다른 Firebase 프로젝트의 키다` | 키의 `project_id` 가 `gachi-joopging-b9518` 이 아니다. 백엔드는 키의 프로젝트로 보내므로 기동은 되고 푸시만 안 온다 |
 | 400 `INVALID_ARGUMENT` · 404 `UNREGISTERED` | 기기 토큰이 틀렸거나 앱이 지워졌다. 자격은 맞다 |
 
 ### `google-services.json` (앱)
