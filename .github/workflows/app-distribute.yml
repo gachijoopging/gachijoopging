@@ -1,0 +1,89 @@
+# 서명된 릴리스 APK 를 GitHub Release 에 올린다. 팀원·시연자는 그 링크로 설치한다.
+# 저장소가 공개라 링크만 있으면 로그인 없이 받는다 — Firebase App Distribution 처럼 테스터를 관리하지 않아도 된다.
+#
+#   git tag app-v1.0.0-1 && git push origin app-v1.0.0-1
+#
+# 절차와 Secrets 는 docs/operations.md §앱 배포.
+name: app-distribute
+
+on:
+  push:
+    tags: ['app-v*']
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+      ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+      KAKAO_NATIVE_APP_KEY: ${{ secrets.KAKAO_NATIVE_APP_KEY }}
+      GOOGLE_WEB_CLIENT_ID: ${{ secrets.GOOGLE_WEB_CLIENT_ID }}
+      API_BASE_URL: https://www.gachijoopging.site/api/v1
+      WS_URL: wss://www.gachijoopging.site/api/v1/ws
+      EXPO_PUBLIC_API_MODE: real
+      # docs/operations.md §앱 서명 의 키 지문. 다른 키로 서명되면 카카오맵이 401 이고 덮어설치도 안 된다
+      RELEASE_SHA1: A3:57:14:98:05:50:8B:BF:62:87:67:52:C9:15:2A:C2:01:CD:4F:1E
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      # 키가 없으면 경로를 넘기지 않는다. 그러면 debug 키로 빌드되고 아래 '서명 키 확인' 이 올리기 전에 막는다
+      - name: 서명 키·google-services.json 풀기
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          set -euo pipefail
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            printf '%s' "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+            echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+          fi
+          if [ -n "$GOOGLE_SERVICES_JSON" ]; then
+            printf '%s' "$GOOGLE_SERVICES_JSON" > mobile/google-services.json
+          fi
+
+      - run: npm ci
+
+      - name: prebuild
+        working-directory: mobile
+        run: npx expo prebuild --platform android --clean --no-install
+
+      # arm64 만 — 시연 기기가 모두 arm64 이고, 네 아키텍처를 다 빌드하면 시간이 세 배가 된다
+      - name: assembleRelease
+        working-directory: mobile/android
+        run: ./gradlew assembleRelease --no-daemon -PreactNativeArchitectures=arm64-v8a
+
+      - name: 서명 키 확인
+        run: |
+          set -euo pipefail
+          APK=mobile/android/app/build/outputs/apk/release/app-release.apk
+          SIGNER=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
+          SHA1=$("$SIGNER" verify --print-certs "$APK" | sed -n 's/.*SHA-1 digest: //p' | tr a-f A-F | sed 's/../&:/g; s/:$//')
+          echo "서명 SHA-1: $SHA1"
+          if [ "$SHA1" != "$RELEASE_SHA1" ]; then
+            echo "::error::릴리스 키가 아니다 (기대 $RELEASE_SHA1). Secrets 의 ANDROID_KEYSTORE_* 를 본다 — 올리지 않는다"
+            exit 1
+          fi
+          cp "$APK" gachijoopging.apk
+
+      - name: Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" gachijoopging.apk --latest \
+            --title "$GITHUB_REF_NAME" \
+            --notes "설치: 휴대폰에서 아래 gachijoopging.apk 를 받아 연다. 커밋 ${GITHUB_SHA::7}"
