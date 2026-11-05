@@ -419,21 +419,13 @@ done
 | `DOCKERHUB_TOKEN` | `build.yml` · `deploy.yml` | Docker Hub **액세스 토큰**(Read & Write). 계정 비밀번호를 쓰지 않는다 — 비밀번호는 결제·삭제까지 열어 준다 |
 | `SSH_PRIVATE_KEY` | `deploy.yml` | 배포 전용 키. Lightsail 기본 키와 **다른 것**을 쓴다. 그래야 CI 접근만 따로 끊을 수 있다 |
 | `MM_WEBHOOK_URL` | `pr-review-sla.yml` | Mattermost 웹훅 |
+| `ANDROID_KEYSTORE_BASE64` | `app-distribute.yml` | `release.jks` 를 base64 로. Secrets 에 바이너리를 그대로 넣지 못해 워크플로가 파일로 푼다 |
+| `ANDROID_KEYSTORE_PASSWORD` · `ANDROID_KEY_ALIAS` · `ANDROID_KEY_PASSWORD` | `app-distribute.yml` | §앱 서명 의 같은 이름. `ANDROID_KEYSTORE_PATH` 는 워크플로가 푼 파일 경로를 넣는다 |
+| `KAKAO_NATIVE_APP_KEY` · `GOOGLE_WEB_CLIENT_ID` | `app-distribute.yml` | APK 에 박히는 앱 키. `mobile/.env` 의 같은 이름 |
+| `GOOGLE_SERVICES_JSON` | `app-distribute.yml` | `google-services.json` 본문. 없으면 파일 없이 빌드한다 |
 
 아이디(`yydd12`)와 서버 IP 는 **시크릿이 아니다.** DNS 를 찍으면 나오는 값이고, 가리면 로그가 `***` 가 돼
 어디로 배포됐는지 못 본다. 가릴 것만 가린다.
-
-앱 서명 APK 를 CI 에서 만들게 되면(GAC-112) 아래가 더 들어간다. 키 파일은 **base64 로 넣고 워크플로가
-파일로 푼다** — Secrets 에 바이너리를 그대로 넣지 못한다.
-
-```
-ANDROID_KEYSTORE_BASE64      release.jks 를 base64 로
-ANDROID_KEYSTORE_PASSWORD
-ANDROID_KEY_ALIAS
-ANDROID_KEY_PASSWORD
-```
-
-이름은 §앱 서명 의 환경 변수와 맞춘다(`ANDROID_KEYSTORE_PATH` 는 워크들로가 푼 파일 경로를 넣는다).
 
 ### 서버 `.env` 를 올릴 때
 
@@ -1010,6 +1002,35 @@ apksigner verify --print-certs <apk> | grep SHA-1
 
 - Android: `release.jks` 와 비밀번호는 저장소 밖(`local.properties`). 잃으면 덮어설치가 불가능하다. 자세한 것은 아래 §앱 서명
 - iOS: 1차 범위 밖. 넣을 때 Apple 개발자 계정·서명·TestFlight 절차를 여기에 적는다
+
+## 앱 배포
+
+스토어에 올리지 않는다. 서명된 APK 를 **GitHub Release** 에 올리고 그 링크로 설치한다. 저장소가 공개라
+로그인 없이 받는다 — Firebase App Distribution 처럼 테스터 이메일을 등록하거나 App Tester 앱을 깔 필요가 없다.
+
+### 받는 법 (팀원·시연자)
+
+휴대폰 브라우저에서 연다. 항상 마지막 빌드다.
+
+```
+https://github.com/gachijoopging/gachijoopging/releases/latest/download/gachijoopging.apk
+```
+
+받은 파일을 열면 "출처를 알 수 없는 앱" 허용을 묻는다 — 그 브라우저에 한 번 허용한다. 옛 APK 위에 그대로
+덮어설치된다(같은 키). 개발 빌드(`npm run android`)가 깔린 폰은 debug 키라 덮어설치가 거절된다 — 먼저 지운다.
+
+### 올리는 법
+
+`app-v*` 태그를 밀면 `app-distribute.yml` 이 빌드해서 올린다. `dev` 의 커밋에 건다.
+
+```sh
+git fetch origin && git tag app-v1.0.0-<n> origin/dev && git push origin app-v1.0.0-<n>
+```
+
+- 실서버(`www.gachijoopging.site`)에 붙는 빌드다. 주소는 워크플로에 박혀 있고, 앱 키는 Secrets(§GitHub Secrets)
+- arm64 만 빌드한다. 32비트 전용 폰·x86 에뮬레이터에서는 설치가 거절된다
+- 서명 SHA-1 이 §앱 서명 의 지문과 다르면 **올리지 않고 실패한다.** Secrets 가 비었거나 틀린 것이다 —
+  debug 키 APK 가 올라가면 카카오맵이 안 뜨고, 받은 사람은 지워야 다음 것을 깐다
 
 ## 앱 서명
 
