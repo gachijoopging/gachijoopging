@@ -107,8 +107,8 @@ public class LiveService {
     return repository.findCrew(crewId, me).stream().map(this::member).toList();
   }
 
-  public Optional<LiveMemberResponse> member(UUID userId) {
-    return repository.findMember(userId).map(this::member);
+  public Optional<LiveMemberResponse> member(UUID userId, UUID activityId, UUID crewId) {
+    return repository.findMember(userId, activityId, crewId).map(this::member);
   }
 
   private LiveMemberResponse member(LiveMemberRow row) {

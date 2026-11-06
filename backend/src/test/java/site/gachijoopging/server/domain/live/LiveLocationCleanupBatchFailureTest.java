@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -63,5 +64,31 @@ class LiveLocationCleanupBatchFailureTest {
     job.removeStaleLocations();
 
     verify(broadcaster).endedIfGone(다음_행.crewId(), 다음_행.userId(), 다음_행.activityId());
+  }
+
+  @Test
+  void 종료_알림에_실패한_행은_다음_정리에서_다시_알린다() {
+    LiveLocationRepository repository = mock(LiveLocationRepository.class);
+    LiveBroadcaster broadcaster = mock(LiveBroadcaster.class);
+    StaleRow 지운_행 = new StaleRow(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID());
+    when(repository.deleteStale(any(), anyInt())).thenReturn(List.of(지운_행)).thenReturn(List.of());
+    doThrow(new IllegalStateException("DB 장애"))
+        .doThrow(new IllegalStateException("DB 장애"))
+        .doNothing()
+        .when(broadcaster)
+        .endedIfGone(지운_행.crewId(), 지운_행.userId(), 지운_행.activityId());
+    var job =
+        new LiveLocationCleanupJob(
+            repository,
+            broadcaster,
+            new BatchDelete(mock(PlatformTransactionManager.class)),
+            Clock.systemUTC());
+
+    job.removeStaleLocations();
+    job.removeStaleLocations();
+    job.removeStaleLocations();
+    job.removeStaleLocations();
+
+    verify(broadcaster, times(3)).endedIfGone(지운_행.crewId(), 지운_행.userId(), 지운_행.activityId());
   }
 }

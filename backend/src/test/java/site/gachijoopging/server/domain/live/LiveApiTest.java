@@ -227,6 +227,30 @@ class LiveApiTest extends IntegrationTest {
   }
 
   @Test
+  void 늦게_처리된_이전_크루의_시작_이벤트는_다른_크루에서_시작한_새_활동을_보내지_않는다() throws Exception {
+    TestAccount 나 = 크루원이_된다("live-moved@test.io");
+    TestAccount 옮긴_사람 = 같은_크루에_넣는다(나, "live-moved-mover@test.io");
+    TestAccount 새_크루장 = 크루원이_된다("live-moved-other@test.io");
+    BlockingQueue<Map<String, Object>> 내_수신 = 구독한다(나);
+    UUID 이전_크루 =
+        jdbcTemplate.queryForObject(
+            "SELECT crew_id FROM crew_members WHERE user_id = ?", UUID.class, 나.id());
+    UUID 이전_활동 = 시작한다(옮긴_사람, true);
+    끝낸다(옮긴_사람, 이전_활동);
+    받는다(내_수신, "LIVE_ENDED");
+    jdbcTemplate.update(
+        "UPDATE crew_members SET crew_id = (SELECT crew_id FROM crew_members WHERE user_id = ?)"
+            + " WHERE user_id = ?",
+        새_크루장.id(),
+        옮긴_사람.id());
+    시작한다(옮긴_사람, true);
+
+    broadcaster.started(이전_크루, 옮긴_사람.id(), 이전_활동);
+
+    assertThat(내_수신.poll(500, TimeUnit.MILLISECONDS)).isNull();
+  }
+
+  @Test
   void 위치_공유를_끈_사용자는_location_null_에_거리와_개수를_그대로_보낸다() throws Exception {
     TestAccount 나 = 크루원이_된다("live-private@test.io");
     TestAccount 크루원 = 같은_크루에_넣는다(나, "live-private-mate@test.io");

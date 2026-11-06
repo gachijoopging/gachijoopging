@@ -30,9 +30,12 @@ public class LiveBroadcaster {
     pending.put(userId, new Pending(crewId, activityId, update));
   }
 
-  // 조회를 잠금 밖에서 하면, 조회 뒤 커밋된 종료의 LIVE_ENDED 가 먼저 나가고 끝난 활동이 목록에 되살아난다
-  public synchronized void started(UUID crewId, UUID userId) {
-    liveService.member(userId).ifPresent(member -> send(crewId, userId, "LIVE_STARTED", member));
+  // 조회를 잠금 밖에서 하면, 조회 뒤 커밋된 종료의 LIVE_ENDED 가 먼저 나가고 끝난 활동이 목록에 되살아난다.
+  // 이벤트의 활동·크루로 조회해야, 늦게 처리된 이벤트가 다른 크루로 옮겨 시작한 새 활동을 이전 크루에 보이지 않는다
+  public synchronized void started(UUID crewId, UUID userId, UUID activityId) {
+    liveService
+        .member(userId, activityId, crewId)
+        .ifPresent(member -> send(crewId, userId, "LIVE_STARTED", member));
   }
 
   // 정리와 보고 재개가 엇갈려 LIVE_STARTED 가 먼저 나갔으면, 뒤늦은 LIVE_ENDED 가 이어진 활동을 목록에서 지운다

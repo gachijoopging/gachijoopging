@@ -15,12 +15,12 @@ public class LiveEventListener {
 
   @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
   public void onStarted(LiveStartedEvent event) {
-    broadcaster.started(event.crewId(), event.userId());
+    broadcaster.started(event.crewId(), event.userId(), event.activityId());
   }
 
   @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
   public void onResumed(LiveResumedEvent event) {
-    broadcaster.started(event.crewId(), event.userId());
+    broadcaster.started(event.crewId(), event.userId(), event.activityId());
   }
 
   @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)

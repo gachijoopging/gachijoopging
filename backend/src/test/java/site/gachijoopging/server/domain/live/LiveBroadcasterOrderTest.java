@@ -31,13 +31,14 @@ class LiveBroadcasterOrderTest {
     UUID 크루 = UUID.randomUUID();
     UUID 사용자 = UUID.randomUUID();
     UUID 받는_사람 = UUID.randomUUID();
+    UUID 활동 = UUID.randomUUID();
     LiveLocationRepository repository = mock(LiveLocationRepository.class);
     SimpMessagingTemplate messaging = mock(SimpMessagingTemplate.class);
     LiveService liveService = mock(LiveService.class);
     when(repository.findRecipients(크루, 사용자)).thenReturn(List.of(받는_사람));
     CountDownLatch 조회_중 = new CountDownLatch(1);
     CountDownLatch 조회_끝 = new CountDownLatch(1);
-    when(liveService.member(사용자))
+    when(liveService.member(사용자, 활동, 크루))
         .thenAnswer(
             inv -> {
               조회_중.countDown();
@@ -46,9 +47,9 @@ class LiveBroadcasterOrderTest {
             });
     LiveBroadcaster broadcaster = new LiveBroadcaster(repository, messaging, liveService);
 
-    CompletableFuture<Void> 시작 = CompletableFuture.runAsync(() -> broadcaster.started(크루, 사용자));
+    CompletableFuture<Void> 시작 = CompletableFuture.runAsync(() -> broadcaster.started(크루, 사용자, 활동));
     조회_중.await(5, TimeUnit.SECONDS);
-    Thread 종료 = new Thread(() -> broadcaster.ended(크루, 사용자, UUID.randomUUID()));
+    Thread 종료 = new Thread(() -> broadcaster.ended(크루, 사용자, 활동));
     종료.start();
     Awaitility.await()
         .atMost(Duration.ofSeconds(5))

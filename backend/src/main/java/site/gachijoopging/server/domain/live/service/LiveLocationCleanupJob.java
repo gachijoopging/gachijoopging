@@ -4,6 +4,8 @@ import java.time.Clock;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -26,6 +28,9 @@ public class LiveLocationCleanupJob {
   private final LiveBroadcaster broadcaster;
   private final BatchDelete batchDelete;
   private final Clock clock;
+  // 알림이 실패한 행은 다음 정리에서 다시 찾을 수 없으므로, DB 가 돌아올 때까지 주기마다 다시 보낸다.
+  // 재시작하면 잃지만 그때는 소켓도 끊겨 앱이 다시 연결하며 GET /crew/live 로 맞춘다
+  private final Set<StaleRow> unsent = ConcurrentHashMap.newKeySet();
 
   @Scheduled(cron = "0 */5 * * * *")
   public int removeStaleLocations() {
@@ -41,12 +46,15 @@ public class LiveLocationCleanupJob {
             return rows.size();
           });
     } finally {
-      // 지운 행은 다음 정리에서 다시 못 찾으므로, 한 행의 알림이 실패해도 나머지는 보낸다
-      for (StaleRow r : removed) {
+      List<StaleRow> toNotify = new ArrayList<>(unsent);
+      unsent.removeAll(toNotify);
+      toNotify.addAll(removed);
+      for (StaleRow r : toNotify) {
         try {
           broadcaster.endedIfGone(r.crewId(), r.userId(), r.activityId());
         } catch (RuntimeException e) {
-          log.warn("정리한 실시간 위치의 종료 알림 실패 — activityId={}", r.activityId(), e);
+          unsent.add(r);
+          log.warn("정리한 실시간 위치의 종료 알림 실패, 다음 정리에서 다시 보냄 — activityId={}", r.activityId(), e);
         }
       }
     }

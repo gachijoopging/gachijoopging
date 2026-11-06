@@ -171,9 +171,13 @@ public class LiveLocationRepository {
         .single();
   }
 
-  public Optional<LiveMemberRow> findMember(UUID userId) {
-    return jdbc.sql(MEMBER_SELECT + " AND l.user_id = :userId")
+  public Optional<LiveMemberRow> findMember(UUID userId, UUID activityId, UUID crewId) {
+    return jdbc.sql(
+            MEMBER_SELECT
+                + " AND l.user_id = :userId AND l.activity_id = :activityId AND l.crew_id = :crewId")
         .param("userId", userId)
+        .param("activityId", activityId)
+        .param("crewId", crewId)
         .query(LiveLocationRepository::member)
         .optional();
   }
