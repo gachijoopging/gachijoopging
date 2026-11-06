@@ -45,9 +45,10 @@ public class LiveBroadcaster {
     }
   }
 
-  // 끝난 뒤 묶여 있던 갱신이 나가면 앱 목록에 그 사람이 다시 생긴다
+  // 끝난 뒤 묶여 있던 갱신이 나가면 앱 목록에 그 사람이 다시 생긴다.
+  // 정리 알림은 재시도로 늦게 나갈 수 있어, 그 사이 시작한 새 활동의 갱신은 남긴다
   public synchronized void ended(UUID crewId, UUID userId, UUID activityId) {
-    pending.remove(userId);
+    pending.computeIfPresent(userId, (k, p) -> p.activityId().equals(activityId) ? null : p);
     send(
         crewId,
         userId,
