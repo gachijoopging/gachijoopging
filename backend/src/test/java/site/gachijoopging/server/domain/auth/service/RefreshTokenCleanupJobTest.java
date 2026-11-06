@@ -18,9 +18,9 @@ class RefreshTokenCleanupJobTest extends IntegrationTest {
   @Autowired private Clock clock;
 
   @Test
-  void 만료_후_30일이_지난_토큰을_지운다() {
-    UUID 사용자 = 사용자를_만든다("refresh-cleanup-old@test.io");
-    String 해시 = 토큰을_만든다(사용자, clock.instant().minus(31, ChronoUnit.DAYS));
+  void 만료된_토큰은_바로_지운다() {
+    UUID 사용자 = 사용자를_만든다("refresh-cleanup-expired@test.io");
+    String 해시 = 토큰을_만든다(사용자, clock.instant().minus(1, ChronoUnit.MINUTES));
 
     refreshTokenCleanupJob.removeExpiredTokens();
 
@@ -28,19 +28,9 @@ class RefreshTokenCleanupJobTest extends IntegrationTest {
   }
 
   @Test
-  void 만료된_지_얼마_안_된_토큰은_남긴다() {
-    UUID 사용자 = 사용자를_만든다("refresh-cleanup-recent@test.io");
-    String 해시 = 토큰을_만든다(사용자, clock.instant().minus(29, ChronoUnit.DAYS));
-
-    refreshTokenCleanupJob.removeExpiredTokens();
-
-    assertThat(남아_있나(해시)).isTrue();
-  }
-
-  @Test
-  void 아직_만료되지_않은_토큰은_건드리지_않는다() {
+  void 아직_만료되지_않은_토큰은_남긴다() {
     UUID 사용자 = 사용자를_만든다("refresh-cleanup-alive@test.io");
-    String 해시 = 토큰을_만든다(사용자, clock.instant().plus(14, ChronoUnit.DAYS));
+    String 해시 = 토큰을_만든다(사용자, clock.instant().plus(1, ChronoUnit.MINUTES));
 
     refreshTokenCleanupJob.removeExpiredTokens();
 

@@ -61,12 +61,6 @@ public class RefreshToken {
     this.createdAt = requireNonNull(now, "now");
   }
 
-  public void revoke(Instant now) {
-    if (revokedAt == null) {
-      this.revokedAt = now;
-    }
-  }
-
   public boolean revoked() {
     return revokedAt != null;
   }

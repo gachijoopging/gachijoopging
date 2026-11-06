@@ -22,9 +22,9 @@ wss://www.gachijoopging.site/api/v1/ws?token=<accessToken>
 |---|---|---|
 | `CHAT` | 크루원이 메시지를 보냄 | `ChatMessage` (openapi 와 같은 모양: seq · id · author · text · createdAt) |
 | `CHAT_DELETED` | 크루장이 신고 처리로 지움 | `{ seq }` |
-| `LIVE_STARTED` | 크루원이 활동 시작 | `LiveMember` |
+| `LIVE_STARTED` | 크루원이 활동 시작. 갱신이 끊겨 정리된 활동의 보고가 다시 와도 보낸다 | `LiveMember` |
 | `LIVE_UPDATE` | 위치·거리·개수 갱신 | `{ userId, locationShared, location: {lng,lat} \| null, distanceM, itemCount, elapsedSec, paused }` |
-| `LIVE_ENDED` | 활동 종료 | `{ userId, activityId }` |
+| `LIVE_ENDED` | 활동 종료. 갱신이 끊겨 위치를 정리할 때도 보낸다 | `{ userId, activityId }` |
 | `NOTIFICATION` | 알림 생성 (푸시와 별개로 앱이 켜져 있을 때 배지 갱신용) | `Notification` |
 
 - 서버의 `locationShared`는 활동 저장값이다. false면 "위치를 공유하지 않아요", true이며 `location=null`이면 "위치 확인 중". 지도 마커는 공유 중이고 실제 좌표가 있을 때만 그린다.
