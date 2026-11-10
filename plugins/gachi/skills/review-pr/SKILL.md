@@ -101,7 +101,7 @@ PR 마다 **`Agent` 도구로 새 에이전트**를 띄운다 (`subagent_type: "
 
 결과는 남은 지적으로 정한다: 필수 수정(재리뷰의 **미해결** 포함)이 있으면 `수정 필요` → 없고 확인 질문이 남으면 `확인 필요` → 나머지 `필수 수정 없음`.
 
-올리기 직전 `gh pr view <N> --json state,headRefOid` 를 다시 본다. 닫힘 · 머지됨이면 올리지 않고 건너뛴 이유를 적는다. 머리가 바뀌었으면 `git -C "$W" fetch origin "pull/<N>/head"` 뒤 `git -C "$W" diff <이전 SHA>..<새 SHA>` 로 새 변경을 보고 지적 · 검증을 다시 확인한 뒤 SHA 와 링크를 새것으로 바꾼다.
+올리기 직전 `gh pr view <N> --json state,headRefOid` 를 다시 본다. 닫힘 · 머지됨이면 올리지 않고 건너뛴 이유를 적는다. 머리가 바뀌었으면 `git -C "$W" fetch origin "pull/<N>/head"` → **`git -C "$W" checkout --detach <새 SHA>`** 로 worktree 를 새 커밋으로 옮긴 뒤(fetch 만으로는 파일이 옛 커밋에 머문다) `git -C "$W" diff <이전 SHA>..<새 SHA>` 로 새 변경을 보고, 지적 · 검증을 새 커밋에서 다시 확인한 뒤 SHA 와 링크를 새것으로 바꾼다.
 
 **내 역할이 정할 것**(계약에서 누가 무엇을 맡을지 같은 것)이 지적에 있을 때만 올리기 전에 `AskUserQuestion` 으로 묻는다 (PR 마다 1개). 답은 그 지적에 `확인: …` 으로 적는다. 답이 내 할 일을 만들면 끝 보고에 적고 `/create-issue` 를 제안한다 — 이 스킬은 이슈를 만들지 않는다.
 

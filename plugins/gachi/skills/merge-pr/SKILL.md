@@ -80,12 +80,13 @@ gh pr merge <N> --merge
 gh api -X DELETE "repos/gachijoopging/gachijoopging/git/refs/heads/<headRef>"
 git fetch --prune
 # 그 브랜치의 로컬 worktree (gachi:ship-issue 가 만든 .claude/worktrees/gac-N) 와 로컬 브랜치
-git worktree list | grep -F "[<headRef>]" && git -c core.longpaths=true worktree remove --force "<그 경로>"
+git worktree list | grep -F "[<headRef>]"                      # 경로를 얻는다
+git -c core.longpaths=true worktree remove "<그 경로>"          # --force 없이. 미커밋 변경이 있으면 git 이 거부한다 — 그대로 두고 보고에 적는다
 git worktree prune
-git show-ref --verify -q "refs/heads/<headRef>" && [ "$(git branch --show-current)" != "<headRef>" ] && git branch -D "<headRef>"
+git show-ref --verify -q "refs/heads/<headRef>" && [ "$(git branch --show-current)" != "<headRef>" ] && git branch -d "<headRef>"   # -d: 머지 안 된 커밋이 있으면 거부
 ```
 
-현재 브랜치가 `<headRef>` 면 지우지 않고 보고에 적는다. Linear 는 연동이 Done 으로 옮긴다 — 손대지 않는다.
+worktree 에 미커밋 변경이 있거나, 로컬 브랜치에 push 안 된 커밋이 있거나, 현재 브랜치가 `<headRef>` 면 지우지 않고 보고에 적는다. 원격 PR 이 머지됐다고 로컬 작업이 버려도 되는 것은 아니다. Linear 는 연동이 Done 으로 옮긴다 — 손대지 않는다.
 
 ## 끝 보고
 
