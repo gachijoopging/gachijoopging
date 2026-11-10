@@ -898,9 +898,9 @@ unset PGPASSWORD
 |---|---|
 | 🚨 백엔드 응답 없음 | `docker compose logs --tail 50 backend`. DB·Redis 자격이나 Flyway 에서 죽는 일이 많다 |
 | 🚨 소켓 `HTTP 502` | 백엔드가 죽은 것이다. 위와 같다 — 소켓만 따로 깨지는 경우는 드물다 |
-| 🚨 소켓 `HTTP 400` | Upgrade 헤더가 Spring 까지 안 닿은 것이다. `watch.sh` 의 `--http1.1` 이 빠졌거나, Nginx 의 `proxy_set_header Upgrade`·`Connection "upgrade"` 가 없어졌는지 본다(§HTTPS) |
+| 🚨 소켓 `HTTP 400` | Upgrade 헤더가 Spring 까지 안 닿은 것이다. `watch.sh` 의 `--http1.1` 이 빠졌거나, Nginx 의 `proxy_set_header Upgrade`·`Connection "upgrade"` 가 없어졌는지 본다(§HTTPS). `location /api/v1/ws` 블록이 사라져 `/api/v1/` 로 떨어진 경우도 같다 — 그 블록엔 Upgrade 헤더가 없다 |
 | 🚨 소켓 `HTTP 401` | `/api/v1/ws` 에 핸들러가 없다. **Nginx 가 `/api/v1` 접두사를 떼지 않았는지**(§HTTPS), 아니면 소켓 없는 옛 이미지로 롤백됐는지 본다 |
-| 🚨 소켓 그 외 4xx (404 등) | Nginx 의 `location /api/v1/ws` 가 사라졌거나 `PUBLIC_BASE_URL` 이 잘못 잡혀 `location / { return 404 }` 에 걸린 것이다 |
+| 🚨 소켓 그 외 4xx (404 등) | `PUBLIC_BASE_URL` 에 엉뚱한 경로가 붙어 `location / { return 404 }` 에 걸린 것이다. `/api/v1/ws` 와 `/api/v1/` 둘 다 사라져야 404 가 난다 |
 | 🚨 바깥에서 안 보인다 | 서버 전원·Lightsail 방화벽·DNS. `ssh` 가 되는지부터 본다 |
 | 🚨 Redis 응답 없음 | `REDIS_PASSWORD` 불일치가 가장 흔하다(§Redis). rate limit 이 조용히 열린 상태다 |
 | ⚠️ 인증서 N일 남음 | `docker compose logs certbot`. 갱신이 멈춘 것이다 |
