@@ -88,6 +88,7 @@ claude plugin list        # gachi@gachi · Scope: project · enabled 가 보여�
 | 증상 | 이유 · 해결 |
 | --- | --- |
 | `gh` 401 · 404 | `gh auth status` 로 확인. 만료면 `gh auth login` |
+| `Bad address` · `invalid pointer address` | Winsock 오류. 같은 명령을 한 번 더. 리뷰 게시 뒤 조회에서 나면 `run=` 값으로 다시 조회한다 — 게시는 이미 됐을 수 있다 |
 | `reviewDecision` 이 빈 값 | dev 는 ruleset 이 승인 0명이라 정상. 스킬은 `latestReviews` 로 본다 |
 | approve 가 422 | 내 PR 이다. GitHub 가 작성자 승인을 막는다 |
 | `rv-N` · `ap-N` · `.claude/worktrees/gac-N` 이 남음 | `git worktree list` 로 보고 `git worktree remove --force <경로>` 뒤 `git worktree prune`. `Directory not empty` 면 `rm -rf` 뒤 prune |
