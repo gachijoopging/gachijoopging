@@ -95,7 +95,7 @@ git -c core.longpaths=true worktree add -B "<headRef>" "$W" "origin/<headRef>"
 git -C "$W" push origin "<headRef>"      # fast-forward 만. --force 는 절대 쓰지 않는다
 ```
 
-거부되면(non-fast-forward) 그사이 작성자가 push 한 것이다. merge · rebase 하지 않고 멈춰 보고한다. `-C` 형으로 쓰는 이유: 알림 훅은 `git push` 를 주 checkout 기준으로 보므로, 주 checkout 이 `dev` 에 있을 때 다른 모양으로 push 하면 가짜 "dev 반영" 이 나간다.
+거부되면(non-fast-forward) 그사이 작성자가 push 한 것이다. merge · rebase 하지 않고 멈춰 보고한다. `-C` 형으로 쓰는 이유: 알림 훅은 `git push` 를 **세션 작업 폴더** 기준으로 보는데 이 스킬의 세션은 `$W` 가 아니라 원래 checkout 에 있다. 그 checkout 이 `dev` 에 서 있으면 다른 모양의 push 는 가짜 "dev 반영" 이 된다. `-C` 가 끼면 훅의 `git push` 패턴에 걸리지 않는다.
 
 ## 6. PR 댓글 하나
 

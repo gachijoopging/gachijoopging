@@ -9,8 +9,11 @@ import { dirname, join } from 'node:path';
 import { parseEnv } from '../../infra/notify.mjs';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
-const git = (...args) => execFileSync('git', args, { cwd: root, encoding: 'utf8' }).trim();
-const gh = (...args) => execFileSync('gh', args, { cwd: root, encoding: 'utf8' }).trim();
+// git 은 세션의 작업 폴더(훅 입력 cwd)에서 본다. 세션이 worktree 에 있는데 주 checkout 의 HEAD 를 보면,
+// 주 checkout 이 dev 에 서 있을 때 worktree 의 기능 브랜치 push 가 가짜 "dev 반영" 이 된다.
+const cwd = () => input?.cwd ?? root;
+const git = (...args) => execFileSync('git', args, { cwd: cwd(), encoding: 'utf8' }).trim();
+const gh = (...args) => execFileSync('gh', args, { cwd: cwd(), encoding: 'utf8' }).trim();
 
 function readStdin() {
   try { return JSON.parse(readFileSync(0, 'utf8')); } catch { return null; }
