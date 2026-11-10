@@ -2,14 +2,17 @@
 // AI 처리량 자체는 여기서 재지 않는다 — 터널이 처리량을 깎고 월 한도를 태운다(ai/progress.md).
 // 서빙 기기에서 `uv run python scripts/smoke.py --concurrency 10` 으로 잰다.
 //
-//   node infra/load/upload.mjs [N=10]
+//   BASE=https://www.gachijoopging.site/api/v1 node infra/load/upload.mjs [N=10]
 //
-// 계정·크루·활동은 실행마다 만들고 끝나면 지운다.
+// 계정·크루·활동은 실행마다 만들고 끝나면 지운다. Ctrl+C 한 번은 업로드가 끝난 뒤 정리하고 종료한다.
 import { readdirSync, readFileSync } from 'node:fs';
 
-const BASE = process.env.BASE ?? 'https://www.gachijoopging.site/api/v1';
+const BASE = process.env.BASE;
+// 기본값을 두지 않는다 — 인자 없이 돌리면 곧바로 운영에 계정이 생긴다
+if (!BASE) { console.error('BASE=<API 주소> 를 준다. 예: BASE=https://www.gachijoopging.site/api/v1'); process.exit(1); }
 const N = +(process.argv[2] ?? 10);
 const RUN = Date.now().toString(36);
+process.once('SIGINT', () => console.log('중단 — 업로드가 끝나면 정리 후 종료'));
 const DIR = new URL('../../ai/docs/labeling-examples/', import.meta.url);
 const photos = readdirSync(DIR).filter((f) => f.endsWith('.jpg'));
 
@@ -37,10 +40,12 @@ async function upload(token, activityId, name) {
 }
 
 const catalog = await http('GET', '/agreements');
-const t = await http('POST', '/auth/signup', null, { email: `load-${RUN}-up@example.com`, password: `load-${RUN}-pw`, nickname: '부하업로드' });
+const t = await http('POST', '/auth/signup', null, { email: `load-${RUN}-up@example.com`, password: crypto.randomUUID(), nickname: `업${RUN.slice(-6)}` }); // 닉네임은 UNIQUE
 const token = t.accessToken;
 const activityId = crypto.randomUUID();
 let started = false;
+let failed = 0;
+const fail = (e) => { failed++; console.error(`정리 실패: ${e.message}`); };
 try {
   await http('PUT', '/users/me/agreements', token, { items: catalog.items.map((a) => ({ type: a.type, version: a.version, agreed: a.required })) });
   await http('POST', '/crews', token, { name: `부하${RUN}`, region: 'SEOUL', joinPolicy: 'OPEN' });
@@ -54,9 +59,11 @@ try {
   console.log(JSON.stringify({ n: N, ok: count('OK'), unavailable: count('UNAVAILABLE'), other: N - count('OK') - count('UNAVAILABLE'), p50: ms[Math.floor(N / 2)], max: ms.at(-1) }));
 } finally {
   if (started) {
-    await http('POST', `/activities/${activityId}/end`, token, { endedAt: new Date().toISOString(), durationSec: 60, pausedSec: 0, distanceM: 0, steps: null, route: [] }).catch((e) => console.error(e.message));
-    await http('DELETE', `/activities/${activityId}`, token).catch((e) => console.error(e.message));
+    await http('POST', `/activities/${activityId}/end`, token, { endedAt: new Date().toISOString(), durationSec: 60, pausedSec: 0, distanceM: 0, steps: null, route: [] }).catch(fail);
+    await http('DELETE', `/activities/${activityId}`, token).catch(fail);
   }
-  await http('DELETE', '/users/me', token).catch((e) => console.error(e.message));
-  console.log('정리 끝');
+  await http('DELETE', '/users/me', token).catch(fail);
+  // 0 이 아니면 운영에 계정·크루가 남았다 — 위의 오류 줄을 보고 손으로 지운다
+  console.log(`정리: 실패 ${failed}`);
+  process.exitCode = failed ? 1 : process.exitCode;
 }
