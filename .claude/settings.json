@@ -12,5 +12,18 @@
         ]
       }
     ]
+  },
+  "enabledPlugins": {
+    "gachi@gachi": true
+  },
+  "extraKnownMarketplaces": {
+    "gachi": {
+      "source": {
+        "source": "git",
+        "url": "https://github.com/gachijoopging/gachijoopging.git",
+        "ref": "dev"
+      },
+      "autoUpdate": true
+    }
   }
 }
