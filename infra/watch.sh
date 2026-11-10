@@ -134,12 +134,15 @@ else
   record redis no "Redis"
 fi
 
-# 소켓은 토큰 없이 401 이면 정상이다 — Spring 까지 닿았다는 뜻이다.
-# 백엔드가 죽으면 Nginx 가 502 를, 네트워크가 끊기면 000 을 준다.
-code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 10 \
+# 소켓은 토큰 없이 101 이면 정상이다 — Spring 까지 닿았다는 뜻이다(Nginx 혼자서는 101 을 못 만든다).
+# 백엔드는 핸드셰이크를 받아 준 뒤 4401 로 닫는다. HTTP 로 거절하면 앱이 닫힘 코드를 못 받아서다(docs/realtime.md).
+# 401 은 핸드셰이크에서 거절하던 옛 백엔드다. 백엔드가 죽으면 Nginx 가 502 를, 네트워크가 끊기면 000 을 준다.
+# --http1.1: HTTP/2 는 Upgrade 헤더를 버려 평범한 GET 이 되고 400 이 온다.
+# 101 뒤에는 연결이 열린 채라 curl 이 --max-time 에서 실패로 끝난다. 그래도 -w 는 받은 코드를 찍으므로 실패는 버린다.
+code=$(curl -sS --http1.1 -o /dev/null -w '%{http_code}' --max-time 3 \
   -H 'Connection: Upgrade' -H 'Upgrade: websocket' -H 'Sec-WebSocket-Version: 13' \
-  -H 'Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==' "$PUBLIC/api/v1/ws" 2>/dev/null || echo 000)
-if [ "$code" = 401 ]; then
+  -H 'Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==' "$PUBLIC/api/v1/ws" 2>/dev/null || true)
+if [ "$code" = 101 ] || [ "$code" = 401 ]; then
   record socket yes "소켓"
 elif [ "$backend_ok" = no ] && [ "$code" = 502 ]; then
   # 백엔드가 죽어서 생긴 502 다. 원인이 하나인데 알림이 둘 가면 읽는 사람이 둘 다 흘려 보게 된다.
