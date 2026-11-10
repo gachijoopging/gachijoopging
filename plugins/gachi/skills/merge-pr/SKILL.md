@@ -42,6 +42,7 @@ gh pr list --state open --limit 100 \
 - `mergeStateStatus` 가 ruleset(필수 체크 4개 · main 의 승인 1명 · 코드 오너)을 요약한다: `CLEAN` 은 바로 머지 가능, `UNSTABLE` 은 필수 아닌 체크(`backend-docker-test` 등)만 빨강, `BLOCKED` 는 필수 체크 빨강이거나 ruleset 미충족, `DIRTY` 는 충돌, `UNKNOWN` 은 계산 중(잠시 뒤 다시)
 - `dev` 는 ruleset 이 승인 0명이라 `reviewDecision` 이 승인돼도 빈 값이다. 그래서 `latestReviews` 로 본다 — 한 명이라도 APPROVED 가 있고 CHANGES_REQUESTED 가 없어야 한다
 - `backend-docker-test` 의 SKIPPED 는 정상이다 (필수 아님)
+- push 직후 1~3분은 `gh pr checks` 가 `no checks`, `mergeStateStatus` 가 `UNKNOWN` 이다. 체크가 등록될 때까지 10초 간격으로 최대 3분 기다린 뒤 `gh pr checks <N> --watch` 로 끝을 보고 다시 조회한다
 
 인자로 번호를 받았으면 `gh pr view <N> --json <위와 같은 필드>` 로 그 PR 만 본다:
 - draft · `BLOCKED` · `DIRTY` · CHANGES_REQUESTED → 이유를 말하고 거부

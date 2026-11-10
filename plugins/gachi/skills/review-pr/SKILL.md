@@ -52,6 +52,7 @@ gh api "repos/gachijoopging/gachijoopging/pulls/<N>/comments" --paginate     # �
 gh pr checks <N>                                                           # CI 결과. 검증 근거로 쓴다
 git fetch origin <base> "pull/<N>/head"
 W="${TEMP:-${TMPDIR:-/tmp}}/rv-<N>"                                        # 짧은 경로. 긴 경로는 backend 테스트 픽스처가 Windows 경로 길이에 걸린다
+[ -e "$W" ] && W="$W-$(date -u +%H%M%S)"                                   # 지난 실행 잔여(프로세스가 잡은 폴더 등)가 있으면 다른 이름으로
 git -c core.longpaths=true worktree add --detach "$W" <headRefOid>
 ```
 
