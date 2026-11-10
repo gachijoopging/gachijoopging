@@ -76,6 +76,9 @@ gh pr merge <N> --merge
 ## 3. 뒤처리
 
 ```bash
+# push 안 된 로컬 커밋이 있는지는 원격 브랜치를 지우기 전에 tip 을 비교해 둔다.
+# squash 머지라 브랜치 커밋은 dev 의 조상이 아니어서 git branch -d 는 항상 거부한다 — 그래서 -d 대신 이 비교로 판단한다
+LOCAL=$(git rev-parse -q --verify "refs/heads/<headRef>"); REMOTE=$(git rev-parse -q --verify "refs/remotes/origin/<headRef>")
 # base dev 였으면 원격 이슈 브랜치를 지운다 (git push --delete 는 훅의 git push 패턴에 걸리므로 API 로)
 gh api -X DELETE "repos/gachijoopging/gachijoopging/git/refs/heads/<headRef>"
 git fetch --prune
@@ -83,10 +86,10 @@ git fetch --prune
 git worktree list | grep -F "[<headRef>]"                      # 경로를 얻는다
 git -c core.longpaths=true worktree remove "<그 경로>"          # --force 없이. 미커밋 변경이 있으면 git 이 거부한다 — 그대로 두고 보고에 적는다
 git worktree prune
-git show-ref --verify -q "refs/heads/<headRef>" && [ "$(git branch --show-current)" != "<headRef>" ] && git branch -d "<headRef>"   # -d: 머지 안 된 커밋이 있으면 거부
+[ -n "$LOCAL" ] && [ "$LOCAL" = "$REMOTE" ] && [ "$(git branch --show-current)" != "<headRef>" ] && git branch -D "<headRef>"
 ```
 
-worktree 에 미커밋 변경이 있거나, 로컬 브랜치에 push 안 된 커밋이 있거나, 현재 브랜치가 `<headRef>` 면 지우지 않고 보고에 적는다. 원격 PR 이 머지됐다고 로컬 작업이 버려도 되는 것은 아니다. Linear 는 연동이 Done 으로 옮긴다 — 손대지 않는다.
+worktree 에 미커밋 변경이 있거나, 로컬 tip 이 원격 tip 과 달랐거나(push 안 된 커밋), 현재 브랜치가 `<headRef>` 면 지우지 않고 보고에 적는다. 원격 PR 이 머지됐다고 로컬 작업이 버려도 되는 것은 아니다. Linear 는 연동이 Done 으로 옮긴다 — 손대지 않는다.
 
 ## 끝 보고
 
