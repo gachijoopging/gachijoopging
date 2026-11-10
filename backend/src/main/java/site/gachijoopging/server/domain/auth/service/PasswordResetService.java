@@ -56,7 +56,9 @@ public class PasswordResetService {
       return false;
     }
     if (!matches(token.get().getTokenHash(), hash(userId, code))) {
-      tokenRepository.recordFailure(token.get().getId(), properties.maxAttempts(), now);
+      if (tokenRepository.deleteIfLastAttempt(token.get().getId(), properties.maxAttempts()) == 0) {
+        tokenRepository.recordFailure(token.get().getId());
+      }
       return false;
     }
     if (tokenRepository.consume(token.get().getId(), now) == 0) {
@@ -70,7 +72,7 @@ public class PasswordResetService {
   private String issueFor(UUID userId) {
     userLock.lock(userId);
     Instant now = clock.instant();
-    tokenRepository.expireUnusedByUserId(userId, now);
+    tokenRepository.deleteAllByUserId(userId);
     String code = "%06d".formatted(RANDOM.nextInt(1_000_000));
     tokenRepository.save(
         PasswordResetToken.builder()
