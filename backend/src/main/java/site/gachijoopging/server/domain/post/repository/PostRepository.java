@@ -1,6 +1,7 @@
 package site.gachijoopging.server.domain.post.repository;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -67,4 +68,25 @@ public interface PostRepository extends JpaRepository<Post, UUID> {
       value = "DELETE FROM post_likes WHERE post_id = :postId AND user_id = :userId",
       nativeQuery = true)
   void unlike(@Param("postId") UUID postId, @Param("userId") UUID userId);
+
+  @Query(
+      value = "SELECT id FROM posts WHERE deleted_at < :threshold LIMIT :limit",
+      nativeQuery = true)
+  List<UUID> findDeletedBefore(@Param("threshold") Instant threshold, @Param("limit") int limit);
+
+  @Query(value = "SELECT media_id FROM post_media WHERE post_id IN (:ids)", nativeQuery = true)
+  List<UUID> findMediaIds(@Param("ids") List<UUID> ids);
+
+  // 자식 행에 ON DELETE CASCADE 가 없어 같은 문장에서 지운다. 지워지지 않은 댓글도 게시물과 함께 간다
+  @Modifying
+  @Query(
+      value =
+          """
+          WITH likes AS (DELETE FROM post_likes WHERE post_id IN (:ids)),
+               links AS (DELETE FROM post_media WHERE post_id IN (:ids)),
+               replies AS (DELETE FROM comments WHERE post_id IN (:ids))
+          DELETE FROM posts WHERE id IN (:ids)
+          """,
+      nativeQuery = true)
+  int purge(@Param("ids") List<UUID> ids);
 }

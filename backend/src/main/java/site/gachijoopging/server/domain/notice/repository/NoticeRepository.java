@@ -2,6 +2,7 @@ package site.gachijoopging.server.domain.notice.repository;
 
 import jakarta.persistence.LockModeType;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -34,4 +35,20 @@ public interface NoticeRepository extends JpaRepository<Notice, UUID> {
       @Param("title") String title,
       @Param("body") String body,
       @Param("now") Instant now);
+
+  @Query(
+      value = "SELECT id FROM notices WHERE deleted_at < :threshold LIMIT :limit",
+      nativeQuery = true)
+  List<UUID> findDeletedBefore(@Param("threshold") Instant threshold, @Param("limit") int limit);
+
+  // 공지 댓글에 ON DELETE CASCADE 가 없어 같은 문장에서 지운다. 지워지지 않은 댓글도 공지와 함께 간다
+  @Modifying
+  @Query(
+      value =
+          """
+          WITH replies AS (DELETE FROM notice_comments WHERE notice_id IN (:ids))
+          DELETE FROM notices WHERE id IN (:ids)
+          """,
+      nativeQuery = true)
+  int purge(@Param("ids") List<UUID> ids);
 }

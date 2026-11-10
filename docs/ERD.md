@@ -35,6 +35,7 @@ erDiagram
   notices ||--o{ notice_comments : ""
   crews ||--o{ chat_messages : ""
   crews ||--o{ chat_reads : ""
+  crews ||--o| chat_seqs : ""
   users ||--o{ notifications : ""
   crews ||--o{ reports : ""
   users ||--o{ refresh_tokens : ""
@@ -317,6 +318,8 @@ PENDING 이 있는 사람의 크루 만들기·다른 크루 가입·신청은 4
 
 **chat_reads** — (crew_id, user_id) PK, last_seq bigint NOT NULL, updated_at.
 
+**chat_seqs** — crew_id PK → crews, last_seq bigint NOT NULL. 그 크루에서 마지막으로 발급한 seq. 지운 메시지를 물리 삭제해도 seq 가 되돌아가지 않게 메시지와 따로 둔다(아래 "채팅 seq").
+
 **reports**
 
 | 컬럼 | 제약 |
@@ -385,7 +388,7 @@ meets · meet_members · meet_invites · meet_join_requests · friendships · ne
 
 재연결 뒤 이어받기는 `afterSeq` 커서다(`realtime.md`). 그런데 seq 를 먼저 받은 메시지가 늦게 커밋될 수 있다 — seq 5 가 seq 4 보다 먼저 커밋되면, 이어받기가 5 까지 읽고 다음에 `afterSeq=5` 로 묻는 사이 4 는 영영 내려가지 않는다.
 
-그래서 **같은 크루의 메시지 저장을 직렬화**해 seq 순서와 커밋 순서를 같게 만든다. 저장 트랜잭션이 먼저 크루 단위 advisory lock(`pg_advisory_xact_lock`, 키는 `crew_id`)을 잡고 그 크루의 다음 seq 를 발급한다. 크루 하나의 동시 발화는 적어 경합은 무시할 수준이다. `UNIQUE (crew_id, seq)` 가 마지막 방어선이다.
+그래서 **같은 크루의 메시지 저장을 직렬화**해 seq 순서와 커밋 순서를 같게 만든다. 저장 트랜잭션이 먼저 크루 단위 advisory lock(`pg_advisory_xact_lock`, 키는 `crew_id`)을 잡고 그 크루의 다음 seq 를 `chat_seqs` 에서 발급한다. `max(seq) + 1` 로 정하면 지운 지 30일 된 마지막 메시지를 물리 삭제한 뒤 같은 번호가 다시 나가, 이미 그 번호까지 읽은 사람에게 새 메시지가 읽음으로 계산된다. 크루 하나의 동시 발화는 적어 경합은 무시할 수준이다. `UNIQUE (crew_id, seq)` 가 마지막 방어선이다.
 
 ### 크루 정원 — 크루별로 직렬화한다
 
@@ -414,7 +417,7 @@ meets · meet_members · meet_invites · meet_join_requests · friendships · ne
 | 종료 없이 끊긴 `live_locations` | 5분마다 | `updated_at` 이 25분 넘게 지난 행 삭제 — 늦어도 30분 안에 지워진다. 지운 행은 `LIVE_ENDED` 로 알리고, 활동이 이어지면 다음 갱신이 행을 다시 만들며 `LIVE_STARTED` 로 알린다 (`LiveLocationCleanupJob`) | 있음 |
 | `password_reset_tokens` | 사용·폐기 때 · 매일 04:00 KST | 사용·재발급·오답 한도로 폐기되는 행은 그때 삭제, 쓰지 않고 만료된 행은 매일 삭제 (`PasswordResetTokenCleanupJob`) | 있음 |
 | 처리 끝난 `reports` | 매일 04:00 KST | `resolved_at` 이 364일 지난 행 삭제 — 늦어도 1년 안에 지워진다 (`ReportCleanupJob`) | 있음 |
-| `deleted_at` 이 찍힌 콘텐츠 행 (`activities`·`posts`·`comments`·`notices`·`chat_messages`) | 매일 04:00 KST | `deleted_at` 이 29일 지난 행과 그 행에 딸린 행(댓글·좋아요·사진 연결 등)을 물리 삭제. 사진 파일은 `deleted/` 에서 함께 지운다 | 구현 전 |
+| `deleted_at` 이 찍힌 콘텐츠 행 (`activities`·`posts`·`comments`·`notices`·`notice_comments`·`chat_messages`) | 매일 04:00 KST | `deleted_at` 이 29일 지난 행과 그 행에 딸린 행(줍기·사진 연결·좋아요·지워지지 않은 댓글)을 물리 삭제. 붙었던 `media` 행은 다른 곳에 붙어 있지 않으면 지우고, 파일은 `media_purge_queue` 로 원본·`deleted/` 둘 다 지운다 | 있음 (`ActivityCleanupJob`·`PostCleanupJob`·`NoticeCleanupJob`·`ChatMessageCleanupJob`) |
 | `deleted_at` 이 찍힌 `users`·`crews` | — | 물리 삭제하지 않는다. 탈퇴한 `users` 는 개인정보를 지운 빈 행으로 남아 "탈퇴한 크루원" 게시물·댓글이 가리키고, 해산한 `crews` 는 개인 활동 기록·`crew_daily_stats` 가 가리킨다 | 해당 없음 |
 | 서버 접속 로그 | 3개월 | 3개월 지난 로그 삭제 | infra 담당 (GAC-109). DB 행이 아니다 |
 | 사용자가 버린 활동 사진 | 버릴 때 (`DELETE /media/{mediaId}`) | `activity_photos`·`media` 행을 지우고 커밋 뒤 원본·썸네일 파일을 지운다. `deleted/` 를 거치지 않는다 | 있음 (GAC-89) |

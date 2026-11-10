@@ -135,16 +135,26 @@ public class MediaService {
   // 활동 사진 행은 활동과 함께 먼저 지워져 있어야 한다
   @Transactional(propagation = Propagation.MANDATORY)
   public void withdraw(UUID me) {
+    purge(mediaRepository.deletePersonalOf(me));
+  }
+
+  // 지운 콘텐츠를 물리 삭제할 때 거기 붙었던 사진도 지운다 (privacy §2 "지운 뒤 30일")
+  @Transactional(propagation = Propagation.MANDATORY)
+  public void release(List<UUID> mediaIds) {
+    if (!mediaIds.isEmpty()) {
+      purge(mediaRepository.deleteUnattached(mediaIds));
+    }
+  }
+
+  private void purge(List<MediaRepository.KeyRow> rows) {
     List<String> keys = new ArrayList<>();
-    mediaRepository
-        .deletePersonalOf(me)
-        .forEach(
-            row -> {
-              keys.add(row.getObjectKey());
-              keys.add(row.getThumbKey());
-              mediaRepository.enqueuePurge(row.getObjectKey());
-              mediaRepository.enqueuePurge(row.getThumbKey());
-            });
+    rows.forEach(
+        row -> {
+          keys.add(row.getObjectKey());
+          keys.add(row.getThumbKey());
+          mediaRepository.enqueuePurge(row.getObjectKey());
+          mediaRepository.enqueuePurge(row.getThumbKey());
+        });
     events.publishEvent(new MediaPurgeEvent(keys));
   }
 

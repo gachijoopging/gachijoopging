@@ -25,4 +25,14 @@ public interface NoticeCommentRepository extends JpaRepository<NoticeComment, UU
       @Param("authorId") UUID authorId,
       @Param("text") String text,
       @Param("now") Instant now);
+
+  @Modifying
+  @Query(
+      value =
+          """
+          DELETE FROM notice_comments WHERE id IN (
+            SELECT id FROM notice_comments WHERE deleted_at < :threshold LIMIT :limit)
+          """,
+      nativeQuery = true)
+  int deleteDeletedBefore(@Param("threshold") Instant threshold, @Param("limit") int limit);
 }

@@ -2,6 +2,7 @@ package site.gachijoopging.server.domain.activity.repository;
 
 import jakarta.persistence.LockModeType;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -126,4 +127,19 @@ public interface ActivityRepository extends JpaRepository<Activity, UUID> {
   @Modifying
   @Query(value = "DELETE FROM activity_photos WHERE id = :photoId", nativeQuery = true)
   void deletePhoto(@Param("photoId") UUID photoId);
+
+  @Query(
+      value = "SELECT id FROM activities WHERE deleted_at < :threshold LIMIT :limit",
+      nativeQuery = true)
+  List<UUID> findDeletedBefore(@Param("threshold") Instant threshold, @Param("limit") int limit);
+
+  @Query(
+      value = "SELECT media_id FROM activity_photos WHERE activity_id IN (:ids)",
+      nativeQuery = true)
+  List<UUID> findPhotoMediaIds(@Param("ids") List<UUID> ids);
+
+  // 줍기·사진 연결·실시간 위치는 ON DELETE CASCADE 로 함께 지워진다
+  @Modifying
+  @Query(value = "DELETE FROM activities WHERE id IN (:ids)", nativeQuery = true)
+  int purge(@Param("ids") List<UUID> ids);
 }

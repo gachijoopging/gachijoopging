@@ -25,4 +25,14 @@ public interface CommentRepository extends JpaRepository<Comment, UUID> {
       @Param("authorId") UUID authorId,
       @Param("text") String text,
       @Param("now") Instant now);
+
+  @Modifying
+  @Query(
+      value =
+          """
+          DELETE FROM comments WHERE id IN (
+            SELECT id FROM comments WHERE deleted_at < :threshold LIMIT :limit)
+          """,
+      nativeQuery = true)
+  int deleteDeletedBefore(@Param("threshold") Instant threshold, @Param("limit") int limit);
 }
