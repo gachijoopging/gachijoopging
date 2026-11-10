@@ -13,6 +13,7 @@ DELETE FROM notice_comments WHERE notice_id IN (SELECT id FROM notices WHERE cre
 DELETE FROM notices WHERE crew_id IN (SELECT id FROM demo_crews);
 DELETE FROM chat_reads WHERE crew_id IN (SELECT id FROM demo_crews);
 DELETE FROM chat_messages WHERE crew_id IN (SELECT id FROM demo_crews);
+DELETE FROM chat_seqs WHERE crew_id IN (SELECT id FROM demo_crews);
 DELETE FROM reports WHERE crew_id IN (SELECT id FROM demo_crews);
 DELETE FROM activities WHERE crew_id IN (SELECT id FROM demo_crews);
 DELETE FROM crew_daily_stats WHERE crew_id IN (SELECT id FROM demo_crews);

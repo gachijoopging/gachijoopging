@@ -102,6 +102,7 @@ class ChatApiTest extends IntegrationTest {
             jdbcTemplate.queryForObject(
                 "SELECT count(*) FROM chat_messages WHERE id = ?", Long.class, id))
         .isEqualTo(1);
+    assertThat(보낸다(나, "다음 메시지")).isEqualTo(((Number) 데이터(첫_echo).get("seq")).longValue() + 1);
   }
 
   @Test

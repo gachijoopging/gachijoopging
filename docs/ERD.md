@@ -388,7 +388,7 @@ meets · meet_members · meet_invites · meet_join_requests · friendships · ne
 
 재연결 뒤 이어받기는 `afterSeq` 커서다(`realtime.md`). 그런데 seq 를 먼저 받은 메시지가 늦게 커밋될 수 있다 — seq 5 가 seq 4 보다 먼저 커밋되면, 이어받기가 5 까지 읽고 다음에 `afterSeq=5` 로 묻는 사이 4 는 영영 내려가지 않는다.
 
-그래서 **같은 크루의 메시지 저장을 직렬화**해 seq 순서와 커밋 순서를 같게 만든다. 저장 트랜잭션이 먼저 크루 단위 advisory lock(`pg_advisory_xact_lock`, 키는 `crew_id`)을 잡고 그 크루의 다음 seq 를 `chat_seqs` 에서 발급한다. `max(seq) + 1` 로 정하면 지운 지 30일 된 마지막 메시지를 물리 삭제한 뒤 같은 번호가 다시 나가, 이미 그 번호까지 읽은 사람에게 새 메시지가 읽음으로 계산된다. 크루 하나의 동시 발화는 적어 경합은 무시할 수준이다. `UNIQUE (crew_id, seq)` 가 마지막 방어선이다.
+그래서 **같은 크루의 메시지 저장을 직렬화**해 seq 순서와 커밋 순서를 같게 만든다. 저장 트랜잭션이 먼저 크루 단위 advisory lock(`pg_advisory_xact_lock`, 키는 `crew_id`)을 잡고 그 크루의 다음 seq 를 `chat_seqs` 에서 발급한다. `max(seq) + 1` 로 정하면 지운 지 30일 된 마지막 메시지를 물리 삭제한 뒤 같은 번호가 다시 나가, 이미 그 번호까지 읽은 사람에게 새 메시지가 읽음으로 계산된다. `chat_seqs` 에 행이 없는 크루(시드처럼 메시지가 카운터를 거치지 않고 들어온 경우)만 첫 발급을 `max(seq) + 1` 에서 시작한다. 크루 하나의 동시 발화는 적어 경합은 무시할 수준이다. `UNIQUE (crew_id, seq)` 가 마지막 방어선이다.
 
 ### 크루 정원 — 크루별로 직렬화한다
 

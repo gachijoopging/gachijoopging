@@ -19,7 +19,8 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, UUID> 
           """
           WITH next AS (
             INSERT INTO chat_seqs (crew_id, last_seq)
-            SELECT :crewId, 1 WHERE NOT EXISTS (SELECT 1 FROM chat_messages WHERE id = :id)
+            SELECT :crewId, coalesce((SELECT max(seq) FROM chat_messages WHERE crew_id = :crewId), 0) + 1
+            WHERE NOT EXISTS (SELECT 1 FROM chat_messages WHERE id = :id)
             ON CONFLICT (crew_id) DO UPDATE SET last_seq = chat_seqs.last_seq + 1
             RETURNING last_seq
           )
