@@ -40,6 +40,7 @@ mobile/legacy-387996e3-20260813.apk
 
 # Local git worktrees
 .worktrees/
+.claude/worktrees/
 
 # graft's local graph cache — regenerable, not committed (run `graft build`).
 /graft/
