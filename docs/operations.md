@@ -781,7 +781,9 @@ ssh <서버> sh -s -- <기기 토큰> < infra/fcm-check.sh    # ③ 그 기기�
 
 상태는 `/opt/gachijoopging/.watch-state` 에 "이름 연속실패횟수" 로 남는다. 바뀌는 순간에만 보낸다.
 
-소켓은 토큰 없이 **401 이면 정상**이다 — Spring 까지 닿았다는 뜻이다. 백엔드가 죽으면 Nginx 가 502 를,
+소켓은 토큰 없이 **101 이면 정상**이다 — Spring 까지 닿았다는 뜻이다. 백엔드는 핸드셰이크를 받아 준 뒤 4401 로
+닫는다(`docs/realtime.md`). 401 은 정상이 아니다 — `/api/v1/ws` 에 핸들러가 없을 때(접두사 탈락 · 소켓 없는 이미지로 롤백)
+`anyRequest().authenticated()` 가 주는 코드라, 정상으로 보면 §HTTPS 의 그 장애가 묻힌다. 백엔드가 죽으면 Nginx 가 502 를,
 네트워크가 끊기면 000 을 준다. AI 는 `AI_BASE_URL` 이 비어 있으면 건너뛴다. 아직 연결 전이라는 것을
 5분마다 쏘면 그게 소음이다.
 
@@ -896,7 +898,9 @@ unset PGPASSWORD
 |---|---|
 | 🚨 백엔드 응답 없음 | `docker compose logs --tail 50 backend`. DB·Redis 자격이나 Flyway 에서 죽는 일이 많다 |
 | 🚨 소켓 `HTTP 502` | 백엔드가 죽은 것이다. 위와 같다 — 소켓만 따로 깨지는 경우는 드물다 |
-| 🚨 소켓 `HTTP 401` 아닌 4xx | Nginx 설정이 바뀌었다. **`/api/v1` 접두사를 떼지 않았는지** 본다(§HTTPS) |
+| 🚨 소켓 `HTTP 400` | Upgrade 헤더가 Spring 까지 안 닿은 것이다. `watch.sh` 의 `--http1.1` 이 빠졌거나, Nginx 의 `proxy_set_header Upgrade`·`Connection "upgrade"` 가 없어졌는지 본다(§HTTPS). `location /api/v1/ws` 블록이 사라져 `/api/v1/` 로 떨어진 경우도 같다 — 그 블록엔 Upgrade 헤더가 없다 |
+| 🚨 소켓 `HTTP 401` | `/api/v1/ws` 에 핸들러가 없다. **Nginx 가 `/api/v1` 접두사를 떼지 않았는지**(§HTTPS), 아니면 소켓 없는 옛 이미지로 롤백됐는지 본다 |
+| 🚨 소켓 그 외 4xx (404 등) | `PUBLIC_BASE_URL` 에 엉뚱한 경로가 붙어 `location / { return 404 }` 에 걸린 것이다. `/api/v1/ws` 와 `/api/v1/` 둘 다 사라져야 404 가 난다 |
 | 🚨 바깥에서 안 보인다 | 서버 전원·Lightsail 방화벽·DNS. `ssh` 가 되는지부터 본다 |
 | 🚨 Redis 응답 없음 | `REDIS_PASSWORD` 불일치가 가장 흔하다(§Redis). rate limit 이 조용히 열린 상태다 |
 | ⚠️ 인증서 N일 남음 | `docker compose logs certbot`. 갱신이 멈춘 것이다 |
