@@ -28,22 +28,25 @@ gh pr list --state open --limit 100 \
   --json number,title,isDraft,author,reviewRequests,latestReviews,headRefOid,headRefName,baseRefName,url \
   --jq ".[] | select(.author.login != \"$ME\" and (.isDraft|not))
         | select(([.reviewRequests[]? | (.login // .slug)] + [.latestReviews[]?.author.login]) | index(\"$ME\") != null)
-        | {number,title,author:.author.login,base:.baseRefName,head:.headRefName,sha:.headRefOid[:7],url,requested:([.reviewRequests[]? | (.login // .slug)] | index(\"$ME\") != null)}"
+        | {number,title,author:.author.login,base:.baseRefName,head:.headRefName,sha:.headRefOid[:7],url}"
 # PR 마다 — 지금 머리 커밋을 내가 이미 리뷰했나 (리뷰 · 일반 댓글 모두, 첫 줄 마커 기준)
 gh pr view <N> --json reviews,comments \
   --jq "[.reviews[],.comments[]] | map(select(.author.login==\"$ME\" and (.body|startswith(\"<!-- review-pr\")) and (.body|test(\"sha=<sha 7자>\")))) | length"
-# PR 마다 — 내 마지막 마커 뒤에 작성자의 반영 댓글(gachi:apply-pr)이 있나. 커밋 없이 답만 단 반영은 머리 sha 가 그대로다
+# PR 마다 — 작성자의 반영 댓글(gachi:apply-pr)이 내 마지막 마커 리뷰에 답했나. 커밋 없이 답만 단 반영은 머리 sha 가 그대로다.
+# 반영 댓글의 `<!-- apply-pr answered=… -->` 표지에 내 run 이 있어야 센다. 내 결과가 `필수 수정 없음` 이었으면 0 — 작성자도 재리뷰를 요청하지 않는다
 gh pr view <N> --json author,reviews,comments \
   --jq ".author.login as \$a
-        | ([.reviews[],.comments[]] | map(select(.author.login==\"$ME\" and (.body|startswith(\"<!-- review-pr\")))) | map(.submittedAt // .createdAt) | max // \"\") as \$t
-        | [.comments[] | select(.author.login==\$a and (.body|startswith(\"리뷰 반영 (작성자)\")) and .createdAt > \$t)] | length"
+        | ([.reviews[],.comments[]] | map(select(.author.login==\"$ME\" and (.body|startswith(\"<!-- review-pr\")))) | sort_by(.submittedAt // .createdAt) | last) as \$m
+        | if \$m == null or (\$m.body|contains(\"**결과:** 필수 수정 없음\")) then 0
+          else (\$m.body|capture(\"run=(?<r>[0-9TZ]+)\").r) as \$r
+            | [.comments[] | select(.author.login==\$a and (.body|startswith(\"리뷰 반영 (작성자)\"))) | (.body|capture(\"answered=(?<x>[0-9TZ,]+)\").x // \"\") | split(\",\") | select(any(.[]; . == \$r))] | length end"
 ```
 
 **리뷰할 PR** 은 아래를 모두 만족하는 PR 이다.
 
 - 작성자가 내가 아니고 draft 가 아니다
 - 리뷰 요청(`reviewRequests`)에 내가 있거나, 이미 리뷰를 낸 사람(`latestReviews[].author`)에 내가 있다. GitHub 는 리뷰를 내면 요청 목록에서 빼므로 둘을 합쳐 본다
-- 지금 머리 커밋(`headRefOid` 앞 7자)에 대한 내 마커 리뷰 · 댓글이 없다 (위 둘째 명령이 0). **또는** 리뷰 요청에 내가 있고(`requested: true`) 내 마지막 마커 뒤에 작성자의 `리뷰 반영 (작성자)` 댓글이 있다 (위 셋째 명령이 1 이상) — 작성자가 커밋 없이 답만 달고 나에게 재리뷰를 요청한 경우다. 요청을 함께 보는 이유: 반영 댓글은 리뷰어를 가리지 않는다. 작성자(`gachi:apply-pr`)는 답이 필요한 리뷰어에게만 다시 요청한다
+- 지금 머리 커밋(`headRefOid` 앞 7자)에 대한 내 마커 리뷰 · 댓글이 없다 (위 둘째 명령이 0). **또는** 작성자의 반영 댓글이 내 마지막 마커 리뷰에 답했다 (위 셋째 명령이 1 이상) — 작성자가 커밋 없이 답만 단 경우다. 리뷰 요청 목록은 보지 않는다: 프로젝트 `/review-pr` 처럼 댓글로 리뷰하면 요청이 지워지지 않아 기준이 되지 못한다
 
 인자로 번호를 받았으면 위 조건 없이 그 PR 들만 본다 (내 PR 셀프 리뷰도 된다 — 단 **Approve 는 절대 하지 않는다.** GitHub 가 작성자 승인을 막는다). 0개면 "리뷰할 PR 이 없어요" 로 끝낸다. 1개면 바로 진행한다. 여럿이면 `AskUserQuestion` 1개(`multiSelect: true`): 선택지마다 `#<N> <제목>`, 설명에 작성자 · 요청인지 이미 리뷰했는지 · base. 4개를 넘으면 나머지 번호는 질문 문장에 적고 Other 로 받는다.
 
