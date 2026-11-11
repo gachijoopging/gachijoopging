@@ -1,19 +1,23 @@
 package site.gachijoopging.server.domain.stats;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static site.gachijoopging.server.support.TestAccounts.가입한다;
 
 import com.jayway.jsonpath.JsonPath;
+import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -23,8 +27,10 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
+import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import site.gachijoopging.server.support.IntegrationTest;
@@ -326,6 +332,48 @@ class StatsApiTest extends IntegrationTest {
     조회(크루장, "/crew/members/" + 계정().id() + "/activities").andExpect(status().isNotFound());
     조회(크루장, "/crew/members/" + 크루원.id() + "/activities", "limit", "51")
         .andExpect(status().isUnprocessableEntity());
+  }
+
+  @Test
+  void CSV_는_BOM_과_헤더_뒤에_기간_양끝을_포함한_활동을_한_행씩_싣고_크루장만_받는다() throws Exception {
+    TestAccount 크루장 = 계정();
+    String 크루 = 공개_크루를_만든다(크루장);
+    TestAccount 크루원 = 계정();
+    들어간다(크루원, 크루);
+    끝낸다(크루장, "2026-10-09T14:59:00Z", Map.of("CAN", 9)); // KST 10-09 23:59, 기간 앞
+    끝낸다(크루장, "2026-10-09T15:00:00Z", Map.of("CAN", 2, "PLASTIC", 1)); // KST 10-10 00:00
+    끝낸다(크루원, "2026-10-13T14:55:00Z", Map.of("CIGARETTE", 3)); // KST 10-13 23:55, 자정을 넘겨 끝남
+    끝낸다(크루원, "2026-10-13T15:00:00Z", Map.of("CAN", 9)); // KST 10-14 00:00, 기간 뒤
+
+    MockHttpServletResponse 응답 =
+        조회(크루장, "/crew/export", "from", "2026-10-10", "to", "2026-10-13")
+            .andExpect(status().isOk())
+            .andExpect(content().contentType("text/csv;charset=utf-8"))
+            .andReturn()
+            .getResponse();
+
+    byte[] 바이트 = 응답.getContentAsByteArray();
+    assertThat(Arrays.copyOf(바이트, 3)).containsExactly(0xEF, 0xBB, 0xBF);
+    String[] 행 = new String(바이트, StandardCharsets.UTF_8).substring(1).split("\r\n");
+    assertThat(행).hasSize(3);
+    assertThat(행[0]).isEqualTo("날짜,크루원,시작,종료,거리(m),시간(초),총개수,담배꽁초,캔,플라스틱,종이,유리,비닐,일반");
+    assertThat(행[1])
+        .matches(
+            "2026-10-10,t\\w{8},2026-10-10 00:00:00,2026-10-10 00:10:00,1000,600,3,0,2,1,0,0,0,0");
+    assertThat(행[2])
+        .matches(
+            "2026-10-13,t\\w{8},2026-10-13 23:55:00,2026-10-14 00:05:00,1000,600,3,3,0,0,0,0,0,0");
+    assertThat(
+            ContentDisposition.parse(응답.getHeader(HttpHeaders.CONTENT_DISPOSITION)).getFilename())
+        .matches("크루\\w{8}_활동기록_2026-10-10_2026-10-13\\.csv");
+
+    조회(크루원, "/crew/export", "from", "2026-10-10", "to", "2026-10-13")
+        .andExpect(status().isForbidden());
+    조회(크루장, "/crew/export", "from", "2026-10-13", "to", "2026-10-10")
+        .andExpect(status().isUnprocessableEntity());
+    조회(크루장, "/crew/export", "from", "2026-10", "to", "2026-10-13")
+        .andExpect(status().isUnprocessableEntity());
+    조회(크루장, "/crew/export", "from", "2026-10-10").andExpect(status().isUnprocessableEntity());
   }
 
   private void 단계(TestAccount 계정, int 수량, int 단계) throws Exception {

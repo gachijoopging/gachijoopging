@@ -1,11 +1,19 @@
 package site.gachijoopging.server.domain.stats.service;
 
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.io.UncheckedIOException;
+import java.io.Writer;
+import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.DayOfWeek;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
@@ -36,12 +44,14 @@ import site.gachijoopging.server.domain.stats.repository.CrewDailyStatsRepositor
 import site.gachijoopging.server.domain.stats.repository.StatsQueryRepository;
 import site.gachijoopging.server.domain.stats.repository.StatsQueryRepository.CardCursor;
 import site.gachijoopging.server.domain.stats.repository.StatsQueryRepository.CardRow;
+import site.gachijoopging.server.domain.stats.repository.StatsQueryRepository.ExportRow;
 import site.gachijoopging.server.domain.stats.repository.StatsQueryRepository.Totals;
 import site.gachijoopging.server.domain.stats.repository.StatsQueryRepository.UserRow;
 import site.gachijoopging.server.global.error.BusinessException;
 import site.gachijoopging.server.global.error.ErrorCode;
 import site.gachijoopging.server.global.response.CursorPage;
 import site.gachijoopging.server.global.response.Cursors;
+import site.gachijoopging.server.global.security.CrewMembership;
 
 @Service
 @RequiredArgsConstructor
@@ -56,6 +66,10 @@ public class StatsService {
   private static final int CHARACTER_DAYS = 14;
 
   private static final int LIVE_FACES = 5;
+
+  private static final String CSV_HEADER = "날짜,크루원,시작,종료,거리(m),시간(초),총개수,담배꽁초,캔,플라스틱,종이,유리,비닐,일반";
+  private static final DateTimeFormatter CSV_TIME =
+      DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(KST);
 
   private final CrewDailyStatsRepository crewDailyStatsRepository;
   private final StatsQueryRepository queryRepository;
@@ -201,6 +215,61 @@ public class StatsService {
             ? Cursors.encode(page.getLast().startedAt(), page.getLast().id())
             : null;
     return new CursorPage<>(page.stream().map(this::card).toList(), next);
+  }
+
+  // 헤더를 쓰기 전에 검사를 끝낸다 — 본문을 쓰기 시작하면 오류 응답으로 바꿀 수 없다
+  @Transactional(readOnly = true)
+  public String exportFileName(CrewMembership crew, LocalDate from, LocalDate to) {
+    crew.requireLeader();
+    if (to.isBefore(from)) {
+      throw new BusinessException(ErrorCode.VALIDATION, "to 가 from 보다 앞선다");
+    }
+    String name = queryRepository.crew(crew.crewId()).name() + "_활동기록_" + from + "_" + to;
+    return name.replaceAll("[\\\\/:*?\"<>|\\p{Cntrl}]", "_") + ".csv";
+  }
+
+  // 탈퇴한 사람의 활동은 행이 지워져 나오지 않는다. crew_daily_stats 합계와 다를 수 있다 (ERD §회원 탈퇴 때)
+  // 쓰는 동안 DB 커넥션을 잡는다. 느린 클라이언트가 문제가 되면 임시 파일로 먼저 받아 내보낸다
+  @Transactional(readOnly = true)
+  public void export(CrewMembership crew, LocalDate from, LocalDate to, OutputStream out)
+      throws IOException {
+    crew.requireLeader();
+    UUID crewId = crew.crewId();
+    Writer writer = new BufferedWriter(new OutputStreamWriter(out, StandardCharsets.UTF_8));
+    writer.write('\uFEFF');
+    writer.write(CSV_HEADER + "\r\n");
+    queryRepository.export(crewId, from, to, row -> writeRow(writer, row));
+    writer.flush();
+  }
+
+  private static void writeRow(Writer writer, ExportRow row) {
+    StringBuilder line =
+        new StringBuilder()
+            .append(LocalDate.ofInstant(row.startedAt(), KST))
+            .append(',')
+            .append(csvText(Objects.requireNonNullElse(row.nickname(), "")))
+            .append(',')
+            .append(CSV_TIME.format(row.startedAt()))
+            .append(',')
+            .append(CSV_TIME.format(row.endedAt()))
+            .append(',')
+            .append(row.distanceM())
+            .append(',')
+            .append(row.durationSec())
+            .append(',')
+            .append(row.itemCount());
+    row.byCategory().forEach(quantity -> line.append(',').append(quantity));
+    try {
+      writer.write(line.append("\r\n").toString());
+    } catch (IOException e) {
+      throw new UncheckedIOException(e);
+    }
+  }
+
+  // 사용자가 쓴 글자다. = + - @ 탭 CR 로 시작하면 엑셀이 수식으로 실행하므로 ' 를 붙인다 (OWASP CSV Injection)
+  static String csvText(String value) {
+    String safe = value.matches("(?s)[=+\\-@\t\r].*") ? "'" + value : value;
+    return safe.matches("(?s).*[,\"\r\n].*") ? '"' + safe.replace("\"", "\"\"") + '"' : safe;
   }
 
   // 형식은 맞아도 13월 같은 값은 파싱에서 걸린다

@@ -44,8 +44,7 @@ class OpenApiContractTest extends IntegrationTest {
       Map.of("GET /health", "앱이 부르지 않는다 — 서버 상태는 /actuator/health 로 본다 (docs/operations.md)");
 
   // 구현되면 이 표에서 지운다
-  private static final Map<String, String> 미구현_연산 =
-      Map.ofEntries(Map.entry("GET /crew/export", "GAC-97"));
+  private static final Map<String, String> 미구현_연산 = Map.of();
 
   private static final Map<String, String> 미구현_스키마 = Map.of();
 
