@@ -98,6 +98,40 @@ class MeApiTest extends IntegrationTest {
   }
 
   @Test
+  void 공백뿐인_닉네임은_422_VALIDATION_이다() throws Exception {
+    TestAccount 나 = 가입한다(mockMvc, "me-blank@test.io");
+
+    mockMvc
+        .perform(수정(나, "{\"nickname\":\"  \"}"))
+        .andExpect(status().isUnprocessableEntity())
+        .andExpect(jsonPath("$.code").value("VALIDATION"));
+  }
+
+  @Test
+  void 닉네임은_줄바꿈과_앞뒤_공백을_정리해_저장한다() throws Exception {
+    TestAccount 나 = 가입한다(mockMvc, "me-trim@test.io");
+
+    mockMvc
+        .perform(수정(나, "{\"nickname\":\" 수정\\n닉네임 \"}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.nickname").value("수정닉네임"));
+  }
+
+  @Test
+  void 닉네임_길이는_글자_수로_센다() throws Exception {
+    TestAccount 나 = 가입한다(mockMvc, "me-emoji@test.io");
+
+    mockMvc
+        .perform(수정(나, "{\"nickname\":\"" + "🌱".repeat(13) + "\"}"))
+        .andExpect(status().isUnprocessableEntity())
+        .andExpect(jsonPath("$.code").value("VALIDATION"));
+    mockMvc
+        .perform(수정(나, "{\"nickname\":\"" + "🌱".repeat(12) + "\"}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.data.nickname").value("🌱".repeat(12)));
+  }
+
+  @Test
   void 남의_사진은_프로필에_쓸_수_없다() throws Exception {
     TestAccount 남 = 가입한다(mockMvc, "me-photo-other@test.io");
     UUID 남의_사진 = 사진을_만든다(남.id());
