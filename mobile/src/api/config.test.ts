@@ -33,7 +33,7 @@ test('실 모드에서 백엔드에 있는 경로는 실서버로 보낸다', as
 test('실 모드에서도 백엔드에 없는 경로는 목 응답을 준다', async () => {
   const api = createApiClient();
   await expect(api.get('GET /notifications')).resolves.toEqual(await createMockClient().get('GET /notifications'));
-  await expect(api.mutate('PUT /users/me/agreements', { items: [] })).resolves.toEqual(await createMockClient().mutate('PUT /users/me/agreements', { items: [] }));
+  await expect(api.mutate('POST /notifications/read', {})).resolves.toEqual(await createMockClient().mutate('POST /notifications/read', {}));
   expect(fetch).not.toHaveBeenCalled();
 });
 
@@ -130,9 +130,12 @@ test('크루가 없으면 홈은 NO_CREW 로 거절된다 — 홈이 소속 화�
   await expect(createApiClient().get('GET /crew/home')).rejects.toEqual(new ApiError('NO_CREW', undefined, 403));
 });
 
-test('서버에 동의 API 가 없는 동안 동의는 완료로 보되 항목은 미선택이다 — 1-4 필수 동의가 미리 체크되면 안 된다', async () => {
-  const { data } = await createApiClient().get('GET /users/me/agreements');
-  expect(data.complete).toBe(true);
-  expect(data.items.map((item) => item.agreed)).toEqual([false, false, false]);
-  expect(fetch).not.toHaveBeenCalled();
+test('동의 목록·상태·저장은 실서버로 보낸다 — 목의 완료 응답으로는 서버에 동의가 남지 않는다', async () => {
+  const api = createApiClient();
+  await api.get('GET /agreements');
+  await api.get('GET /users/me/agreements');
+  await api.mutate('PUT /users/me/agreements', { items: [{ type: 'MARKETING', version: '2026-10', agreed: false }] });
+  expect(fetch.mock.calls.map(([url, init]) => `${init?.method} ${url.replace('https://api.test/api/v1', '')}`)).toEqual([
+    'GET /agreements', 'GET /users/me/agreements', 'PUT /users/me/agreements',
+  ]);
 });
