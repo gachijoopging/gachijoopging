@@ -33,6 +33,14 @@ public class LiveLocationRepository {
 
   public record ActivityRow(UUID userId, UUID crewId, boolean locationShared) {}
 
+  public record StaleRow(UUID userId, UUID activityId, UUID crewId) {}
+
+  public enum Upsert {
+    NOT_IN_PROGRESS,
+    INSERTED,
+    UPDATED
+  }
+
   public record LiveMemberRow(
       UUID userId,
       String nickname,
@@ -65,7 +73,7 @@ public class LiveLocationRepository {
 
   // 종료와 엇갈린 보고가 끝난 활동의 행을 되살리지 않게 한다. FOR SHARE 가 종료의 FOR UPDATE 커밋을
   // 기다린 뒤 상태를 다시 판정한다 — 없으면 READ COMMITTED 스냅샷이 진행 중으로 보고 INSERT 한다
-  public int upsertIfInProgress(
+  public Upsert upsertIfInProgress(
       UUID activityId,
       LngLat location,
       int distanceM,
@@ -89,6 +97,7 @@ public class LiveLocationRepository {
               point = EXCLUDED.point, paused = EXCLUDED.paused, distance_m = EXCLUDED.distance_m,
               item_count = EXCLUDED.item_count, elapsed_sec = EXCLUDED.elapsed_sec,
               updated_at = EXCLUDED.updated_at
+            RETURNING (xmax = 0) AS inserted
             """)
         .param("activityId", activityId)
         .param("lng", location == null ? null : location.lng())
@@ -98,7 +107,33 @@ public class LiveLocationRepository {
         .param("itemCount", itemCount)
         .param("elapsedSec", elapsedSec)
         .param("now", OffsetDateTime.ofInstant(now, ZoneOffset.UTC))
-        .update();
+        .query(Boolean.class)
+        .optional()
+        .map(inserted -> inserted ? Upsert.INSERTED : Upsert.UPDATED)
+        .orElse(Upsert.NOT_IN_PROGRESS);
+  }
+
+  // 후보를 잠근 채 시각을 다시 본다. 잠그지 않으면 고른 행이 모두 동시에 갱신됐을 때 0행을 지우고,
+  // 뒤에 오래된 행이 남았는데도 BatchDelete 가 멈춘다. 잠그면 0행은 후보가 바닥났다는 뜻이다
+  public List<StaleRow> deleteStale(Instant threshold, int limit) {
+    OffsetDateTime before = OffsetDateTime.ofInstant(threshold, ZoneOffset.UTC);
+    return jdbc.sql(
+            """
+            DELETE FROM live_locations
+            WHERE updated_at < :before AND user_id IN (
+              SELECT user_id FROM live_locations WHERE updated_at < :before
+              ORDER BY updated_at LIMIT :limit FOR UPDATE)
+            RETURNING user_id, activity_id, crew_id
+            """)
+        .param("before", before)
+        .param("limit", limit)
+        .query(
+            (rs, i) ->
+                new StaleRow(
+                    rs.getObject("user_id", UUID.class),
+                    rs.getObject("activity_id", UUID.class),
+                    rs.getObject("crew_id", UUID.class)))
+        .list();
   }
 
   public void delete(UUID userId, UUID activityId) {
@@ -136,9 +171,13 @@ public class LiveLocationRepository {
         .single();
   }
 
-  public Optional<LiveMemberRow> findMember(UUID userId) {
-    return jdbc.sql(MEMBER_SELECT + " AND l.user_id = :userId")
+  public Optional<LiveMemberRow> findMember(UUID userId, UUID activityId, UUID crewId) {
+    return jdbc.sql(
+            MEMBER_SELECT
+                + " AND l.user_id = :userId AND l.activity_id = :activityId AND l.crew_id = :crewId")
         .param("userId", userId)
+        .param("activityId", activityId)
+        .param("crewId", crewId)
         .query(LiveLocationRepository::member)
         .optional();
   }

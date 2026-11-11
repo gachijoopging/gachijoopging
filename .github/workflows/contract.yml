@@ -30,16 +30,38 @@ jobs:
         run: |
           set -euo pipefail
           if [ "${{ github.event_name }}" != "pull_request" ]; then
-            echo "run=true" >> "$GITHUB_OUTPUT"; exit 0
+            echo "run=true" >> "$GITHUB_OUTPUT"; echo "gen=true" >> "$GITHUB_OUTPUT"; exit 0
           fi
           git fetch --quiet origin "$BASE"
-          if git diff --name-only "$(git rev-parse FETCH_HEAD)...HEAD" | grep -qE '^(docs/openapi\.yaml|redocly\.yaml)$'; then
+          CHANGED=$(git diff --name-only "$(git rev-parse FETCH_HEAD)...HEAD")
+          if grep -qE '^(docs/openapi\.yaml|redocly\.yaml)$' <<< "$CHANGED"; then
             echo "run=true" >> "$GITHUB_OUTPUT"
           else
             echo "run=false" >> "$GITHUB_OUTPUT"
-            echo "계약 파일이 바뀌지 않았다 — 건너뛴다."
+            echo "계약 파일이 바뀌지 않았다 — lint 를 건너뛴다."
+          fi
+          if grep -qE '^(docs/openapi\.yaml|mobile/scripts/gen-mocks\.mjs|mobile/src/api/(contract|mocks)\.generated\.ts)$' <<< "$CHANGED"; then
+            echo "gen=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "gen=false" >> "$GITHUB_OUTPUT"
+            echo "계약·앱 생성물이 바뀌지 않았다 — 생성물 검사를 건너뛴다."
           fi
 
       - name: redocly lint
         if: steps.scope.outputs.run == 'true'
         run: npx --yes @redocly/cli@2.57.0 lint docs/openapi.yaml
+
+      # 계약을 바꾸고 재생성을 빠뜨리면 목이 옛 계약 타입을 만족한 채로 남아 타입 검사가 누락을 못 잡는다.
+      # mobile 전체 npm ci 는 무거워서 생성기에 필요한 yaml 만 lock 의 버전으로 깐다
+      - name: 앱 생성물이 계약과 같나
+        if: steps.scope.outputs.gen == 'true'
+        run: |
+          set -euo pipefail
+          YAML=$(node -p "require('./package-lock.json').packages['node_modules/yaml'].version")
+          npm install --silent --no-save --no-package-lock --prefix "$RUNNER_TEMP/gen" "yaml@$YAML"
+          mkdir -p node_modules && ln -s "$RUNNER_TEMP/gen/node_modules/yaml" node_modules/yaml
+          (cd mobile && npm run --silent gen:mocks)
+          if ! git diff --exit-code --stat -- mobile/src/api; then
+            echo "::error::앱 생성물이 docs/openapi.yaml 과 다르다. cd mobile && npm run gen:mocks 후 생성된 두 파일을 커밋한다"
+            exit 1
+          fi

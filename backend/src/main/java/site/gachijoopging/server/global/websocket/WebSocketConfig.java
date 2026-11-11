@@ -58,7 +58,9 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
   // 서버가 한 대(ADR-0005)라 simple broker 다. 인스턴스를 늘리면 브로커를 바꾼다.
   // 모바일은 망이 바뀌면 반쯤 열린 연결이 남는다. heartbeat 로 걷어 내고, 받기만 하는 연결이
-  // nginx proxy_read_timeout 에 끊기지 않게 한다. 값은 앱 @stomp/stompjs 기본값(10초)과 같다
+  // nginx proxy_read_timeout 에 끊기지 않게 한다. 값은 앱 @stomp/stompjs 기본값(10초)과 같다.
+  // 발송 스레드 풀이 순서를 섞으면 LIVE_ENDED 가 같은 활동의 LIVE_STARTED 뒤에 도착해 목록에서 지운다.
+  // 세션마다 보낸 순서대로 받게 한다
   @Override
   public void configureMessageBroker(MessageBrokerRegistry registry) {
     registry
@@ -66,6 +68,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         .setHeartbeatValue(new long[] {10_000, 10_000})
         .setTaskScheduler(heartbeatScheduler);
     registry.setApplicationDestinationPrefixes(APP_PREFIX);
+    registry.setPreservePublishOrder(true);
   }
 
   @Override

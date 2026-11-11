@@ -42,9 +42,9 @@ after(() => {
 });
 
 // 임시 폴더는 git 저장소가 아니므로 gh 가 볼 저장소를 GH_REPO 로 넘긴다
-function run(command, stdout = '') {
+function run(command, stdout = '', cwd) {
   received = [];
-  const input = { tool_name: 'Bash', tool_input: { command }, tool_response: { stdout, stderr: '' } };
+  const input = { tool_name: 'Bash', tool_input: { command }, tool_response: { stdout, stderr: '' }, cwd };
   return new Promise((resolve) => {
     const p = spawn('node', [hookCopy], { env: { ...process.env, GH_REPO: nameWithOwner } });
     p.on('close', () => resolve(received));
@@ -74,4 +74,21 @@ test('실제로 머지된 PR 은 반영 알림을 한 번 보낸다', async () =
 test('git push 와 gh pr create 가 한 명령이어도 리뷰어 알림을 보낸다', { skip: !reviewed && '리뷰어가 지정된 열린 PR 이 없다' }, async () => {
   const texts = await run('git push -u origin x && gh pr create --base dev --title t --body b', `${url}/pull/${reviewed}\n`);
   assert.equal(reviewNotices(texts).length, 1);
+});
+
+// 주 checkout 은 dev 에 서 있고, 세션은 기능 브랜치 worktree 에 있는 흔한 모양을 실제 저장소로 만든다
+test('세션이 기능 브랜치 worktree 에 있으면 주 checkout 이 dev 여도 dev 반영을 보내지 않는다', async () => {
+  const g = (dir, ...args) => execFileSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@t', ...args], { cwd: dir, encoding: 'utf8' }).trim();
+  const origin = join(sandbox, 'origin.git');
+  const main = join(sandbox, 'main');
+  const feat = join(sandbox, 'feat');
+  execFileSync('git', ['init', '-q', '--bare', '-b', 'dev', origin]);
+  execFileSync('git', ['clone', '-q', origin, main]);
+  g(main, 'switch', '-q', '-c', 'dev');
+  g(main, 'commit', '-q', '--allow-empty', '-m', 'dev 첫 커밋');
+  g(main, 'push', '-q', '-u', 'origin', 'dev');
+  g(main, 'worktree', 'add', '-q', '-b', 'feat', feat);
+
+  assert.equal(mergeNotices(await run('git push -u origin feat', '', feat)).length, 0);
+  assert.equal(mergeNotices(await run('git push', '', main)).length, 1); // 같은 상태에서 주 checkout 의 push 는 dev 반영이다
 });

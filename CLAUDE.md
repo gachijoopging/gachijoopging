@@ -13,7 +13,12 @@
 |---|---|
 | `/create-issue <작업 설명>` | Linear 일감을 만들 때. 중복 검사 후 폴더 오너에게 배정한다 |
 | `/review-pr [번호\|URL ...] [초안만]` | 열린 PR/MR 을 골라 리뷰하고 요약 코멘트를 하나씩 단다. 승인·머지는 하지 않는다 |
+| `/gachi:ship-issue [GAC-N]` | 내 Linear 이슈를 골라 이슈 worktree 에서 계획 → 테스트 먼저 구현(서브에이전트) → 검증 → PR |
+| `/gachi:review-pr [번호 ...]` | 내가 리뷰 요청된 PR 을 새 에이전트가 비판적으로 리뷰하고 `gh pr review` 로 올린다. 필수 수정 없고 내 PR 아니면 Approve |
+| `/gachi:apply-pr [번호]` | 리뷰어가 자기 `gachi:review-pr` 지적을 작성자 브랜치에 직접 반영하고 재리뷰. 내 PR 엔 쓰지 않는다 |
+| `/gachi:merge-pr [번호]` | 승인·체크 초록인 PR 을 `dev` 는 squash, `main` 은 merge commit 으로 머지. 알림은 훅이 보낸다 |
 
+`/gachi:*` 는 팀 플러그인(`plugins/gachi`)이다. 설치·업데이트·막히는 것은 `plugins/gachi/README.md`.
 Linear 접근은 각자 OAuth 로 붙인다. 연결 방법은 `docs/conventions.md` §Linear 연결.
 
 ## 이 저장소의 에이전트
@@ -21,8 +26,8 @@ Linear 접근은 각자 OAuth 로 붙인다. 연결 방법은 `docs/conventions.
 | 에이전트 | 역할 |
 |---|---|
 | `issue-planner` | 폴더 오너십으로 일감을 쪼개고 완료 조건을 검증 (읽기 전용, 생성하지 않는다) |
-| `pr-creator` | 검증된 브랜치를 규칙에 맞는 PR 로 발행. 머지는 하지 않는다 |
-| `backend-guard` | `backend/` 코드를 `backend/docs/02-conventions.md` 에 대조 (읽기 전용) |
+| `pr-creator` | 검증된 브랜치를 규칙에 맞는 PR 로 발행. 머지는 하지 않는다. `gachi:ship-issue` 가 부른다 |
+| `backend-guard` | `backend/` 코드를 `backend/docs/02-conventions.md` 에 대조 (읽기 전용). `gachi:review-pr` · `ship-issue` 가 부른다 |
 | `screen-builder` | `docs/screens/<번호>.md` 대로 화면을 구현. `design-system` 컴포넌트만 쓴다 |
 | `notifier` | Mattermost 알림 발송 전담. 훅이 못 잡은 것만 보낸다 |
 

@@ -69,7 +69,7 @@ JSON 필드명은 openapi.yaml 이 정본이다 — camelCase, 철자 하나도 
   — 조회 결과를 서비스가 그대로 전달만 하는 메서드를 억지로 만드는 것보다 낫다.
   읽기라 트랜잭션 없이도 안전하다.
 - **`service/XxxCleanupJob`** — `@Scheduled` 가 부르는 정리 작업. 자기 데이터의
-  bulk 삭제라 트랜잭션을 열며, 그래서 `facade/` 가 아니라 서비스 옆이다.
+  bulk 삭제를 `BatchDelete`(`global/batch`)로 배치마다 따로 커밋하며, 리포지토리를 직접 쓰므로 `facade/` 가 아니라 서비스 옆이다.
 - **`service/`(`XxxService`)** — **트랜잭션 경계**, 비즈니스 규칙, 권한 검사
   (소유자·크루장·크루원), 타 도메인 **서비스** 호출. 타 도메인 서비스 주입은
   `01-구조.md` §4 의 관계만, 순환하면 기동이 실패한다(§12). **HttpServletRequest·ResponseEntity 등 웹 타입을 모른다.**

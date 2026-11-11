@@ -223,6 +223,28 @@ class NotificationApiTest extends IntegrationTest {
   }
 
   @Test
+  void 끊겨_정리된_활동의_보고가_이어져도_활동_시작은_다시_알리지_않는다() throws Exception {
+    TestAccount 크루장 = 크루장이_된다("noti-resume-leader@test.io");
+    TestAccount 팔로워 = 크루원이_된다("noti-resume-follower@test.io", 크루장);
+    mockMvc.perform(팔로우(팔로워, 크루장.id())).andExpect(status().isNoContent());
+    UUID 활동 = UUID.randomUUID();
+    mockMvc.perform(활동을_시작한다(크루장, 활동)).andExpect(status().isCreated());
+    jdbcTemplate.update("DELETE FROM live_locations WHERE user_id = ?", 크루장.id());
+
+    mockMvc
+        .perform(
+            post("/api/v1/activities/{id}/live", 활동)
+                .header(인증, 크루장.bearer())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    "{\"location\":{\"lng\":126.9,\"lat\":37.5},\"distanceM\":700,\"itemCount\":3,"
+                        + "\"elapsedSec\":60,\"paused\":false}"))
+        .andExpect(status().isNoContent());
+
+    assertThat(종류(팔로워)).containsExactly("ACTIVITY_STARTED");
+  }
+
+  @Test
   void 자기_자신이나_다른_크루_사용자나_없는_사용자를_팔로우해도_204_이고_행은_생기지_않는다() throws Exception {
     TestAccount 크루장 = 크루장이_된다("noti-follow-odd-leader@test.io");
     TestAccount 남의_크루장 = 크루장이_된다("noti-follow-odd-stranger@test.io");
