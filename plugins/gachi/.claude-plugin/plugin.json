@@ -1,0 +1,5 @@
+{
+  "name": "gachi",
+  "description": "가치줍깅 팀 작업 흐름: Linear 이슈 → worktree 에서 TDD 구현 → 검증 → GitHub PR → 남의 PR 리뷰 · 내 리뷰 직접 반영 · 머지",
+  "author": { "name": "gachijoopging" }
+}
