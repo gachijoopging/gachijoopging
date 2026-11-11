@@ -149,4 +149,4 @@ Linear 는 건드리지 않는다 (상태는 연동이 옮긴다).
 
 ## 끝 보고
 
-PR 주소 · 항목별 표(`| # | 요청 | 커밋 | 상태 |`) · push 결과 · 셀프 점검 결과 · 재리뷰를 요청한 리뷰어 · 안 한 항목과 이유 · 확인 명령 시도 횟수 · 사용자가 정한 것. `.claude/worktrees/gac-<번호>` 가 있으면 로컬을 맞추는 명령을 마지막 줄에 적는다: `git -C <그 경로> pull --ff-only`.
+PR 주소 · 항목별 표(`| # | 요청 | 커밋 | 상태 |`) · push 결과 · 셀프 점검 결과 · 재리뷰를 요청한 리뷰어 · 안 한 항목과 이유 · 확인 명령 시도 횟수 · 사용자가 정한 것. `.claude/worktrees/gac-<번호>` 가 있으면 로컬을 맞추는 명령을 마지막 줄에 적는다: `git -C <그 경로> fetch origin <headRef> && git -C <그 경로> merge --ff-only origin/<headRef>`. `pull` 을 쓰지 않는다 — ship-issue 가 `origin/dev` 에서 만든 브랜치는 `-u` 없이 push 하면 upstream 이 `origin/dev` 로 남아 dev 를 당긴다.
