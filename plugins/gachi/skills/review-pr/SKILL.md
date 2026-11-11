@@ -32,13 +32,18 @@ gh pr list --state open --limit 100 \
 # PR 마다 — 지금 머리 커밋을 내가 이미 리뷰했나 (리뷰 · 일반 댓글 모두, 첫 줄 마커 기준)
 gh pr view <N> --json reviews,comments \
   --jq "[.reviews[],.comments[]] | map(select(.author.login==\"$ME\" and (.body|startswith(\"<!-- review-pr\")) and (.body|test(\"sha=<sha 7자>\")))) | length"
+# PR 마다 — 내 마지막 마커 뒤에 작성자의 반영 댓글(gachi:apply-pr)이 있나. 커밋 없이 답만 단 반영은 머리 sha 가 그대로다
+gh pr view <N> --json author,reviews,comments \
+  --jq ".author.login as \$a
+        | ([.reviews[],.comments[]] | map(select(.author.login==\"$ME\" and (.body|startswith(\"<!-- review-pr\")))) | map(.submittedAt // .createdAt) | max // \"\") as \$t
+        | [.comments[] | select(.author.login==\$a and (.body|startswith(\"리뷰 반영 (작성자)\")) and .createdAt > \$t)] | length"
 ```
 
 **리뷰할 PR** 은 아래를 모두 만족하는 PR 이다.
 
 - 작성자가 내가 아니고 draft 가 아니다
 - 리뷰 요청(`reviewRequests`)에 내가 있거나, 이미 리뷰를 낸 사람(`latestReviews[].author`)에 내가 있다. GitHub 는 리뷰를 내면 요청 목록에서 빼므로 둘을 합쳐 본다
-- 지금 머리 커밋(`headRefOid` 앞 7자)에 대한 내 마커 리뷰 · 댓글이 없다 (위 둘째 명령이 0)
+- 지금 머리 커밋(`headRefOid` 앞 7자)에 대한 내 마커 리뷰 · 댓글이 없다 (위 둘째 명령이 0). **또는** 내 마지막 마커 뒤에 작성자의 `리뷰 반영 (작성자)` 댓글이 있다 (위 셋째 명령이 1 이상) — 작성자가 커밋 없이 답만 달고 재리뷰를 요청한 경우다
 
 인자로 번호를 받았으면 위 조건 없이 그 PR 들만 본다 (내 PR 셀프 리뷰도 된다 — 단 **Approve 는 절대 하지 않는다.** GitHub 가 작성자 승인을 막는다). 0개면 "리뷰할 PR 이 없어요" 로 끝낸다. 1개면 바로 진행한다. 여럿이면 `AskUserQuestion` 1개(`multiSelect: true`): 선택지마다 `#<N> <제목>`, 설명에 작성자 · 요청인지 이미 리뷰했는지 · base. 4개를 넘으면 나머지 번호는 질문 문장에 적고 Other 로 받는다.
 

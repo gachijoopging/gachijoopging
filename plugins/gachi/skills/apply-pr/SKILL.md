@@ -34,10 +34,12 @@ ME=$(gh api user --jq .login)
 gh pr list --state open --author "@me" --base dev --limit 100 --json number,title,isDraft,headRefName,headRefOid,url \
   --jq ".[] | select(.isDraft|not) | {number,title,head:.headRefName,sha:.headRefOid[:7],url}"
 # PR 마다 — 리뷰어별 마지막 마커 리뷰 (리뷰 · 일반 댓글 모두. /review-pr 와 gachi:review-pr 둘 다 같은 마커를 쓴다)
+# answered: 그 리뷰 뒤에 내 `리뷰 반영 (작성자)` 댓글이 있다. 커밋 없이 답만 단 반영은 머리 sha 가 그대로라 이것으로 가린다
 gh pr view <N> --json reviews,comments \
-  --jq "[.reviews[],.comments[]] | map(select(.author.login!=\"$ME\" and (.body|startswith(\"<!-- review-pr\"))))
+  --jq "([.comments[] | select(.author.login==\"$ME\" and (.body|startswith(\"리뷰 반영 (작성자)\"))) | .createdAt] | max // \"\") as \$done
+        | [.reviews[],.comments[]] | map(select(.author.login!=\"$ME\" and (.body|startswith(\"<!-- review-pr\"))))
         | group_by(.author.login) | map(sort_by(.submittedAt // .createdAt) | last) | .[]
-        | {reviewer:.author.login, sha:(.body|capture(\"sha=(?<s>[0-9a-f]{7})\").s), todo:(.body|(contains(\"[필수 수정]\") or contains(\"[개선 제안]\") or contains(\"[확인 질문]\") or contains(\"미해결\")))}"
+        | {reviewer:.author.login, sha:(.body|capture(\"sha=(?<s>[0-9a-f]{7})\").s), todo:(.body|(contains(\"[필수 수정]\") or contains(\"[개선 제안]\") or contains(\"[확인 질문]\") or contains(\"미해결\"))), answered:(\$done > (.submittedAt // .createdAt))}"
 # 분류 검출에 정규식을 쓰지 않는다 — bash 큰따옴표를 거치면 \[ 가 \[ 로 들어가 gh 의 jq 가 invalid escape 로 거부한다
 ```
 
@@ -45,7 +47,7 @@ gh pr view <N> --json reviews,comments \
 
 - 작성자가 나고, base 가 `dev` 이고, draft 가 아니다
 - 남이 단 마커 리뷰 중 리뷰어별 마지막 것에 `todo: true` 가 하나 이상 있다 (`[필수 수정]` · `[개선 제안]` · `[확인 질문]` · 이전 지적 `미해결`)
-- 그 리뷰의 `sha` 가 지금 머리 커밋(`headRefOid` 앞 7자)과 같다. 다르면 리뷰 뒤에 이미 push 한 것이다 → 후보가 아니다. 리뷰어의 재리뷰를 기다린다
+- 그 리뷰의 `sha` 가 지금 머리 커밋(`headRefOid` 앞 7자)과 같고 `answered: false` 다. 다르면 리뷰 뒤에 이미 push 했거나 반영 댓글을 단 것이다 → 후보가 아니다. 리뷰어의 재리뷰를 기다린다
 
 인자로 번호를 받았으면 거부 규칙만 적용하고 그 PR 을 본다. `sha` 가 달라도 경고하고 계속하되, 2 단계 표에서 항목마다 현재 머리와 대조해 `이미 해결` 인 행은 표에 남기고 코드는 건드리지 않는다.
 
@@ -105,7 +107,7 @@ git -c core.longpaths=true worktree add --detach "$W" "origin/<headRef>"     # �
 git -C "$W" push origin "HEAD:refs/heads/<headRef>"      # detached HEAD 를 내 원격 브랜치로. fast-forward 만, --force 는 절대 쓰지 않는다
 ```
 
-거부되면(non-fast-forward) 그사이 다른 곳(이슈 worktree 등)에서 push 한 것이다. merge · rebase 하지 않고 멈춰 보고한다. `-C` 형으로 쓰는 이유: 알림 훅은 `git push` 를 **세션 작업 폴더** 기준으로 보는데 이 스킬의 세션은 `$W` 가 아니라 원래 checkout 에 있다. 그 checkout 이 `dev` 에 서 있으면 다른 모양의 push 는 가짜 "dev 반영" 이 된다. `-C` 가 끼면 훅의 `git push` 패턴에 걸리지 않는다.
+반영 커밋이 없으면(모든 행이 `답만` · `안 함`) push 하지 않고 6 단계로 간다. 거부되면(non-fast-forward) 그사이 다른 곳(이슈 worktree 등)에서 push 한 것이다. merge · rebase 하지 않고 멈춰 보고한다. `-C` 형으로 쓰는 이유: 알림 훅은 `git push` 를 **세션 작업 폴더** 기준으로 보는데 이 스킬의 세션은 `$W` 가 아니라 원래 checkout 에 있다. 그 checkout 이 `dev` 에 서 있으면 다른 모양의 push 는 가짜 "dev 반영" 이 된다. `-C` 가 끼면 훅의 `git push` 패턴에 걸리지 않는다.
 
 ## 6. PR 댓글 하나
 
@@ -114,7 +116,7 @@ F="$(git rev-parse --git-dir)/APPLY-<N>.md"     # 본문은 파일로. 따옴표
 gh pr comment <N> --body-file "$F"
 ```
 
-본문: 첫 줄 `리뷰 반영 (작성자) <이전 sha 7자> → <새 sha 7자>`, 그다음 항목마다 한 줄:
+본문: 첫 줄 `리뷰 반영 (작성자) <이전 sha 7자> → <새 sha 7자>` (커밋이 없으면 `리뷰 반영 (작성자) <sha 7자> — 커밋 없음`), 그다음 항목마다 한 줄. 이 첫 줄이 양쪽 스킬의 표지다 — apply-pr 은 이 댓글이 달린 리뷰를 다시 고르지 않고, 리뷰어의 `gachi:review-pr` 는 머리가 그대로여도 이 댓글을 보고 다시 고른다:
 
 - `1-1 고쳤어요 — <sha> <무엇이 어떻게 바뀌었나>`
 - `1-2 이번엔 안 했어요 — <이유>`
@@ -124,6 +126,8 @@ gh pr comment <N> --body-file "$F"
 ## 7. 셀프 점검 (한 번만)
 
 `Skill` 도구로 **`gachi:review-pr`** 를 `args: "<N>"` 으로 실행한다. 내 PR 이므로 Approve 하지 않고 댓글로 결과만 단다. 이전 지적은 리뷰어의 마지막 마커 리뷰로 판정한다.
+
+반영 커밋이 없으면 셀프 점검을 건너뛰고 바로 재리뷰를 요청한다 — 코드가 리뷰어가 본 그대로라 점검할 것이 답뿐이다.
 
 - `필수 수정 없음` · `확인 필요` → 원래 리뷰어에게 재리뷰를 요청한다. GitHub 가 리뷰어에게 알린다
   ```bash
