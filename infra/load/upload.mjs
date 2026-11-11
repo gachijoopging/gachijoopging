@@ -48,7 +48,7 @@ let failed = 0;
 const fail = (e) => { failed++; console.error(`정리 실패: ${e.message}`); };
 try {
   await http('PUT', '/users/me/agreements', token, { items: catalog.items.map((a) => ({ type: a.type, version: a.version, agreed: a.required })) });
-  await http('POST', '/crews', token, { name: `부하${RUN}`, region: 'SEOUL', joinPolicy: 'OPEN' });
+  await http('POST', '/crews', token, { name: `부하${RUN}`, region: 'SEOUL', joinPolicy: 'APPROVAL' }); // 공개면 누가 들어와 크루장 탈퇴가 막힐 수 있다
   await http('POST', '/activities', token, { id: activityId, startedAt: new Date().toISOString(), locationShared: false });
   started = true;
 

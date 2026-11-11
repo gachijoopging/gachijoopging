@@ -124,12 +124,19 @@ const users = [];
 const stats = { updates: 0, sentCount: 0, echoMs: [], drops: [], errors: [] };
 try {
   for (let i = 0; i < N; i++) { checkStop(); await signup(i, agreements, users); }
-  const crew = await http('POST', '/crews', users[0].token, { name: `부하${RUN}`, region: 'SEOUL', joinPolicy: 'OPEN' });
-  for (const u of users.slice(1)) { checkStop(); await http('POST', '/crews/join-requests', u.token, { crewId: crew.id }); }
+  // 비공개로 만들어 크루장이 직접 승인한다 — 공개면 실행 중에 실사용자가 들어올 수 있고, 그러면 크루장이 탈퇴하지 못해 정리가 막힌다
+  const crew = await http('POST', '/crews', users[0].token, { name: `부하${RUN}`, region: 'SEOUL', joinPolicy: 'APPROVAL' });
+  for (const u of users.slice(1)) {
+    checkStop();
+    const jr = await http('POST', '/crews/join-requests', u.token, { crewId: crew.id });
+    await http('POST', `/crew/join-requests/${jr.id}`, users[0].token, { decision: 'APPROVE' });
+  }
   for (const u of users) {
     checkStop();
-    u.activityId = crypto.randomUUID();
-    await http('POST', '/activities', u.token, { id: u.activityId, startedAt: new Date().toISOString(), locationShared: true });
+    // 시작이 성공한 뒤에 넣는다 — 없는 활동을 정리하려다 404 가 나면 그 사용자의 탈퇴까지 건너뛴다
+    const id = crypto.randomUUID();
+    await http('POST', '/activities', u.token, { id, startedAt: new Date().toISOString(), locationShared: true });
+    u.activityId = id;
   }
   console.log(`준비: ${N}명 · 크루 ${crew.name}`);
 
