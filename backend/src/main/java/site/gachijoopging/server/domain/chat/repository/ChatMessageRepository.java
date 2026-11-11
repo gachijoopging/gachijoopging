@@ -12,7 +12,8 @@ import site.gachijoopging.server.domain.chat.entity.ChatMessage;
 public interface ChatMessageRepository extends JpaRepository<ChatMessage, UUID> {
 
   // 충돌 대상을 id 로만 둔다 — (crew_id, seq) 위반까지 삼키면 seq 직렬화가 깨져도 조용히 메시지가 사라진다.
-  // 재전송마다 seq 를 소모하면 앱이 보는 번호가 빈다
+  // 재전송마다 seq 를 소모하면 앱이 보는 번호가 빈다.
+  // greatest: 배포를 되돌린 사이 카운터를 모르는 옛 코드가 max(seq)+1 로 저장한 번호를 다시 주지 않는다
   @Modifying
   @Query(
       value =
@@ -21,7 +22,7 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, UUID> 
             INSERT INTO chat_seqs (crew_id, last_seq)
             SELECT :crewId, coalesce((SELECT max(seq) FROM chat_messages WHERE crew_id = :crewId), 0) + 1
             WHERE NOT EXISTS (SELECT 1 FROM chat_messages WHERE id = :id)
-            ON CONFLICT (crew_id) DO UPDATE SET last_seq = chat_seqs.last_seq + 1
+            ON CONFLICT (crew_id) DO UPDATE SET last_seq = greatest(chat_seqs.last_seq + 1, excluded.last_seq)
             RETURNING last_seq
           )
           INSERT INTO chat_messages (id, crew_id, seq, author_id, text, created_at)
