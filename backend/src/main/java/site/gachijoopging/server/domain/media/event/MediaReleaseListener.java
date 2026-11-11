@@ -14,7 +14,7 @@ public class MediaReleaseListener {
   private final MediaService mediaService;
 
   @EventListener
-  public void onMediaReleased(MediaReleasedEvent event) {
+  public void onMediaRelease(MediaReleaseEvent event) {
     mediaService.release(event.mediaIds());
   }
 }

@@ -10,7 +10,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import site.gachijoopging.server.domain.activity.repository.ActivityRepository;
-import site.gachijoopging.server.domain.media.event.MediaReleasedEvent;
+import site.gachijoopging.server.domain.media.event.MediaReleaseEvent;
 import site.gachijoopging.server.global.batch.BatchDelete;
 
 @Slf4j
@@ -39,7 +39,7 @@ public class ActivityCleanupJob {
               // 사진 연결은 활동과 함께 지워지므로 먼저 읽어 둔다
               List<UUID> mediaIds = activityRepository.findPhotoMediaIds(ids);
               activityRepository.purge(ids);
-              events.publishEvent(new MediaReleasedEvent(mediaIds));
+              events.publishEvent(new MediaReleaseEvent(mediaIds));
               return ids.size();
             });
     if (removed > 0) {

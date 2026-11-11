@@ -9,7 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-import site.gachijoopging.server.domain.media.event.MediaReleasedEvent;
+import site.gachijoopging.server.domain.media.event.MediaReleaseEvent;
 import site.gachijoopging.server.domain.post.repository.CommentRepository;
 import site.gachijoopging.server.domain.post.repository.PostRepository;
 import site.gachijoopging.server.global.batch.BatchDelete;
@@ -40,7 +40,7 @@ public class PostCleanupJob {
               }
               List<UUID> mediaIds = postRepository.findMediaIds(ids);
               postRepository.purge(ids);
-              events.publishEvent(new MediaReleasedEvent(mediaIds));
+              events.publishEvent(new MediaReleaseEvent(mediaIds));
               return ids.size();
             });
     int comments = batchDelete.untilDone(n -> commentRepository.deleteDeletedBefore(threshold, n));
