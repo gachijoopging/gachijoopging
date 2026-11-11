@@ -63,7 +63,7 @@ try {
     await http('DELETE', `/activities/${activityId}`, token).catch(fail);
   }
   await http('DELETE', '/users/me', token).catch(fail);
-  // 0 이 아니면 운영에 계정·크루가 남았다 — 위의 오류 줄을 보고 손으로 지운다
-  console.log(`정리: 실패 ${failed}`);
+  // 0 이 아니면 운영에 계정·크루가 남았다. 비밀번호를 남기지 않으므로 API 로는 못 지운다 — 이 email 로 운영 DB 에서 지운다
+  console.log(`정리: 실패 ${failed}${failed ? ` (load-${RUN}-up@example.com)` : ''}`);
   process.exitCode = failed ? 1 : process.exitCode;
 }

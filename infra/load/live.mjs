@@ -19,8 +19,11 @@ const RUN = Date.now().toString(36);
 const PASSWORD = crypto.randomUUID();
 const PERIOD = 5000;
 let interrupt;
+let stopped = false;
 const interrupted = new Promise((r) => (interrupt = r));
-process.once('SIGINT', () => { console.log('중단 — 정리 후 종료'); interrupt(); });
+process.once('SIGINT', () => { console.log('중단 — 정리 후 종료'); stopped = true; interrupt(); });
+// 준비 중에 눌러도 바로 정리로 넘어간다. 안 그러면 준비가 이어지고, 다시 누르면 정리 없이 죽는다
+const checkStop = () => { if (stopped) throw new Error('중단'); };
 
 async function http(method, path, token, body) {
   const res = await fetch(BASE + path, {
@@ -33,13 +36,17 @@ async function http(method, path, token, body) {
   return text ? JSON.parse(text).data : null;
 }
 
-async function signup(i, agreements) {
+const email = (i) => `load-${RUN}-${i}@example.com`;
+
+// 가입 직후에 users 에 넣는다 — 뒤 요청이 실패해도 정리 대상에서 빠지지 않게
+async function signup(i, agreements, users) {
   const t = await http('POST', '/auth/signup', null, {
-    email: `load-${RUN}-${i}@example.com`, password: PASSWORD, nickname: `부하${RUN.slice(-4)}${i}`, // 닉네임은 UNIQUE · 2~12자
+    email: email(i), password: PASSWORD, nickname: `부하${RUN.slice(-4)}${i}`, // 닉네임은 UNIQUE · 2~12자
   });
-  await http('PUT', '/users/me/agreements', t.accessToken, { items: agreements });
-  const me = await http('GET', '/users/me', t.accessToken);
-  return { i, token: t.accessToken, id: me.id };
+  const u = { i, token: t.accessToken };
+  users.push(u);
+  await http('PUT', '/users/me/agreements', u.token, { items: agreements });
+  u.id = (await http('GET', '/users/me', u.token)).id;
 }
 
 const frame = (cmd, headers, body = '') =>
@@ -88,14 +95,16 @@ function connect(u, stats) {
 
 const pct = (xs, p) => xs.length ? [...xs].sort((a, b) => a - b)[Math.min(xs.length - 1, Math.floor(xs.length * p))] : null;
 
-async function cleanup(users, startedAt) {
+async function cleanup(users) {
   // 크루장(0번)을 마지막에 — 다른 크루원이 남아 있으면 크루장은 탈퇴하지 못한다
   let failed = 0;
   for (const u of [...users.slice(1), users[0]].filter(Boolean)) {
     try {
       if (u.activityId) {
+        // 기록을 남기지 않으므로 0 이다. 실제 시간을 넣으면 준비가 60초를 넘을 때 서버가 422 로 거절해
+        // 탈퇴까지 막힌다(활동 시간 ≤ 시작~종료 + 60초)
         await http('POST', `/activities/${u.activityId}/end`, u.token, {
-          endedAt: new Date().toISOString(), durationSec: Math.round((Date.now() - startedAt) / 1000),
+          endedAt: new Date().toISOString(), durationSec: 0,
           pausedSec: 0, distanceM: 0, steps: null, route: [],
         });
         await http('DELETE', `/activities/${u.activityId}`, u.token);
@@ -103,7 +112,7 @@ async function cleanup(users, startedAt) {
       await http('DELETE', '/users/me', u.token);
     } catch (e) {
       failed++;
-      console.error(`정리 실패 ${u.i}: ${e.message}`);
+      console.error(`정리 실패 ${u.i} ${email(u.i)}: ${e.message}`);
     }
   }
   return failed;
@@ -113,18 +122,19 @@ const catalog = await http('GET', '/agreements');
 const agreements = catalog.items.map((a) => ({ type: a.type, version: a.version, agreed: a.required }));
 const users = [];
 const stats = { updates: 0, sentCount: 0, echoMs: [], drops: [], errors: [] };
-const startedAt = Date.now();
 try {
-  for (let i = 0; i < N; i++) users.push(await signup(i, agreements));
+  for (let i = 0; i < N; i++) { checkStop(); await signup(i, agreements, users); }
   const crew = await http('POST', '/crews', users[0].token, { name: `부하${RUN}`, region: 'SEOUL', joinPolicy: 'OPEN' });
-  for (const u of users.slice(1)) await http('POST', '/crews/join-requests', u.token, { crewId: crew.id });
+  for (const u of users.slice(1)) { checkStop(); await http('POST', '/crews/join-requests', u.token, { crewId: crew.id }); }
   for (const u of users) {
+    checkStop();
     u.activityId = crypto.randomUUID();
     await http('POST', '/activities', u.token, { id: u.activityId, startedAt: new Date().toISOString(), locationShared: true });
   }
   console.log(`준비: ${N}명 · 크루 ${crew.name}`);
 
   await Promise.all(users.map((u) => connect(u, stats)));
+  checkStop();
   console.log(`연결: ${N} — ${MIN}분 유지`);
 
   const t0 = Date.now();
@@ -139,7 +149,9 @@ try {
   const tick = setInterval(() => console.log(
     `${Math.round((Date.now() - t0) / 1000)}s 보냄 ${stats.sentCount} 받음 ${stats.updates} 끊김 ${stats.drops.length} 왕복 p95 ${pct(stats.echoMs, 0.95)}ms`,
   ), 60000);
-  await Promise.race([new Promise((r) => setTimeout(r, MIN * 60000)), interrupted]);
+  let wait;
+  await Promise.race([new Promise((r) => (wait = setTimeout(r, MIN * 60000))), interrupted]);
+  clearTimeout(wait); // 안 지우면 정리 뒤에도 MIN 분이 찰 때까지 프로세스가 안 끝난다
   clearInterval(tick);
   timers.forEach(clearTimeout);
   for (const u of users) { clearInterval(u.timer); u.closing = true; u.ws.close(); }
@@ -151,10 +163,13 @@ try {
     echoMs: { p50: pct(stats.echoMs, 0.5), p95: pct(stats.echoMs, 0.95), max: pct(stats.echoMs, 1), n: stats.echoMs.length },
     drops: stats.drops, errors: stats.errors,
   }, null, 2));
+} catch (e) {
+  if (!stopped) throw e;
 } finally {
   for (const u of users) { u.closing = true; u.ws?.close(); }
-  const failed = await cleanup(users, startedAt);
-  // 0 이 아니면 운영에 계정·크루가 남았다 — 위의 "정리 실패" 줄을 보고 손으로 지운다
+  const failed = await cleanup(users);
+  // 0 이 아니면 운영에 계정·크루가 남았다. 비밀번호를 남기지 않으므로 API 로는 못 지운다 —
+  // "정리 실패" 줄의 email 로 운영 DB 에서 지운다
   console.log(`정리: ${users.length}명 중 실패 ${failed}`);
   process.exitCode = failed ? 1 : process.exitCode;
 }
