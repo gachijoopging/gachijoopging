@@ -1,6 +1,6 @@
 ---
 name: apply-pr
-description: 작성자가 쓴다. 내 dev PR 에 남이 gachi:review-pr(또는 /review-pr)로 단 지적을 찾아 할 일을 표로 정리하고, 승인받으면 내 브랜치 worktree 에서 테스트 먼저 고쳐 항목마다 커밋하고 fast-forward 로 push 한 뒤, 반영 댓글을 달고 gachi:review-pr 로 셀프 점검을 한 번 돌려 깨끗하면 리뷰어에게 재리뷰를 요청한다. 남의 PR · main 대상 PR 에는 쓰지 않는다. 머지하지 않는다.
+description: 작성자가 쓴다. 내 dev PR 에 남이 gachi:review-pr(또는 /review-pr)로 단 지적을 찾아 할 일을 표로 정리하고, 승인받으면 내 브랜치 worktree 에서 테스트 먼저 고쳐 항목마다 커밋하고 fast-forward 로 push 한 뒤, 반영 댓글을 달고 gachi:review-pr 로 셀프 점검을 한 번 돌려 깨끗하면 리뷰어에게 재리뷰를 요청한다(반영 커밋이 없으면 점검 없이, 답이 필요한 리뷰어에게만). 남의 PR · main 대상 PR 에는 쓰지 않는다. 머지하지 않는다.
 argument-hint: "[PR 번호 — 비우면 받은 리뷰가 아직 반영 안 된 내 PR 중에서 고른다]"
 disable-model-invocation: true
 ---
@@ -39,14 +39,15 @@ gh pr view <N> --json reviews,comments \
   --jq "([.comments[] | select(.author.login==\"$ME\" and (.body|startswith(\"리뷰 반영 (작성자)\"))) | .createdAt] | max // \"\") as \$done
         | [.reviews[],.comments[]] | map(select(.author.login!=\"$ME\" and (.body|startswith(\"<!-- review-pr\"))))
         | group_by(.author.login) | map(sort_by(.submittedAt // .createdAt) | last) | .[]
-        | {reviewer:.author.login, sha:(.body|capture(\"sha=(?<s>[0-9a-f]{7})\").s), todo:(.body|(contains(\"[필수 수정]\") or contains(\"[개선 제안]\") or contains(\"[확인 질문]\") or contains(\"미해결\"))), answered:(\$done > (.submittedAt // .createdAt))}"
-# 분류 검출에 정규식을 쓰지 않는다 — bash 큰따옴표를 거치면 \[ 가 \[ 로 들어가 gh 의 jq 가 invalid escape 로 거부한다
+        | {reviewer:.author.login, sha:(.body|capture(\"sha=(?<s>[0-9a-f]{7})\").s), todo:(.body|split(\"\n\")|map(select((startswith(\"**\") and (contains(\"[필수 수정]\") or contains(\"[개선 제안]\") or contains(\"[확인 질문]\"))) or startswith(\"- 미해결\")))|length > 0), approved:(.body|contains(\"**결과:** 필수 수정 없음\")), answered:(\$done > (.submittedAt // .createdAt))}"
+# 분류 검출에 정규식을 쓰지 않는다 — bash 큰따옴표를 거치면 \\[ 가 \[ 로 들어가 gh 의 jq 가 invalid escape 로 거부한다
+# todo 는 줄 단위로 센다 — 발견 사항 머리줄(`**N. [분류]`)과 `- 미해결` 줄. 본문 전체로 보면 `- 해결됨 — [필수 수정]` 같은 이전 지적 줄까지 걸려 다 끝난 리뷰도 후보가 된다
 ```
 
 **반영할 PR** 은 아래를 모두 만족하는 PR 이다.
 
 - 작성자가 나고, base 가 `dev` 이고, draft 가 아니다
-- 남이 단 마커 리뷰 중 리뷰어별 마지막 것에 `todo: true` 가 하나 이상 있다 (`[필수 수정]` · `[개선 제안]` · `[확인 질문]` · 이전 지적 `미해결`)
+- 남이 단 마커 리뷰 중 리뷰어별 마지막 것에 `todo: true` 가 하나 이상 있다 (발견 사항의 `[필수 수정]` · `[개선 제안]` · `[확인 질문]` 머리줄, 또는 이전 지적 `- 미해결` 줄)
 - 그 리뷰의 `sha` 가 지금 머리 커밋(`headRefOid` 앞 7자)과 같고 `answered: false` 다. 다르면 리뷰 뒤에 이미 push 했거나 반영 댓글을 단 것이다 → 후보가 아니다. 리뷰어의 재리뷰를 기다린다
 
 인자로 번호를 받았으면 거부 규칙만 적용하고 그 PR 을 본다. `sha` 가 달라도 경고하고 계속하되, 2 단계 표에서 항목마다 현재 머리와 대조해 `이미 해결` 인 행은 표에 남기고 코드는 건드리지 않는다.
@@ -65,7 +66,7 @@ gh pr view <N> --json reviews,comments \
         | sort_by(.submittedAt // .createdAt) | last | .body"
 ```
 
-`### 발견 사항` 의 `**N. [분류] 제목**` 블록과 `### 이전 지적 확인` 의 `미해결` 줄을 표로 만든다. 한 지적에 요청이 여러 개면 `N-1 · N-2 …` 로 쪼갠다. 이전 지적은 `P-1 · P-2 …` 로 센다. 리뷰어가 둘 이상이면 번호 앞에 리뷰어 login 을 붙인다(`djm030 1-1`). 번호는 아래 댓글 · 보고에서 그대로 쓴다.
+1 단계에서 후보가 된 리뷰(`sha` 가 머리와 같고 `answered: false`)만 읽는다 — 이미 답한 리뷰어의 항목을 다시 넣지 않는다. `### 발견 사항` 의 `**N. [분류] 제목**` 블록과 `### 이전 지적 확인` 의 `미해결` 줄을 표로 만든다. 표가 0행이면(인자로 받은 PR 에서 모두 `이미 해결`) "반영할 것 없음" 으로 끝낸다. 한 지적에 요청이 여러 개면 `N-1 · N-2 …` 로 쪼갠다. 이전 지적은 `P-1 · P-2 …` 로 센다. 리뷰어가 둘 이상이면 번호 앞에 리뷰어 login 을 붙인다(`djm030 1-1`). 번호는 아래 댓글 · 보고에서 그대로 쓴다.
 
 | # | 분류 | 위치 | 요청 | 할 일 |
 |---|---|---|---|---|
@@ -127,14 +128,15 @@ gh pr comment <N> --body-file "$F"
 
 `Skill` 도구로 **`gachi:review-pr`** 를 `args: "<N>"` 으로 실행한다. 내 PR 이므로 Approve 하지 않고 댓글로 결과만 단다. 이전 지적은 리뷰어의 마지막 마커 리뷰로 판정한다.
 
-반영 커밋이 없으면 셀프 점검을 건너뛰고 바로 재리뷰를 요청한다 — 코드가 리뷰어가 본 그대로라 점검할 것이 답뿐이다.
+반영 커밋이 없으면 셀프 점검을 건너뛴다 — 코드가 리뷰어가 본 그대로라 점검할 것이 답뿐이다. 그때는 리뷰 결과가 `필수 수정 없음` 이 아니었던 리뷰어(`approved: false`)에게만 재리뷰를 요청한다. 이미 `필수 수정 없음` 을 준 리뷰어의 판단은 그대로이므로, 답(개선 제안 `안 함` 등)은 댓글로만 남긴다 — 다시 요청하면 같은 리뷰가 되풀이된다.
 
 - `필수 수정 없음` → 원래 리뷰어에게 재리뷰를 요청한다. GitHub 가 리뷰어에게 알린다
   ```bash
   gh pr edit <N> --add-reviewer <리뷰어>[,<리뷰어>]
   ```
 - `확인 필요` → 재리뷰를 요청하지 않고 셀프 점검의 확인 질문을 보고하고 멈춘다. 작성자 쪽에서 답할 수 있는 질문이다 — 답을 PR 댓글로 단 뒤 위 명령으로 재리뷰를 요청한다
-- `수정 필요` → 재리뷰를 요청하지 않고 보고하고 멈춘다. 셀프 점검의 지적은 이 스킬이 읽는 남의 리뷰가 아니므로, 직접 고친 뒤 `gachi:review-pr <N>` 으로 다시 점검하고 위 명령으로 재리뷰를 요청한다
+- `수정 필요` 의 원인이 이번에 사용자가 `안 함` 을 승인한 필수 수정뿐이다 → 재리뷰를 요청한다. 그 판단은 리뷰어 몫이고, 반영 댓글에 이유를 적었다
+- 그 밖의 `수정 필요` → 재리뷰를 요청하지 않고 보고하고 멈춘다. 셀프 점검의 지적은 이 스킬이 읽는 남의 리뷰가 아니므로, 직접 고친 뒤 `gachi:review-pr <N>` 으로 다시 점검하고 위 명령으로 재리뷰를 요청한다
 
 **반복하지 않는다.** 승인과 머지 여부는 리뷰어의 재리뷰가 정한다.
 

@@ -28,7 +28,7 @@ gh pr list --state open --limit 100 \
   --json number,title,isDraft,author,reviewRequests,latestReviews,headRefOid,headRefName,baseRefName,url \
   --jq ".[] | select(.author.login != \"$ME\" and (.isDraft|not))
         | select(([.reviewRequests[]? | (.login // .slug)] + [.latestReviews[]?.author.login]) | index(\"$ME\") != null)
-        | {number,title,author:.author.login,base:.baseRefName,head:.headRefName,sha:.headRefOid[:7],url}"
+        | {number,title,author:.author.login,base:.baseRefName,head:.headRefName,sha:.headRefOid[:7],url,requested:([.reviewRequests[]? | (.login // .slug)] | index(\"$ME\") != null)}"
 # PR 마다 — 지금 머리 커밋을 내가 이미 리뷰했나 (리뷰 · 일반 댓글 모두, 첫 줄 마커 기준)
 gh pr view <N> --json reviews,comments \
   --jq "[.reviews[],.comments[]] | map(select(.author.login==\"$ME\" and (.body|startswith(\"<!-- review-pr\")) and (.body|test(\"sha=<sha 7자>\")))) | length"
@@ -43,7 +43,7 @@ gh pr view <N> --json author,reviews,comments \
 
 - 작성자가 내가 아니고 draft 가 아니다
 - 리뷰 요청(`reviewRequests`)에 내가 있거나, 이미 리뷰를 낸 사람(`latestReviews[].author`)에 내가 있다. GitHub 는 리뷰를 내면 요청 목록에서 빼므로 둘을 합쳐 본다
-- 지금 머리 커밋(`headRefOid` 앞 7자)에 대한 내 마커 리뷰 · 댓글이 없다 (위 둘째 명령이 0). **또는** 내 마지막 마커 뒤에 작성자의 `리뷰 반영 (작성자)` 댓글이 있다 (위 셋째 명령이 1 이상) — 작성자가 커밋 없이 답만 달고 재리뷰를 요청한 경우다
+- 지금 머리 커밋(`headRefOid` 앞 7자)에 대한 내 마커 리뷰 · 댓글이 없다 (위 둘째 명령이 0). **또는** 리뷰 요청에 내가 있고(`requested: true`) 내 마지막 마커 뒤에 작성자의 `리뷰 반영 (작성자)` 댓글이 있다 (위 셋째 명령이 1 이상) — 작성자가 커밋 없이 답만 달고 나에게 재리뷰를 요청한 경우다. 요청을 함께 보는 이유: 반영 댓글은 리뷰어를 가리지 않는다. 작성자(`gachi:apply-pr`)는 답이 필요한 리뷰어에게만 다시 요청한다
 
 인자로 번호를 받았으면 위 조건 없이 그 PR 들만 본다 (내 PR 셀프 리뷰도 된다 — 단 **Approve 는 절대 하지 않는다.** GitHub 가 작성자 승인을 막는다). 0개면 "리뷰할 PR 이 없어요" 로 끝낸다. 1개면 바로 진행한다. 여럿이면 `AskUserQuestion` 1개(`multiSelect: true`): 선택지마다 `#<N> <제목>`, 설명에 작성자 · 요청인지 이미 리뷰했는지 · base. 4개를 넘으면 나머지 번호는 질문 문장에 적고 Other 로 받는다.
 
@@ -64,7 +64,7 @@ git -c core.longpaths=true worktree add --detach "$W" <headRefOid>
 - 현재 작업 트리 · 브랜치는 건드리지 않는다. `git checkout` · `git stash` 를 쓰지 않는다
 - 연결 이슈: `closingIssuesReferences` 또는 브랜치 이름의 `gac-<번호>` → `get_issue` 로 `## 완료 조건` 을 읽는다
 - 이미 달린 리뷰(내 것 · 남의 것 · 인라인)를 한 줄씩 요약한다. 같은 지적을 되풀이하지 않기 위해서다
-- 내 마커 리뷰가 다른 커밋에 있으면 **재리뷰**다. 이전 지적을 하나씩 현재 커밋에서 다시 보고 `해결됨 / 미해결 / 확인 불가` 로 판정해 둔다
+- 내 마커 리뷰가 이미 있으면 **재리뷰**다 — 다른 커밋이면 새 변경을, 같은 커밋이면(작성자가 답만 달고 재리뷰를 요청한 경우) 작성자의 반영 댓글을 보고 판정한다. 이전 지적을 하나씩 현재 커밋에서 다시 보고 `해결됨 / 미해결 / 확인 불가` 로 판정해 둔다
 - 내 PR 이면 **셀프 점검**이다(`gachi:apply-pr` 가 반영 뒤 부른다). 남이 단 리뷰어별 마지막 마커 리뷰를 이전 지적으로 삼아 같은 방식으로 판정한다. 작성자의 반영 댓글(`리뷰 반영 (작성자)`)은 참고만 하고, 판정은 현재 커밋의 코드로 한다
 
 ## 3. 새 에이전트에게 리뷰 맡기기
@@ -104,7 +104,7 @@ PR 마다 **`Agent` 도구로 새 에이전트**를 띄운다 (`subagent_type: "
 
 ## 4. 지적 확인
 
-에이전트 결과를 그대로 올리지 않는다. 지적마다 인용한 파일:줄을 `$W` 에서 직접 열어 맞는지 보고, 재현했다는 것은 그 명령을 다시 돌려 본다. 틀렸거나 확인되지 않는 지적, 이미 달린 리뷰와 같은 지적은 뺀다. 같은 원인은 하나로 묶는다. 건수를 채우지 않는다.
+에이전트 결과를 그대로 올리지 않는다. 지적마다 인용한 파일:줄을 `$W` 에서 직접 열어 맞는지 보고, 재현했다는 것은 그 명령을 다시 돌려 본다. 틀렸거나 확인되지 않는 지적, 이미 달린 리뷰와 같은 지적은 뺀다. 단 내 이전 지적은 빼는 대상이 아니다 — `이전 지적 확인` 에서 판정하고, 미해결로 남은 필수 수정은 아래 결과 규칙에 그대로 들어간다. 같은 원인은 하나로 묶는다. 건수를 채우지 않는다.
 
 결과는 남은 지적으로 정한다: 필수 수정(재리뷰 · 셀프 점검에서 **미해결로 남은 이전 필수 수정** 포함. 미해결 개선 제안은 넣지 않는다)이 있으면 `수정 필요` → 없고 확인 질문이 남으면 `확인 필요` → 나머지 `필수 수정 없음`.
 
