@@ -15,7 +15,7 @@
 | `/review-pr [번호\|URL ...] [초안만]` | 열린 PR/MR 을 골라 리뷰하고 요약 코멘트를 하나씩 단다. 승인·머지는 하지 않는다 |
 | `/gachi:ship-issue [GAC-N]` | 내 Linear 이슈를 골라 이슈 worktree 에서 계획 → 테스트 먼저 구현(서브에이전트) → 검증 → PR |
 | `/gachi:review-pr [번호 ...]` | 내가 리뷰 요청된 PR 을 새 에이전트가 비판적으로 리뷰하고 `gh pr review` 로 올린다. 필수 수정 없고 내 PR 아니면 Approve |
-| `/gachi:apply-pr [번호]` | 리뷰어가 자기 `gachi:review-pr` 지적을 작성자 브랜치에 직접 반영하고 재리뷰. 내 PR 엔 쓰지 않는다 |
+| `/gachi:apply-pr [번호]` | 작성자가 내 PR 에 받은 리뷰 지적을 반영하고 push → 셀프 점검 → 리뷰어에게 재리뷰 요청. 남의 PR 엔 쓰지 않는다 |
 | `/gachi:merge-pr [번호]` | 승인·체크 초록인 PR 을 `dev` 는 squash, `main` 은 merge commit 으로 머지. 알림은 훅이 보낸다 |
 
 `/gachi:*` 는 팀 플러그인(`plugins/gachi`)이다. 설치·업데이트·막히는 것은 `plugins/gachi/README.md`.

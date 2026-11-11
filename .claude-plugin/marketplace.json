@@ -6,7 +6,7 @@
     {
       "name": "gachi",
       "source": "./plugins/gachi",
-      "description": "Linear 이슈 고르기 → worktree 에서 테스트 먼저 구현 → dev PR · 남의 PR 리뷰 · 내 리뷰 직접 반영 · 머지 (ship-issue · review-pr · apply-pr · merge-pr)"
+      "description": "Linear 이슈 고르기 → worktree 에서 테스트 먼저 구현 → dev PR · 남의 PR 리뷰 · 받은 리뷰 반영 · 머지 (ship-issue · review-pr · apply-pr · merge-pr)"
     }
   ]
 }

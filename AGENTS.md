@@ -53,7 +53,7 @@
 - 한글이 든 `.ps1` 은 UTF-8 BOM. PowerShell 5.1 은 BOM 없으면 cp949 로 읽어 구문 오류로 나타난다
 - `design-system` 의 색을 바꿨으면 그 폴더에서 `npm test`. 자세한 규칙은 `design-system/CLAUDE.md`
 - 이슈를 Done 으로 옮기기 전에 `docs/conventions.md` §완료의 정의 넷을 모두 만족해야 한다. 여기에 옮겨 적지 않는다 — 정본은 그쪽이다
-- Claude Code 를 쓰면 팀 플러그인 `/gachi:ship-issue` · `/gachi:review-pr` · `/gachi:apply-pr` · `/gachi:merge-pr` 가 이 규칙대로 해 준다 (`plugins/gachi/README.md`). `gachi:apply-pr` 는 "담당 폴더 밖을 고치지 않는다" 의 유일한 예외다 — 리뷰어가 사용자 승인 뒤 자기 리뷰 지적을 작성자 브랜치에 직접 반영한다
+- Claude Code 를 쓰면 팀 플러그인 `/gachi:ship-issue` · `/gachi:review-pr` · `/gachi:apply-pr` · `/gachi:merge-pr` 가 이 규칙대로 해 준다 (`plugins/gachi/README.md`). 리뷰어는 `gachi:review-pr` 로 지적만 달고, 반영은 작성자가 `gachi:apply-pr` 로 한다
 
 ## 코딩 지침
 
