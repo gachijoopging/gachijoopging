@@ -72,6 +72,7 @@ public class CrewService implements CrewMembershipLoader {
     requireNoCrewNorPending(me);
     UUID crewId = UUID.randomUUID();
     Instant now = clock.instant();
+    crewRepository.lockName(name);
     if (crewRepository.existsByNameAndDeletedAtIsNull(name)
         || crewRepository.insertIfAbsent(
                 crewId,
@@ -146,8 +147,11 @@ public class CrewService implements CrewMembershipLoader {
       throw new BusinessException(ErrorCode.FORBIDDEN, "크루장만 할 수 있다");
     }
     String name = request.name() == null ? null : trimmedName(request.name());
-    if (name != null && crewRepository.existsByNameAndIdNotAndDeletedAtIsNull(name, crew.getId())) {
-      throw new BusinessException(ErrorCode.CREW_NAME_TAKEN, "이미 쓰는 크루 이름이다");
+    if (name != null) {
+      crewRepository.lockName(name);
+      if (crewRepository.existsByNameAndIdNotAndDeletedAtIsNull(name, crew.getId())) {
+        throw new BusinessException(ErrorCode.CREW_NAME_TAKEN, "이미 쓰는 크루 이름이다");
+      }
     }
     if (request.photoMediaId() != null) {
       request
