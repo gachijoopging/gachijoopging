@@ -22,6 +22,8 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
+import site.gachijoopging.server.domain.chat.dto.SendChatRequest;
+import site.gachijoopging.server.domain.chat.service.ChatService;
 import site.gachijoopging.server.support.IntegrationTest;
 
 @AutoConfigureMockMvc
@@ -41,6 +43,7 @@ class DemoSeedRunnerTest extends IntegrationTest {
   @Autowired private JdbcClient jdbcClient;
   @Autowired private PasswordEncoder passwordEncoder;
   @Autowired private Clock clock;
+  @Autowired private ChatService chatService;
 
   @Test
   void 다시_돌려도_크루와_계정과_데이터가_늘지_않는다() {
@@ -102,6 +105,8 @@ class DemoSeedRunnerTest extends IntegrationTest {
   void 리셋_SQL_뒤_다시_돌리면_데모_상태로_돌아가고_통계가_두_배가_되지_않는다() throws Exception {
     UUID 데모_크루 = DemoSeedRunner.id("crew:demo");
     UUID 게스트 = DemoSeedRunner.id("user:guest");
+    UUID 크루원 = DemoSeedRunner.id("user:member");
+    chatService.send(크루원, new SendChatRequest(UUID.randomUUID(), "리셋 전 메시지"));
     jdbcTemplate.update(
         "INSERT INTO crew_members (crew_id, user_id, joined_at) VALUES (?, ?, now())", 데모_크루, 게스트);
     jdbcTemplate.update(
@@ -133,6 +138,12 @@ class DemoSeedRunnerTest extends IntegrationTest {
                 데모_크루,
                 데모_크루))
         .isTrue();
+    UUID 리셋_뒤_메시지 = UUID.randomUUID();
+    chatService.send(크루원, new SendChatRequest(리셋_뒤_메시지, "리셋 뒤 메시지"));
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT seq FROM chat_messages WHERE id = ?", Long.class, 리셋_뒤_메시지))
+        .isEqualTo(4);
   }
 
   @Test

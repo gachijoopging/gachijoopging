@@ -102,6 +102,24 @@ class ChatApiTest extends IntegrationTest {
             jdbcTemplate.queryForObject(
                 "SELECT count(*) FROM chat_messages WHERE id = ?", Long.class, id))
         .isEqualTo(1);
+    assertThat(보낸다(나, "다음 메시지")).isEqualTo(((Number) 데이터(첫_echo).get("seq")).longValue() + 1);
+  }
+
+  // 배포를 되돌리면 chat_seqs 를 모르는 옛 코드가 max(seq)+1 로 저장한다. 다시 올린 뒤 카운터가 그 seq 를 재사용하면 안 된다
+  @Test
+  void 카운터를_거치지_않고_저장된_메시지가_있어도_다음_메시지는_그_뒤_seq_를_받는다() throws Exception {
+    TestAccount 나 = 크루장이_된다("chat-rollback@test.io");
+    long 첫_seq = 보낸다(나, "카운터로 저장");
+    jdbcTemplate.update(
+        """
+        INSERT INTO chat_messages (id, crew_id, seq, author_id, text, created_at)
+        SELECT ?, crew_id, max(seq) + 1, author_id, '옛 코드로 저장', now()
+        FROM chat_messages WHERE author_id = ? GROUP BY crew_id, author_id
+        """,
+        UUID.randomUUID(),
+        나.id());
+
+    assertThat(보낸다(나, "다시 올린 뒤")).isEqualTo(첫_seq + 2);
   }
 
   @Test

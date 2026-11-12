@@ -47,7 +47,7 @@ public class MediaPurgeListener {
               mediaStorage.delete(QUARANTINE_PREFIX + original);
               jdbc.update("DELETE FROM media_purge_queue WHERE object_key = ?", key);
             } catch (RuntimeException e) {
-              log.error("탈퇴한 사용자의 사진을 지우지 못했다: {}", key, e);
+              log.error("사진을 지우지 못했다: {}", key, e);
             }
           }
         });

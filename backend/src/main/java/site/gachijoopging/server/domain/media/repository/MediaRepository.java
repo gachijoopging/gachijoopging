@@ -73,6 +73,24 @@ public interface MediaRepository extends JpaRepository<Media, UUID> {
       nativeQuery = true)
   List<KeyRow> deletePersonalOf(@Param("ownerId") UUID ownerId);
 
+  // 아직 어딘가 붙어 있는 사진을 지우면 FK 에 막히거나 프로필·크루 사진이 조용히 빈다
+  @Query(
+      value =
+          """
+          WITH gone AS (
+            DELETE FROM media m
+            WHERE m.id IN (:ids)
+              AND NOT EXISTS (SELECT 1 FROM activity_photos p WHERE p.media_id = m.id)
+              AND NOT EXISTS (SELECT 1 FROM post_media p WHERE p.media_id = m.id)
+              AND NOT EXISTS (SELECT 1 FROM users u WHERE u.photo_media_id = m.id)
+              AND NOT EXISTS (SELECT 1 FROM crews c WHERE c.photo_media_id = m.id)
+            RETURNING object_key, thumb_key
+          )
+          SELECT object_key AS objectKey, thumb_key AS thumbKey FROM gone
+          """,
+      nativeQuery = true)
+  List<KeyRow> deleteUnattached(@Param("ids") List<UUID> ids);
+
   @Modifying
   @Query(
       value = "INSERT INTO media_purge_queue (object_key) VALUES (:key) ON CONFLICT DO NOTHING",
