@@ -6,23 +6,43 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.TreeMap;
 import java.util.UUID;
-import lombok.RequiredArgsConstructor;
+import java.util.function.Consumer;
+import javax.sql.DataSource;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowCallbackHandler;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
+import site.gachijoopging.server.domain.activity.entity.Category;
 
 // 날짜 인자는 전부 KST 날짜다. activities 는 시작 시각의 KST 날짜로 자른다 — crew_daily_stats 가 그렇게 쌓인다
 @Repository
-@RequiredArgsConstructor
 public class StatsQueryRepository {
 
   private static final String ENDED_ACTIVITY = "a.status = 'ENDED' AND a.deleted_at IS NULL";
 
+  // 선언 순서가 CSV 카테고리 열 순서다
+  private static final List<String> CATEGORIES =
+      Arrays.stream(Category.values()).map(Enum::name).toList();
+
+  // PostgreSQL 드라이버는 fetchSize 가 없으면 결과를 한 번에 다 메모리에 올린다
+  private static final int EXPORT_FETCH_SIZE = 500;
+
   private final JdbcClient jdbc;
+  private final JdbcClient streamingJdbc;
+
+  public StatsQueryRepository(JdbcClient jdbc, DataSource dataSource) {
+    this.jdbc = jdbc;
+    JdbcTemplate streaming = new JdbcTemplate(dataSource);
+    streaming.setFetchSize(EXPORT_FETCH_SIZE);
+    this.streamingJdbc = JdbcClient.create(streaming);
+  }
 
   // firstDay 는 ALL 추이의 첫 달이다. 크루가 생기기 전 날짜에 시작한 활동도 빠뜨리지 않는다
   public record CrewRow(UUID id, String name, int goalCount, LocalDate firstDay) {}
@@ -316,6 +336,56 @@ public class StatsQueryRepository {
   }
 
   public record CardCursor(Instant startedAt, UUID id) {}
+
+  public record ExportRow(
+      Instant startedAt,
+      Instant endedAt,
+      String nickname,
+      int distanceM,
+      int durationSec,
+      int itemCount,
+      List<Integer> byCategory) {}
+
+  /** 트랜잭션 안에서 불러야 커서로 나눠 읽는다. */
+  public void export(UUID crewId, LocalDate from, LocalDate to, Consumer<ExportRow> sink) {
+    String categoryColumns =
+        CATEGORIES.stream()
+            .map(c -> "coalesce(CAST(a.by_category ->> '%s' AS int), 0) AS \"%s\"".formatted(c, c))
+            .reduce((x, y) -> x + ", " + y)
+            .orElseThrow();
+    streamingJdbc
+        .sql(
+            """
+            SELECT a.started_at, a.ended_at, u.nickname, a.distance_m, a.duration_sec,
+                   a.item_count, %s
+            FROM activities a
+            JOIN users u ON u.id = a.user_id
+            WHERE a.crew_id = :crewId AND %s %s
+              AND a.started_at < CAST(CAST(:to AS date) + 1 AS timestamp) AT TIME ZONE 'Asia/Seoul'
+            ORDER BY a.started_at, a.id
+            """
+                .formatted(categoryColumns, ENDED_ACTIVITY, startedFrom(from)))
+        .param("crewId", crewId)
+        .param("from", from)
+        .param("to", to)
+        .query(
+            (RowCallbackHandler)
+                rs -> {
+                  List<Integer> byCategory = new ArrayList<>(CATEGORIES.size());
+                  for (String category : CATEGORIES) {
+                    byCategory.add(rs.getInt(category));
+                  }
+                  sink.accept(
+                      new ExportRow(
+                          instant(rs, "started_at"),
+                          instant(rs, "ended_at"),
+                          rs.getString("nickname"),
+                          rs.getInt("distance_m"),
+                          rs.getInt("duration_sec"),
+                          rs.getInt("item_count"),
+                          byCategory));
+                });
+  }
 
   // from 이 없을 때 "IS NULL OR" 로 묶지 않고 조건을 빼는 것은, 서버 prepared statement 의 generic plan 이
   // 그 OR 때문에 started_at·date 인덱스를 못 탈 수 있어서다

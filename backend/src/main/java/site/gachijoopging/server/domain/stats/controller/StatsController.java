@@ -1,10 +1,18 @@
 package site.gachijoopging.server.domain.stats.controller;
 
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Pattern;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.format.annotation.DateTimeFormat.ISO;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -58,5 +66,23 @@ public class StatsController {
       @RequestParam(required = false) String cursor,
       @RequestParam(defaultValue = "20") @Min(1) @Max(50) int limit) {
     return ApiResponse.of(statsService.memberActivities(crew.crewId(), userId, cursor, limit));
+  }
+
+  @GetMapping("/crew/export")
+  public void export(
+      @CurrentCrew CrewMembership crew,
+      @RequestParam @DateTimeFormat(iso = ISO.DATE) LocalDate from,
+      @RequestParam @DateTimeFormat(iso = ISO.DATE) LocalDate to,
+      HttpServletResponse response)
+      throws IOException {
+    String fileName = statsService.exportFileName(crew, from, to);
+    response.setContentType("text/csv; charset=utf-8");
+    response.setHeader(
+        HttpHeaders.CONTENT_DISPOSITION,
+        ContentDisposition.attachment()
+            .filename(fileName, StandardCharsets.UTF_8)
+            .build()
+            .toString());
+    statsService.export(crew, from, to, response.getOutputStream());
   }
 }
