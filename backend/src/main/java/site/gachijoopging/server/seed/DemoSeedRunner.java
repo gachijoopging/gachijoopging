@@ -1,5 +1,7 @@
 package site.gachijoopging.server.seed;
 
+import static site.gachijoopging.server.global.config.ClockConfig.KST;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.charset.StandardCharsets;
@@ -8,7 +10,6 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -37,8 +38,6 @@ public class DemoSeedRunner implements ApplicationRunner {
 
   private static final List<String> NICKNAMES =
       List.of("데모크루장", "데모크루원1", "데모크루원2", "데모멤버", "비공개크루장", "데모게스트");
-
-  private static final ZoneId KST = ZoneId.of("Asia/Seoul");
 
   private static final ObjectMapper JSON = new ObjectMapper();
 

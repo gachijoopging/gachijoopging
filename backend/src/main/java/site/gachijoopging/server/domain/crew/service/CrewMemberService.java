@@ -1,10 +1,11 @@
 package site.gachijoopging.server.domain.crew.service;
 
+import static site.gachijoopging.server.global.config.ClockConfig.KST;
+
 import java.sql.Date;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -31,8 +32,6 @@ import site.gachijoopging.server.global.security.CrewMembership;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class CrewMemberService {
-
-  private static final ZoneId KST = ZoneId.of("Asia/Seoul");
 
   private final CrewRepository crewRepository;
   private final UserLock userLock;
