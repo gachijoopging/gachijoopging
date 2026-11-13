@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import org.hibernate.validator.constraints.CodePointLength;
+import site.gachijoopging.server.domain.user.dto.Nickname;
 
 public final class AuthDtos {
 
@@ -16,7 +17,7 @@ public final class AuthDtos {
       @NotBlank @CodePointLength(min = 2, max = 12) String nickname) {
 
     public SignupRequest {
-      nickname = normalizeNickname(nickname);
+      nickname = Nickname.normalize(nickname);
     }
   }
 
@@ -27,7 +28,7 @@ public final class AuthDtos {
       @NotBlank String token, @CodePointLength(min = 2, max = 12) String nickname) {
 
     public SocialTokenRequest {
-      nickname = normalizeNickname(nickname);
+      nickname = Nickname.normalize(nickname);
     }
   }
 
@@ -49,8 +50,4 @@ public final class AuthDtos {
   // code 형식을 여기서 막으면 fields 없는 422 가 되어 앱이 코드 칸에 오류를 붙이지 못한다
   public record PasswordResetConfirmRequest(
       @NotNull String email, @NotNull String code, @NotBlank @Size(min = 8) String newPassword) {}
-
-  private static String normalizeNickname(String nickname) {
-    return nickname == null ? null : nickname.replace("\r", "").replace("\n", "").strip();
-  }
 }
