@@ -13,12 +13,18 @@ import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import site.gachijoopging.server.support.IntegrationTest;
@@ -183,6 +189,28 @@ class CrewApiTest extends IntegrationTest {
   }
 
   @Test
+  void 두_크루가_같은_새_이름으로_동시에_바꾸면_하나만_되고_하나는_409_CREW_NAME_TAKEN_이다() throws Exception {
+    TestAccount 가 = 가입한다(mockMvc, "crew-race-a@test.io");
+    TestAccount 나 = 가입한다(mockMvc, "crew-race-b@test.io");
+    mockMvc.perform(만든다(가, "경합이름가"));
+    mockMvc.perform(만든다(나, "경합이름나"));
+
+    assertThat(동시에(수정(가, "{\"name\":\"경합새이름\"}"), 수정(나, "{\"name\":\"경합새이름\"}")))
+        .containsExactlyInAnyOrder("200 null", "409 CREW_NAME_TAKEN");
+  }
+
+  @Test
+  void 같은_이름으로_만들기와_수정이_동시에_오면_하나만_되고_하나는_409_CREW_NAME_TAKEN_이다() throws Exception {
+    TestAccount 크루장 = 가입한다(mockMvc, "crew-race-leader@test.io");
+    TestAccount 새_크루장 = 가입한다(mockMvc, "crew-race-new@test.io");
+    mockMvc.perform(만든다(크루장, "경합원래이름"));
+
+    assertThat(동시에(만든다(새_크루장, "경합겹친이름"), 수정(크루장, "{\"name\":\"경합겹친이름\"}")))
+        .isIn(
+            List.of("201 null", "409 CREW_NAME_TAKEN"), List.of("409 CREW_NAME_TAKEN", "200 null"));
+  }
+
+  @Test
   void 크루장이_탈퇴했으면_검색의_크루장은_탈퇴한_크루원이다() throws Exception {
     TestAccount 크루장 = 가입한다(mockMvc, "crew-withdrawn-leader@test.io");
     mockMvc.perform(만든다(크루장, "탈퇴확인크루"));
@@ -329,6 +357,35 @@ class CrewApiTest extends IntegrationTest {
         .header(HttpHeaders.AUTHORIZATION, 계정.bearer())
         .contentType(MediaType.APPLICATION_JSON)
         .content(본문);
+  }
+
+  // 상태만 보면 무결성 위반의 일반 409 CONFLICT 와 구별되지 않아 오류 코드까지 돌려준다
+  private List<String> 동시에(MockHttpServletRequestBuilder 첫째, MockHttpServletRequestBuilder 둘째)
+      throws Exception {
+    CountDownLatch 출발 = new CountDownLatch(1);
+    ExecutorService 두_손가락 = Executors.newFixedThreadPool(2);
+    try {
+      List<Future<String>> 결과 =
+          Stream.of(첫째, 둘째)
+              .map(
+                  요청 ->
+                      두_손가락.submit(
+                          () -> {
+                            출발.await();
+                            MockHttpServletResponse 응답 =
+                                mockMvc.perform(요청).andReturn().getResponse();
+                            String 코드 =
+                                응답.getStatus() < 400
+                                    ? null
+                                    : JsonPath.read(응답.getContentAsString(), "$.code");
+                            return 응답.getStatus() + " " + 코드;
+                          }))
+              .toList();
+      출발.countDown();
+      return List.of(결과.get(0).get(), 결과.get(1).get());
+    } finally {
+      두_손가락.shutdown();
+    }
   }
 
   private void 소속시킨다(TestAccount 계정, String 크루_id) {
