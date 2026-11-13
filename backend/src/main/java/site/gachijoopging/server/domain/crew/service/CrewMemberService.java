@@ -1,10 +1,12 @@
 package site.gachijoopging.server.domain.crew.service;
 
+import static site.gachijoopging.server.global.config.ClockConfig.KST;
+
 import java.sql.Date;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneId;
+import java.time.Period;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -32,7 +34,8 @@ import site.gachijoopging.server.global.security.CrewMembership;
 @Transactional(readOnly = true)
 public class CrewMemberService {
 
-  private static final ZoneId KST = ZoneId.of("Asia/Seoul");
+  // 계약 MemberStats.activeDays 가 최근 6개월이다
+  private static final Period ACTIVE_DAYS_PERIOD = Period.ofMonths(6);
 
   private final CrewRepository crewRepository;
   private final UserLock userLock;
@@ -44,18 +47,19 @@ public class CrewMemberService {
   private final Clock clock;
 
   public List<MemberResponse> members(UUID me, CrewMembership membership) {
-    return crewQueryRepository.findMembers(membership.crewId(), me, null).stream()
+    return crewQueryRepository.findMembers(membership.crewId(), me).stream()
         .map(this::member)
         .toList();
   }
 
   public MemberProfileResponse profile(UUID me, CrewMembership membership, UUID userId) {
     MemberRow row =
-        crewQueryRepository.findMembers(membership.crewId(), me, userId).stream()
-            .findFirst()
+        crewQueryRepository
+            .findMember(membership.crewId(), me, userId)
             .orElseThrow(CrewMemberService::notMember);
     UserBriefResponse brief = brief(row);
-    Instant since = LocalDate.now(clock.withZone(KST)).minusMonths(6).atStartOfDay(KST).toInstant();
+    Instant since =
+        LocalDate.now(clock.withZone(KST)).minus(ACTIVE_DAYS_PERIOD).atStartOfDay(KST).toInstant();
     return new MemberProfileResponse(
         brief.id(),
         brief.nickname(),

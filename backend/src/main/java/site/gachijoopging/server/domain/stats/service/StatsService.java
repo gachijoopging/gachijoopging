@@ -1,5 +1,7 @@
 package site.gachijoopging.server.domain.stats.service;
 
+import static site.gachijoopging.server.global.config.ClockConfig.KST;
+
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -12,7 +14,6 @@ import java.time.DayOfWeek;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.YearMonth;
-import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.time.temporal.TemporalAdjusters;
@@ -56,8 +57,6 @@ import site.gachijoopging.server.global.security.CrewMembership;
 @Service
 @RequiredArgsConstructor
 public class StatsService {
-
-  private static final ZoneId KST = ZoneId.of("Asia/Seoul");
 
   private static final String WITHDRAWN_NICKNAME = "탈퇴한 크루원";
 

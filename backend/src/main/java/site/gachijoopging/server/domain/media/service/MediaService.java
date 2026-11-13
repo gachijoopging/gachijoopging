@@ -1,10 +1,11 @@
 package site.gachijoopging.server.domain.media.service;
 
+import static site.gachijoopging.server.global.config.ClockConfig.KST;
+
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -33,8 +34,6 @@ import site.gachijoopging.server.global.ratelimit.RateLimiter;
 public class MediaService {
 
   private static final int DAILY_LIMIT = 300;
-
-  private static final ZoneId KST = ZoneId.of("Asia/Seoul");
 
   private final MediaRepository mediaRepository;
   private final ActivityService activityService;
