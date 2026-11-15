@@ -8,15 +8,12 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.actuate.observability.AutoConfigureObservability;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import site.gachijoopging.server.global.metrics.GachijoopgingMetrics;
 import site.gachijoopging.server.support.IntegrationTest;
 
 @AutoConfigureMockMvc
 @AutoConfigureObservability(tracing = false)
-// 관리 포트가 따로면 MockMvc 에는 /actuator 가 없다 — 지표 이름만 보는 테스트라 같은 포트로 띄운다
-@TestPropertySource(properties = "management.server.port=")
 class MetricExposureTest extends IntegrationTest {
 
   @Autowired private MockMvc mockMvc;

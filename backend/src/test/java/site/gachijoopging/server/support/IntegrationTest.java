@@ -97,6 +97,14 @@ public abstract class IntegrationTest {
     registry.add("app.agreements.marketing-url", () -> "https://legal.test/marketing");
   }
 
+  // 운영에서 끈 /v3/api-docs 와 관리 포트의 /actuator 를 계약·지표 테스트가 MockMvc 로 본다.
+  // 그 테스트에만 켜면 컨텍스트가 하나 더 떠서 테스트 Postgres 의 max_connections 를 넘는다
+  @DynamicPropertySource
+  static void contractEndpointProperties(DynamicPropertyRegistry registry) {
+    registry.add("springdoc.api-docs.enabled", () -> true);
+    registry.add("management.server.port", () -> "");
+  }
+
   public static final String MEDIA_BASE_URL = "https://media.test";
 
   static final Path UPLOAD_ROOT = 임시_업로드_디렉터리();
