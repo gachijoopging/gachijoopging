@@ -34,6 +34,7 @@ import site.gachijoopging.server.global.error.ErrorCode;
 import site.gachijoopging.server.global.lock.UserLock;
 import site.gachijoopging.server.global.security.AccountAuthorityLoader;
 import site.gachijoopging.server.global.security.SessionVersionLoader;
+import site.gachijoopging.server.global.security.jwt.JwtVerifier;
 
 @Service
 @RequiredArgsConstructor
@@ -280,8 +281,10 @@ public class UserService implements AccountAuthorityLoader, SessionVersionLoader
 
   @Override
   @Transactional(readOnly = true)
-  public Collection<? extends GrantedAuthority> authoritiesOf(UUID userId) {
-    activeUser(userId);
+  public Collection<? extends GrantedAuthority> authoritiesOf(JwtVerifier.Token token) {
+    if (token.issuedBeforeCut(activeUser(token.userId()).getSessionVersion())) {
+      throw new BusinessException(ErrorCode.TOKEN_EXPIRED, "accessToken 거부 — 세션이 끊기기 전에 발급됐다");
+    }
     return USER;
   }
 

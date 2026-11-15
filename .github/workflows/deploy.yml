@@ -65,7 +65,7 @@ jobs:
         run: |
           set -euo pipefail
           scp infra/docker-compose.yml infra/deploy.sh infra/watch.sh infra/backup.sh "$HOST:/opt/gachijoopging/"
-          scp infra/nginx/nginx.conf "$HOST:/opt/gachijoopging/nginx/"
+          scp infra/nginx/nginx.conf infra/nginx/media_link.js "$HOST:/opt/gachijoopging/nginx/"
           ssh "$HOST" 'mkdir -p /opt/gachijoopging/legal'
           scp infra/legal/*.html "$HOST:/opt/gachijoopging/legal/"
 

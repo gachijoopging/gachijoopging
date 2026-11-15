@@ -28,6 +28,7 @@ import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.yaml.snakeyaml.Yaml;
 import site.gachijoopging.server.global.config.WebConfig;
@@ -36,6 +37,7 @@ import site.gachijoopging.server.support.TestAccounts;
 import site.gachijoopging.server.support.TestAccounts.TestAccount;
 
 @AutoConfigureMockMvc
+@TestPropertySource(properties = "springdoc.api-docs.enabled=true")
 class OpenApiContractTest extends IntegrationTest {
 
   private static final Path 모바일_계약 = Path.of("..", "docs", "openapi.yaml");

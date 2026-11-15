@@ -1,5 +1,6 @@
 package site.gachijoopging.server.global.security;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -13,6 +14,7 @@ import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -23,6 +25,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 import site.gachijoopging.server.global.config.WebConfig;
+import site.gachijoopging.server.global.error.BusinessException;
+import site.gachijoopging.server.global.error.ErrorCode;
 import site.gachijoopging.server.global.error.GlobalExceptionHandler;
 import site.gachijoopging.server.global.security.jwt.JwtIssuer;
 import site.gachijoopging.server.global.security.jwt.JwtProperties;
@@ -91,8 +95,36 @@ class JwtAuthenticationFilterTest {
         .andExpect(status().isUnauthorized());
   }
 
+  @Test
+  void 인증된_요청_하나는_계정을_한_번만_읽는다() throws Exception {
+    키_설정.계정_조회.set(0);
+
+    mockMvc
+        .perform(
+            get("/api/v1/probe/me")
+                .header("Authorization", "Bearer " + issuer.issue(UUID.randomUUID())))
+        .andExpect(status().isOk());
+
+    assertThat(키_설정.계정_조회).hasValue(1);
+  }
+
+  @Test
+  void 세션_버전이_지금과_다른_토큰이면_401_이다() throws Exception {
+    String 끊기_전_토큰 =
+        new JwtIssuer(키_설정.PROPERTIES, Clock.systemUTC(), userId -> Optional.of(키_설정.지금_세션_버전 + 1))
+            .issue(UUID.randomUUID());
+
+    mockMvc
+        .perform(get("/api/v1/probe/me").header("Authorization", "Bearer " + 끊기_전_토큰))
+        .andExpect(status().isUnauthorized())
+        .andExpect(jsonPath("$.code").value("TOKEN_EXPIRED"));
+  }
+
   @TestConfiguration
   static class 키_설정 {
+
+    static final int 지금_세션_버전 = 0;
+    static final AtomicInteger 계정_조회 = new AtomicInteger();
 
     private static final JwtProperties PROPERTIES = 새_설정();
 
@@ -112,7 +144,13 @@ class JwtAuthenticationFilterTest {
 
     @Bean
     AccountAuthorityLoader accountAuthorityLoader() {
-      return userId -> List.of();
+      return token -> {
+        계정_조회.incrementAndGet();
+        if (token.issuedBeforeCut(지금_세션_버전)) {
+          throw new BusinessException(ErrorCode.TOKEN_EXPIRED, "세션이 끊기기 전에 발급됐다");
+        }
+        return List.of();
+      };
     }
 
     @Bean
@@ -122,7 +160,12 @@ class JwtAuthenticationFilterTest {
 
     @Bean
     JwtVerifier jwtVerifier() {
-      return new JwtVerifier(PROPERTIES, Clock.systemUTC(), 끊긴_적_없음());
+      return new JwtVerifier(
+          PROPERTIES,
+          Clock.systemUTC(),
+          userId -> {
+            throw new AssertionError("필터는 세션 버전을 AccountAuthorityLoader 와 함께 읽어야 한다");
+          });
     }
 
     private static JwtProperties 새_설정() {

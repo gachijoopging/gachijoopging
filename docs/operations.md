@@ -100,7 +100,7 @@ printf '\nSPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE=3\n' >> .env
 docker compose up -d redis backend
 
 docker run --rm --network gachijoopging_default curlimages/curl \
-  -sS -o /dev/null -w '%{http_code}\n' http://backend:8080/actuator/health
+  -sS -o /dev/null -w '%{http_code}\n' http://backend:8081/actuator/health
 ```
 
 이 줄은 교체 중에만 쓴다. **11번에서 지운다** — 남겨 두면 운영이 커넥션 3개로 돈다.
@@ -182,7 +182,7 @@ Nginx 가 443 을 잡고 `/api/v1/...` 를 **경로 그대로** 백엔드로 넘
 | `https://gachijoopging.site` | 301 → `www` (apex 는 쓰지 않는다) |
 | `https://www.gachijoopging.site/api/v1/...` | 백엔드 |
 | `.../api/v1/ws` | STOMP 소켓. 유휴 타임아웃 1시간 — 기본 60초면 조용한 구간에서 끊긴다 |
-| `.../actuator/health` | 헬스체크만 연다. `/actuator` 전체를 열면 prometheus 지표가 같이 공개된다 |
+| `.../actuator/health` | 헬스체크만 연다(관리 포트 `backend:8081`). `/actuator` 전체를 열면 prometheus 지표가 같이 공개된다 |
 
 **upstream 을 변수로 쓴다.** `proxy_pass http://backend:8080` 처럼 고정 이름으로 적으면 Nginx 가
 **시작할 때** 이름을 해석하고, 백엔드가 아직 없으면 아예 뜨지 않는다. `resolver` + `set $upstream` 이면
@@ -213,7 +213,7 @@ sudo docker run --rm -p 80:80 \
 ```powershell
 powershell -ExecutionPolicy Bypass -File infra\dev-keys.ps1   # 최초 1회
 docker compose -f infra/docker-compose.dev.yml up -d
-curl http://localhost:8080/actuator/health                     # {"status":"UP"}
+curl http://localhost:8080/api/v1/health                       # {"data":{"status":"UP"}} — /actuator 는 관리 포트(8081)라 호스트에 없다
 ```
 
 `dev-keys.ps1` 은 JWT 키 한 쌍을 만들어 루트 `.env` 에 넣는다. 백엔드는 그 키가 없으면 기동에서 죽는다 —
@@ -326,13 +326,15 @@ node infra/legal/build.mjs --check    # 어긋나면 1 로 끝난다 — legal.y
 
 ### 서명
 
-만료 6시간(`app.media.signed-url-ttl`). 만드는 쪽은 백엔드 `MediaSignedUrl`, 검증하는 쪽은 Nginx
-`secure_link_md5` 다. **식이 한 글자만 달라도 모든 사진이 403 이 되고, 그 사실은 배포한 뒤에야 드러난다.**
+만료 6시간(`app.media.signed-url-ttl`). 만드는 쪽은 백엔드 `MediaSignedUrl`, 검증하는 쪽은 Nginx 의
+njs 스크립트 `infra/nginx/media_link.js` 다. **식이 한 글자만 달라도 모든 사진이 403 이 되고, 그 사실은 배포한 뒤에야 드러난다.**
 
 ```
-raw = <만료><uri> <MEDIA_SECURE_LINK_SECRET>      ← uri 와 비밀 사이에 공백 한 칸
-서명 = base64url(MD5(raw)) · 패딩 없음
+서명 = base64url(HMAC-SHA256(<MEDIA_SECURE_LINK_SECRET>, <만료><uri>)) · 패딩 없음
 ```
+
+Nginx 내장 `secure_link_md5` 는 MD5 만 지원해서 쓰지 않는다. `media_link.js` 는 compose 가 마운트하고
+`deploy.yml` 이 `nginx.conf` 와 함께 올린다 — 서버에 없으면 Docker 가 그 자리에 빈 디렉터리를 만들어 Nginx 가 뜨지 않는다.
 
 Nginx 설정 파일은 그대로 쓰이지 않는다. 컨테이너가 `envsubst` 로 `${MEDIA_SECURE_LINK_SECRET}` 와
 `${MEDIA_ROOT}` **둘만** 바꿔 `/etc/nginx/nginx.conf` 를 만든다. 이름을 넘기지 않은 `$host`·`$uri` 는
@@ -480,7 +482,7 @@ Supabase Enforce SSL. 나머지는 한 겹이거나 그보다 약하고, 어디�
 
 | | |
 |---|---|
-| 백엔드 8080 | **호스트에 내지 않는다.** Nginx 가 compose 네트워크로 `backend:8080` 에 붙고, healthcheck 는 컨테이너 안에서 `localhost` 를 본다. 되살리면 Nginx 를 우회해 **`/actuator/prometheus` 가 인증 없이** 열리고, **`X-Real-IP` 를 위조**해 `login:ip:` 카운터를 피할 수 있다 |
+| 백엔드 8080 · 8081 | **호스트에 내지 않는다.** Nginx 가 compose 네트워크로 `backend:8080`(앱)과 `backend:8081`(관리 포트의 `/actuator/health` 하나)에 붙고, healthcheck 는 컨테이너 안에서 `localhost:8081` 을 본다. 8080 을 되살리면 **`X-Real-IP` 를 위조**해 `login:ip:` 카운터를 피할 수 있고, 8081 을 되살리면 **`/actuator/prometheus` 가 인증 없이** 열린다 |
 | Redis 6379 | 같다. `--requirepass` 까지 걸려 있다(§Redis) |
 | AI · DB | 이 서버에 없다. AI 는 담당자 맥, DB 는 Supabase |
 

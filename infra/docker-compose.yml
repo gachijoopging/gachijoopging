@@ -28,10 +28,10 @@ services:
     environment:
       LOGGING_PATTERN_LEVEL: "%5p [%X{requestId:-}]"
     # 호스트에 포트를 열지 않는다. Nginx 가 compose 네트워크 안에서 backend:8080 으로 붙고,
-    # healthcheck 는 컨테이너 안에서 localhost 를 본다 — 바깥에 낼 이유가 없다.
+    # healthcheck 는 컨테이너 안에서 localhost:8081(관리 포트)을 본다 — 바깥에 낼 이유가 없다.
     #
     # 되살리면 Nginx 를 우회해 두 가지가 열린다(operations.md §보안):
-    #   /actuator/prometheus 가 인증 없이 — SecurityConfig 가 /actuator/** 를 permitAll 하고
+    #   8081 이면 /actuator/prometheus 가 인증 없이 — SecurityConfig 가 /actuator/** 를 permitAll 하고
     #     Nginx 만 health 하나로 좁히고 있다
     #   X-Real-IP 위조 — AuthController.clientIp() 가 헤더를 무검증으로 믿어
     #     login:ip:·pwreset:ip: 카운터를 피하거나 남의 IP 를 막을 수 있다
@@ -45,7 +45,7 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost:8080/actuator/health/readiness"]
+      test: ["CMD", "curl", "-fsS", "http://localhost:8081/actuator/health/readiness"]
       interval: 10s
       timeout: 5s
       retries: 12
@@ -89,6 +89,8 @@ services:
       - .env
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf.template:ro
+      # 사진 URL 서명 검증. 없으면 Docker 가 그 자리에 빈 디렉터리를 만들어 Nginx 가 뜨지 않는다 — deploy.yml 이 함께 올린다
+      - ./nginx/media_link.js:/etc/nginx/media_link.js:ro
       # 약관 전문. 바뀌는 일이 드물고 백엔드를 거칠 이유가 없어 Nginx 가 직접 보낸다.
       - ./legal:/srv/legal:ro
       - certbot-conf:/etc/letsencrypt:ro
