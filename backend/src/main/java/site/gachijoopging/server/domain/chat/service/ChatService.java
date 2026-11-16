@@ -3,7 +3,6 @@ package site.gachijoopging.server.domain.chat.service;
 import java.time.Clock;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
@@ -30,8 +29,6 @@ import site.gachijoopging.server.global.error.ErrorCode;
 public class ChatService {
 
   private static final int MAX_TEXT = 500;
-
-  private static final String WITHDRAWN_NICKNAME = "탈퇴한 크루원";
 
   private final ChatMessageRepository messageRepository;
   private final ChatQueryRepository queryRepository;
@@ -128,16 +125,13 @@ public class ChatService {
             .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "없는 메시지다")));
   }
 
-  // 탈퇴한 사람은 이름·사진 없이 "탈퇴한 크루원" 으로 보인다 (ERD 회원 탈퇴 때)
   private ChatMessageResponse response(MessageRow row) {
     UserBriefResponse author =
-        "DELETED".equals(row.status())
-            ? new UserBriefResponse(row.authorId().toString(), WITHDRAWN_NICKNAME, null, true)
-            : new UserBriefResponse(
-                row.authorId().toString(),
-                Objects.requireNonNullElse(row.nickname(), ""),
-                row.photoKey() == null ? null : signedUrl.of(row.photoKey()),
-                false);
+        UserBriefResponse.of(
+            row.authorId(),
+            row.status(),
+            row.nickname(),
+            row.photoKey() == null ? null : signedUrl.of(row.photoKey()));
     return new ChatMessageResponse(
         row.seq(), row.id().toString(), author, row.text(), row.createdAt());
   }

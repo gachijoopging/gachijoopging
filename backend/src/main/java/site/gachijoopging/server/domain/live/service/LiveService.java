@@ -2,7 +2,6 @@ package site.gachijoopging.server.domain.live.service;
 
 import java.time.Clock;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -31,8 +30,6 @@ import site.gachijoopging.server.global.error.ErrorCode;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class LiveService {
-
-  private static final String WITHDRAWN_NICKNAME = "탈퇴한 크루원";
 
   private final LiveLocationRepository repository;
   private final MediaSignedUrl signedUrl;
@@ -125,13 +122,10 @@ public class LiveService {
   }
 
   private UserBriefResponse brief(LiveMemberRow row) {
-    if ("DELETED".equals(row.userStatus())) {
-      return new UserBriefResponse(row.userId().toString(), WITHDRAWN_NICKNAME, null, true);
-    }
-    return new UserBriefResponse(
-        row.userId().toString(),
-        Objects.requireNonNullElse(row.nickname(), ""),
-        row.photoKey() == null ? null : signedUrl.of(row.photoKey()),
-        false);
+    return UserBriefResponse.of(
+        row.userId(),
+        row.userStatus(),
+        row.nickname(),
+        row.photoKey() == null ? null : signedUrl.of(row.photoKey()));
   }
 }

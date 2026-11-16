@@ -57,8 +57,6 @@ public class PostService {
 
   private static final int DETAIL_COMMENTS = 20;
 
-  private static final String WITHDRAWN_NICKNAME = "탈퇴한 크루원";
-
   private final PostRepository postRepository;
   private final CommentRepository commentRepository;
   private final PostQueryRepository queryRepository;
@@ -345,13 +343,8 @@ public class PostService {
         .toList();
   }
 
-  // 탈퇴한 사람은 이름·사진 없이 "탈퇴한 크루원" 으로 보인다 (ERD 회원 탈퇴 때)
   private UserBriefResponse author(UUID id, String status, String nickname, String photoKey) {
-    if ("DELETED".equals(status)) {
-      return new UserBriefResponse(id.toString(), WITHDRAWN_NICKNAME, null, true);
-    }
-    return new UserBriefResponse(
-        id.toString(), Objects.requireNonNullElse(nickname, ""), url(photoKey), false);
+    return UserBriefResponse.of(id, status, nickname, url(photoKey));
   }
 
   private String url(String key) {

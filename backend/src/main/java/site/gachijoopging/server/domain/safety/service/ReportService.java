@@ -42,8 +42,6 @@ public class ReportService {
 
   private static final int PREVIEW = 100;
 
-  private static final String WITHDRAWN_NICKNAME = "탈퇴한 크루원";
-
   private final ReportRepository reportRepository;
   private final ReportQueryRepository queryRepository;
   private final PostService postService;
@@ -206,23 +204,19 @@ public class ReportService {
         row.targetType(),
         row.targetId(),
         row.targetWithdrawn()
-            ? WITHDRAWN_NICKNAME
+            ? UserBriefResponse.WITHDRAWN_NICKNAME
             : preview(Objects.requireNonNullElse(row.targetText(), "")),
         row.reason(),
         row.memo(),
         row.createdAt());
   }
 
-  // 탈퇴한 사람은 이름·사진 없이 "탈퇴한 크루원" 으로 보인다 (ERD 회원 탈퇴 때)
   private UserBriefResponse reporter(PendingRow row) {
-    if ("DELETED".equals(row.status())) {
-      return new UserBriefResponse(row.reporterId().toString(), WITHDRAWN_NICKNAME, null, true);
-    }
-    return new UserBriefResponse(
-        row.reporterId().toString(),
-        Objects.requireNonNullElse(row.nickname(), ""),
-        row.photoKey() == null ? null : signedUrl.of(row.photoKey()),
-        false);
+    return UserBriefResponse.of(
+        row.reporterId(),
+        row.status(),
+        row.nickname(),
+        row.photoKey() == null ? null : signedUrl.of(row.photoKey()));
   }
 
   // 코드포인트로 잘라야 이모지가 반으로 갈리지 않는다

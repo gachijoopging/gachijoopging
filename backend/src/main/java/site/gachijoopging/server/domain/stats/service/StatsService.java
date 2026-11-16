@@ -59,8 +59,6 @@ public class StatsService {
 
   private static final ZoneId KST = ZoneId.of("Asia/Seoul");
 
-  private static final String WITHDRAWN_NICKNAME = "탈퇴한 크루원";
-
   // 홈의 두 창은 굴러가는 창이라 절벽처럼 리셋되지 않는다 (feature-scope §홈)
   private static final int LAST_DAYS = 7;
   private static final int CHARACTER_DAYS = 14;
@@ -290,14 +288,11 @@ public class StatsService {
   }
 
   private UserBriefResponse brief(UserRow user) {
-    if ("DELETED".equals(user.status())) {
-      return new UserBriefResponse(user.id().toString(), WITHDRAWN_NICKNAME, null, true);
-    }
-    return new UserBriefResponse(
-        user.id().toString(),
-        Objects.requireNonNullElse(user.nickname(), ""),
-        user.photoKey() == null ? null : signedUrl.of(user.photoKey()),
-        false);
+    return UserBriefResponse.of(
+        user.id(),
+        user.status(),
+        user.nickname(),
+        user.photoKey() == null ? null : signedUrl.of(user.photoKey()));
   }
 
   private ActivityCardResponse card(CardRow row) {
