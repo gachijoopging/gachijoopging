@@ -17,7 +17,7 @@ TAG=${1:-}
 if [ -z "$TAG" ]; then
   [ -s "$PREV_FILE" ] || { echo "되돌릴 태그가 없다" >&2; exit 2; }
   TAG=$(cat "$PREV_FILE")
-  echo "롤백 → $TAG"
+  echo "롤백 → $TAG (설정은 그대로다 — 이미지와 어긋나면 operations.md §롤백)"
 fi
 
 BEFORE=$(read_env IMAGE_TAG)
@@ -50,7 +50,7 @@ done
 echo "기동 실패 — 마지막 상태: ${state:-?}" >&2
 docker compose logs --tail 50 backend >&2
 if [ -n "$BEFORE" ]; then
-  echo "되돌린다 → $BEFORE" >&2
+  echo "되돌린다 → $BEFORE (설정은 그대로다 — 이미지와 어긋나면 operations.md §롤백)" >&2
   sed -i "s|^IMAGE_TAG=.*|IMAGE_TAG=$BEFORE|" "$ENV_FILE"
   docker compose up -d
 fi

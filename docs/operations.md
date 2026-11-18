@@ -286,6 +286,19 @@ cd /opt/gachijoopging && ./deploy.sh <태그>      # 특정 태그로
 `deploy.sh` 는 기동을 3분까지 기다린다. healthy 가 안 되면 **스스로 직전 태그로 되돌리고** 실패로 끝난다.
 안 기다리면 깨진 배포가 초록으로 끝난다.
 
+**설정은 되돌아가지 않는다.** `deploy.sh` 는 자동 롤백을 포함해 `IMAGE_TAG` 만 되돌린다.
+`docker-compose.yml`·`nginx/` 는 deploy.yml 이 마지막에 올린 것이 그대로 남는다. 이미지와 설정이 함께
+바뀐 배포를 넘어 되돌리면 둘이 어긋난다 — 사진 서명을 HMAC 으로 바꾸고 Actuator 를 8081 로 옮긴 배포보다
+앞 태그로 가면 **모든 사진이 403** 이고 healthcheck 가 계속 unhealthy 다. 그때는 설정도 그 태그의 것으로
+다시 올린다. 이미지 태그가 곧 커밋 SHA 다:
+
+```sh
+T=<되돌린 태그>
+git show "$T:infra/docker-compose.yml" | ssh <서버> 'cat > /opt/gachijoopging/docker-compose.yml'
+git show "$T:infra/nginx/nginx.conf"   | ssh <서버> 'cat > /opt/gachijoopging/nginx/nginx.conf'
+ssh <서버> 'cd /opt/gachijoopging && docker compose up -d --force-recreate'
+```
+
 필요한 GitHub Secret 은 §시크릿 에 있다. 여기 옮겨 적지 않는다 — 한쪽이 반드시 낡는다.
 
 ## 약관 전문
