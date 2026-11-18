@@ -10,6 +10,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -19,6 +20,7 @@ import site.gachijoopging.server.domain.live.repository.LiveLocationRepository.S
 import site.gachijoopging.server.domain.live.service.LiveBroadcaster;
 import site.gachijoopging.server.domain.live.service.LiveLocationCleanupJob;
 import site.gachijoopging.server.global.batch.BatchDelete;
+import site.gachijoopging.server.global.batch.RetentionProperties;
 
 class LiveLocationCleanupBatchFailureTest {
 
@@ -35,7 +37,9 @@ class LiveLocationCleanupBatchFailureTest {
             repository,
             broadcaster,
             new BatchDelete(mock(PlatformTransactionManager.class)),
-            Clock.systemUTC());
+            Clock.systemUTC(),
+            new RetentionProperties(
+                Duration.ofDays(29), Duration.ofDays(364), Duration.ofMinutes(25)));
 
     assertThatThrownBy(job::removeStaleLocations).hasMessage("DB 장애");
 
@@ -59,7 +63,9 @@ class LiveLocationCleanupBatchFailureTest {
             repository,
             broadcaster,
             new BatchDelete(mock(PlatformTransactionManager.class)),
-            Clock.systemUTC());
+            Clock.systemUTC(),
+            new RetentionProperties(
+                Duration.ofDays(29), Duration.ofDays(364), Duration.ofMinutes(25)));
 
     job.removeStaleLocations();
 
@@ -82,7 +88,9 @@ class LiveLocationCleanupBatchFailureTest {
             repository,
             broadcaster,
             new BatchDelete(mock(PlatformTransactionManager.class)),
-            Clock.systemUTC());
+            Clock.systemUTC(),
+            new RetentionProperties(
+                Duration.ofDays(29), Duration.ofDays(364), Duration.ofMinutes(25)));
 
     job.removeStaleLocations();
     job.removeStaleLocations();

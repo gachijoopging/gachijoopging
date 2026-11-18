@@ -1,7 +1,6 @@
 package site.gachijoopging.server.domain.post.service;
 
 import java.time.Clock;
-import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -13,24 +12,23 @@ import site.gachijoopging.server.domain.media.event.MediaReleaseEvent;
 import site.gachijoopging.server.domain.post.repository.CommentRepository;
 import site.gachijoopging.server.domain.post.repository.PostRepository;
 import site.gachijoopging.server.global.batch.BatchDelete;
+import site.gachijoopging.server.global.batch.RetentionProperties;
 
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class PostCleanupJob {
 
-  // 지운 뒤 30일 안에 완전히 지운다(privacy §2). 매일 돌아서 하루 앞당겨야 30일을 넘기지 않는다
-  private static final Duration RETENTION = Duration.ofDays(29);
-
   private final PostRepository postRepository;
   private final CommentRepository commentRepository;
   private final ApplicationEventPublisher events;
   private final BatchDelete batchDelete;
   private final Clock clock;
+  private final RetentionProperties retention;
 
   @Scheduled(cron = "0 0 4 * * *", zone = "Asia/Seoul")
   public int removeDeletedPosts() {
-    var threshold = clock.instant().minus(RETENTION);
+    var threshold = clock.instant().minus(retention.softDeleted());
     int posts =
         batchDelete.untilDone(
             n -> {

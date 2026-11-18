@@ -1,7 +1,6 @@
 package site.gachijoopging.server.domain.activity.service;
 
 import java.time.Clock;
-import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -12,23 +11,22 @@ import org.springframework.stereotype.Component;
 import site.gachijoopging.server.domain.activity.repository.ActivityRepository;
 import site.gachijoopging.server.domain.media.event.MediaReleaseEvent;
 import site.gachijoopging.server.global.batch.BatchDelete;
+import site.gachijoopging.server.global.batch.RetentionProperties;
 
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class ActivityCleanupJob {
 
-  // 지운 뒤 30일 안에 완전히 지운다(privacy §2). 매일 돌아서 하루 앞당겨야 30일을 넘기지 않는다
-  private static final Duration RETENTION = Duration.ofDays(29);
-
   private final ActivityRepository activityRepository;
   private final ApplicationEventPublisher events;
   private final BatchDelete batchDelete;
   private final Clock clock;
+  private final RetentionProperties retention;
 
   @Scheduled(cron = "0 0 4 * * *", zone = "Asia/Seoul")
   public int removeDeletedActivities() {
-    var threshold = clock.instant().minus(RETENTION);
+    var threshold = clock.instant().minus(retention.softDeleted());
     int removed =
         batchDelete.untilDone(
             n -> {

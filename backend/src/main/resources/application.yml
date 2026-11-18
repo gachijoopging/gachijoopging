@@ -118,6 +118,14 @@ app:
     # 기록 상세 지도에 그리기에 충분하고, 앱이 이미 3~5점 평활을 거친 점이다
     route-simplify-meters: 5
 
+  retention:
+    # 지운 뒤 30일 안에 완전히 지운다(privacy §2). 매일 돌아서 하루 앞당겨야 30일을 넘기지 않는다
+    soft-deleted: 29d
+    # 처리 끝난 뒤 1년(privacy §2). 매일 돌아서 하루 앞당겨야 1년을 넘기지 않는다
+    resolved-report: 364d
+    # 마지막 갱신 뒤 30분 안에 지운다(feature-scope 보존·정리). 5분마다 돌아서 5분 앞당긴다
+    stale-live-location: 25m
+
   ai:
     # ⚠️ 값이 비어 있는 것이 지금의 정상 상태다. 선행 (Spring → AI 서버 노출 경로)이
     # 끝나지 않아 배포 환경에 주소가 없다. 비어 있으면 AiInferenceClient 가 호출하지 않고
