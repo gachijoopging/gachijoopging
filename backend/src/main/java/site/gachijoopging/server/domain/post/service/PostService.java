@@ -1,9 +1,10 @@
 package site.gachijoopging.server.domain.post.service;
 
+import static site.gachijoopging.server.global.config.ClockConfig.KST;
+
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -48,8 +49,6 @@ import site.gachijoopging.server.global.security.CrewMembership;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class PostService {
-
-  private static final ZoneId KST = ZoneId.of("Asia/Seoul");
 
   private static final int MAX_TEXT = 1000;
 
