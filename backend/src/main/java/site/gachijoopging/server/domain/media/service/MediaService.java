@@ -9,7 +9,9 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -161,6 +163,13 @@ public class MediaService {
   public void quarantine(String fromKey, String toKey) {
     mediaRepository.quarantineObjectKey(fromKey, toKey);
     mediaRepository.quarantineThumbKey(fromKey, toKey);
+  }
+
+  /** 월 폴더({@code yyyy/MM}) 안을 가리키는 행 키에서 {@code deleted/} 를 뗀 집합. */
+  public Set<String> referencedKeysIn(String monthFolder) {
+    return mediaRepository.findKeysIn(monthFolder).stream()
+        .map(key -> key.replaceFirst("^deleted/", ""))
+        .collect(Collectors.toSet());
   }
 
   private static long secondsUntilMidnight(Instant now) {
