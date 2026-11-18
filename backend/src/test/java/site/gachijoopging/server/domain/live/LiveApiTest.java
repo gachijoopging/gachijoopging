@@ -1,6 +1,7 @@
 package site.gachijoopging.server.domain.live;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -101,6 +102,34 @@ class LiveApiTest extends IntegrationTest {
     TestAccount 미가입자 = 가입한다(mockMvc, "live-nocrew@test.io");
 
     assertThat(닫힘_코드("?token=" + 미가입자.accessToken())).isEqualTo(4403);
+  }
+
+  @Test
+  void 연결_중_추방되면_4403_으로_닫힌다() throws Exception {
+    TestAccount 크루장 = 크루원이_된다("live-expel-leader@test.io");
+    TestAccount 나 = 같은_크루에_넣는다(크루장, "live-expel-me@test.io");
+    CompletableFuture<CloseStatus> 닫힘 = 열어_둔다("?token=" + 나.accessToken());
+
+    mockMvc
+        .perform(
+            delete("/api/v1/crew/members/{userId}", 나.id())
+                .header(HttpHeaders.AUTHORIZATION, 크루장.bearer()))
+        .andExpect(status().isNoContent());
+
+    assertThat(닫힘.get(5, TimeUnit.SECONDS).getCode()).isEqualTo(4403);
+  }
+
+  @Test
+  void 연결_중_크루를_나가면_4403_으로_닫힌다() throws Exception {
+    TestAccount 크루장 = 크루원이_된다("live-leave-leader@test.io");
+    TestAccount 나 = 같은_크루에_넣는다(크루장, "live-leave-me@test.io");
+    CompletableFuture<CloseStatus> 닫힘 = 열어_둔다("?token=" + 나.accessToken());
+
+    mockMvc
+        .perform(post("/api/v1/crew/leave").header(HttpHeaders.AUTHORIZATION, 나.bearer()))
+        .andExpect(status().isNoContent());
+
+    assertThat(닫힘.get(5, TimeUnit.SECONDS).getCode()).isEqualTo(4403);
   }
 
   @Test
@@ -348,6 +377,10 @@ class LiveApiTest extends IntegrationTest {
   }
 
   private int 닫힘_코드(String 쿼리) throws Exception {
+    return 열어_둔다(쿼리).get(5, TimeUnit.SECONDS).getCode();
+  }
+
+  private CompletableFuture<CloseStatus> 열어_둔다(String 쿼리) throws Exception {
     CompletableFuture<CloseStatus> 닫힘 = new CompletableFuture<>();
     new StandardWebSocketClient()
         .execute(
@@ -359,7 +392,7 @@ class LiveApiTest extends IntegrationTest {
             },
             "ws://localhost:" + port + "/api/v1/ws" + 쿼리)
         .get(5, TimeUnit.SECONDS);
-    return 닫힘.get(5, TimeUnit.SECONDS).getCode();
+    return 닫힘;
   }
 
   private static final StompFrameHandler 무시 =

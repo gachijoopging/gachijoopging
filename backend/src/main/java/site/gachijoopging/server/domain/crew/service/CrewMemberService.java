@@ -19,6 +19,7 @@ import site.gachijoopging.server.domain.crew.dto.MemberResponse;
 import site.gachijoopging.server.domain.crew.dto.UserBriefResponse;
 import site.gachijoopging.server.domain.crew.entity.Crew;
 import site.gachijoopging.server.domain.crew.event.MemberExpelledEvent;
+import site.gachijoopging.server.domain.crew.event.MemberLeftEvent;
 import site.gachijoopging.server.domain.crew.repository.CrewJoinRequestRepository;
 import site.gachijoopging.server.domain.crew.repository.CrewQueryRepository;
 import site.gachijoopging.server.domain.crew.repository.CrewQueryRepository.MemberRow;
@@ -141,6 +142,7 @@ public class CrewMemberService {
       joinRequestRepository.cancelPendingForCrew(crew.getId(), now);
       crew.dissolve(now);
     }
+    events.publishEvent(new MemberLeftEvent(crew.getId(), me));
     return true;
   }
 

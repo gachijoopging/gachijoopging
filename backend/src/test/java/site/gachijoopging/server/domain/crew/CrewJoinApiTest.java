@@ -214,6 +214,22 @@ class CrewJoinApiTest extends IntegrationTest {
   }
 
   @Test
+  void 마흔아홉_명_비공개_크루에서_두_신청을_동시에_승인하면_하나만_되고_50명이다() throws Exception {
+    TestAccount 크루장 = 가입한다(mockMvc, "join-race-approve-leader@test.io");
+    String 크루 = 크루를_만든다(크루장);
+    String 첫째 = 신청_id(신청한다(가입한다(mockMvc, "join-race-approve-a@test.io"), 크루));
+    String 둘째 = 신청_id(신청한다(가입한다(mockMvc, "join-race-approve-b@test.io"), 크루));
+    크루원을_채운다(크루, 48);
+
+    assertThat(
+            동시에(
+                () -> mockMvc.perform(처리한다(크루장, 첫째, "APPROVE")),
+                () -> mockMvc.perform(처리한다(크루장, 둘째, "APPROVE"))))
+        .containsExactlyInAnyOrder(204, 409);
+    assertThat(크루원_수(크루)).isEqualTo(50);
+  }
+
+  @Test
   void 한_사람이_공개_가입과_다른_크루_신청을_동시에_하면_하나만_된다() throws Exception {
     String 공개_크루 = 공개_크루를_만든다(가입한다(mockMvc, "join-mix-open-leader@test.io"));
     String 비공개_크루 = 크루를_만든다(가입한다(mockMvc, "join-mix-closed-leader@test.io"));
