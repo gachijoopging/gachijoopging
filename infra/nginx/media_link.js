@@ -1,5 +1,4 @@
-// 사진 URL 서명 검증. 만드는 쪽은 백엔드 MediaSignedUrl 이고 식이 한 글자만 달라도 모든 사진이 403 이 된다:
-//   서명 = base64url(HMAC-SHA256(MEDIA_SECURE_LINK_SECRET, <만료><uri>)) · 패딩 없음
+// 사진 URL 서명 검증. 만드는 쪽은 백엔드 MediaSignedUrl 이고 식이 한 글자만 달라도 모든 사진이 403 이 된다.
 // nginx 의 secure_link_md5 는 MD5 만 지원해서 njs 로 검증한다.
 import crypto from 'crypto';
 
