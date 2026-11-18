@@ -19,8 +19,6 @@ import site.gachijoopging.server.global.batch.RetentionProperties;
 @RequiredArgsConstructor
 public class LiveLocationCleanupJob {
 
-  // 지운 행은 LIVE_ENDED 로 알린다 — 목록을 이미 받은 크루원 화면에서도 빠져야 GET /crew/live 와 같아진다.
-  // 활동이 이어지면 다음 보고가 행을 다시 만들고 LIVE_STARTED 로 알린다
   private final LiveLocationRepository liveLocationRepository;
   private final LiveBroadcaster broadcaster;
   private final BatchDelete batchDelete;
@@ -30,6 +28,8 @@ public class LiveLocationCleanupJob {
   // 재시작하면 잃지만 그때는 소켓도 끊겨 앱이 다시 연결하며 GET /crew/live 로 맞춘다
   private final Set<StaleRow> unsent = ConcurrentHashMap.newKeySet();
 
+  // 지운 행은 LIVE_ENDED 로 알린다 — 목록을 이미 받은 크루원 화면에서도 빠져야 GET /crew/live 와 같아진다.
+  // 활동이 이어지면 다음 보고가 행을 다시 만들고 LIVE_STARTED 로 알린다
   @Scheduled(cron = "0 */5 * * * *")
   public int removeStaleLocations() {
     var threshold = clock.instant().minus(retention.staleLiveLocation());
