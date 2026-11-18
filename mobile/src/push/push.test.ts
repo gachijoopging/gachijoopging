@@ -91,3 +91,63 @@ test('토큰을 못 얻으면(FCM 설정 없음) 등록하지 않고 던지지 �
   await expect(push.syncPushToken(api)).resolves.toBeUndefined();
   expect(mutate).not.toHaveBeenCalled();
 });
+
+const router = { push: jest.fn(), dismissTo: jest.fn() };
+const tap = (data: Record<string, string>) => ({ notificationId: '500', ...data });
+const flush = () => new Promise((r) => setImmediate(r));
+beforeEach(() => {
+  router.push.mockReset();
+  router.dismissTo.mockReset();
+});
+
+test('댓글 푸시를 누르면 그 알림을 읽음 처리하고 그 게시물(5-2)로 간다', async () => {
+  await push.openPush(api, tap({ type: 'COMMENT', targetType: 'POST', targetId: 'po77' }), router, '/');
+  expect(mutate).toHaveBeenCalledWith('POST /notifications/read', { ids: [500] });
+  expect(router.push).toHaveBeenCalledWith({ pathname: '/posts/[id]', params: { id: 'po77' } });
+});
+
+test('공개 크루 가입(CREW_JOINED) 푸시는 크루장을 크루원 화면(3-11)으로 보낸다', async () => {
+  await push.openPush(api, tap({ type: 'CREW_JOINED', targetType: 'MEMBERS' }), router, '/');
+  expect(router.push).toHaveBeenCalledWith({ pathname: '/crew/members' });
+});
+
+test('가입 결과(CREW) 푸시는 GET /users/me 소속 분기로 간다 — 거절을 아직 확인하지 않았으면 1-9', async () => {
+  get.mockResolvedValue({ data: { profileComplete: true, membership: { status: 'NONE', rejection: { requestId: 'r1', crew: { id: 'c1', name: '줍깅' }, decidedAt: '2026-11-18T00:00:00Z' } } } });
+  await push.openPush(api, tap({ type: 'JOIN_REJECTED', targetType: 'CREW' }), router, '/crew-choice');
+  expect(get).toHaveBeenCalledWith('GET /users/me');
+  expect(router.dismissTo).toHaveBeenCalledWith('/pending-approval');
+  expect(router.push).not.toHaveBeenCalled();
+});
+
+test('1-9 에 있으면 가입 결과 푸시는 그 화면에 맡긴다 — 1-9 가 푸시를 받아 스스로 다시 읽는다', async () => {
+  get.mockResolvedValue({ data: { profileComplete: true, membership: { status: 'MEMBER' } } });
+  await push.openPush(api, tap({ type: 'JOIN_APPROVED', targetType: 'CREW' }), router, '/pending-approval');
+  expect(router.dismissTo).not.toHaveBeenCalled();
+  expect(router.push).not.toHaveBeenCalled();
+});
+
+test('대상이 없는 알림(게시물 삭제·신고 결과)은 알림 목록(2-3)에서 이유를 보게 한다', async () => {
+  await push.openPush(api, tap({ type: 'POST_REMOVED', targetType: 'POST' }), router, '/');
+  expect(router.push).toHaveBeenCalledWith('/notifications');
+});
+
+test('읽음 요청이 실패해도 대상 화면으로 간다', async () => {
+  mutate.mockRejectedValueOnce(new Error('offline'));
+  await expect(push.openPush(api, tap({ type: 'NOTICE', targetType: 'NOTICE', targetId: 'n1' }), router, '/')).resolves.toBeUndefined();
+  await flush();
+  expect(router.push).toHaveBeenCalledWith({ pathname: '/crew/notices/[id]', params: { id: 'n1' } });
+});
+
+test('같은 알림을 두 번 열지 않는다 — 콜드 스타트의 마지막 응답과 리스너가 같은 탭을 두 번 줄 수 있다', async () => {
+  const data = tap({ type: 'COMMENT', targetType: 'POST', targetId: 'po77' });
+  await push.openPush(api, data, router, '/');
+  await push.openPush(api, data, router, '/posts/po77');
+  expect(router.push).toHaveBeenCalledTimes(1);
+});
+
+test('우리 서버가 보낸 알림이 아니면(notificationId 없음) 아무것도 하지 않는다', async () => {
+  await push.openPush(api, { type: 'COMMENT' }, router, '/');
+  await push.openPush(api, undefined, router, '/');
+  expect(mutate).not.toHaveBeenCalled();
+  expect(router.push).not.toHaveBeenCalled();
+});

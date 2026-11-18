@@ -17,7 +17,7 @@ jest.mock('../api/config', () => ({ apiConfig: { real: false }, createApiClient:
 jest.mock('../auth/launch', () => ({ launchDestination: jest.fn() }));
 jest.mock('./actions', () => ({ endIfExpired: () => mockEndIfExpired() }));
 jest.mock('./store', () => ({ loadLastAccount: () => ({ session: { activityId: 'a1' }, ended: null, outbox: [] }) }));
-jest.mock('../push/push', () => ({ usePushTokenSync() {} }));
+jest.mock('../push/push', () => ({ usePushTokenSync() {}, usePushOpen() {} }));
 import RootLayout from '../../app/_layout';
 
 let tree: ReactTestRenderer;
