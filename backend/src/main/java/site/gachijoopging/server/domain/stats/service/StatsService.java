@@ -1,5 +1,7 @@
 package site.gachijoopging.server.domain.stats.service;
 
+import static site.gachijoopging.server.global.config.ClockConfig.KST;
+
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -12,7 +14,6 @@ import java.time.DayOfWeek;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.YearMonth;
-import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.time.temporal.TemporalAdjusters;
@@ -56,8 +57,6 @@ import site.gachijoopging.server.global.security.CrewMembership;
 @Service
 @RequiredArgsConstructor
 public class StatsService {
-
-  private static final ZoneId KST = ZoneId.of("Asia/Seoul");
 
   // 홈의 두 창은 굴러가는 창이라 절벽처럼 리셋되지 않는다 (feature-scope §홈)
   private static final int LAST_DAYS = 7;

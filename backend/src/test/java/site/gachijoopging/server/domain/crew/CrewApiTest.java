@@ -9,16 +9,28 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static site.gachijoopging.server.support.TestAccounts.가입한다;
 
 import com.jayway.jsonpath.JsonPath;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.Timestamp;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
+import javax.sql.DataSource;
+import org.awaitility.Awaitility;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import site.gachijoopging.server.support.IntegrationTest;
@@ -29,6 +41,7 @@ class CrewApiTest extends IntegrationTest {
 
   @Autowired private MockMvc mockMvc;
   @Autowired private JdbcTemplate jdbcTemplate;
+  @Autowired private DataSource dataSource;
 
   @Test
   void 만든_사람이_크루장이고_GET_crew_가_같은_크루를_돌려준다() throws Exception {
@@ -183,6 +196,54 @@ class CrewApiTest extends IntegrationTest {
   }
 
   @Test
+  void 두_크루가_같은_새_이름으로_동시에_바꾸면_하나만_되고_하나는_409_CREW_NAME_TAKEN_이다() throws Exception {
+    TestAccount 가 = 가입한다(mockMvc, "crew-race-a@test.io");
+    TestAccount 나 = 가입한다(mockMvc, "crew-race-b@test.io");
+    mockMvc.perform(만든다(가, "경합이름가"));
+    mockMvc.perform(만든다(나, "경합이름나"));
+
+    assertThat(동시에(수정(가, "{\"name\":\"경합새이름\"}"), 수정(나, "{\"name\":\"경합새이름\"}")))
+        .containsExactlyInAnyOrder("200 null", "409 CREW_NAME_TAKEN");
+  }
+
+  @Test
+  void 만들기가_커밋하기_전에_같은_이름으로_수정하면_만들기를_기다렸다가_409_CREW_NAME_TAKEN_이다() throws Exception {
+    TestAccount 크루장 = 가입한다(mockMvc, "crew-race-leader@test.io");
+    TestAccount 새_크루장 = 가입한다(mockMvc, "crew-race-new@test.io");
+    mockMvc.perform(만든다(크루장, "경합원래이름"));
+    String 다른_크루 =
+        크루_id(
+            mockMvc
+                .perform(만든다(가입한다(mockMvc, "crew-race-other@test.io"), "경합다른크루"))
+                .andReturn()
+                .getResponse()
+                .getContentAsString());
+
+    ExecutorService 두_손가락 = Executors.newFixedThreadPool(2);
+    try (Connection 연결 = dataSource.getConnection()) {
+      연결.setAutoCommit(false);
+      // 새 크루장의 소속 행을 커밋하지 않고 쥐면 만들기가 이름 잠금과 크루 행을 쥔 채 crew_members.user_id 유일 인덱스에서 멈춘다
+      try (PreparedStatement 소속 =
+          연결.prepareStatement(
+              "INSERT INTO crew_members (crew_id, user_id, joined_at) VALUES (?, ?, now())")) {
+        소속.setObject(1, UUID.fromString(다른_크루));
+        소속.setObject(2, 새_크루장.id());
+        소속.executeUpdate();
+      }
+      Future<String> 만들기 = 두_손가락.submit(() -> 보낸다(만든다(새_크루장, "경합겹친이름")));
+      잠금을_기다리는_요청이(1);
+      Future<String> 바꾸기 = 두_손가락.submit(() -> 보낸다(수정(크루장, "{\"name\":\"경합겹친이름\"}")));
+      잠금을_기다리는_요청이(2);
+      연결.rollback();
+
+      assertThat(만들기.get(10, TimeUnit.SECONDS)).isEqualTo("201 null");
+      assertThat(바꾸기.get(10, TimeUnit.SECONDS)).isEqualTo("409 CREW_NAME_TAKEN");
+    } finally {
+      두_손가락.shutdown();
+    }
+  }
+
+  @Test
   void 크루장이_탈퇴했으면_검색의_크루장은_탈퇴한_크루원이다() throws Exception {
     TestAccount 크루장 = 가입한다(mockMvc, "crew-withdrawn-leader@test.io");
     mockMvc.perform(만든다(크루장, "탈퇴확인크루"));
@@ -329,6 +390,47 @@ class CrewApiTest extends IntegrationTest {
         .header(HttpHeaders.AUTHORIZATION, 계정.bearer())
         .contentType(MediaType.APPLICATION_JSON)
         .content(본문);
+  }
+
+  private List<String> 동시에(MockHttpServletRequestBuilder 첫째, MockHttpServletRequestBuilder 둘째)
+      throws Exception {
+    CountDownLatch 출발 = new CountDownLatch(1);
+    ExecutorService 두_손가락 = Executors.newFixedThreadPool(2);
+    try {
+      List<Future<String>> 결과 =
+          Stream.of(첫째, 둘째)
+              .map(
+                  요청 ->
+                      두_손가락.submit(
+                          () -> {
+                            출발.await();
+                            return 보낸다(요청);
+                          }))
+              .toList();
+      출발.countDown();
+      return List.of(결과.get(0).get(), 결과.get(1).get());
+    } finally {
+      두_손가락.shutdown();
+    }
+  }
+
+  // 상태만 보면 무결성 위반의 일반 409 CONFLICT 와 구별되지 않아 오류 코드까지 돌려준다
+  private String 보낸다(MockHttpServletRequestBuilder 요청) throws Exception {
+    MockHttpServletResponse 응답 = mockMvc.perform(요청).andReturn().getResponse();
+    String 코드 = 응답.getStatus() < 400 ? null : JsonPath.read(응답.getContentAsString(), "$.code");
+    return 응답.getStatus() + " " + 코드;
+  }
+
+  private void 잠금을_기다리는_요청이(long 수) {
+    Awaitility.await()
+        .atMost(Duration.ofSeconds(10))
+        .until(
+            () ->
+                jdbcTemplate.queryForObject(
+                        "SELECT count(*) FROM pg_stat_activity"
+                            + " WHERE datname = current_database() AND wait_event_type = 'Lock'",
+                        Long.class)
+                    >= 수);
   }
 
   private void 소속시킨다(TestAccount 계정, String 크루_id) {

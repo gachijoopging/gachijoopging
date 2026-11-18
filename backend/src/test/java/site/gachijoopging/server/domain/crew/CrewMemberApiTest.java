@@ -11,9 +11,16 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static site.gachijoopging.server.support.TestAccounts.가입한다;
 
 import com.jayway.jsonpath.JsonPath;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import javax.sql.DataSource;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -36,6 +43,7 @@ class CrewMemberApiTest extends IntegrationTest {
   @Autowired private MockMvc mockMvc;
   @Autowired private ApplicationEvents events;
   @Autowired private JdbcTemplate jdbcTemplate;
+  @Autowired private DataSource dataSource;
 
   @Test
   void 크루원_목록은_크루장_먼저_나머지는_닉네임순이고_이_크루에서_끝낸_활동만_센다() throws Exception {
@@ -163,6 +171,46 @@ class CrewMemberApiTest extends IntegrationTest {
     가입_요청(크루원, 크루)
         .andExpect(status().isForbidden())
         .andExpect(jsonPath("$.code").value("EXPELLED_FROM_CREW"));
+  }
+
+  @Test
+  void 추방이_크루_잠금을_기다리는_사이_위임되면_이전_크루장의_추방은_403_이고_대상은_크루원이다() throws Exception {
+    TestAccount 크루장 = 가입한다(mockMvc, "expel-race-leader@test.io");
+    String 크루 = 공개_크루를_만든다(크루장);
+    TestAccount 새_크루장 = 가입한다(mockMvc, "expel-race-next@test.io");
+    크루에_들어간다(새_크루장, 크루);
+    TestAccount 대상 = 가입한다(mockMvc, "expel-race-target@test.io");
+    크루에_들어간다(대상, 크루);
+    ExecutorService 손 = Executors.newSingleThreadExecutor();
+    try (Connection 위임 = dataSource.getConnection()) {
+      위임.setAutoCommit(false);
+      try (PreparedStatement 잠금 =
+          위임.prepareStatement("SELECT 1 FROM crews WHERE id = ? FOR UPDATE")) {
+        잠금.setObject(1, UUID.fromString(크루));
+        잠금.executeQuery();
+      }
+      Future<Integer> 추방 =
+          손.submit(() -> mockMvc.perform(추방한다(크루장, 대상.id())).andReturn().getResponse().getStatus());
+      크루_잠금을_기다릴_때까지_본다();
+      try (PreparedStatement 바꾼다 =
+          위임.prepareStatement("UPDATE crews SET leader_id = ? WHERE id = ?")) {
+        바꾼다.setObject(1, 새_크루장.id());
+        바꾼다.setObject(2, UUID.fromString(크루));
+        바꾼다.executeUpdate();
+      }
+      위임.commit();
+
+      assertThat(추방.get(10, TimeUnit.SECONDS)).isEqualTo(403);
+    } finally {
+      손.shutdown();
+    }
+    assertThat(
+            jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM crew_members WHERE crew_id = ? AND user_id = ?",
+                Integer.class,
+                UUID.fromString(크루),
+                대상.id()))
+        .isEqualTo(1);
   }
 
   @Test
@@ -323,6 +371,21 @@ class CrewMemberApiTest extends IntegrationTest {
         java.sql.Timestamp.from(시작),
         끝남 ? java.sql.Timestamp.from(시작.plusSeconds(600)) : null,
         수량);
+  }
+
+  private void 크루_잠금을_기다릴_때까지_본다() throws InterruptedException {
+    for (int i = 0; i < 100; i++) {
+      Integer 대기 =
+          jdbcTemplate.queryForObject(
+              "SELECT count(*) FROM pg_stat_activity"
+                  + " WHERE wait_event_type = 'Lock' AND query ILIKE '%from crews%'",
+              Integer.class);
+      if (대기 > 0) {
+        return;
+      }
+      Thread.sleep(50);
+    }
+    throw new AssertionError("추방 요청이 크루 잠금을 기다리지 않는다");
   }
 
   private int 크루원_수(String 크루) {
