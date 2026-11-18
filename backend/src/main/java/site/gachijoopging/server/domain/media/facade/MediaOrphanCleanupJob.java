@@ -4,6 +4,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Set;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -31,7 +32,10 @@ public class MediaOrphanCleanupJob {
     Instant cutoff = clock.instant().minus(GRACE);
     int removed = 0;
     for (String folder : storage.monthFolders()) {
-      Set<String> referenced = mediaService.referencedKeysIn(unquarantined(folder));
+      Set<String> referenced =
+          mediaService.referencedKeysIn(unquarantined(folder)).stream()
+              .map(MediaOrphanCleanupJob::unquarantined)
+              .collect(Collectors.toSet());
       for (StoredFile file : storage.files(folder)) {
         if (file.modifiedAt().isBefore(cutoff)
             && !referenced.contains(unquarantined(file.key()))

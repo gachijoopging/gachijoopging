@@ -19,7 +19,7 @@ import site.gachijoopging.server.support.IntegrationTest;
 
 class MediaOrphanCleanupJobTest extends IntegrationTest {
 
-  // 다른 테스트가 올린 파일과 섞이지 않도록 업로드가 쓰지 않는 지난 달 폴더를 쓴다
+  // 다른 테스트가 올린 파일과 섞이지 않도록 업로드가 쓰지 않는 과거 폴더를 쓴다
   private static final String 폴더 = "1999/01/";
 
   @Autowired private MediaOrphanCleanupJob job;
