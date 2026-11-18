@@ -16,14 +16,17 @@ import site.gachijoopging.server.global.security.CrewMembershipLoader;
 class CrewSessionGuard extends WebSocketHandlerDecorator {
 
   static final CloseStatus TOKEN_REJECTED = new CloseStatus(4401, "accessToken 거부");
-  static final CloseStatus NO_CREW = new CloseStatus(4403, "소속 크루가 없다");
 
   private final ObjectProvider<CrewMembershipLoader> crewMembershipLoader;
+  private final CrewSessions crewSessions;
 
   CrewSessionGuard(
-      WebSocketHandler delegate, ObjectProvider<CrewMembershipLoader> crewMembershipLoader) {
+      WebSocketHandler delegate,
+      ObjectProvider<CrewMembershipLoader> crewMembershipLoader,
+      CrewSessions crewSessions) {
     super(delegate);
     this.crewMembershipLoader = crewMembershipLoader;
+    this.crewSessions = crewSessions;
   }
 
   @Override
@@ -34,11 +37,11 @@ class CrewSessionGuard extends WebSocketHandlerDecorator {
         session.close(TOKEN_REJECTED);
         return;
       }
-      if (crewMembershipLoader
-          .getObject()
-          .membershipOf(UUID.fromString(user.getName()))
-          .isEmpty()) {
-        session.close(NO_CREW);
+      UUID userId = UUID.fromString(user.getName());
+      // 소속 검사와 추방 커밋이 엇갈려도 추방 쪽이 이 세션을 찾아 닫을 수 있게 검사 전에 올린다
+      crewSessions.register(userId, session);
+      if (crewMembershipLoader.getObject().membershipOf(userId).isEmpty()) {
+        session.close(CrewSessions.NO_CREW);
         return;
       }
       super.afterConnectionEstablished(new TokenHidden(session));
@@ -47,6 +50,16 @@ class CrewSessionGuard extends WebSocketHandlerDecorator {
       log.error("소켓 연결 처리 실패 — session {}", session.getId(), e);
       session.close(CloseStatus.SERVER_ERROR);
     }
+  }
+
+  @Override
+  public void afterConnectionClosed(WebSocketSession session, CloseStatus closeStatus)
+      throws Exception {
+    Principal user = session.getPrincipal();
+    if (user != null) {
+      crewSessions.unregister(UUID.fromString(user.getName()), session);
+    }
+    super.afterConnectionClosed(session, closeStatus);
   }
 
   // STOMP 처리기는 받은 세션을 보관하고 끊김·한도 초과 때 문자열로 로그에 남긴다. 그 문자열에서 토큰을 뺀다

@@ -36,15 +36,18 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
   private final JwtVerifier jwtVerifier;
   private final ObjectProvider<CrewMembershipLoader> crewMembershipLoader;
   private final TaskScheduler heartbeatScheduler;
+  private final CrewSessions crewSessions;
 
   // 브로커 스케줄러는 이 설정을 받아 만들어지는 빈이라 바로 주입하면 순환한다
   public WebSocketConfig(
       JwtVerifier jwtVerifier,
       ObjectProvider<CrewMembershipLoader> crewMembershipLoader,
-      @Lazy @Qualifier("messageBrokerTaskScheduler") TaskScheduler heartbeatScheduler) {
+      @Lazy @Qualifier("messageBrokerTaskScheduler") TaskScheduler heartbeatScheduler,
+      CrewSessions crewSessions) {
     this.jwtVerifier = jwtVerifier;
     this.crewMembershipLoader = crewMembershipLoader;
     this.heartbeatScheduler = heartbeatScheduler;
+    this.crewSessions = crewSessions;
   }
 
   @Override
@@ -74,7 +77,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
   @Override
   public void configureWebSocketTransport(WebSocketTransportRegistration registration) {
     registration.addDecoratorFactory(
-        handler -> new CrewSessionGuard(handler, crewMembershipLoader));
+        handler -> new CrewSessionGuard(handler, crewMembershipLoader, crewSessions));
   }
 
   // 크루는 서버가 정한다. 다른 경로를 구독하거나 브로커에 직접 보내면 남의 큐에 닿을 수 있다
