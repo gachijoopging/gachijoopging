@@ -2,7 +2,6 @@ package site.gachijoopging.server.domain.safety.service;
 
 import java.time.Clock;
 import java.util.List;
-import java.util.Objects;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -20,8 +19,6 @@ import site.gachijoopging.server.global.response.Cursors;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class BlockService {
-
-  private static final String WITHDRAWN_NICKNAME = "탈퇴한 크루원";
 
   private final BlockRepository blockRepository;
   private final MediaSignedUrl signedUrl;
@@ -59,15 +56,11 @@ public class BlockService {
         page.stream().map(this::brief).toList(), next, blockRepository.count(me));
   }
 
-  // 탈퇴한 사람은 이름·사진 없이 "탈퇴한 크루원" 으로 보인다 (ERD 회원 탈퇴 때)
   private UserBriefResponse brief(BlockedRow row) {
-    if ("DELETED".equals(row.status())) {
-      return new UserBriefResponse(row.id().toString(), WITHDRAWN_NICKNAME, null, true);
-    }
-    return new UserBriefResponse(
-        row.id().toString(),
-        Objects.requireNonNullElse(row.nickname(), ""),
-        row.photoKey() == null ? null : signedUrl.of(row.photoKey()),
-        false);
+    return UserBriefResponse.of(
+        row.id(),
+        row.status(),
+        row.nickname(),
+        row.photoKey() == null ? null : signedUrl.of(row.photoKey()));
   }
 }

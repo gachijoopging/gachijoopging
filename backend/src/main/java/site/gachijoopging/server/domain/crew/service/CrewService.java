@@ -44,8 +44,6 @@ public class CrewService implements CrewMembershipLoader {
 
   static final int CAPACITY = 50;
 
-  private static final String WITHDRAWN_NICKNAME = "탈퇴한 크루원";
-
   private final CrewRepository crewRepository;
   private final UserLock userLock;
   private final CrewQueryRepository crewQueryRepository;
@@ -241,11 +239,7 @@ public class CrewService implements CrewMembershipLoader {
   }
 
   UserBriefResponse brief(UUID id, String nickname, UUID photoMediaId, String status) {
-    if ("DELETED".equals(status)) {
-      return new UserBriefResponse(id.toString(), WITHDRAWN_NICKNAME, null, true);
-    }
-    return new UserBriefResponse(
-        id.toString(), Objects.requireNonNullElse(nickname, ""), photoUrl(photoMediaId), false);
+    return UserBriefResponse.of(id, status, nickname, photoUrl(photoMediaId));
   }
 
   private String photoUrl(UUID photoMediaId) {

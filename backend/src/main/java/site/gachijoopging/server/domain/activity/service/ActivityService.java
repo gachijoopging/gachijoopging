@@ -7,7 +7,6 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.TreeMap;
 import java.util.UUID;
@@ -57,8 +56,6 @@ public class ActivityService {
 
   // AI 신뢰도가 이보다 낮으면 앱이 "확인 필요" 로 보인다 (feature-scope §AI 줍기)
   private static final float UNCLASSIFIED_BELOW = 0.7f;
-
-  private static final String WITHDRAWN_NICKNAME = "탈퇴한 크루원";
 
   // 앱이 초를 반올림하는 오차, 활동 중 기기 시계가 보정되는 차이를 받아 준다
   private static final Duration CLOCK_SKEW = Duration.ofMinutes(1);
@@ -482,17 +479,13 @@ public class ActivityService {
         .toList();
   }
 
-  // 탈퇴한 사람은 이름·사진 없이 "탈퇴한 크루원" 으로 보인다 (ERD 회원 탈퇴 때)
   private UserBriefResponse user(UUID userId) {
     ActivityQueryRepository.UserRow user = queryRepository.findUser(userId);
-    if ("DELETED".equals(user.getStatus())) {
-      return new UserBriefResponse(userId.toString(), WITHDRAWN_NICKNAME, null, true);
-    }
-    return new UserBriefResponse(
-        userId.toString(),
-        Objects.requireNonNullElse(user.getNickname(), ""),
-        user.getPhotoKey() == null ? null : signedUrl.of(user.getPhotoKey()),
-        false);
+    return UserBriefResponse.of(
+        userId,
+        user.getStatus(),
+        user.getNickname(),
+        user.getPhotoKey() == null ? null : signedUrl.of(user.getPhotoKey()));
   }
 
   private ActivityCardResponse card(ActivityQueryRepository.CardRow row) {

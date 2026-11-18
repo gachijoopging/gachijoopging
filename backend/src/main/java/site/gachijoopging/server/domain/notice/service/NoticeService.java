@@ -2,7 +2,6 @@ package site.gachijoopging.server.domain.notice.service;
 
 import java.time.Clock;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
@@ -46,8 +45,6 @@ public class NoticeService {
   private static final int MAX_COMMENT = 500;
 
   private static final int PREVIEW = 100;
-
-  private static final String WITHDRAWN_NICKNAME = "탈퇴한 크루원";
 
   private final NoticeRepository noticeRepository;
   private final NoticeCommentRepository commentRepository;
@@ -235,16 +232,12 @@ public class NoticeService {
     return new CommentResponse(row.id().toString(), author(row), row.text(), row.createdAt());
   }
 
-  // 탈퇴한 사람은 이름·사진 없이 "탈퇴한 크루원" 으로 보인다 (ERD 회원 탈퇴 때)
   private UserBriefResponse author(CommentRow row) {
-    if ("DELETED".equals(row.status())) {
-      return new UserBriefResponse(row.authorId().toString(), WITHDRAWN_NICKNAME, null, true);
-    }
-    return new UserBriefResponse(
-        row.authorId().toString(),
-        Objects.requireNonNullElse(row.nickname(), ""),
-        row.photoKey() == null ? null : signedUrl.of(row.photoKey()),
-        false);
+    return UserBriefResponse.of(
+        row.authorId(),
+        row.status(),
+        row.nickname(),
+        row.photoKey() == null ? null : signedUrl.of(row.photoKey()));
   }
 
   private static String text(String value, int max, String what) {
