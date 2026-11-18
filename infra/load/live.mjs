@@ -161,7 +161,10 @@ try {
   clearTimeout(wait); // 안 지우면 정리 뒤에도 MIN 분이 찰 때까지 프로세스가 안 끝난다
   clearInterval(tick);
   timers.forEach(clearTimeout);
-  for (const u of users) { clearInterval(u.timer); u.closing = true; u.ws.close(); }
+  users.forEach((u) => clearInterval(u.timer));
+  // 서버는 LIVE_UPDATE 를 5초마다 묶어 보낸다. 마지막 묶음을 받기 전에 닫으면 보낸 위치가 안 받은 것으로 세어진다
+  if (!stopped) await Promise.race([new Promise((r) => setTimeout(r, PERIOD + 1000)), interrupted]);
+  for (const u of users) { u.closing = true; u.ws.close(); }
 
   const expected = stats.sentCount * N; // 보낸 위치마다 크루원 전원(본인 포함)이 받아야 한다
   console.log(JSON.stringify({
