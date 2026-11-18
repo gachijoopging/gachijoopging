@@ -334,7 +334,7 @@ PENDING 이 있는 사람의 크루 만들기·다른 크루 가입·신청은 4
 | status | PENDING · RESOLVED |
 | result | DELETE · DISMISS (Q39). 사용자 추방 시 해당 크루·대상의 PENDING USER 신고를 모두 RESOLVED 처리(결과 null). USER 무조치는 DISMISS |
 | resolved_by · resolved_at | |
-| | UNIQUE (reporter_id, target_type, target_id) |
+| | UNIQUE (reporter_id, target_type, target_id) WHERE status = 'PENDING' — 처리된 대상은 다시 신고할 수 있다 |
 
 신고 처리·추방 시 각 신고자에게 결과 `REPORT_RESOLVED` 알림을 보낸다. 결과 설명은 title/detail에 담고 알림 목록으로 이동한다.
 

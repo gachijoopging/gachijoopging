@@ -4020,7 +4020,7 @@ export interface paths {
         readonly put?: never;
         /**
          * 신고 (6-1) — 크루장에게 REPORT 알림
-         * @description reason=OTHER이면 공백뿐이지 않은 memo가 필수다. 같은 신고자의 같은 targetType·targetId 중복 신고는 409 CONFLICT. 동일 id 재전송은 공통 멱등 규칙으로 흡수한다
+         * @description reason=OTHER이면 공백뿐이지 않은 memo가 필수다. 같은 신고자가 같은 targetType·targetId 에 대기 중(PENDING) 신고를 이미 가지고 있으면 409 CONFLICT. 처리된 신고만 있으면 다시 신고할 수 있다. 동일 id 재전송은 공통 멱등 규칙으로 흡수한다
          */
         readonly post: {
             readonly parameters: {
