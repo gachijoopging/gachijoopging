@@ -30,6 +30,7 @@ import { createApiClient } from '../../src/api/config';
 import { MOCKS } from '../../src/api/mocks.generated';
 import { leaveForMembership } from '../../src/feed/leave';
 import { characterBubble, myCategorySummary } from '../../src/home/home';
+import { useNotificationArrivals } from '../../src/notifications/useNotificationArrivals';
 import { useFlash } from '../../src/ui/useFlash';
 
 type Home = (typeof MOCKS)['GET /crew/home']['data'];
@@ -64,6 +65,7 @@ export default function HomeScreen() {
 
   // 탭 복귀·다른 화면에서 뒤로 올 때도 조용히 다시 받는다
   useFocusEffect(useCallback(() => void load('quiet'), [load]));
+  useNotificationArrivals(() => void load('quiet'));
 
   const unread = home?.unreadNotifications ?? 0;
 

@@ -49,6 +49,7 @@ export function acquireCrewSocket(): StompSocket | null {
     sendLive: (body) => socket.sendLive(body),
     subscribe: (handler) => track(socket.subscribe(handler)),
     onLive: (handler) => track(socket.onLive(handler)),
+    onNotification: (handler) => track(socket.onNotification(handler)),
     onStatus: (listener) => track(socket.onStatus(listener)),
     close() {
       if (released) return;

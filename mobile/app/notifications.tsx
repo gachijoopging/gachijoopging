@@ -33,6 +33,7 @@ import {
   relativeTime,
   type ReadState,
 } from '../src/notifications/notifications';
+import { useNotificationArrivals } from '../src/notifications/useNotificationArrivals';
 
 type Page = (typeof MOCKS)['GET /notifications']['data'];
 type Item = Page['items'][number];
@@ -96,6 +97,7 @@ export default function NotificationsScreen() {
       Notifications.getPermissionsAsync().then((p) => setNotifyOff(!p.granted)).catch(() => {});
     }, [load]),
   );
+  useNotificationArrivals(() => void load('first'));
 
   const open = (item: Item) => {
     if (read && item.unread) {

@@ -22,6 +22,7 @@ function fakeSocket(): Fake {
     sendLive: jest.fn(),
     subscribe: jest.fn(() => unsubscribed),
     onLive: jest.fn(() => unsubscribed),
+    onNotification: jest.fn(() => unsubscribed),
     onStatus: jest.fn((listener) => {
       statusListeners.add(listener);
       listener('connecting');
@@ -68,6 +69,18 @@ test('닫은 화면이 단 구독만 떼어 내고 남은 화면의 구독은 �
   chat.close();
   expect(created[0].unsubscribed).toHaveBeenCalledTimes(1);
   live.close();
+});
+
+test('알림 구독도 그 화면이 닫을 때 떼어 낸다 — 홈이 닫혀도 채팅 화면의 연결은 남는다', () => {
+  const home = acquireCrewSocket()!;
+  const chat = acquireCrewSocket()!;
+  const notify = jest.fn();
+  home.onNotification(notify);
+  expect(created[0].onNotification).toHaveBeenCalledWith(notify);
+  home.close();
+  expect(created[0].unsubscribed).toHaveBeenCalledTimes(1);
+  expect(created[0].close).not.toHaveBeenCalled();
+  chat.close();
 });
 
 test('4403 으로 닫힌 연결은 놓고, 다음 화면은 새로 붙는다', () => {
