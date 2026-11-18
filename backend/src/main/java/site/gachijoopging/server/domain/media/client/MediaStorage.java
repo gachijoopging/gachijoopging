@@ -5,11 +5,13 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import org.springframework.stereotype.Component;
@@ -72,7 +74,11 @@ public class MediaStorage {
     try (Stream<Path> paths = Files.list(dir)) {
       return paths
           .filter(Files::isRegularFile)
-          .map(p -> new StoredFile(folder + "/" + p.getFileName(), modifiedAt(p)))
+          .flatMap(
+              p ->
+                  modifiedAt(p)
+                      .map(at -> new StoredFile(folder + "/" + p.getFileName(), at))
+                      .stream())
           .toList();
     } catch (IOException e) {
       throw new UncheckedIOException("사진 폴더를 읽지 못했다: " + folder, e);
@@ -95,9 +101,12 @@ public class MediaStorage {
     }
   }
 
-  private static Instant modifiedAt(Path file) {
+  static Optional<Instant> modifiedAt(Path file) {
     try {
-      return Files.getLastModifiedTime(file).toInstant();
+      return Optional.of(Files.getLastModifiedTime(file).toInstant());
+    } catch (NoSuchFileException e) {
+      // 목록을 읽은 뒤 purge·삭제·격리가 파일을 치웠다. 이 파일 때문에 나머지 정리를 멈추지 않는다
+      return Optional.empty();
     } catch (IOException e) {
       throw new UncheckedIOException("사진 수정 시각을 읽지 못했다: " + file, e);
     }

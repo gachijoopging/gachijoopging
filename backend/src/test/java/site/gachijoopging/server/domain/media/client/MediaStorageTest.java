@@ -104,4 +104,9 @@ class MediaStorageTest {
 
     assertThat(root.resolve("2026/08/사진.jpg")).doesNotExist();
   }
+
+  @Test
+  void 목록을_읽은_뒤_사라진_파일은_수정_시각_없이_넘어간다() {
+    assertThat(MediaStorage.modifiedAt(root.resolve("2026/08/사라진.jpg"))).isEmpty();
+  }
 }
