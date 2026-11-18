@@ -7,6 +7,7 @@ import { apiConfig, createApiClient } from '../src/api/config';
 import { launchDestination } from '../src/auth/launch';
 import { endIfExpired } from '../src/activity/actions';
 import { loadLastAccount } from '../src/activity/store';
+import { usePushTokenSync } from '../src/push/push';
 
 const EXPIRY_CHECK_MS = 60_000;
 
@@ -49,6 +50,7 @@ function useExpiredActivityEnd() {
 function RootStack() {
   useLaunchRoute();
   useExpiredActivityEnd();
+  usePushTokenSync();
   const reduce = useReduceMotion();
   // 화면은 오른쪽에서 들어와 같은 길로 나간다. 새로 쓰는 작업은 시트처럼 아래에서 올라와 아래로 내려간다.
   // 동작 줄이기를 켜면 미는 움직임 대신 제자리에서 흐려졌다 선명해진다

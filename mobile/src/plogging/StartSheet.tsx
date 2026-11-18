@@ -25,11 +25,11 @@ import {
 import { healthConnect } from '../activity/health-connect';
 import type { ApiClient } from '../api/client';
 import { getPermissionMode, requestPreciseLocation, type PermissionMode } from '../auth/location-permission';
-import { askNotificationsOnce } from './notify-permission';
+import { askNotificationsOnce, NOTIFY_ASKED_FILE } from './notify-permission';
 import { startActivity, type StartResult } from './start';
 
 // 재설치하면 지워져 한 번 더 묻는다. OS 도 재설치 때 권한을 초기화하니 맞는 동작이다
-const notifyAsked = new File(Paths.document, 'notification-permission-asked');
+const notifyAsked = new File(Paths.document, NOTIFY_ASKED_FILE);
 
 /** 4-2 활동 시작 시트. 여는 순간에는 서버를 부르지 않는다 — 요청은 시작 버튼의 POST /activities 하나다. */
 export function StartSheet({

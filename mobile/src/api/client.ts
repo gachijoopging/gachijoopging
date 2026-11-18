@@ -47,6 +47,7 @@ export type VoidMutationKey =
   | 'DELETE /crews/join-requests/mine'
   | 'POST /crews/join-requests/{requestId}/read'
   | 'POST /notifications/read'
+  | 'PUT /users/me/devices'
   | 'DELETE /notices/{noticeId}'
   | 'DELETE /notice-comments/{commentId}'
   | 'POST /crew/join-requests/{requestId}'
