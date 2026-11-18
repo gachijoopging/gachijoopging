@@ -98,19 +98,20 @@ const pct = (xs, p) => xs.length ? [...xs].sort((a, b) => a - b)[Math.min(xs.len
 async function cleanup(users) {
   // 크루장(0번)을 마지막에 — 다른 크루원이 남아 있으면 크루장은 탈퇴하지 못한다
   let failed = 0;
+  // 단계마다 따로 잡는다 — 시작이 실패해 없는 활동이면 종료가 404 여도 탈퇴는 해야 한다
+  const step = (call) => call.catch((e) => e);
   for (const u of [...users.slice(1), users[0]].filter(Boolean)) {
-    try {
-      if (u.activityId) {
-        // 기록을 남기지 않으므로 0 이다. 실제 시간을 넣으면 준비가 60초를 넘을 때 서버가 422 로 거절해
-        // 탈퇴까지 막힌다(활동 시간 ≤ 시작~종료 + 60초)
-        await http('POST', `/activities/${u.activityId}/end`, u.token, {
-          endedAt: new Date().toISOString(), durationSec: 0,
-          pausedSec: 0, distanceM: 0, steps: null, route: [],
-        });
-        await http('DELETE', `/activities/${u.activityId}`, u.token);
-      }
-      await http('DELETE', '/users/me', u.token);
-    } catch (e) {
+    if (u.activityId) {
+      // 기록을 남기지 않으므로 0 이다. 실제 시간을 넣으면 준비가 60초를 넘을 때 서버가 422 로 거절해
+      // 탈퇴까지 막힌다(활동 시간 ≤ 시작~종료 + 60초)
+      await step(http('POST', `/activities/${u.activityId}/end`, u.token, {
+        endedAt: new Date().toISOString(), durationSec: 0,
+        pausedSec: 0, distanceM: 0, steps: null, route: [],
+      }));
+      await step(http('DELETE', `/activities/${u.activityId}`, u.token));
+    }
+    const e = await step(http('DELETE', '/users/me', u.token));
+    if (e) {
       failed++;
       console.error(`정리 실패 ${u.i} ${email(u.i)}: ${e.message}`);
     }
@@ -133,10 +134,9 @@ try {
   }
   for (const u of users) {
     checkStop();
-    // 시작이 성공한 뒤에 넣는다 — 없는 활동을 정리하려다 404 가 나면 그 사용자의 탈퇴까지 건너뛴다
-    const id = crypto.randomUUID();
-    await http('POST', '/activities', u.token, { id, startedAt: new Date().toISOString(), locationShared: true });
-    u.activityId = id;
+    // 보내기 전에 넣는다 — 서버가 커밋한 뒤 응답만 끊겨도 정리가 그 활동을 끝내야 탈퇴가 409 로 막히지 않는다
+    u.activityId = crypto.randomUUID();
+    await http('POST', '/activities', u.token, { id: u.activityId, startedAt: new Date().toISOString(), locationShared: true });
   }
   console.log(`준비: ${N}명 · 크루 ${crew.name}`);
 
