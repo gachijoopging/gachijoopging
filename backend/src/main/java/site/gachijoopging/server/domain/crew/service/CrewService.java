@@ -115,8 +115,10 @@ public class CrewService implements CrewMembershipLoader {
     }
   }
 
-  // 호출자가 findActiveForUpdate 로 그 크루 행을 잠근 트랜잭션 안에서만 부른다
   void admit(UUID crewId, UUID userId, Instant now) {
+    crewRepository
+        .findActiveForUpdate(crewId)
+        .orElseThrow(() -> new BusinessException(ErrorCode.NO_CREW, "소속 크루가 없다"));
     requireSeat(crewId);
     if (crewRepository.insertMemberIfAbsent(crewId, userId, now) == 0) {
       throw new BusinessException(ErrorCode.ALREADY_IN_CREW, "이미 크루에 소속돼 있다");
