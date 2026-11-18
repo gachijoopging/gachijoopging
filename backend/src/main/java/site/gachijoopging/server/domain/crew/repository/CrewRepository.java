@@ -20,6 +20,13 @@ public interface CrewRepository extends JpaRepository<Crew, UUID> {
   @Query("SELECT c FROM Crew c WHERE c.id = :id AND c.deletedAt IS NULL")
   Optional<Crew> findActiveForUpdate(@Param("id") UUID id);
 
+  // 이름 중복 검사와 커밋 사이에 같은 이름이 커밋되면 UNIQUE 위반이 CREW_NAME_TAKEN 이 아닌 일반 충돌로 떨어진다
+  @Query(
+      value =
+          "SELECT 1 FROM (SELECT pg_advisory_xact_lock(hashtext('crew-name'), hashtext(:name))) l",
+      nativeQuery = true)
+  int lockName(@Param("name") String name);
+
   boolean existsByNameAndDeletedAtIsNull(String name);
 
   boolean existsByNameAndIdNotAndDeletedAtIsNull(String name, UUID id);
