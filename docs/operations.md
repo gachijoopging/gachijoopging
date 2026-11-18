@@ -502,10 +502,10 @@ Supabase Enforce SSL. 나머지는 한 겹이거나 그보다 약하고, 어디�
 서버 안에서:
 
 ```sh
-sudo ss -tlnp | grep 8080          # 아무것도 안 나와야 한다
+sudo ss -tlnp | grep -E ':(8080|8081)\b'   # 아무것도 안 나와야 한다
 ```
 
-compose 가 8080 을 publish 하지 않으므로 **무언가 보이면 누가 `ports:` 를 되살린 것이다.**
+compose 가 8080·8081 을 publish 하지 않으므로 **무언가 보이면 누가 `ports:` 를 되살린 것이다.**
 
 밖에서는 전 포트를 센다. 주소는 §구성 의 공개 주소를 쓴다 — 서버를 새로 만들면 IP 가 바뀐다.
 
@@ -513,14 +513,14 @@ compose 가 8080 을 publish 하지 않으므로 **무언가 보이면 누가 `p
 nmap -Pn -p- www.gachijoopging.site
 ```
 
-`nmap` 이 없으면 아래로 대신하되 **범위를 좁힌다.** 위 표가 닫혀 있어야 한다고 적은 8080·6379 를
+`nmap` 이 없으면 아래로 대신하되 **범위를 좁힌다.** 위 표가 닫혀 있어야 한다고 적은 8080·8081·6379 를
 반드시 포함한다 — 빼면 누가 `ports:` 를 되살려도 이 확인이 그냥 통과한다.
 
 ```sh
 H=www.gachijoopging.site
 p() { timeout 3 bash -c "echo > /dev/tcp/$H/$1" 2>/dev/null && echo "$1"; }
 export H; export -f p
-{ seq 1 1024; echo 6379; echo 8080; } | xargs -P 100 -I{} bash -c 'p {}' | sort -n
+{ seq 1 1024; echo 6379; echo 8080; echo 8081; } | xargs -P 100 -I{} bash -c 'p {}' | sort -n
 # → 22 · 80 · 443 (약 40초)
 ```
 
