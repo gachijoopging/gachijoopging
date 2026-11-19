@@ -1,3 +1,5 @@
+export const NOTIFY_ASKED_FILE = 'notification-permission-asked';
+
 type Permissions = {
   get: () => Promise<{ status: string; canAskAgain?: boolean }>;
   request: () => Promise<unknown>;

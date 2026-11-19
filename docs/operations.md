@@ -781,8 +781,8 @@ ssh <서버> sh -s -- <기기 토큰> < infra/fcm-check.sh    # ③ 그 기기�
 팀 채널로 받아 **`mobile/google-services.json`** 에 둔다.
 
 `mobile/android/app/` 에 두지 않는다. `android/` 는 `prebuild --clean` 이 지우고 다시 만든다.
-`app.json` 의 `android.googleServicesFile: "./google-services.json"` 이 이 파일을 prebuild 때 그 자리로
-복사한다 — 이 설정은 앱 쪽 FCM 연결(GAC-123)에서 들어간다.
+`app.config.js` 가 이 파일이 있을 때만 `android.googleServicesFile` 로 넘겨 prebuild 때 그 자리로 복사한다.
+파일이 없으면 푸시 없이 빌드된다 — 앱은 FCM 토큰을 못 얻어 서버에 등록하지 않을 뿐 나머지는 그대로 돈다.
 
 ### 회전
 

@@ -27,6 +27,7 @@ import { leaveForMembership } from '../../src/feed/leave';
 import type { MOCKS } from '../../src/api/mocks.generated';
 import { CalendarPanel } from '../../src/crew/CalendarPanel';
 import { NoticesPanel } from '../../src/crew/NoticesPanel';
+import { useNotificationArrivals } from '../../src/notifications/useNotificationArrivals';
 import { RecordsPanel } from '../../src/crew/RecordsPanel';
 import { useFlash } from '../../src/ui/useFlash';
 import { monthDay } from '../../src/crew/crew';
@@ -82,6 +83,7 @@ export default function CrewScreen() {
   }, []);
 
   useFocusEffect(useCallback(() => void load('quiet'), [load]));
+  useNotificationArrivals(() => void load('quiet'));
 
   return (
     <Screen edges={['top', 'left', 'right']}>

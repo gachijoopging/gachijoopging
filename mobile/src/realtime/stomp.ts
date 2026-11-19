@@ -19,6 +19,8 @@ export type LiveEvent =
   | { type: 'LIVE_UPDATE'; data: { userId: string; locationShared: boolean; location: { lng: number; lat: number } | null; distanceM: number; itemCount: number; elapsedSec: number; paused: boolean } }
   | { type: 'LIVE_ENDED'; data: { userId: string; activityId: string } };
 
+export type NotificationEvent = { type: 'NOTIFICATION'; data: components['schemas']['Notification'] };
+
 /** @stomp/stompjs Client 중 여기서 쓰는 부분. 테스트는 이 모양의 가짜를 넣는다 */
 export type StompLike = {
   onConnect: () => void;
@@ -45,6 +47,7 @@ export type StompSocketOptions = {
 
 export type StompSocket = ChatSocket & {
   onLive(handler: (event: LiveEvent) => void): () => void;
+  onNotification(handler: (event: NotificationEvent) => void): () => void;
   sendLive(body: LiveBody): void;
 };
 
@@ -61,6 +64,7 @@ const LIVE_TYPES = new Set(['LIVE_STARTED', 'LIVE_UPDATE', 'LIVE_ENDED']);
 export function createStompSocket({ url, getToken, refresh, signOut, postLive, createClient = defaultClient }: StompSocketOptions): StompSocket {
   const chatHandlers = new Set<(event: ChatSocketEvent) => void>();
   const liveHandlers = new Set<(event: LiveEvent) => void>();
+  const notificationHandlers = new Set<(event: NotificationEvent) => void>();
   const listeners = new Set<(status: ChatSocketStatus) => void>();
   let status: ChatSocketStatus = 'connecting';
   let client: StompLike | null = null;
@@ -81,6 +85,7 @@ export function createStompSocket({ url, getToken, refresh, signOut, postLive, c
     try { message = JSON.parse(body); } catch { return; }
     if (CHAT_TYPES.has(message.type ?? '')) chatHandlers.forEach((h) => h(message as ChatSocketEvent));
     else if (LIVE_TYPES.has(message.type ?? '')) liveHandlers.forEach((h) => h(message as LiveEvent));
+    else if (message.type === 'NOTIFICATION') notificationHandlers.forEach((h) => h(message as NotificationEvent));
   };
 
   const signOutAndClose = () => {
@@ -187,6 +192,10 @@ export function createStompSocket({ url, getToken, refresh, signOut, postLive, c
       liveHandlers.add(handler);
       return () => liveHandlers.delete(handler);
     },
+    onNotification(handler) {
+      notificationHandlers.add(handler);
+      return () => notificationHandlers.delete(handler);
+    },
     sendLive(body) {
       if (status === 'open') publish('/app/crew/live', body);
       else postLive(body).catch(() => {});
@@ -204,6 +213,7 @@ export function createStompSocket({ url, getToken, refresh, signOut, postLive, c
       client = null;
       chatHandlers.clear();
       liveHandlers.clear();
+      notificationHandlers.clear();
       listeners.clear();
     },
   };

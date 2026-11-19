@@ -11,11 +11,13 @@ jest.mock('expo-router', () => ({
   router: { push: (...a: unknown[]) => mockPush(...a), setParams: (p: Record<string, undefined>) => { mockParams = { ...mockParams, ...p }; } },
   useLocalSearchParams: () => mockParams,
   useFocusEffect: (fn: () => void) => require('react').useEffect(fn, [fn]),
+  useIsFocused: () => true,
 }));
 jest.mock('react-native', () => ({ View: 'View', ScrollView: 'ScrollView', RefreshControl: 'RefreshControl' }));
 jest.mock('./CalendarPanel', () => ({ CalendarPanel: 'CalendarPanel' }));
 jest.mock('./RecordsPanel', () => ({ RecordsPanel: 'RecordsPanel' }));
 jest.mock('../feed/leave', () => ({ leaveForMembership: jest.fn() }));
+jest.mock('../auth/launch', () => ({ launchDecided: () => true }));
 jest.mock('design-system/src', () => new Proxy(
   { space: {}, size: {}, borderWidth: {}, useTheme: () => ({ colors: {} }) },
   { get: (target, key) => (key in target ? target[key as keyof typeof target] : String(key)) },

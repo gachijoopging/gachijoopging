@@ -22,6 +22,7 @@ function fakeSocket(): Fake {
     sendLive: jest.fn(),
     subscribe: jest.fn(() => unsubscribed),
     onLive: jest.fn(() => unsubscribed),
+    onNotification: jest.fn(() => unsubscribed),
     onStatus: jest.fn((listener) => {
       statusListeners.add(listener);
       listener('connecting');
@@ -70,6 +71,18 @@ test('닫은 화면이 단 구독만 떼어 내고 남은 화면의 구독은 �
   live.close();
 });
 
+test('알림 구독도 그 화면이 닫을 때 떼어 낸다 — 홈이 닫혀도 채팅 화면의 연결은 남는다', () => {
+  const home = acquireCrewSocket()!;
+  const chat = acquireCrewSocket()!;
+  const notify = jest.fn();
+  home.onNotification(notify);
+  expect(created[0].onNotification).toHaveBeenCalledWith(notify);
+  home.close();
+  expect(created[0].unsubscribed).toHaveBeenCalledTimes(1);
+  expect(created[0].close).not.toHaveBeenCalled();
+  chat.close();
+});
+
 test('4403 으로 닫힌 연결은 놓고, 다음 화면은 새로 붙는다', () => {
   const first = acquireCrewSocket()!;
   created[0].setStatus({ closed: 4403 });
@@ -103,4 +116,31 @@ test('실서버 설정이 없으면 소켓을 만들지 않는다 — 화면은 
     process.env.EXPO_PUBLIC_API_MODE = 'real';
   });
   expect(createStompSocket).not.toHaveBeenCalled();
+});
+
+test('핸들을 쥔 채 로그아웃하면 연결을 닫고 로그인 필요(4401)를 알린다 — 다음에 받으면 새로 붙는다', async () => {
+  const { signOut } = require('../api/client') as typeof import('../api/client');
+  const home = acquireCrewSocket()!;
+  const statuses: ChatSocketStatus[] = [];
+  home.onStatus((status) => statuses.push(status));
+  await signOut();
+  expect(created[0].close).toHaveBeenCalledTimes(1);
+  expect(statuses[statuses.length - 1]).toEqual({ closed: 4401 });
+
+  const next = acquireCrewSocket()!;
+  expect(created).toHaveLength(2);
+  home.close();
+  expect(created[1].close).not.toHaveBeenCalled();
+  next.close();
+  expect(created[1].close).toHaveBeenCalledTimes(1);
+});
+
+test('화면의 상태 리스너가 던져도 로그아웃은 연결을 닫는다', async () => {
+  const { signOut } = require('../api/client') as typeof import('../api/client');
+  const home = acquireCrewSocket()!;
+  home.onStatus((status) => {
+    if (typeof status === 'object') throw new Error('boom');
+  });
+  await signOut().catch(() => {});
+  expect(created[0].close).toHaveBeenCalledTimes(1);
 });

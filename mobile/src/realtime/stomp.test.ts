@@ -70,6 +70,29 @@ test('채팅 구독에는 CHAT·CHAT_DELETED 만, 위치 구독에는 LIVE_* 만
   expect(live.mock.calls.map(([e]) => e.type)).toEqual(['LIVE_UPDATE']);
 });
 
+test('NOTIFICATION 은 알림 구독에만 간다 — 벨 배지·알림 목록을 다시 읽는 신호다', async () => {
+  const { socket, last } = setup();
+  await flush();
+  last().onConnect();
+  const chat = jest.fn();
+  const live = jest.fn();
+  const notify = jest.fn();
+  socket.subscribe(chat);
+  socket.onLive(live);
+  const off = socket.onNotification(notify);
+  const send = (type: string, data: unknown) => last().deliver!({ body: JSON.stringify({ type, data }) });
+  send('NOTIFICATION', { id: 501, type: 'COMMENT' });
+  send('CHAT', { seq: 1 });
+  send('LIVE_UPDATE', { userId: 'u1' });
+  expect(notify.mock.calls).toEqual([[{ type: 'NOTIFICATION', data: { id: 501, type: 'COMMENT' } }]]);
+  expect(chat).toHaveBeenCalledTimes(1);
+  expect(live).toHaveBeenCalledTimes(1);
+
+  off();
+  send('NOTIFICATION', { id: 502 });
+  expect(notify).toHaveBeenCalledTimes(1);
+});
+
 test('채팅은 /app/crew/chat, 위치는 /app/crew/live 로 보낸다', async () => {
   const { socket, last, postLive } = setup();
   await flush();
@@ -259,4 +282,15 @@ test('close 뒤에는 다시 붙지 않는다', async () => {
   last().onWebSocketClose({ code: 1006 });
   await jest.advanceTimersByTimeAsync(60_000);
   expect(clients).toHaveLength(1);
+});
+
+test('close 뒤에 온 프레임은 핸들러를 부르지 않는다', async () => {
+  const { socket, last } = setup();
+  await flush();
+  last().onConnect();
+  const notify = jest.fn();
+  socket.onNotification(notify);
+  socket.close();
+  last().deliver!({ body: JSON.stringify({ type: 'NOTIFICATION', data: { id: 1 } }) });
+  expect(notify).not.toHaveBeenCalled();
 });

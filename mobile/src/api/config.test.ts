@@ -32,8 +32,8 @@ test('실 모드에서 백엔드에 있는 경로는 실서버로 보낸다', as
 
 test('실 모드에서도 백엔드에 없는 경로는 목 응답을 준다', async () => {
   const api = createApiClient();
-  await expect(api.get('GET /notifications')).resolves.toEqual(await createMockClient().get('GET /notifications'));
-  await expect(api.mutate('POST /notifications/read', {})).resolves.toEqual(await createMockClient().mutate('POST /notifications/read', {}));
+  await expect(api.get('GET /users/me/blocked')).resolves.toEqual(await createMockClient().get('GET /users/me/blocked'));
+  await expect(api.mutate('PUT /users/{userId}/block', { userId: 'u2' })).resolves.toEqual(await createMockClient().mutate('PUT /users/{userId}/block', { userId: 'u2' }));
   expect(fetch).not.toHaveBeenCalled();
 });
 
@@ -52,6 +52,20 @@ test('게시물·댓글·좋아요와 크루원 게시물은 실서버로 보낸
   expect(fetch.mock.calls.map(([url, init]) => `${init?.method} ${url.replace('https://api.test/api/v1', '')}`)).toEqual([
     'GET /crew/posts?scope=MINE', 'POST /crew/posts', 'GET /posts/p1', 'PUT /posts/p1/like', 'DELETE /posts/p1/like',
     'GET /posts/p1/comments?cursor=c', 'POST /posts/p1/comments', 'DELETE /comments/c1', 'DELETE /posts/p1', 'GET /crew/members/u2/posts',
+  ]);
+});
+
+test('알림·기기 토큰·팔로우는 실서버로 보낸다 — 목 알림 id 로 읽음을 보내면 서버의 알림이 그대로 남는다', async () => {
+  const api = createApiClient();
+  await api.get('GET /notifications');
+  await api.get('GET /notifications/unread-count');
+  await api.mutate('POST /notifications/read', { ids: [501] });
+  await api.mutate('PUT /users/me/devices', { pushToken: 'fcm-1', platform: 'ANDROID' });
+  await api.mutate('PUT /users/{userId}/follow', { userId: 'u2' });
+  await api.mutate('DELETE /users/{userId}/follow', { userId: 'u2' });
+  expect(fetch.mock.calls.map(([url, init]) => `${init?.method} ${url.replace('https://api.test/api/v1', '')}`)).toEqual([
+    'GET /notifications', 'GET /notifications/unread-count', 'POST /notifications/read', 'PUT /users/me/devices',
+    'PUT /users/u2/follow', 'DELETE /users/u2/follow',
   ]);
 });
 
