@@ -97,7 +97,7 @@ export default function NotificationsScreen() {
       Notifications.getPermissionsAsync().then((p) => setNotifyOff(!p.granted)).catch(() => {});
     }, [load]),
   );
-  useNotificationArrivals(() => void load('quiet'));
+  useNotificationArrivals(() => void load(read ? 'quiet' : 'first'));
 
   const open = (item: Item) => {
     if (read && item.unread) {

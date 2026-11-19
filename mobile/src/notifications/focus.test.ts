@@ -50,3 +50,15 @@ test('알림 도착으로 다시 받다 실패하면 목록을 그대로 두고 
     expect(tree.root.findAllByType('ErrorState')).toHaveLength(0);
   } finally { act(() => tree.unmount()); }
 });
+
+test('첫 조회가 끝나기 전에 알림 도착 재조회가 겹쳐 실패하면 다시 시도할 수 있는 오류 상태를 보인다 — 로딩에 멈추면 안 된다', async () => {
+  let hang = true;
+  mockGet.mockImplementation(() => hang ? new Promise(() => {}) : Promise.reject(new Error('offline')));
+  let tree: ReturnType<typeof create>;
+  await act(async () => { tree = create(React.createElement(NotificationsScreen)); });
+  try {
+    hang = false;
+    await act(async () => mockArrive());
+    expect(tree.root.findAllByType('ErrorState')).toHaveLength(1);
+  } finally { act(() => tree.unmount()); }
+});
