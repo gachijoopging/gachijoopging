@@ -60,10 +60,12 @@ export async function openPush(
 ): Promise<void> {
   try {
     const { notificationId, type = '', targetType = '', targetId } = (data ?? {}) as PushData;
-    if (!notificationId || opened.has(notificationId)) return;
+    const account = currentAccount();
+    if (!account || !notificationId || opened.has(notificationId)) return;
     opened.add(notificationId);
     api.mutate('POST /notifications/read', { ids: [Number(notificationId)] }).catch(() => {});
-    if (targetType === 'CREW') {
+    // 미가입자는 크루 화면과 알림 목록을 열 수 없다
+    if (targetType === 'CREW' || !account.hasCrew) {
       // 1-9 는 가입 결과 푸시를 받아 스스로 다시 읽는다
       if (pathname === '/pending-approval') return;
       const { data: me } = await api.get('GET /users/me');

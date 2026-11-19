@@ -169,3 +169,20 @@ test('우리 서버가 보낸 알림이 아니면(notificationId 없음) 아무�
   expect(mutate).not.toHaveBeenCalled();
   expect(router.push).not.toHaveBeenCalled();
 });
+
+test('로그아웃한 뒤 알림창에 남은 푸시를 눌러도 아무 화면도 열지 않는다 — 로그인 화면 위에 게시물이 쌓이면 안 된다', async () => {
+  mockAccount = null;
+  await push.openPush(api, tap({ type: 'COMMENT', targetType: 'POST', targetId: 'po77' }), router, '/start');
+  expect(mutate).not.toHaveBeenCalled();
+  expect(router.push).not.toHaveBeenCalled();
+  expect(router.dismissTo).not.toHaveBeenCalled();
+});
+
+test('미가입자는 어떤 푸시를 눌러도 GET /users/me 소속 분기로 간다 — 알림 목록(2-3)은 크루원만 연다', async () => {
+  mockAccount = { id: 'u1', hasCrew: false, since: 1 };
+  get.mockResolvedValue({ data: { profileComplete: true, membership: { status: 'NONE' } } });
+  await push.openPush(api, tap({ type: 'REPORT_RESOLVED', targetType: 'NOTIFICATIONS' }), router, '/crew-choice');
+  expect(get).toHaveBeenCalledWith('GET /users/me');
+  expect(router.dismissTo).toHaveBeenCalledTimes(1);
+  expect(router.push).not.toHaveBeenCalled();
+});
