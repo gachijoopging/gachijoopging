@@ -186,3 +186,14 @@ test('미가입자는 어떤 푸시를 눌러도 GET /users/me 소속 분기로 
   expect(router.dismissTo).toHaveBeenCalledTimes(1);
   expect(router.push).not.toHaveBeenCalled();
 });
+
+test('가입 결과 푸시의 GET /users/me 가 실패하면 같은 알림을 다시 눌러 열 수 있다', async () => {
+  mockAccount = { id: 'u1', hasCrew: false, since: 1 };
+  const data = tap({ type: 'JOIN_APPROVED', targetType: 'CREW' });
+  get.mockRejectedValueOnce(new Error('offline'));
+  await push.openPush(api, data, router, '/crew-choice');
+  expect(router.dismissTo).not.toHaveBeenCalled();
+  get.mockResolvedValue({ data: { profileComplete: true, membership: { status: 'MEMBER' } } });
+  await push.openPush(api, data, router, '/crew-choice');
+  expect(router.dismissTo).toHaveBeenCalledWith('/(tabs)');
+});

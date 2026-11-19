@@ -68,7 +68,10 @@ export async function openPush(
     if (targetType === 'CREW' || !account.hasCrew) {
       // 1-9 는 가입 결과 푸시를 받아 스스로 다시 읽는다
       if (pathname === '/pending-approval') return;
-      const { data: me } = await api.get('GET /users/me');
+      const { data: me } = await api.get('GET /users/me').catch((error) => {
+        opened.delete(notificationId);
+        throw error;
+      });
       nav.dismissTo(resolveDestination(me));
       return;
     }
