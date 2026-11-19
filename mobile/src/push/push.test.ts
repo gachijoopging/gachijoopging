@@ -197,3 +197,13 @@ test('가입 결과 푸시의 GET /users/me 가 실패하면 같은 알림을 �
   await push.openPush(api, data, router, '/crew-choice');
   expect(router.dismissTo).toHaveBeenCalledWith('/(tabs)');
 });
+
+test('1-4·1-5(/nickname) 에 있으면 어떤 푸시도 열지 않고 읽음 처리도 하지 않는다 — 필수 동의·닉네임이 끝나야 크루 화면을 연다', async () => {
+  get.mockResolvedValue({ data: { profileComplete: true, membership: { status: 'MEMBER' } } });
+  await push.openPush(api, tap({ notificationId: '700', type: 'COMMENT', targetType: 'POST', targetId: 'po77' }), router, '/nickname');
+  await push.openPush(api, tap({ notificationId: '701', type: 'JOIN_APPROVED', targetType: 'CREW' }), router, '/nickname');
+  expect(mutate).not.toHaveBeenCalled();
+  expect(get).not.toHaveBeenCalled();
+  expect(router.push).not.toHaveBeenCalled();
+  expect(router.dismissTo).not.toHaveBeenCalled();
+});
