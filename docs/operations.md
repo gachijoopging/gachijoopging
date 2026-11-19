@@ -259,7 +259,7 @@ curl http://localhost:8080/api/v1/health                       # {"data":{"statu
 |---|---|
 | `dev` 머지 → 이미지 | `.github/workflows/build.yml` → `yydd12/gachijoopging-backend:<커밋 SHA>` |
 | `main` 머지 → 배포 | `.github/workflows/deploy.yml` → 서버에서 `infra/deploy.sh` |
-| 서버의 파일 | `/opt/gachijoopging/` 에 `docker-compose.yml`·`nginx/nginx.conf`·`deploy.sh`·`.env`. 저장소를 두지 않는다 — deploy.yml 이 배포마다 올린다 |
+| 서버의 파일 | `/opt/gachijoopging/` 에 `docker-compose.yml`·`nginx/nginx.conf`·`nginx/media_link.js`·`deploy.sh`·`.env`. 저장소를 두지 않는다 — deploy.yml 이 배포마다 올린다 |
 
 **배포할 태그는 머지 커밋의 두 번째 부모다.** `dev → main` 은 merge commit 이라(`conventions.md`) `main`
 머리 SHA 로 만든 이미지는 없다. 이미지가 있는 것은 머지 당시 `dev` 머리, 즉 `git rev-parse HEAD^2` 다.
