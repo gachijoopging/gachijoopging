@@ -1,9 +1,11 @@
 import { useEffect, useRef } from 'react';
-import { useIsFocused } from 'expo-router';
+import { router, useIsFocused } from 'expo-router';
+import { launchDecided } from '../auth/launch';
+import { leaveForMembership } from '../feed/leave';
 import { acquireCrewSocket } from '../realtime/crew-socket';
 
 /**
- * 앱이 앞에 있을 때 알림이 생기면 부른다. 백그라운드는 푸시가, 연결 끊김(4401·4403)은 채팅·크루원 화면이 맡는다.
+ * 앱이 앞에 있을 때 알림이 생기면 부른다. 백그라운드는 푸시가 맡는다.
  * 가려진 화면은 부르지 않는다 — 채팅 한 건마다 알림이 오고, 놓친 몫은 화면이 돌아올 때 스스로 다시 받는다
  */
 export function useNotificationArrivals(onArrive: () => void): void {
@@ -23,6 +25,11 @@ export function useNotificationArrivals(onArrive: () => void): void {
     let registered = false;
     socket.onStatus((status) => {
       if (registered && status === 'open') arrive();
+      // 추방·세션 만료는 채팅·크루원 화면이 떠 있지 않아도 온다. 여러 화면이 함께 쥐고 있으므로 앞에 있는 화면만 보낸다
+      if (typeof status !== 'object' || !focused.current) return;
+      if (status.closed === 4403) void leaveForMembership();
+      // 첫 화면이 정해지기 전의 세션 만료는 시작 분기가 로그인으로 보낸다. 같이 보내면 떠나는 탭 위에서 이동이 겹친다
+      else if (launchDecided()) router.dismissTo('/start');
     });
     registered = true;
     return () => socket.close();

@@ -11,6 +11,11 @@ export function tabsAllowed(): boolean {
   return decided || currentAccount()?.hasCrew === true;
 }
 
+/** 콜드 스타트의 첫 화면이 정해졌는지. 그전의 화면 이동은 시작 분기가 맡는다 */
+export function launchDecided(): boolean {
+  return decided;
+}
+
 export function subscribeTabsAllowed(listener: () => void): () => void {
   listeners.add(listener);
   return () => listeners.delete(listener);

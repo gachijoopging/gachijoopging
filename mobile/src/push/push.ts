@@ -61,6 +61,8 @@ export async function openPush(
     const { notificationId, type = '', targetType = '', targetId } = (data ?? {}) as PushData;
     const account = currentAccount();
     if (!account || !notificationId || opened.has(notificationId)) return;
+    // 필수 동의·닉네임(1-4)이 끝나기 전에는 크루 화면을 열지 않는다. 안 읽음으로 남겨 끝난 뒤 2-3 에서 보게 한다
+    if (pathname === '/nickname') return;
     opened.add(notificationId);
     api.mutate('POST /notifications/read', { ids: [Number(notificationId)] }).catch(() => {});
     // 미가입자는 크루 화면과 알림 목록을 열 수 없다
