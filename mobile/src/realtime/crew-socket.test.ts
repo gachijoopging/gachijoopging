@@ -117,3 +117,20 @@ test('실서버 설정이 없으면 소켓을 만들지 않는다 — 화면은 
   });
   expect(createStompSocket).not.toHaveBeenCalled();
 });
+
+test('핸들을 쥔 채 로그아웃하면 연결을 닫고 로그인 필요(4401)를 알린다 — 다음에 받으면 새로 붙는다', async () => {
+  const { signOut } = require('../api/client') as typeof import('../api/client');
+  const home = acquireCrewSocket()!;
+  const statuses: ChatSocketStatus[] = [];
+  home.onStatus((status) => statuses.push(status));
+  await signOut();
+  expect(created[0].close).toHaveBeenCalledTimes(1);
+  expect(statuses[statuses.length - 1]).toEqual({ closed: 4401 });
+
+  const next = acquireCrewSocket()!;
+  expect(created).toHaveLength(2);
+  home.close();
+  expect(created[1].close).not.toHaveBeenCalled();
+  next.close();
+  expect(created[1].close).toHaveBeenCalledTimes(1);
+});

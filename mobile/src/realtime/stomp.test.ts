@@ -283,3 +283,14 @@ test('close 뒤에는 다시 붙지 않는다', async () => {
   await jest.advanceTimersByTimeAsync(60_000);
   expect(clients).toHaveLength(1);
 });
+
+test('close 뒤에 온 프레임은 핸들러를 부르지 않는다', async () => {
+  const { socket, last } = setup();
+  await flush();
+  last().onConnect();
+  const notify = jest.fn();
+  socket.onNotification(notify);
+  socket.close();
+  last().deliver!({ body: JSON.stringify({ type: 'NOTIFICATION', data: { id: 1 } }) });
+  expect(notify).not.toHaveBeenCalled();
+});

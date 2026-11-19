@@ -1,6 +1,7 @@
-import { signOut } from '../api/client';
+import { onSignOut, signOut } from '../api/client';
 import { apiConfig, createApiClient } from '../api/config';
 import { getTokens } from '../api/tokens';
+import type { ChatSocketStatus } from '../crew/chat-socket';
 import { createStompSocket, type LiveBody, type StompSocket } from './stomp';
 
 const api = createApiClient();
@@ -8,8 +9,23 @@ const api = createApiClient();
 /** 소켓이 닫혀 있을 때의 같은 보고. HTTP 는 활동 id 를 경로에 싣는다 */
 const postLive = ({ activityId, ...rest }: LiveBody) => api.mutate('POST /activities/{id}/live', { id: activityId, ...rest });
 
-type Entry = { socket: StompSocket; holders: number };
+type Entry = { socket: StompSocket; holders: number; listeners: Set<(status: ChatSocketStatus) => void> };
 let shared: Entry | null = null;
+
+let listening = false;
+
+// 로그아웃한 기기가 이전 계정의 채팅·위치·알림을 계속 받으면 안 된다. 핸들을 쥔 화면에는 로그인 필요(4401)로 알린다
+function closeOnSignOut() {
+  if (listening) return;
+  listening = true;
+  onSignOut(() => {
+    const entry = shared;
+    if (!entry) return;
+    shared = null;
+    entry.listeners.forEach((listener) => listener({ closed: 4401 }));
+    entry.socket.close();
+  });
+}
 
 function open(): Entry {
   const entry: Entry = {
@@ -21,6 +37,7 @@ function open(): Entry {
       postLive,
     }),
     holders: 0,
+    listeners: new Set(),
   };
   // 스스로 다시 붙지 않는 끊김(4401·4403)이면 놓는다. 다음에 여는 화면은 새 토큰·새 소속으로 새로 붙는다
   entry.socket.onStatus((status) => {
@@ -35,6 +52,7 @@ function open(): Entry {
  */
 export function acquireCrewSocket(): StompSocket | null {
   if (!apiConfig.real || !apiConfig.wsUrl) return null;
+  closeOnSignOut();
   const entry = (shared ??= open());
   entry.holders += 1;
   const { socket } = entry;
@@ -50,7 +68,14 @@ export function acquireCrewSocket(): StompSocket | null {
     subscribe: (handler) => track(socket.subscribe(handler)),
     onLive: (handler) => track(socket.onLive(handler)),
     onNotification: (handler) => track(socket.onNotification(handler)),
-    onStatus: (listener) => track(socket.onStatus(listener)),
+    onStatus: (listener) => {
+      entry.listeners.add(listener);
+      const unsubscribe = socket.onStatus(listener);
+      return track(() => {
+        entry.listeners.delete(listener);
+        unsubscribe();
+      });
+    },
     close() {
       if (released) return;
       released = true;

@@ -241,12 +241,20 @@ export function createMockClient({ delayMs = 0, failing = [], activityTotals }: 
   };
 }
 
+const signOutListeners = new Set<() => void>();
+
+/** 계정에 묶인 연결을 쥔 쪽이 로그아웃을 듣는다. 화면이 스택에 남아 있어도 이전 계정의 연결은 끊겨야 한다 */
+export function onSignOut(listener: () => void): void {
+  signOutListeners.add(listener);
+}
+
 /** 로그아웃 상태로. 남은 토큰·계정·기억한 응답이 다음 계정에 보이면 안 된다 */
 export async function signOut(): Promise<void> {
   session += 1;
   lastResponses.clear();
   responsesOwner = null;
   forgetAccount();
+  signOutListeners.forEach((listener) => listener());
   await clearTokens().catch(() => {});
 }
 
