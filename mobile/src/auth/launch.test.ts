@@ -73,6 +73,25 @@ test.each([
   if (after) expect(currentAccount()?.hasCrew).toBe(false);
 });
 
+test.each([
+  ['다른 화면으로 떠나면', '/crew-choice', false],
+  ['탭에 남으면', '/(tabs)', true],
+  ['오프라인이라 지금 화면에 두면', null, true],
+] as const)('크루원으로 기억하지 않은 계정은 콜드 스타트 행선지가 정해진 뒤에 탭을 그린다 — %s 탭을 다시 그리라고 알리는가: %s', (_label, destination, redraws) => {
+  jest.isolateModules(() => {
+    const { decideLaunch, subscribeTabsAllowed, tabsAllowed } = require('./launch') as typeof import('./launch');
+    const redraw = jest.fn();
+    subscribeTabsAllowed(redraw);
+    rememberAccount({ id: 'u1', membership: { status: 'MEMBER' } });
+    expect(tabsAllowed()).toBe(true);
+    rememberAccount({ id: 'u1', membership: { status: 'PENDING' } });
+    expect(tabsAllowed()).toBe(false);
+    decideLaunch(destination);
+    expect(tabsAllowed()).toBe(true);
+    expect(redraw).toHaveBeenCalledTimes(redraws ? 1 : 0);
+  });
+});
+
 test('오프라인이어도 크루원이 아니었던 계정에는 탭을 열지 않는다', async () => {
   const offline = api(async () => { throw new NetworkError('OFFLINE'); });
   await launchDestination(api(async () => me({ status: 'PENDING' })));
