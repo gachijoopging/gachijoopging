@@ -11,7 +11,7 @@ import { readyView } from '../../src/plogging/ready';
 import { activityMetrics, activitySummaryLabel } from '../../src/plogging/start';
 import { useFlash } from '../../src/ui/useFlash';
 
-const api: ApiClient = createApiClient({ delayMs: 300 });
+const api: ApiClient = createApiClient();
 
 
 /** 4-1. 줍깅 버튼은 이 화면을 거치지 않고 시트를 띄운다. 설정·빈 기록의 "줍깅 시작" 링크가 닿는 자리다 */

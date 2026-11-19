@@ -24,7 +24,7 @@ import { kstToday } from './calendar';
 
 type Stats = ApiResponse<'GET /crew/stats'>['data'];
 
-const api: ApiClient = createApiClient({ delayMs: 300 });
+const api: ApiClient = createApiClient();
 const RANGES: StatsRange[] = ['WEEK', 'MONTH', 'ALL'];
 const RANGE_CHIP: Record<StatsRange, string> = { WEEK: '이번 주', MONTH: '이번 달', ALL: '전체' };
 

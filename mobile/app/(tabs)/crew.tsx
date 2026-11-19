@@ -33,7 +33,7 @@ import { monthDay } from '../../src/crew/crew';
 
 export type Crew = ApiResponse<'GET /crew'>['data'];
 
-const api: ApiClient = createApiClient({ delayMs: 300 });
+const api: ApiClient = createApiClient();
 
 type Panel = 'calendar' | 'records' | 'notices';
 const PANELS: ReadonlyArray<{ value: Panel; label: string }> = [

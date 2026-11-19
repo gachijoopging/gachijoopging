@@ -14,7 +14,7 @@ jest.mock('react-native', () => ({
   Platform: { OS: 'android', select: (o: Record<string, unknown>) => o.android ?? o.default },
 }));
 jest.mock('../../modules/kakao-map', () => ({ KakaoMapView: 'KakaoMapView' }));
-jest.mock('../api/client', () => ({ createMockClient: () => ({ get: jest.fn() }) }));
+jest.mock('../api/client', () => ({ createHttpClient: () => ({ get: jest.fn() }) }));
 let mockStored: unknown = { session: null, ended: null, outbox: [] };
 jest.mock('./store', () => ({
   getStored: () => mockStored,

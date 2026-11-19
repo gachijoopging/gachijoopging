@@ -25,8 +25,9 @@ jest.mock('design-system/src', () => new Proxy(
   { get: (target, key) => (key in target ? target[key as keyof typeof target] : String(key)) },
 ));
 jest.mock('../api/config', () => ({ createApiClient: () => ({ get: (k: string, q: unknown) => mockGet(k, q), mutate: async () => undefined }) }));
+let mockNoSocket = false;
 jest.mock('../realtime/crew-socket', () => ({
-  acquireCrewSocket: () => ({
+  acquireCrewSocket: () => mockNoSocket ? null : ({
     send: (body: { id: string; text: string }) => mockSocket.sent.push(body),
     subscribe: (handler: (event: ChatSocketEvent) => void) => {
       mockSocket.emit = handler;
@@ -76,6 +77,18 @@ const write = async (text: string) => {
 const open = async () => {
   await act(async () => { tree = create(React.createElement(CrewChatScreen)); });
 };
+
+test('소켓 주소가 없으면 오류를 보인다 — 보낸 글을 스스로 되돌려 주는 목 소켓으로 전송된 척하지 않는다', async () => {
+  mockNoSocket = true;
+  try {
+    await open();
+    expect(byType('ErrorState')).toHaveLength(1);
+    expect(byType('Field')[0].props.editable).toBe(false);
+    expect(byType('IconButton')[0].props.disabled).toBe(true);
+  } finally {
+    mockNoSocket = false;
+  }
+});
 
 test('끊긴 동안 쓴 메시지는 붙은 뒤 앞 메시지의 echo 를 받고 나서 하나씩 나간다', async () => {
   await open();

@@ -3,7 +3,7 @@ import { AppState } from 'react-native';
 import { Stack, useRootNavigationState, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { ThemeProvider, useReduceMotion } from 'design-system/src';
-import { apiConfig, createApiClient } from '../src/api/config';
+import { createApiClient } from '../src/api/config';
 import { decideLaunch, launchDestination } from '../src/auth/launch';
 import { endIfExpired } from '../src/activity/actions';
 import { loadLastAccount } from '../src/activity/store';
@@ -11,13 +11,13 @@ import { usePushOpen, usePushTokenSync } from '../src/push/push';
 
 const EXPIRY_CHECK_MS = 60_000;
 
-/** 실서버에서는 콜드 스타트 때 세션·소속으로 첫 화면을 고른다. 목은 로그인 없이 홈부터 보여 준다 */
+/** 콜드 스타트 때 세션·소속으로 첫 화면을 고른다 */
 function useLaunchRoute() {
   const router = useRouter();
   const mounted = !!useRootNavigationState()?.key;
   const [launch, setLaunch] = useState({ settled: false, onTabs: false });
   useEffect(() => {
-    if (!mounted || !apiConfig.real) return;
+    if (!mounted) return;
     launchDestination(createApiClient()).then((destination) => {
       decideLaunch(destination);
       const onTabs = !destination || destination === '/(tabs)';

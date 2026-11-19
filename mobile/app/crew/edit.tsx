@@ -46,7 +46,7 @@ const POLICIES: { value: JoinPolicy; title: string; subtitle: string }[] = [
   { value: 'APPROVAL', title: '비공개', subtitle: '크루장이 승인해야 가입' },
 ];
 
-const api: ApiClient = createApiClient({ delayMs: 300 });
+const api: ApiClient = createApiClient();
 
 export default function EditCrewScreen() {
   const navigation = useNavigation();

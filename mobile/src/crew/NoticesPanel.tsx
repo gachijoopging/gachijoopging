@@ -8,7 +8,7 @@ import { monthDay } from './crew';
 
 type Notice = ApiResponse<'GET /crew/notices'>['data']['items'][number];
 
-const api: ApiClient = createApiClient({ delayMs: 300 });
+const api: ApiClient = createApiClient();
 
 /** 모이깅의 공지 패널(3-5). 쓰기는 크루장만 */
 export function NoticesPanel({ isLeader, refreshKey, endReached = 0 }: { isLeader: boolean; refreshKey: number; endReached?: number }) {

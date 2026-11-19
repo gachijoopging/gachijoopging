@@ -34,7 +34,7 @@ jest.mock('../activity/ShareCard', () => ({
 }));
 jest.mock('../api/client', () => ({ peek: () => undefined, forget: () => {},
   ApiError: class extends Error {},
-  createMockClient: () => ({ get: (...args: unknown[]) => mockGet(...args), mutate: (...args: unknown[]) => mockMutate(...args) }),
+  createHttpClient: () => ({ get: (...args: unknown[]) => mockGet(...args), mutate: (...args: unknown[]) => mockMutate(...args) }),
 }));
 jest.mock('expo-router', () => ({
   router: { push: jest.fn(), replace: jest.fn(), back: jest.fn() },

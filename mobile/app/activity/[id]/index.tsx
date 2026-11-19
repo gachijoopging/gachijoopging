@@ -64,7 +64,7 @@ import { useFlash } from '../../../src/ui/useFlash';
 
 type Member = CrewLive;
 
-const api: ApiClient = createApiClient({ delayMs: 300 });
+const api: ApiClient = createApiClient();
 const BUBBLE_MS = 3_000;
 const LOCATION_CHECK_MS = 5_000;
 

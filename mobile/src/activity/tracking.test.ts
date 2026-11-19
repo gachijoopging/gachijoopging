@@ -1,5 +1,5 @@
 const snapshot = { endedAt: '2026-09-30T00:01:00Z', durationSec: 60, pausedSec: 0, distanceM: 10, steps: null, route: [] };
-import { ApiError, NetworkError, createMockClient, type ApiClient } from '../api/client';
+import { ApiError, NetworkError, createHttpClient, type ApiClient } from '../api/client';
 import type { Op } from './outbox';
 import { undoItem } from './outbox';
 import { displayDistance, newSession, pause, resume, type Session } from './session';
@@ -7,7 +7,7 @@ import { activityGoneCode, finalSteps, isSendingItem, refreshSteps, startTrackin
 import type { StepSource } from './steps';
 
 let mockStored: ReturnType<typeof import('./store')['getStored']>;
-const mockMutate = jest.mocked(createMockClient().mutate);
+const mockMutate = jest.mocked(createHttpClient({ baseUrl: '' }).mutate);
 const mockPermission = jest.fn().mockResolvedValue({ granted: true });
 const mockEnabled = jest.fn().mockResolvedValue(true);
 const mockStart = jest.fn().mockResolvedValue(undefined);
@@ -15,7 +15,7 @@ const mockStopLocation = jest.fn().mockResolvedValue(undefined);
 const mockHasStarted = jest.fn().mockResolvedValue(true);
 jest.mock('../api/client', () => {
   const client = { mutate: jest.fn().mockResolvedValue({}) };
-  return { ...jest.requireActual('../api/client'), createMockClient: () => client };
+  return { ...jest.requireActual('../api/client'), createHttpClient: () => client };
 });
 jest.mock('expo-location', () => ({
   Accuracy: { BestForNavigation: 6 },

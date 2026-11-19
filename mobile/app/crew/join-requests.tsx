@@ -28,7 +28,7 @@ import { CREW_CAPACITY } from '../../src/crew/region';
 
 type JoinRequest = ApiResponse<'GET /crew/join-requests'>['data']['items'][number];
 
-const api: ApiClient = createApiClient({ delayMs: 300 });
+const api: ApiClient = createApiClient();
 
 export default function ManageJoinRequestsScreen() {
   const [requests, setRequests] = useState<readonly JoinRequest[] | null>(null);

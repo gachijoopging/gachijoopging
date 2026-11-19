@@ -56,7 +56,7 @@ type Modal =
   | { kind: 'delegate' }
   | { kind: 'checkFailed'; action: Kind };
 
-const api: ApiClient = createApiClient({ delayMs: 300 });
+const api: ApiClient = createApiClient();
 
 const CONFIRM: Record<Kind, { title: string; body: (crew: string, pending: boolean) => string; cancel: string; ok: string }> = {
   withdraw: {

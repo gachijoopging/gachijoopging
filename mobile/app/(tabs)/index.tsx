@@ -35,7 +35,7 @@ import { useFlash } from '../../src/ui/useFlash';
 
 type Home = ApiResponse<'GET /crew/home'>['data'];
 
-const api: ApiClient = createApiClient({ delayMs: 300 });
+const api: ApiClient = createApiClient();
 const wordmark = require('../../../design-system/assets/logo-wordmark.png');
 const wordmarkDark = require('../../../design-system/assets/logo-wordmark-dark.png');
 const BUBBLE_MS = 3000;

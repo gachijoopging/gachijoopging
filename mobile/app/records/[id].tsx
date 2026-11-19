@@ -61,7 +61,7 @@ type Detail = {
   items: readonly Item[];
 };
 
-const api: ApiClient = createApiClient({ delayMs: 300 });
+const api: ApiClient = createApiClient();
 const CATEGORIES = Object.keys(CATEGORY_LABEL) as Category[];
 
 export default function ActivityDetailScreen() {

@@ -14,20 +14,13 @@ jest.mock('expo-secure-store', () => ({
   setItemAsync: async (k: string, v: string) => { await mockWriteGate; mockSecure.set(k, v); },
   deleteItemAsync: async (k: string) => { mockSecure.delete(k); },
 }));
-import { createMockClient, createHttpClient, ApiError, NetworkError, forget, forgetAll, peek } from './client';
+import { createHttpClient, ApiError, NetworkError, forget, forgetAll, peek } from './client';
+import { createMockClient } from '../../test-support/mock-client';
 import { currentAccount, forgetAccount, rememberAccount } from '../auth/account';
 import { getTokens, setTokens } from './tokens';
 import { MOCKS } from './mocks.generated';
 
 describe('목 클라이언트', () => {
-  test('재실행 뒤 종료 목도 기기에 남은 전체 합계를 사용한다', async () => {
-    const session = { itemCount: 2, byCategory: { CAN: 2 }, distanceM: 100, pausedSec: 0 };
-    const api = createMockClient({ activityTotals: () => session });
-    const body = { id: 'a1', endedAt: '2026-09-30T00:01:00Z', durationSec: 60, pausedSec: 20, distanceM: 10, steps: null, route: [] };
-    const response = await api.mutate('POST /activities/{id}/end', body);
-    expect(response.data).toEqual(expect.objectContaining({ ...body, itemCount: 2, byCategory: { CAN: 2 } }));
-  });
-
   test('openapi.yaml 의 example 을 그대로 돌려준다', async () => {
     const api = createMockClient();
     await expect(api.get('GET /crew/home')).resolves.toBe(MOCKS['GET /crew/home']);

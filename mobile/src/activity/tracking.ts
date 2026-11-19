@@ -17,7 +17,7 @@ import { getStored, loadLastAccount, updateStored } from './store';
 export const TRACKING_TASK = 'gachi-activity-tracking';
 const LIVE_EVERY_MS = 5_000;
 
-const api: ApiClient = createApiClient({ activityTotals: () => getStored().session });
+const api: ApiClient = createApiClient();
 
 let lastLiveAt = 0;
 

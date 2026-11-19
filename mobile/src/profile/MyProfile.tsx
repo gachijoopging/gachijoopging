@@ -35,7 +35,7 @@ import { ProfileTabList } from './ProfileTabList';
 type Me = { id: string; nickname: string; intro: string; photoUrl: string | null; crew: { name: string; isLeader: boolean } | null };
 type Tab = 'records' | 'posts';
 
-const api: ApiClient = createApiClient({ delayMs: 300 });
+const api: ApiClient = createApiClient();
 const TABS: { value: Tab; label: string }[] = [
   { value: 'records', label: '기록' },
   { value: 'posts', label: '게시물' },

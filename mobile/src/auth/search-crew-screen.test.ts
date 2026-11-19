@@ -36,7 +36,7 @@ jest.mock('design-system/src', () => new Proxy({ space: {}, size: {}, useRipple:
 
 beforeAll(() => { (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true; });
 beforeEach(() => {
-  // 이름 검색만 흉내 낸다. 검색 규칙 자체는 api/onboarding.test.ts 가 본다
+  // 이름 검색만 흉내 낸다
   mockGet.mockReset().mockImplementation((_key: string, { query }: { query?: string }) => {
     const page = MOCKS['GET /crews'].data;
     return Promise.resolve({ data: { ...page, items: page.items.filter((c) => !query || c.name.includes(query)) } });

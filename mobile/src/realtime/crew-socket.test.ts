@@ -9,7 +9,6 @@ jest.mock('./stomp', () => ({ createStompSocket: jest.fn() }));
 import type { ChatSocketStatus } from '../crew/chat-socket';
 import { createStompSocket, type LiveBody, type StompSocket } from './stomp';
 
-process.env.EXPO_PUBLIC_API_MODE = 'real';
 const { acquireCrewSocket, reportLive } = require('./crew-socket') as typeof import('./crew-socket');
 
 type Fake = StompSocket & { setStatus(status: ChatSocketStatus): void; unsubscribed: jest.Mock };
@@ -108,13 +107,15 @@ test('화면이 연결을 쥐고 있으면 위치를 소켓으로, 아니면 HTT
   screen.close();
 });
 
-test('실서버 설정이 없으면 소켓을 만들지 않는다 — 화면은 목으로 돈다', () => {
+test('소켓 주소가 없으면 소켓을 만들지 않는다', () => {
+  const extra = jest.requireMock<typeof import('expo-constants')>('expo-constants').default.expoConfig!.extra!;
+  const { wsUrl } = extra;
+  extra.wsUrl = '';
   jest.isolateModules(() => {
-    process.env.EXPO_PUBLIC_API_MODE = 'mock';
-    const mock = require('./crew-socket') as typeof import('./crew-socket');
-    expect(mock.acquireCrewSocket()).toBeNull();
-    process.env.EXPO_PUBLIC_API_MODE = 'real';
+    const noUrl = require('./crew-socket') as typeof import('./crew-socket');
+    expect(noUrl.acquireCrewSocket()).toBeNull();
   });
+  extra.wsUrl = wsUrl;
   expect(createStompSocket).not.toHaveBeenCalled();
 });
 

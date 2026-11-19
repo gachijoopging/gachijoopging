@@ -1,4 +1,5 @@
-import { ApiError, createMockClient, type Activity, type ApiClient } from '../api/client';
+import { ApiError, type Activity, type ApiClient } from '../api/client';
+import { createMockClient } from '../../test-support/mock-client';
 import { MOCKS } from '../api/mocks.generated';
 import { activeSec, activityMetrics, activitySummaryLabel, startActivity } from './start';
 

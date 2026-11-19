@@ -34,7 +34,7 @@ type Profile = ApiResponse<'GET /crew/members/{userId}'>['data'];
 type Tab = 'records' | 'posts';
 type Confirm = 'block' | 'kick' | 'delegate';
 
-const api: ApiClient = createApiClient({ delayMs: 300 });
+const api: ApiClient = createApiClient();
 const TABS: { value: Tab; label: string }[] = [
   { value: 'records', label: '기록' },
   { value: 'posts', label: '게시물' },

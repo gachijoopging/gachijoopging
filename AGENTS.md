@@ -111,7 +111,7 @@ iOS · 관리자 웹 · 크루 웹 · 게시물 수정 · 1:1 채팅 · 기존 �
 
 폴더별 명령과 구조는 `mobile/CLAUDE.md`.
 
-- 화면은 `docs/screens.md` 번호(예: 4-3)로 부르고, 데이터는 `docs/openapi.yaml` 의 `example` 을 목으로 쓴다
+- 화면은 `docs/screens.md` 번호(예: 4-3)로 부른다. 화면 데이터는 실서버에서 받고, `docs/openapi.yaml` 의 `example` 은 테스트용 목으로만 쓴다
 - UI 는 `design-system` 컴포넌트만. 색·간격·반경을 직접 쓰지 않는다. `Screen` 으로 감싸고, 누르는 것엔 `useRipple()`
 - 지도는 카카오맵 Android SDK 네이티브 모듈. Expo Go 는 못 쓰고 개발 빌드로 돈다
 - `applicationId` 는 `site.gachijoopging.app` 고정. Firebase·카카오가 이 값으로 대조한다

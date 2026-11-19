@@ -26,7 +26,7 @@ import { currentAccount } from '../../src/auth/account';
 
 type Blocked = ApiResponse<'GET /users/me/blocked'>['data']['items'][number];
 
-const api: ApiClient = createApiClient({ delayMs: 300 });
+const api: ApiClient = createApiClient();
 const ROW_DESC = '차단됨, 게시물, 댓글, 채팅, 위치에서 숨김';
 
 export default function ManageBlocksScreen() {

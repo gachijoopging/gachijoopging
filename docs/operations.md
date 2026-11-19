@@ -959,9 +959,8 @@ tail -50 /var/log/gachijoopging-watch.log
 | 키 | 용도 |
 |---|---|
 | `KAKAO_NATIVE_APP_KEY` | 카카오맵 SDK 초기화. 없으면 지도 화면이 안내 배너만 띄운다 |
-| `API_BASE_URL` | 실서버 HTTP 기준 주소. 예 `https://www.gachijoopging.site/api/v1` |
-| `WS_URL` | 실서버 소켓 주소. 예 `wss://www.gachijoopging.site/api/v1/ws` |
-| `EXPO_PUBLIC_API_MODE` | `real` 이고 `API_BASE_URL` 이 있을 때만 실서버로 붙는다. 그 밖에는 목(openapi example) |
+| `API_BASE_URL` | **필수.** 서버 HTTP 기준 주소. 앱에 목 모드가 없어서, 없으면 모든 요청이 실패해 앱이 동작하지 않는다. 예 `https://www.gachijoopging.site/api/v1` |
+| `WS_URL` | **필수.** 서버 소켓 주소. 없으면 크루 채팅은 오류 화면이 되고, 활동 중 위치와 알림 배지를 실시간으로 받지 못한다. 예 `wss://www.gachijoopging.site/api/v1/ws` |
 
 카카오 개발자 콘솔 → 앱 설정 → 플랫폼 → Android 에 **패키지명과 키 해시**가 등록돼 있어야 지도가 뜬다.
 없으면 `MapAuthException(401): Unauthorized` 가 난다.

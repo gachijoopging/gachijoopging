@@ -23,7 +23,7 @@ jest.mock('../api/client', () => ({
     code: string;
     constructor(value: string) { super(value); this.code = value; }
   },
-  createMockClient: () => ({ get: (...args: unknown[]) => mockGet(...args), mutate: (...args: unknown[]) => mockMutate(...args) }),
+  createHttpClient: () => ({ get: (...args: unknown[]) => mockGet(...args), mutate: (...args: unknown[]) => mockMutate(...args) }),
 }));
 jest.mock('expo-router', () => ({
   router: { canGoBack: () => true, back: jest.fn(), replace: jest.fn(), dismissTo: (...args: unknown[]) => mockDismiss(...args) },

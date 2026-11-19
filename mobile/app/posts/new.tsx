@@ -39,7 +39,7 @@ import { resolveDestination } from '../../src/auth/destination';
 import { POST_PHOTO_MAX, POST_TEXT_MAX, canPost, movePhoto, photosToUpload, readyMediaIds } from '../../src/profile/profile';
 import { changedDraft, discardPhotos, emptyDraft, keepPhoto, lastPostScope, loadDraft, rememberPostScope, saveDraft, type Draft, type Photo, type PostScope } from '../../src/profile/post-draft';
 
-const api: ApiClient = createApiClient({ delayMs: 300 });
+const api: ApiClient = createApiClient();
 const THUMB = size.thumbMd;
 
 export default function CreatePostScreen() {

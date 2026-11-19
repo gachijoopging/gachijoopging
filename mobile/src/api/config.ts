@@ -1,56 +1,14 @@
 import Constants from 'expo-constants';
-import { createHttpClient, createMockClient, type ApiClient, type MockOptions, type MutationKey } from './client';
+import { createHttpClient, type ApiClient } from './client';
 
 const extra = Constants.expoConfig?.extra ?? {};
 
-/** EXPO_PUBLIC_API_MODE=real 이고 주소가 있을 때만 실서버. 하나라도 빠지면 목으로 돈다 */
 export const apiConfig = {
-  real: process.env.EXPO_PUBLIC_API_MODE === 'real' && !!extra.apiBaseUrl,
   baseUrl: (extra.apiBaseUrl as string | undefined) ?? '',
   wsUrl: (extra.wsUrl as string | undefined) ?? '',
 };
 
-/**
- * 백엔드가 구현한 경로만 실서버로 보낸다. 경로가 생기면 한 줄 추가한다.
- * 서버가 아직 거절하는 경로(DELETE /users/me 의 405)도 넣는다 — 목의 성공은 계정이 남은 채 완료를 띄운다.
- */
-const REAL_KEYS: ReadonlySet<MutationKey> = new Set<MutationKey>([
-  'POST /auth/signup', 'POST /auth/login', 'POST /auth/kakao', 'POST /auth/google', 'POST /auth/refresh', 'POST /auth/logout',
-  'POST /auth/password-reset', 'POST /auth/password-reset/confirm', 'PUT /users/me/social',
-  'GET /users/me', 'PATCH /users/me', 'DELETE /users/me',
-  'GET /agreements', 'GET /users/me/agreements', 'PUT /users/me/agreements',
-  'POST /crews', 'GET /crews', 'GET /crew', 'PATCH /crew', 'POST /crew/leave',
-  'GET /crew/members', 'GET /crew/members/{userId}', 'DELETE /crew/members/{userId}', 'PUT /crew/leader',
-  'POST /crews/join-requests', 'GET /crews/join-requests/mine', 'DELETE /crews/join-requests/mine',
-  'POST /crews/join-requests/{requestId}/read', 'GET /crew/join-requests', 'POST /crew/join-requests/{requestId}',
-  'POST /activities', 'GET /activities/current', 'POST /activities/{id}/pause', 'POST /activities/{id}/resume',
-  'POST /activities/{id}/items', 'PATCH /activities/{id}/items/{itemId}', 'DELETE /activities/{id}/items/{itemId}',
-  'POST /activities/{id}/end', 'GET /activities/{id}', 'DELETE /activities/{id}', 'GET /users/me/activities',
-  'GET /crew/home', 'GET /users/me/stats', 'GET /crew/stats', 'GET /crew/calendar', 'GET /crew/export', 'GET /crew/members/{userId}/activities',
-  'DELETE /media/{mediaId}',
-  'GET /crew/posts', 'POST /crew/posts', 'GET /posts/{postId}', 'DELETE /posts/{postId}',
-  'PUT /posts/{postId}/like', 'DELETE /posts/{postId}/like', 'GET /posts/{postId}/comments', 'POST /posts/{postId}/comments',
-  'DELETE /comments/{commentId}', 'GET /crew/members/{userId}/posts',
-  'GET /crew/notices', 'POST /crew/notices', 'GET /notices/{noticeId}', 'PATCH /notices/{noticeId}', 'DELETE /notices/{noticeId}',
-  'POST /notices/{noticeId}/comments', 'DELETE /notice-comments/{commentId}',
-  'GET /crew/chat/messages', 'PUT /crew/chat/read', 'GET /crew/live', 'POST /activities/{id}/live',
-  'GET /notifications', 'GET /notifications/unread-count', 'POST /notifications/read', 'PUT /users/me/devices',
-  'PUT /users/{userId}/follow', 'DELETE /users/{userId}/follow',
-  'GET /users/me/blocked', 'PUT /users/{userId}/block', 'DELETE /users/{userId}/block',
-  'POST /reports', 'GET /crew/reports', 'POST /crew/reports/{reportId}',
-]);
-
-/** 사진은 받는 경로가 실서버인 용도만 서버에 올린다. 목 mediaId 는 UUID 가 아니라 실서버가 422 로 거절한다 */
-const isRealUpload = (key: MutationKey, body: unknown) =>
-  key === 'POST /media' && body instanceof FormData && ['PROFILE', 'CREW', 'ACTIVITY', 'POST'].includes(String(body.getAll('purpose')[0]));
-
-/** 화면은 이것만 부른다. 목/실을 모른다 */
-export function createApiClient(options: MockOptions = {}): ApiClient {
-  const mock = createMockClient(options);
-  if (!apiConfig.real) return mock;
-  const http = createHttpClient({ baseUrl: apiConfig.baseUrl });
-  return {
-    get: (key, query) => (REAL_KEYS.has(key) ? http.get(key, query) : mock.get(key, query)),
-    mutate: (key, body) => (REAL_KEYS.has(key) || isRealUpload(key, body) ? http.mutate(key, body) : mock.mutate(key, body)),
-  };
+/** 화면은 이것만 부른다 */
+export function createApiClient(): ApiClient {
+  return createHttpClient({ baseUrl: apiConfig.baseUrl });
 }

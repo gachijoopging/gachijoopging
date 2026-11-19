@@ -43,7 +43,7 @@ import { useBlockedUsers } from '../profile/blocked-users';
 type Calendar = ApiResponse<'GET /crew/calendar'>['data'];
 type Day = Calendar['days'][number];
 
-const api: ApiClient = createApiClient({ delayMs: 300 });
+const api: ApiClient = createApiClient();
 const WEEK = ['일', '월', '화', '수', '목', '금', '토'];
 
 /** 3-1 모이깅의 달력 탭. refreshKey 가 바뀌면 보던 달을 다시 받는다(당겨서 새로고침) */

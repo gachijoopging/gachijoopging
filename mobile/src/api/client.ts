@@ -1,12 +1,7 @@
-import { MOCKS, type MockKey } from './mocks.generated';
 import type { components, paths } from './contract.generated';
-import type { JoinRequestStatus } from '../auth/pending-request';
-import type { EndBody } from '../activity/outbox';
-import type { AgreementState } from '../auth/agreements';
 import { currentAccount, forgetAccount, rememberAccount } from '../auth/account';
 import { ApiError, NetworkError, fromEnvelope } from './errors';
 import { clearTokens, getTokens, setTokens, type TokenPair } from './tokens';
-import { kstDate } from '../crew/calendar';
 
 export type Activity = components['schemas']['Activity'];
 
@@ -21,16 +16,11 @@ type ContractResponse<K> = K extends `${infer M} ${infer P extends keyof paths}`
   ? paths[P][Lowercase<M> & keyof paths[P]] extends { responses: infer R } ? JsonOf<R[Extract<keyof R, 200 | 201>]> : never
   : never;
 
-// 목도 계약을 만족해야 한다. example 이 계약과 어긋나면 여기서 타입 오류가 난다
-MOCKS satisfies { readonly [K in MockKey]: ContractResponse<K> };
-
 export type QueryKey = KeyOf<'get'>;
 export type ApiResponse<K extends QueryKey> =
   K extends 'GET /crew/export' ? { fileName: string; text: string } : ContractResponse<K>;
 
 export type MutationKey = KeyOf<Method>;
-/** 1-8 가입 응답. 공개 크루는 APPROVED, 비공개 크루는 PENDING 으로 온다 */
-export type JoinResult = { id: string; crew: { id: string; name: string }; status: JoinRequestStatus };
 export type MutationResponse<K extends MutationKey> =
   K extends QueryKey ? ApiResponse<K> : [ContractResponse<K>] extends [never] ? void : ContractResponse<K>;
 
@@ -41,34 +31,6 @@ export type ApiClient = {
 };
 
 export { ApiError, NetworkError, type ApiErrorField } from './errors';
-
-export type MockOptions = {
-  /** 응답 지연. 화면의 로딩 상태를 눈으로 보려면 올린다 */
-  delayMs?: number;
-  activityTotals?: () => { itemCount: number; byCategory: Record<string, number> } | null;
-  /** 이 키들은 항상 실패한다. 오류·재시도 UI 를 목으로 확인하는 수단 */
-  failing?: readonly MutationKey[];
-};
-
-const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
-function isMockKey(key: MutationKey): key is MockKey {
-  return key in MOCKS;
-}
-
-type PostsQuery = { scope?: 'CREW' | 'MINE'; from?: string; to?: string };
-
-/** 서버처럼 scope·기간을 적용한다. 전체 탭에는 나만 보기 글이 오지 않고, 내 게시물 탭에는 내 글만 온다 */
-function filterPosts({ scope = 'CREW', from, to }: PostsQuery = {}) {
-  const me = MOCKS['GET /users/me'].data.id;
-  const posts = MOCKS['GET /crew/posts'].data;
-  const items = posts.items.filter((post) => {
-    const day = kstDate(post.createdAt);
-    if (scope === 'MINE' ? post.author.id !== me : post.visibility === 'PRIVATE') return false;
-    return !(from && day < from) && !(to && day > to);
-  });
-  return { data: { ...posts, items } };
-}
 
 /**
  * 다시 연 화면이 받아 오는 동안 로딩 대신 바로 그리려고, 키·질의별 마지막 응답을 기억한다.
@@ -138,63 +100,13 @@ function remember(owner: string | null, sentAt: number, key: QueryKey, query: un
   if (lastResponses.size > MAX_RESPONSES) lastResponses.delete(lastResponses.keys().next().value!);
 }
 
-/** 실 API 가 붙기 전까지 화면이 쓰는 구현. */
-export function createMockClient({ delayMs = 0, failing = [], activityTotals }: MockOptions = {}): ApiClient {
-  let agreements: AgreementState | null = null;
-  let agreementsOwner: string | null = null;
-  const selectAgreementOwner = () => {
-    const owner = currentAccount()?.id ?? null;
-    if (agreementsOwner !== owner) { agreements = null; agreementsOwner = owner; }
-  };
-  async function load<K extends QueryKey>(key: K, query: unknown): Promise<ApiResponse<K>> {
-    if (delayMs > 0) await wait(delayMs);
-    if (failing.includes(key)) throw new ApiError('MOCK_FAILURE');
-    if (key === 'GET /users/me/agreements') {
-      selectAgreementOwner();
-      if (agreements) return { data: agreements } as ApiResponse<K>;
-    }
-    if (key === 'GET /crew/posts') return filterPosts(query as PostsQuery) as unknown as ApiResponse<K>;
-    return (MOCKS as unknown as Record<string, unknown>)[key] as ApiResponse<K>;
-  }
-  return {
-    async get(key, query) {
-      const owner = currentOwner();
-      const sentAt = forgets;
-      const response = await load(key, query);
-      remember(owner, sentAt, key, query, response);
-      return response;
-    },
-    async mutate(key, body) {
-      if (delayMs > 0) await wait(delayMs);
-      if (failing.includes(key)) throw new ApiError('MOCK_FAILURE');
-      if (key === 'PUT /users/me/agreements') {
-        selectAgreementOwner();
-        const current = agreements ?? (MOCKS as unknown as Record<string, { data: AgreementState }>)['GET /users/me/agreements']?.data;
-        if (!current) throw new ApiError('MOCK_FAILURE');
-        const selected = (body as { items: { type: string; version: string; agreed: boolean }[] }).items;
-        if (selected.some((choice) => !current.items.some((item) => item.type === choice.type && item.version === choice.version))) throw new ApiError('VALIDATION', [{ field: 'items', code: 'FORMAT' }]);
-        const items = current.items.map((item) => {
-          const choice = selected.find((value) => value.type === item.type);
-          return choice ? { ...item, agreed: choice.agreed, agreedAt: choice.agreed ? new Date().toISOString() : null } : item;
-        });
-        agreements = { items, complete: items.every((item) => !item.required || item.agreed) };
-        return { data: agreements } as never;
-      }
-      if (key === 'POST /activities') {
-        // 목의 startedAt 은 고정값이라 그대로 쓰면 시작하자마자 24시간 기한이 지난 활동이 된다
-        return { data: { ...MOCKS['POST /activities'].data, ...(body as object) } } as never;
-      }
-      if (key === 'POST /activities/{id}/end') {
-        const request = body as EndBody & { id: string };
-        const totals = activityTotals?.();
-        return { data: { ...MOCKS['POST /activities/{id}/end'].data, ...request,
-          ...(totals ? { itemCount: totals.itemCount, byCategory: totals.byCategory } : {}),
-        } } as never;
-      }
-      // 204 전용 경로는 example 이 없다 — 성공은 그냥 값 없이 끝난다.
-      return (isMockKey(key) ? MOCKS[key] : undefined) as never;
-    },
-  };
+/** load 를 보내기 직전의 계정·forget 을 기준으로 응답을 기억한다. 목 클라이언트도 이 입구로 실 클라이언트와 같은 기억 규칙을 쓴다 */
+export async function getAndRemember<K extends QueryKey>(key: K, query: unknown, load: () => Promise<ApiResponse<K>>): Promise<ApiResponse<K>> {
+  const owner = currentOwner();
+  const sentAt = forgets;
+  const response = await load();
+  remember(owner, sentAt, key, query, response);
+  return response;
 }
 
 const signOutListeners = new Set<() => void>();

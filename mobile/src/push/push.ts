@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { router, usePathname, type Href } from 'expo-router';
 import { File, Paths } from 'expo-file-system';
 import * as Notifications from 'expo-notifications';
-import { apiConfig, createApiClient } from '../api/config';
+import { createApiClient } from '../api/config';
 import type { ApiClient } from '../api/client';
 import { currentAccount } from '../auth/account';
 import { resolveDestination } from '../auth/destination';
@@ -42,10 +42,9 @@ export async function syncPushToken(api: ApiClient, token?: string): Promise<voi
 export function usePushTokenSync(): void {
   const pathname = usePathname();
   useEffect(() => {
-    if (apiConfig.real) void syncPushToken(createApiClient());
+    void syncPushToken(createApiClient());
   }, [pathname]);
   useEffect(() => {
-    if (!apiConfig.real) return;
     const sub = Notifications.addPushTokenListener(({ data }) => void syncPushToken(createApiClient(), data));
     return () => sub.remove();
   }, []);
@@ -88,7 +87,7 @@ export function usePushOpen(settled: boolean, openLast: boolean): void {
   const path = useRef(pathname);
   path.current = pathname;
   useEffect(() => {
-    if (!apiConfig.real || !settled) return;
+    if (!settled) return;
     const open = (response: Notifications.NotificationResponse) =>
       void openPush(createApiClient(), response.notification.request.content.data, router, path.current);
     const last = openLast ? Notifications.getLastNotificationResponse() : null;

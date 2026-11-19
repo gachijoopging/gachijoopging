@@ -29,7 +29,7 @@ import { reasonLabel, reportActions, resolveOutcome, targetLabel, withoutKickedU
 
 type Report = ApiResponse<'GET /crew/reports'>['data']['items'][number];
 
-const api: ApiClient = createApiClient({ delayMs: 300 });
+const api: ApiClient = createApiClient();
 
 const CONFIRM: Record<ReportAction, { title: (r: Report) => string; body: string; label: string }> = {
   DISMISS: { title: () => '이 신고를 기각할까요?', body: '대상은 그대로 유지되고 신고만 처리돼요.', label: '기각' },

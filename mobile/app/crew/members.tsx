@@ -32,7 +32,7 @@ import type { Crew } from '../(tabs)/crew';
 
 type Member = ApiResponse<'GET /crew/members'>['data'][number];
 
-const api: ApiClient = createApiClient({ delayMs: 300 });
+const api: ApiClient = createApiClient();
 
 function joinedLabel(iso: string): string {
   const d = new Date(Date.parse(iso) + 9 * 60 * 60 * 1000);

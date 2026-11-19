@@ -11,9 +11,7 @@ jest.mock('expo-secure-store', () => ({
   deleteItemAsync: async (k: string) => { mockSecure.delete(k); },
 }));
 import { ApiError } from './client';
-
-process.env.EXPO_PUBLIC_API_MODE = 'real';
-const { apiConfig, createApiClient } = require('./config') as typeof import('./config');
+import { createApiClient } from './config';
 
 const ok = (data: unknown) => ({ ok: true, status: 200, text: async () => JSON.stringify({ data }) });
 const fetch = jest.fn(async (_url: string, _init?: RequestInit) => ok({ ok: true }));
@@ -22,8 +20,8 @@ beforeEach(() => {
   globalThis.fetch = fetch as unknown as typeof globalThis.fetch;
 });
 
-test('실 모드에서 백엔드에 있는 경로는 실서버로 보낸다', async () => {
-  expect(apiConfig.real).toBe(true);
+test('API_MODE 가 없어도 실서버로 보낸다 — 목 응답으로 빠지는 경로가 없다', async () => {
+  expect(process.env.EXPO_PUBLIC_API_MODE).toBeUndefined();
   const api = createApiClient();
   await expect(api.get('GET /crews', { query: '줍' })).resolves.toEqual({ data: { ok: true } });
   await api.mutate('PUT /crew/leader', { userId: 'u2' });

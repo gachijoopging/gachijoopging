@@ -33,7 +33,7 @@ import { useBlockedUsers } from '../../src/profile/blocked-users';
 
 type Member = CrewLive;
 
-const api: ApiClient = createApiClient({ delayMs: 300 });
+const api: ApiClient = createApiClient();
 
 const progress = (m: Member) => `${formatDistance(m.distanceM)} · ${formatElapsed(m.elapsedSec)} · ${m.itemCount}개`;
 const spokenRow = (m: Member) =>

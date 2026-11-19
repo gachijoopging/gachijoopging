@@ -51,10 +51,10 @@ function open(): Entry {
 
 /**
  * 연결은 앱 전체에 하나다(docs/realtime.md §연결). 화면마다 핸들을 받고, 핸들의 close 는 그 화면이 단 구독만 떼어 낸다.
- * 마지막 핸들이 닫히면 연결을 끊는다. 실서버 설정이 없으면 null — 화면은 목으로 돈다
+ * 마지막 핸들이 닫히면 연결을 끊는다. 소켓 주소(WS_URL)가 없으면 null
  */
 export function acquireCrewSocket(): StompSocket | null {
-  if (!apiConfig.real || !apiConfig.wsUrl) return null;
+  if (!apiConfig.wsUrl) return null;
   closeOnSignOut();
   const entry = (shared ??= open());
   entry.holders += 1;

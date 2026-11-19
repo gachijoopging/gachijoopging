@@ -14,7 +14,7 @@ let mockUploadId = 0;
 let mockOffline = false;
 const mockToken = jest.fn();
 let mockStored = { session: null, ended: null, outbox: [] as unknown[] };
-jest.mock('../api/client', () => ({ ApiError: class extends Error { code: string; constructor(code: string) { super(code); this.code = code; } }, createMockClient: () => ({ get: (...args: unknown[]) => mockGet(...args), mutate: (...args: unknown[]) => mockMutate(...args) }) }));
+jest.mock('../api/client', () => ({ ApiError: class extends Error { code: string; constructor(code: string) { super(code); this.code = code; } }, createHttpClient: () => ({ get: (...args: unknown[]) => mockGet(...args), mutate: (...args: unknown[]) => mockMutate(...args) }) }));
 jest.mock('expo-router', () => ({ router: { replace: jest.fn(), push: jest.fn(), back: jest.fn(), dismissTo: (...args: unknown[]) => mockDismiss(...args) }, useFocusEffect: (fn: () => void) => require('react').useEffect(fn, [fn]), useNavigation: () => ({ addListener: () => () => {}, dispatch: jest.fn() }) }));
 jest.mock('expo-crypto', () => ({ randomUUID: () => `upload-${++mockUploadId}` }));
 jest.mock('expo-image-picker', () => ({ launchImageLibraryAsync: async () => ({ canceled: false, assets: [{ uri: 'file:///profile.jpg' }] }) }));

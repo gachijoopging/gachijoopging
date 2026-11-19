@@ -8,7 +8,7 @@ import { createApiClient } from '../../../src/api/config';
 import { mapResetConfirmError, resetRequestErrorMessage } from '../../../src/auth/errors';
 import { validateEmail, validatePassword } from '../../../src/auth/validators';
 
-const api: ApiClient = createApiClient({ delayMs: 300 });
+const api: ApiClient = createApiClient();
 
 export default function ResetPasswordScreen() {
   const params = useLocalSearchParams<{ email?: string }>();

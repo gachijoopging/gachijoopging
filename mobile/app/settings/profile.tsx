@@ -34,7 +34,7 @@ type Original = { nickname: string; intro: string; photoUrl: string | null };
 /** 새로 고른 사진. mediaId 는 올린 뒤에만 생기고, 저장이 실패해도 들고 있다가 다시 올리지 않는다 */
 type Picked = { uri: string; name: string; type: string; uploadId: string; mediaId: string | null };
 
-const api: ApiClient = createApiClient({ delayMs: 300 });
+const api: ApiClient = createApiClient();
 
 export default function EditProfileScreen() {
   const navigation = useNavigation();

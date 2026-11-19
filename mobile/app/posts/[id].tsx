@@ -39,7 +39,7 @@ import { useFlash } from '../../src/ui/useFlash';
 type Detail = Post & { comments: Comment[]; commentsNextCursor?: string | null };
 type Pending = { id: string; text: string };
 
-const api: ApiClient = createApiClient({ delayMs: 300 });
+const api: ApiClient = createApiClient();
 /** 남은 글자는 이 수를 넘긴 뒤부터 보인다 (5-2 입력) */
 const COUNT_FROM = 400;
 
