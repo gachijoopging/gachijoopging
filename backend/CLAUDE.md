@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 @../AGENTS.md
 
-`backend/` 에서 연 세션에 루트 `AGENTS.md` 가 안 보이면 외부 import 승인 창을 거절·건너뛴 것이다. 창은 다시 뜨지 않으니 Claude Code 를 닫고 `~/.claude.json` 의 `projects["<저장소 루트>"].hasClaudeMdExternalIncludesApproved` 를 `true` 로 바꾼다.
+`backend/` 에서 연 세션에 루트 `AGENTS.md` 가 안 보이면 외부 import 승인 창을 거절·건너뛴 것이다. 창은 다시 뜨지 않으니 Claude Code 를 닫고 `~/.claude.json` 의 `projects["<메인 저장소 루트 — worktree 경로가 아니다>"].hasClaudeMdExternalIncludesApproved` 를 `true` 로 바꾼다.
 
 ## 명령
 
