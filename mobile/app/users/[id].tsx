@@ -22,21 +22,15 @@ import {
   Txt,
   space,
 } from 'design-system/src';
-import { ApiError, forgetAll, peek, type ApiClient } from '../../src/api/client';
+import { ApiError, forgetAll, peek, type ApiClient, type ApiResponse } from '../../src/api/client';
 import { createApiClient } from '../../src/api/config';
-import type { MOCKS } from '../../src/api/mocks.generated';
 import { ActivityCalendar, StatsTile, usePaged, type ActivityCard, type Post } from '../../src/profile/ProfileParts';
 import { ProfileTabList } from '../../src/profile/ProfileTabList';
 import { INTRO_FOLD, safetyRows, type SafetyRow } from '../../src/profile/profile';
 import { setUserBlocked } from '../../src/profile/blocked-users';
 import { leaveForMembership } from '../../src/feed/leave';
 
-type Profile = Omit<(typeof MOCKS)['GET /crew/members/{userId}']['data'], 'isLeader' | 'following' | 'blocked' | 'activeDays'> & {
-  isLeader: boolean;
-  following: boolean;
-  blocked: boolean;
-  activeDays: readonly string[];
-};
+type Profile = ApiResponse<'GET /crew/members/{userId}'>['data'];
 type Tab = 'records' | 'posts';
 type Confirm = 'block' | 'kick' | 'delegate';
 

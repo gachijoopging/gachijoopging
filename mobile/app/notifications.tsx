@@ -21,9 +21,8 @@ import {
   type IconName,
   characterEmpty,
 } from 'design-system/src';
-import { type ApiClient } from '../src/api/client';
+import { type ApiClient, type ApiResponse } from '../src/api/client';
 import { createApiClient } from '../src/api/config';
-import { MOCKS } from '../src/api/mocks.generated';
 import { resolveDestination, type Me } from '../src/auth/destination';
 import {
   markAllRead,
@@ -35,7 +34,7 @@ import {
 } from '../src/notifications/notifications';
 import { useNotificationArrivals } from '../src/notifications/useNotificationArrivals';
 
-type Page = (typeof MOCKS)['GET /notifications']['data'];
+type Page = ApiResponse<'GET /notifications'>['data'];
 type Item = Page['items'][number];
 
 const api: ApiClient = createApiClient({ delayMs: 300 });

@@ -364,7 +364,7 @@ export interface paths {
                          *     }
                          */
                         readonly "application/json": {
-                            readonly data?: components["schemas"]["Me"];
+                            readonly data: components["schemas"]["Me"];
                         };
                     };
                 };
@@ -455,7 +455,7 @@ export interface paths {
                          *     }
                          */
                         readonly "application/json": {
-                            readonly data?: components["schemas"]["Me"];
+                            readonly data: components["schemas"]["Me"];
                         };
                     };
                 };
@@ -517,7 +517,7 @@ export interface paths {
                          *     }
                          */
                         readonly "application/json": {
-                            readonly data?: components["schemas"]["AgreementCatalog"];
+                            readonly data: components["schemas"]["AgreementCatalog"];
                         };
                     };
                 };
@@ -592,7 +592,7 @@ export interface paths {
                          *     }
                          */
                         readonly "application/json": {
-                            readonly data?: components["schemas"]["Agreements"];
+                            readonly data: components["schemas"]["Agreements"];
                         };
                     };
                 };
@@ -663,7 +663,7 @@ export interface paths {
                          *     }
                          */
                         readonly "application/json": {
-                            readonly data?: components["schemas"]["Agreements"];
+                            readonly data: components["schemas"]["Agreements"];
                         };
                     };
                 };
@@ -753,7 +753,7 @@ export interface paths {
                          *     }
                          */
                         readonly "application/json": {
-                            readonly data?: components["schemas"]["MemberStats"];
+                            readonly data: components["schemas"]["MemberStats"];
                         };
                     };
                 };
@@ -907,10 +907,10 @@ export interface paths {
                          *     }
                          */
                         readonly "application/json": {
-                            readonly data?: {
-                                readonly items?: readonly components["schemas"]["UserBrief"][];
-                                readonly nextCursor?: string | null;
-                                readonly total?: number;
+                            readonly data: {
+                                readonly items: readonly components["schemas"]["UserBrief"][];
+                                readonly nextCursor: string | null;
+                                readonly total: number;
                             };
                         };
                     };
@@ -1126,9 +1126,9 @@ export interface paths {
                          *     }
                          */
                         readonly "application/json": {
-                            readonly data?: {
-                                readonly items?: readonly components["schemas"]["CrewSummary"][];
-                                readonly nextCursor?: string | null;
+                            readonly data: {
+                                readonly items: readonly components["schemas"]["CrewSummary"][];
+                                readonly nextCursor: string | null;
                             };
                         };
                     };
@@ -1194,7 +1194,7 @@ export interface paths {
                          *     }
                          */
                         readonly "application/json": {
-                            readonly data?: components["schemas"]["Crew"];
+                            readonly data: components["schemas"]["Crew"];
                         };
                     };
                 };
@@ -1267,7 +1267,7 @@ export interface paths {
                          *     }
                          */
                         readonly "application/json": {
-                            readonly data?: components["schemas"]["JoinRequest"];
+                            readonly data: components["schemas"]["JoinRequest"];
                         };
                     };
                 };
@@ -1297,7 +1297,7 @@ export interface paths {
                          *     }
                          */
                         readonly "application/json": {
-                            readonly data?: components["schemas"]["JoinRequest"];
+                            readonly data: components["schemas"]["JoinRequest"];
                         };
                     };
                 };
@@ -1358,7 +1358,7 @@ export interface paths {
                          *     }
                          */
                         readonly "application/json": {
-                            readonly data?: components["schemas"]["JoinRequest"] | (never | null);
+                            readonly data: components["schemas"]["JoinRequest"] | (never | null);
                         };
                     };
                 };
@@ -1487,7 +1487,7 @@ export interface paths {
                          *     }
                          */
                         readonly "application/json": {
-                            readonly data?: components["schemas"]["Crew"];
+                            readonly data: components["schemas"]["Crew"];
                         };
                     };
                 };
@@ -1562,7 +1562,7 @@ export interface paths {
                          *     }
                          */
                         readonly "application/json": {
-                            readonly data?: components["schemas"]["Crew"];
+                            readonly data: components["schemas"]["Crew"];
                         };
                     };
                 };
@@ -1660,7 +1660,7 @@ export interface paths {
                          *     }
                          */
                         readonly "application/json": {
-                            readonly data?: readonly components["schemas"]["Member"][];
+                            readonly data: readonly components["schemas"]["Member"][];
                         };
                     };
                 };
@@ -1726,7 +1726,7 @@ export interface paths {
                          *     }
                          */
                         readonly "application/json": {
-                            readonly data?: components["schemas"]["MemberProfile"];
+                            readonly data: components["schemas"]["MemberProfile"];
                         };
                     };
                 };
@@ -1941,9 +1941,9 @@ export interface paths {
                          *     }
                          */
                         readonly "application/json": {
-                            readonly data?: {
-                                readonly items?: readonly components["schemas"]["JoinRequest"][];
-                                readonly nextCursor?: string | null;
+                            readonly data: {
+                                readonly items: readonly components["schemas"]["JoinRequest"][];
+                                readonly nextCursor: string | null;
                             };
                         };
                     };
@@ -3900,14 +3900,14 @@ export interface paths {
                          *     }
                          */
                         readonly "application/json": {
-                            readonly data?: {
+                            readonly data: {
                                 /** @description 크루장만. 크루원은 둘 다 0 */
-                                readonly pending?: {
-                                    readonly joinRequests?: number;
-                                    readonly reports?: number;
+                                readonly pending: {
+                                    readonly joinRequests: number;
+                                    readonly reports: number;
                                 };
-                                readonly items?: readonly components["schemas"]["Notification"][];
-                                readonly nextCursor?: string | null;
+                                readonly items: readonly components["schemas"]["Notification"][];
+                                readonly nextCursor: string | null;
                             };
                         };
                     };
@@ -3993,8 +3993,8 @@ export interface paths {
                          *     }
                          */
                         readonly "application/json": {
-                            readonly data?: {
-                                readonly count?: number;
+                            readonly data: {
+                                readonly count: number;
                             };
                         };
                     };
@@ -4141,9 +4141,9 @@ export interface paths {
                          *     }
                          */
                         readonly "application/json": {
-                            readonly data?: {
-                                readonly items?: readonly components["schemas"]["Report"][];
-                                readonly nextCursor?: string | null;
+                            readonly data: {
+                                readonly items: readonly components["schemas"]["Report"][];
+                                readonly nextCursor: string | null;
                             };
                         };
                     };
@@ -4281,7 +4281,7 @@ export interface paths {
                          *     }
                          */
                         readonly "application/json": {
-                            readonly data?: components["schemas"]["Home"];
+                            readonly data: components["schemas"]["Home"];
                         };
                     };
                 };
@@ -4384,7 +4384,7 @@ export interface paths {
                          *     }
                          */
                         readonly "application/json": {
-                            readonly data?: components["schemas"]["CrewStats"];
+                            readonly data: components["schemas"]["CrewStats"];
                         };
                     };
                 };
@@ -4437,6 +4437,7 @@ export interface paths {
                          *             "activities": [
                          *               {
                          *                 "activityId": "a098",
+                         *                 "startedAt": "2026-09-02T09:02:00Z",
                          *                 "user": {
                          *                   "id": "8a2d…",
                          *                   "nickname": "상혁",
@@ -4455,6 +4456,7 @@ export interface paths {
                          *             "activities": [
                          *               {
                          *                 "activityId": "a100",
+                         *                 "startedAt": "2026-09-05T09:02:00Z",
                          *                 "user": {
                          *                   "id": "6f1c…",
                          *                   "nickname": "관열",
@@ -4466,6 +4468,7 @@ export interface paths {
                          *               },
                          *               {
                          *                 "activityId": "a101",
+                         *                 "startedAt": "2026-09-05T10:20:00Z",
                          *                 "user": {
                          *                   "id": "8a2d…",
                          *                   "nickname": "상혁",
@@ -4482,20 +4485,20 @@ export interface paths {
                          *     }
                          */
                         readonly "application/json": {
-                            readonly data?: {
-                                readonly days?: readonly {
+                            readonly data: {
+                                readonly days: readonly {
                                     /** Format: date */
-                                    readonly date?: string;
-                                    readonly items?: number;
+                                    readonly date: string;
+                                    readonly items: number;
                                     /** @description 해당 날짜의 활동 횟수 */
-                                    readonly activityCount?: number;
-                                    readonly activities?: readonly {
-                                        readonly activityId?: string;
+                                    readonly activityCount: number;
+                                    readonly activities: readonly {
+                                        readonly activityId: string;
                                         /** Format: date-time */
-                                        readonly startedAt?: string;
-                                        readonly user?: components["schemas"]["UserBrief"];
-                                        readonly items?: number;
-                                        readonly distanceM?: number;
+                                        readonly startedAt: string;
+                                        readonly user: components["schemas"]["UserBrief"];
+                                        readonly items: number;
+                                        readonly distanceM: number;
                                     }[];
                                 }[];
                             };
@@ -4591,7 +4594,7 @@ export interface components {
             readonly name: string;
             /** @description 크루 설명 */
             readonly intro: string;
-            readonly photoUrl?: string | null;
+            readonly photoUrl: string | null;
             readonly region: components["schemas"]["Region"];
             readonly joinPolicy: components["schemas"]["JoinPolicy"];
             /** @description 크루장 포함. 50 이면 정원이 찼다 */
@@ -4621,104 +4624,104 @@ export interface components {
                 /** @description 현재 버전에 동의했는가 */
                 readonly agreed: boolean;
                 /** Format: date-time */
-                readonly agreedAt?: string | null;
+                readonly agreedAt: string | null;
             }[];
         };
         readonly Me: {
-            readonly id?: string;
+            readonly id: string;
             /** @description 닉네임 설정 완료 여부. false면 닉네임 화면 재개. 약관 동의 완료는 GET /users/me/agreements */
             readonly profileComplete: boolean;
-            readonly nickname?: string | null;
-            readonly intro?: string;
-            readonly photoUrl?: string | null;
-            readonly email?: string | null;
-            readonly hasPassword?: boolean;
-            readonly linked?: {
-                readonly kakao?: boolean;
-                readonly google?: boolean;
+            readonly nickname: string | null;
+            readonly intro: string;
+            readonly photoUrl: string | null;
+            readonly email: string | null;
+            readonly hasPassword: boolean;
+            readonly linked: {
+                readonly kakao: boolean;
+                readonly google: boolean;
             };
-            readonly settings?: {
-                readonly shareLocationDefault?: boolean;
-                readonly notifyActivityStart?: boolean;
+            readonly settings: {
+                readonly shareLocationDefault: boolean;
+                readonly notifyActivityStart: boolean;
             };
-            readonly membership?: {
+            readonly membership: {
                 /**
                  * @description NONE→1-6(rejection 이 있으면 1-9 거절 안내 먼저) · PENDING→1-9(비공개 크루 승인 대기, 크루원 아님. crew 는 신청한 크루) · MEMBER→탭. 승인 대기 중 승인됐으면 MEMBER 가 먼저다
                  * @enum {string}
                  */
-                readonly status?: "NONE" | "PENDING" | "MEMBER";
-                readonly crew?: {
-                    readonly id?: string;
-                    readonly name?: string;
-                    readonly isLeader?: boolean;
+                readonly status: "NONE" | "PENDING" | "MEMBER";
+                readonly crew: {
+                    readonly id: string;
+                    readonly name: string;
+                    readonly isLeader: boolean;
                 } | null;
                 /** @description 내 가장 최근 가입 신청이 REJECTED 이고 아직 확인하지 않았을 때만 온다(그보다 오래된 미확인 거절은 다시 띄우지 않는다). status 가 NONE 일 때만. `POST /crews/join-requests/{requestId}/read` 로 확인하면 null */
-                readonly rejection?: {
-                    readonly requestId?: string;
-                    readonly crew?: {
-                        readonly id?: string;
-                        readonly name?: string;
+                readonly rejection: {
+                    readonly requestId: string;
+                    readonly crew: {
+                        readonly id: string;
+                        readonly name: string;
                     };
                     /** Format: date-time */
-                    readonly decidedAt?: string;
+                    readonly decidedAt: string;
                 } | null;
             };
         };
         readonly Crew: {
-            readonly id?: string;
-            readonly name?: string;
-            readonly intro?: string;
-            readonly photoUrl?: string | null;
-            readonly leader?: components["schemas"]["UserBrief"];
-            readonly region?: components["schemas"]["Region"];
-            readonly joinPolicy?: components["schemas"]["JoinPolicy"];
+            readonly id: string;
+            readonly name: string;
+            readonly intro: string;
+            readonly photoUrl: string | null;
+            readonly leader: components["schemas"]["UserBrief"];
+            readonly region: components["schemas"]["Region"];
+            readonly joinPolicy: components["schemas"]["JoinPolicy"];
             /** @description 크루장 포함. 정원 50 */
-            readonly memberCount?: number;
-            readonly goalCount?: number;
+            readonly memberCount: number;
+            readonly goalCount: number;
             /** @description 크루장만 값. 크루원은 0 */
-            readonly pendingJoinRequests?: number;
+            readonly pendingJoinRequests: number;
             /** @description 삭제되지 않은 최신 공지 한 건 자동 선택. 없으면 null */
-            readonly pinnedNotice?: {
-                readonly id?: string;
-                readonly title?: string;
+            readonly pinnedNotice: {
+                readonly id: string;
+                readonly title: string;
                 /** Format: date-time */
-                readonly createdAt?: string;
+                readonly createdAt: string;
             } | null;
-            readonly unreadChat?: number;
-            readonly isLeader?: boolean;
+            readonly unreadChat: number;
+            readonly isLeader: boolean;
         };
         readonly JoinRequest: {
-            readonly id?: string;
-            readonly crew?: {
-                readonly id?: string;
-                readonly name?: string;
+            readonly id: string;
+            readonly crew: {
+                readonly id: string;
+                readonly name: string;
             };
-            readonly user?: components["schemas"]["UserBrief"];
+            readonly user: components["schemas"]["UserBrief"];
             /**
              * @description PENDING 은 승인 대기이며 크루원이 아니다. 공개 크루 가입은 처음부터 APPROVED, 비공개 → 공개 전환으로 자동 가입된 신청도 APPROVED. CANCELED 는 신청자가 취소했거나, 신청자가 탈퇴했거나, 그 크루가 해산된 것
              * @enum {string}
              */
-            readonly status?: "PENDING" | "APPROVED" | "REJECTED" | "CANCELED";
+            readonly status: "PENDING" | "APPROVED" | "REJECTED" | "CANCELED";
             /** Format: date-time */
-            readonly createdAt?: string;
+            readonly createdAt: string;
         };
         readonly Member: components["schemas"]["UserBrief"] & {
-            readonly isLeader?: boolean;
-            readonly totalItems?: number;
+            readonly isLeader: boolean;
+            readonly totalItems: number;
             /** Format: date-time */
-            readonly joinedAt?: string;
-            readonly following?: boolean;
+            readonly joinedAt: string;
+            readonly following: boolean;
         };
         readonly MemberStats: {
-            readonly totalItems?: number;
-            readonly totalDistanceM?: number;
-            readonly totalActivities?: number;
+            readonly totalItems: number;
+            readonly totalDistanceM: number;
+            readonly totalActivities: number;
             /** @description KST 최근 6개월 활동한 날짜 — 프로필 달력 */
-            readonly activeDays?: readonly string[];
+            readonly activeDays: readonly string[];
         };
         readonly MemberProfile: components["schemas"]["Member"] & components["schemas"]["MemberStats"] & {
-            readonly intro?: string;
-            readonly blocked?: boolean;
+            readonly intro: string;
+            readonly blocked: boolean;
         };
         readonly ItemInput: {
             /**
@@ -4734,10 +4737,10 @@ export interface components {
             readonly bbox?: components["schemas"]["Bbox"];
         };
         readonly Bbox: {
-            readonly x?: number;
-            readonly y?: number;
-            readonly w?: number;
-            readonly h?: number;
+            readonly x: number;
+            readonly y: number;
+            readonly w: number;
+            readonly h: number;
         } | null;
         readonly Item: {
             /**
@@ -4889,82 +4892,82 @@ export interface components {
             readonly createdAt: string;
         };
         readonly Notification: {
-            readonly id?: number;
+            readonly id: number;
             /** @enum {string} */
-            readonly type?: "JOIN_REQUEST" | "CREW_JOINED" | "JOIN_APPROVED" | "JOIN_REJECTED" | "NOTICE" | "COMMENT" | "CHAT" | "ACTIVITY_STARTED" | "REPORT" | "REPORT_RESOLVED" | "POST_REMOVED";
-            readonly title?: string;
-            readonly detail?: string;
-            readonly unread?: boolean;
+            readonly type: "JOIN_REQUEST" | "CREW_JOINED" | "JOIN_APPROVED" | "JOIN_REJECTED" | "NOTICE" | "COMMENT" | "CHAT" | "ACTIVITY_STARTED" | "REPORT" | "REPORT_RESOLVED" | "POST_REMOVED";
+            readonly title: string;
+            readonly detail: string;
+            readonly unread: boolean;
             /** @description 이동 대상. JOIN_REQUESTS→3-8 · MEMBERS→3-11 · REPORTS→6-2 · POST→5-2 · NOTICE→3-6 · CHAT→3-7 · LIVE→2-2 · CREW→1-6/탭 · NOTIFICATIONS→2-3 (신고 결과는 title/detail, 크루장 처리 화면으로 보내지 않음) */
-            readonly target?: {
+            readonly target: {
                 /** @enum {string} */
-                readonly type?: "JOIN_REQUESTS" | "MEMBERS" | "REPORTS" | "POST" | "NOTICE" | "CHAT" | "LIVE" | "CREW" | "NOTIFICATIONS";
-                readonly id?: string | null;
+                readonly type: "JOIN_REQUESTS" | "MEMBERS" | "REPORTS" | "POST" | "NOTICE" | "CHAT" | "LIVE" | "CREW" | "NOTIFICATIONS";
+                readonly id: string | null;
             };
             /** Format: date-time */
-            readonly createdAt?: string;
+            readonly createdAt: string;
         };
         readonly Report: {
-            readonly id?: string;
-            readonly reporter?: components["schemas"]["UserBrief"];
-            readonly targetType?: string;
-            readonly targetId?: string;
+            readonly id: string;
+            readonly reporter: components["schemas"]["UserBrief"];
+            readonly targetType: string;
+            readonly targetId: string;
             /** @description 게시물·댓글 본문 앞부분 또는 사용자 닉네임 */
-            readonly targetPreview?: string;
-            readonly reason?: string;
-            readonly memo?: string | null;
+            readonly targetPreview: string;
+            readonly reason: string;
+            readonly memo: string | null;
             /** Format: date-time */
-            readonly createdAt?: string;
+            readonly createdAt: string;
         };
         readonly Home: {
-            readonly crew?: {
-                readonly id?: string;
-                readonly name?: string;
+            readonly crew: {
+                readonly id: string;
+                readonly name: string;
             };
-            readonly last7d?: {
-                readonly crewItems?: number;
-                readonly myItems?: number;
+            readonly last7d: {
+                readonly crewItems: number;
+                readonly myItems: number;
                 /** @description 최근 7일 내가 주운 것의 카테고리별 수량. 0 인 카테고리는 생략 */
-                readonly myByCategory?: {
+                readonly myByCategory: {
                     readonly [key: string]: number;
                 };
                 /** @description 6일 전 → 오늘 */
-                readonly daily?: readonly number[];
+                readonly daily: readonly number[];
             };
-            readonly character?: {
-                readonly windowDays?: number;
-                readonly items?: number;
-                readonly goalCount?: number;
+            readonly character: {
+                readonly windowDays: number;
+                readonly items: number;
+                readonly goalCount: number;
                 /** @description 1 축 처짐 · 2 보통 · 3 신남 · 4 반짝 · 5 파티. 서버가 items/goalCount 로 계산 */
-                readonly stage?: number;
+                readonly stage: number;
             };
-            readonly live?: {
-                readonly count?: number;
-                readonly users?: readonly components["schemas"]["UserBrief"][];
+            readonly live: {
+                readonly count: number;
+                readonly users: readonly components["schemas"]["UserBrief"][];
             };
-            readonly unreadNotifications?: number;
+            readonly unreadNotifications: number;
         };
         readonly CrewStats: {
-            readonly range?: string;
-            readonly totals?: {
-                readonly items?: number;
-                readonly distanceM?: number;
-                readonly durationSec?: number;
-                readonly activities?: number;
+            readonly range: string;
+            readonly totals: {
+                readonly items: number;
+                readonly distanceM: number;
+                readonly durationSec: number;
+                readonly activities: number;
             };
-            readonly byCategory?: {
+            readonly byCategory: {
                 readonly [key: string]: number;
             };
-            readonly series?: readonly {
+            readonly series: readonly {
                 /** Format: date */
-                readonly date?: string;
-                readonly items?: number;
+                readonly date: string;
+                readonly items: number;
             }[];
-            readonly ranking?: readonly {
-                readonly rank?: number;
-                readonly user?: components["schemas"]["UserBrief"];
-                readonly items?: number;
-                readonly distanceM?: number;
+            readonly ranking: readonly {
+                readonly rank: number;
+                readonly user: components["schemas"]["UserBrief"];
+                readonly items: number;
+                readonly distanceM: number;
             }[];
         };
     };
@@ -5013,11 +5016,11 @@ export interface components {
                  *     }
                  */
                 readonly "application/json": {
-                    readonly data?: {
-                        readonly accessToken?: string;
-                        readonly refreshToken?: string;
+                    readonly data: {
+                        readonly accessToken: string;
+                        readonly refreshToken: string;
                         /** @description 최초 발급 여부만 표시. 재진입 분기는 Me.profileComplete와 membership으로 판단 */
-                        readonly isNew?: boolean;
+                        readonly isNew: boolean;
                     };
                 };
             };

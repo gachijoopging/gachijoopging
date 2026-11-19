@@ -21,14 +21,13 @@ import {
   space,
   useRipple,
 } from 'design-system/src';
-import { ApiError, forgetAll, type ApiClient } from '../../src/api/client';
+import { ApiError, forgetAll, type ApiClient, type ApiResponse } from '../../src/api/client';
 import { createApiClient } from '../../src/api/config';
-import type { MOCKS } from '../../src/api/mocks.generated';
 import { monthDay } from '../../src/crew/crew';
 import { memberActionOutcome } from '../../src/crew/manage';
 import { reasonLabel, reportActions, resolveOutcome, targetLabel, withoutKickedUser, type ReportAction } from '../../src/report/report';
 
-type Report = (typeof MOCKS)['GET /crew/reports']['data']['items'][number];
+type Report = ApiResponse<'GET /crew/reports'>['data']['items'][number];
 
 const api: ApiClient = createApiClient({ delayMs: 300 });
 

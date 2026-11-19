@@ -20,14 +20,13 @@ import {
   space,
   useRipple,
 } from 'design-system/src';
-import { ApiError, type ApiClient } from '../../src/api/client';
+import { ApiError, type ApiClient, type ApiResponse } from '../../src/api/client';
 import { createApiClient } from '../../src/api/config';
-import type { MOCKS } from '../../src/api/mocks.generated';
 import { monthDay } from '../../src/crew/crew';
 import { joinDecisionOutcome, type JoinDecision } from '../../src/crew/manage';
 import { CREW_CAPACITY } from '../../src/crew/region';
 
-type JoinRequest = (typeof MOCKS)['GET /crew/join-requests']['data']['items'][number];
+type JoinRequest = ApiResponse<'GET /crew/join-requests'>['data']['items'][number];
 
 const api: ApiClient = createApiClient({ delayMs: 300 });
 

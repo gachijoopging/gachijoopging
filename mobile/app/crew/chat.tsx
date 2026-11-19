@@ -221,7 +221,7 @@ export default function CrewChatScreen() {
       ]);
       const crew = user.membership.crew;
       const nextMe: Me = {
-        author: { id: user.id, nickname: user.nickname, photoUrl: user.photoUrl, withdrawn: false },
+        author: { id: user.id, nickname: user.nickname ?? '', photoUrl: user.photoUrl, withdrawn: false },
         isLeader: !!crew?.isLeader,
         crewId: crew?.id ?? '',
       };

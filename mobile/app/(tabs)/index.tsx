@@ -25,16 +25,15 @@ import {
   characterStageNames,
   characterStages,
 } from 'design-system/src';
-import { ApiError, peek, type ApiClient } from '../../src/api/client';
+import { ApiError, peek, type ApiClient, type ApiResponse } from '../../src/api/client';
 import { createApiClient } from '../../src/api/config';
-import { MOCKS } from '../../src/api/mocks.generated';
 import { leaveForMembership } from '../../src/feed/leave';
 import { characterBubble, myCategorySummary } from '../../src/home/home';
 import { useNotificationArrivals } from '../../src/notifications/useNotificationArrivals';
 import { useBlockedUsers } from '../../src/profile/blocked-users';
 import { useFlash } from '../../src/ui/useFlash';
 
-type Home = (typeof MOCKS)['GET /crew/home']['data'];
+type Home = ApiResponse<'GET /crew/home'>['data'];
 
 const api: ApiClient = createApiClient({ delayMs: 300 });
 const wordmark = require('../../../design-system/assets/logo-wordmark.png');

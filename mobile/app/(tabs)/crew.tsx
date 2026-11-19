@@ -21,24 +21,17 @@ import {
   space,
   useTheme,
 } from 'design-system/src';
-import { ApiError, peek, type ApiClient } from '../../src/api/client';
+import { ApiError, peek, type ApiClient, type ApiResponse } from '../../src/api/client';
 import { createApiClient } from '../../src/api/config';
 import { leaveForMembership } from '../../src/feed/leave';
-import type { MOCKS } from '../../src/api/mocks.generated';
 import { CalendarPanel } from '../../src/crew/CalendarPanel';
 import { NoticesPanel } from '../../src/crew/NoticesPanel';
 import { useNotificationArrivals } from '../../src/notifications/useNotificationArrivals';
 import { RecordsPanel } from '../../src/crew/RecordsPanel';
 import { useFlash } from '../../src/ui/useFlash';
 import { monthDay } from '../../src/crew/crew';
-import type { JoinPolicy, Region } from '../../src/crew/region';
 
-type CrewData = (typeof MOCKS)['GET /crew']['data'];
-export type Crew = Omit<CrewData, 'pinnedNotice' | 'region' | 'joinPolicy'> & {
-  pinnedNotice: CrewData['pinnedNotice'] | null;
-  region: Region;
-  joinPolicy: JoinPolicy;
-};
+export type Crew = ApiResponse<'GET /crew'>['data'];
 
 const api: ApiClient = createApiClient({ delayMs: 300 });
 

@@ -137,6 +137,7 @@ export const MOCKS = {
           "activities": [
             {
               "activityId": "a098",
+              "startedAt": "2026-09-02T09:02:00Z",
               "user": {
                 "id": "8a2d…",
                 "nickname": "상혁",
@@ -155,6 +156,7 @@ export const MOCKS = {
           "activities": [
             {
               "activityId": "a100",
+              "startedAt": "2026-09-05T09:02:00Z",
               "user": {
                 "id": "6f1c…",
                 "nickname": "관열",
@@ -166,6 +168,7 @@ export const MOCKS = {
             },
             {
               "activityId": "a101",
+              "startedAt": "2026-09-05T10:20:00Z",
               "user": {
                 "id": "8a2d…",
                 "nickname": "상혁",
