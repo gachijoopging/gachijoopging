@@ -309,7 +309,7 @@ fi
 
 ```sh
 # 뒤의 줄은 Nginx 를 다시 만든다. compose 는 nginx.conf 의 내용만 바뀐 것을 알아채지 못한다
-ssh <서버> "cd /opt/gachijoopging && ./deploy.sh $T && docker compose up -d --force-recreate nginx"
+ssh <서버> "cd /opt/gachijoopging && ./deploy.sh ${T:?} && docker compose up -d --force-recreate nginx"
 ```
 
 이 경우 **Actions 로 되돌리지 않는다.** deploy.yml 은 `deploy.sh` 를 부르기 전에 `main` 의 설정을 다시
