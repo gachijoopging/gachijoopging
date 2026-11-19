@@ -22,7 +22,7 @@ import {
   Txt,
   space,
 } from 'design-system/src';
-import { ApiError, forget, peek, type ApiClient } from '../../src/api/client';
+import { ApiError, forgetAll, peek, type ApiClient } from '../../src/api/client';
 import { createApiClient } from '../../src/api/config';
 import type { MOCKS } from '../../src/api/mocks.generated';
 import { ActivityCalendar, StatsTile, usePaged, type ActivityCard, type Post } from '../../src/profile/ProfileParts';
@@ -204,7 +204,7 @@ export default function UserProfileScreen() {
     setBusy(true);
     try {
       await api.mutate('DELETE /users/{userId}/block', { userId: id });
-      forget('GET /crew/members/{userId}', { userId: id });
+      forgetAll();
       setUserBlocked(viewerId, id, false);
       setProfile({ ...profile, blocked: false });
       setSnackbar('차단을 해제했어요');
@@ -222,7 +222,7 @@ export default function UserProfileScreen() {
       if (action === 'block') await api.mutate('PUT /users/{userId}/block', { userId: id });
       else if (action === 'kick') await api.mutate('DELETE /crew/members/{userId}', { userId: id });
       else await api.mutate('PUT /crew/leader', { userId: id });
-      forget('GET /crew/members/{userId}', { userId: id });
+      forgetAll();
       setConfirm(null);
       setSheet(false);
       const message = CONFIRM[action].done(profile.nickname);

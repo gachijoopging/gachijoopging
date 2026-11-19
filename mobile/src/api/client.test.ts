@@ -14,7 +14,7 @@ jest.mock('expo-secure-store', () => ({
   setItemAsync: async (k: string, v: string) => { await mockWriteGate; mockSecure.set(k, v); },
   deleteItemAsync: async (k: string) => { mockSecure.delete(k); },
 }));
-import { createMockClient, createHttpClient, ApiError, NetworkError, forget, peek } from './client';
+import { createMockClient, createHttpClient, ApiError, NetworkError, forget, forgetAll, peek } from './client';
 import { currentAccount, forgetAccount, rememberAccount } from '../auth/account';
 import { getTokens, setTokens } from './tokens';
 import { MOCKS } from './mocks.generated';
@@ -181,6 +181,18 @@ describe('마지막 응답 기억', () => {
     forget('GET /activities/{id}', { id: 'a100' });
     expect(peek('GET /activities/{id}', { id: 'a100' })).toBeUndefined();
     expect(peek('GET /crew/home')).toBeDefined();
+  });
+
+  test('forgetAll 뒤에는 어떤 응답도 다시 꺼내지 않는다 — 차단한 사람이 어느 응답에 들어 있는지 알 수 없다', async () => {
+    const api = createMockClient();
+    await api.get('GET /crew/home');
+    await api.get('GET /posts/{postId}', { postId: 'p1' });
+    const late = createMockClient({ delayMs: 10 }).get('GET /crew/posts', { scope: 'CREW' });
+    forgetAll();
+    await late;
+    expect(peek('GET /crew/home')).toBeUndefined();
+    expect(peek('GET /posts/{postId}', { postId: 'p1' })).toBeUndefined();
+    expect(peek('GET /crew/posts', { scope: 'CREW' })).toBeUndefined();
   });
 });
 

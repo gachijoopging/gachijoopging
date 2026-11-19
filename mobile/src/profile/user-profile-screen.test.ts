@@ -1,4 +1,6 @@
 const mockGet = jest.fn();
+const mockMutate = jest.fn();
+const mockForgetAll = jest.fn();
 const mockLeave = jest.fn();
 let mockPeeked: unknown;
 jest.mock('../api/config', () => ({ apiConfig: { real: false }, createApiClient: () => jest.requireMock('../api/client').createMockClient() }));
@@ -10,7 +12,9 @@ jest.mock('../api/client', () => ({
     constructor(value: string) { super(value); this.code = value; }
   },
   peek: (key: string) => (key === 'GET /crew/members/{userId}' ? mockPeeked : undefined),
-  createMockClient: () => ({ get: (...args: unknown[]) => mockGet(...args), mutate: jest.fn() }),
+  forget: () => {},
+  forgetAll: () => mockForgetAll(),
+  createMockClient: () => ({ get: (...args: unknown[]) => mockGet(...args), mutate: (...args: unknown[]) => mockMutate(...args) }),
 }));
 jest.mock('expo-router', () => ({
   router: { push: jest.fn(), replace: jest.fn(), back: jest.fn() },
@@ -44,6 +48,8 @@ let rendered: any;
 beforeEach(() => {
   mockLeave.mockReset();
   mockGet.mockReset().mockImplementation(() => new Promise(() => {}));
+  mockMutate.mockReset().mockResolvedValue(undefined);
+  mockForgetAll.mockReset();
   mockPeeked = undefined;
 });
 afterEach(async () => { if (rendered) await act(async () => rendered.unmount()); rendered = null; });
@@ -72,6 +78,23 @@ test('추방·나가기 뒤라 프로필이 NO_CREW 면 오류 대신 소속 화
   await mount();
   expect(mockLeave).toHaveBeenCalled();
   expect(rendered.root.findAllByType('ErrorState')).toHaveLength(0);
+});
+
+test('차단·해제에 성공하면 기억한 응답을 모두 잊는다 — 다시 연 화면이 차단한 사람이 든 이전 응답부터 그리면 안 된다', async () => {
+  mockGet.mockImplementation((key: string) => {
+    if (key === 'GET /crew/members/{userId}') return Promise.resolve({ data: profile });
+    if (key === 'GET /users/me') return Promise.resolve({ data: { id: 'viewer', membership: { status: 'MEMBER', crew: { isLeader: false } } } });
+    return new Promise(() => {});
+  });
+  await mount();
+  await act(async () => rendered.root.findAll((n: any) => n.type === 'ListRow' && n.props.title === '차단하기')[0].props.onPress());
+  await act(async () => rendered.root.findByType('Dialog').props.actions.props.children[1].props.onPress());
+  expect(mockMutate).toHaveBeenCalledWith('PUT /users/{userId}/block', { userId: 'u2' });
+  expect(mockForgetAll).toHaveBeenCalledTimes(1);
+
+  await act(async () => rendered.root.findAll((n: any) => n.type === 'Banner' && n.props.action)[0].props.action.onPress());
+  expect(mockMutate).toHaveBeenCalledWith('DELETE /users/{userId}/block', { userId: 'u2' });
+  expect(mockForgetAll).toHaveBeenCalledTimes(2);
 });
 
 test('프로필을 연 뒤 게시물 조회가 NO_CREW 면 소속 화면으로 보낸다', async () => {

@@ -151,6 +151,12 @@ export function forget(key: QueryKey, query?: unknown): void {
   forgets += 1;
 }
 
+/** 차단·신고 삭제처럼 대상이 어느 응답에 들어 있는지 알 수 없는 변경 뒤에 부른다 */
+export function forgetAll(): void {
+  lastResponses.clear();
+  forgets += 1;
+}
+
 /** 활동 합계가 바뀌는 변경. 성공하면 합계를 담은 응답을 질의와 상관없이 잊는다 — 다시 연 5-3·5-5·홈이 이전 합계부터 그리면 안 된다 */
 const ACTIVITY_WRITES: readonly MutationKey[] = [
   'POST /activities/{id}/items', 'PATCH /activities/{id}/items/{itemId}', 'DELETE /activities/{id}/items/{itemId}',
