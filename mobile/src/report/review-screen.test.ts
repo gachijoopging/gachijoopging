@@ -2,8 +2,9 @@ import React from 'react';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 const mockGet = jest.fn();
 const mockMutate = jest.fn();
+const mockForgetAll = jest.fn();
 jest.mock('../api/config', () => ({ apiConfig: { real: false }, createApiClient: () => jest.requireMock('../api/client').createMockClient() }));
-jest.mock('../api/client', () => ({ ApiError: class extends Error { code: string; constructor(mockCode: string) { super(mockCode); this.code = mockCode; } }, createMockClient: () => ({ get: (...args: unknown[]) => mockGet(...args), mutate: (...args: unknown[]) => mockMutate(...args) }) }));
+jest.mock('../api/client', () => ({ ApiError: class extends Error { code: string; constructor(mockCode: string) { super(mockCode); this.code = mockCode; } }, forgetAll: () => mockForgetAll(), createMockClient: () => ({ get: (...args: unknown[]) => mockGet(...args), mutate: (...args: unknown[]) => mockMutate(...args) }) }));
 jest.mock('expo/src/winter/fetch', () => ({ fetch: jest.fn() }));
 jest.mock('expo-router', () => ({ router: { canGoBack: () => true, back: jest.fn(), replace: jest.fn() }, useLocalSearchParams: () => ({}), useFocusEffect: (fn: () => void) => require('react').useEffect(fn, [fn]) }));
 jest.mock('react-native', () => ({ View: 'View', Pressable: 'Pressable', ScrollView: 'ScrollView', RefreshControl: 'RefreshControl', Image: 'Image', Platform: { OS: 'android', select: (options: Record<string, unknown>) => options.android ?? options.default } }));
@@ -26,6 +27,7 @@ beforeAll(() => { (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REAC
 beforeEach(() => {
   mockGet.mockReset().mockImplementation((key: string) => Promise.resolve(key === 'GET /users/me' ? me : { data: { items: [report('first')], nextCursor: null } }));
   mockMutate.mockReset().mockResolvedValue({});
+  mockForgetAll.mockReset();
 });
 afterEach(() => { act(() => tree.unmount()); });
 
@@ -89,4 +91,22 @@ test('다음 장을 못 받은 뒤에는 끝에 닿아도 다시 부르지 않�
   expect(tailCalls()).toBe(1);
   await act(async () => { list().props.onEndReached(); });
   expect(tailCalls()).toBe(1);
+});
+
+test('대상 삭제가 끝나면 기억한 응답을 모두 잊는다 — 기각은 잊지 않는다', async () => {
+  mockGet.mockImplementation((key: string) => Promise.resolve(key === 'GET /users/me' ? me : { data: { items: [report('first'), report('second', 'COMMENT')], nextCursor: null } }));
+  await mount();
+  await confirmAction('기각');
+  expect(rowIds()).toEqual(['second']);
+  expect(mockForgetAll).not.toHaveBeenCalled();
+
+  mockMutate.mockRejectedValueOnce(new Error('offline'));
+  await confirmAction('대상 삭제');
+  expect(mockForgetAll).not.toHaveBeenCalled();
+
+  act(() => tree.root.findAllByType('Button' as never).find((node) => node.props.label === '대상 삭제')!.props.onPress());
+  await act(async () => { await tree.root.findByType('Dialog' as never).findAllByType('Button' as never)[1].props.onPress(); });
+  expect(mockMutate).toHaveBeenLastCalledWith('POST /crew/reports/{reportId}', { reportId: 'second', result: 'DELETE' });
+  expect(rowIds()).toEqual([]);
+  expect(mockForgetAll).toHaveBeenCalledTimes(1);
 });

@@ -21,7 +21,7 @@ import {
   space,
   useRipple,
 } from 'design-system/src';
-import { ApiError, type ApiClient } from '../../src/api/client';
+import { ApiError, forgetAll, type ApiClient } from '../../src/api/client';
 import { createApiClient } from '../../src/api/config';
 import type { MOCKS } from '../../src/api/mocks.generated';
 import { monthDay } from '../../src/crew/crew';
@@ -144,6 +144,7 @@ export default function ReviewReportScreen() {
     } catch (e) {
       error = e;
     }
+    if (action === 'DELETE' && !error) forgetAll();
     if (!mounted.current || request !== generation.current) return;
     setBusyId(null);
     acting.current = false;
