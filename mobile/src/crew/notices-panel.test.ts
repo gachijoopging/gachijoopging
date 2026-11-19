@@ -17,6 +17,7 @@ jest.mock('react-native', () => ({ View: 'View', ScrollView: 'ScrollView', Refre
 jest.mock('./CalendarPanel', () => ({ CalendarPanel: 'CalendarPanel' }));
 jest.mock('./RecordsPanel', () => ({ RecordsPanel: 'RecordsPanel' }));
 jest.mock('../feed/leave', () => ({ leaveForMembership: jest.fn() }));
+jest.mock('../auth/launch', () => ({ launchDecided: () => true }));
 jest.mock('design-system/src', () => new Proxy(
   { space: {}, size: {}, borderWidth: {}, useTheme: () => ({ colors: {} }) },
   { get: (target, key) => (key in target ? target[key as keyof typeof target] : String(key)) },

@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { router, useIsFocused } from 'expo-router';
+import { launchDecided } from '../auth/launch';
 import { leaveForMembership } from '../feed/leave';
 import { acquireCrewSocket } from '../realtime/crew-socket';
 
@@ -27,7 +28,8 @@ export function useNotificationArrivals(onArrive: () => void): void {
       // 추방·세션 만료는 채팅·크루원 화면이 떠 있지 않아도 온다. 여러 화면이 함께 쥐고 있으므로 앞에 있는 화면만 보낸다
       if (typeof status !== 'object' || !focused.current) return;
       if (status.closed === 4403) void leaveForMembership();
-      else router.dismissTo('/start');
+      // 첫 화면이 정해지기 전의 세션 만료는 시작 분기가 로그인으로 보낸다. 같이 보내면 떠나는 탭 위에서 이동이 겹친다
+      else if (launchDecided()) router.dismissTo('/start');
     });
     registered = true;
     return () => socket.close();
