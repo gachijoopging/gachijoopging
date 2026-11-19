@@ -254,8 +254,11 @@ export async function signOut(): Promise<void> {
   lastResponses.clear();
   responsesOwner = null;
   forgetAccount();
-  signOutListeners.forEach((listener) => listener());
-  await clearTokens().catch(() => {});
+  try {
+    signOutListeners.forEach((listener) => listener());
+  } finally {
+    await clearTokens().catch(() => {});
+  }
 }
 
 export type HttpOptions = {

@@ -134,3 +134,13 @@ test('핸들을 쥔 채 로그아웃하면 연결을 닫고 로그인 필요(440
   next.close();
   expect(created[1].close).toHaveBeenCalledTimes(1);
 });
+
+test('화면의 상태 리스너가 던져도 로그아웃은 연결을 닫는다', async () => {
+  const { signOut } = require('../api/client') as typeof import('../api/client');
+  const home = acquireCrewSocket()!;
+  home.onStatus((status) => {
+    if (typeof status === 'object') throw new Error('boom');
+  });
+  await signOut().catch(() => {});
+  expect(created[0].close).toHaveBeenCalledTimes(1);
+});

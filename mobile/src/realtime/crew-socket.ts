@@ -22,8 +22,11 @@ function closeOnSignOut() {
     const entry = shared;
     if (!entry) return;
     shared = null;
-    entry.listeners.forEach((listener) => listener({ closed: 4401 }));
-    entry.socket.close();
+    try {
+      entry.listeners.forEach((listener) => listener({ closed: 4401 }));
+    } finally {
+      entry.socket.close();
+    }
   });
 }
 
