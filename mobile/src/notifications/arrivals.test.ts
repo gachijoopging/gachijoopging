@@ -17,6 +17,8 @@ const mockAcquire = jest.fn(() => ({
 jest.mock('../realtime/crew-socket', () => ({ acquireCrewSocket: () => mockAcquire() }));
 let mockFocused = true;
 jest.mock('expo-router', () => ({ useIsFocused: () => mockFocused }));
+const mockLeave = jest.fn();
+jest.mock("../feed/leave", () => ({ leaveForMembership: () => mockLeave() }));
 import { useNotificationArrivals } from './useNotificationArrivals';
 
 function Probe({ onArrive }: { onArrive: () => void }) {
@@ -31,6 +33,7 @@ beforeEach(() => {
   mockFocused = true;
   mockSocket.close.mockClear();
   mockAcquire.mockClear();
+  mockLeave.mockClear();
 });
 
 test('NOTIFICATION 이 오면 가장 최근 콜백을 부르고, 다시 그려도 연결을 새로 잡지 않는다', () => {
@@ -96,5 +99,25 @@ test('화면이 포커스가 아니면 부르지 않는다 — 채팅 한 건마
   act(() => mockSocket.handler!({ type: 'NOTIFICATION', data: { id: 502 } }));
   expect(onArrive).toHaveBeenCalledTimes(1);
   expect(mockAcquire).toHaveBeenCalledTimes(1);
+  act(() => tree.unmount());
+});
+
+test("추방(4403)으로 끊기면 소속 분기로 보낸다 — 홈·모이깅·2-3 만 열려 있으면 다른 화면이 맡아 주지 않는다", () => {
+  let tree!: ReactTestRenderer;
+  act(() => { tree = create(React.createElement(Probe, { onArrive: () => {} })); });
+  act(() => mockSocket.status!({ closed: 4403 }));
+  expect(mockLeave).toHaveBeenCalledTimes(1);
+  act(() => tree.unmount());
+});
+
+test("세션 만료(4401)와 가려진 화면의 4403 은 건드리지 않는다 — 앞에 있는 화면 하나만 보낸다", () => {
+  let tree!: ReactTestRenderer;
+  act(() => { tree = create(React.createElement(Probe, { onArrive: () => {} })); });
+  act(() => mockSocket.status!({ closed: 4401 }));
+  expect(mockLeave).not.toHaveBeenCalled();
+  mockFocused = false;
+  act(() => tree.update(React.createElement(Probe, { onArrive: () => {} })));
+  act(() => mockSocket.status!({ closed: 4403 }));
+  expect(mockLeave).not.toHaveBeenCalled();
   act(() => tree.unmount());
 });
