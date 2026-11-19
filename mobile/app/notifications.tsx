@@ -65,7 +65,7 @@ export default function NotificationsScreen() {
   const [snackbar, setSnackbar] = useState<string | null>(null);
   const request = useRef(0);
 
-  const load = useCallback(async (mode: 'first' | 'pull') => {
+  const load = useCallback(async (mode: 'first' | 'pull' | 'quiet') => {
     const generation = ++request.current;
     if (mode === 'pull') setRefreshing(true);
     const [list, count] = await Promise.allSettled([
@@ -77,7 +77,7 @@ export default function NotificationsScreen() {
     if (list.status === 'rejected') {
       // 당겨서 실패는 스낵바만 — 값은 그대로 두고 연결 배너까지 겹치지 않는다
       if (mode === 'pull') setSnackbar('새로고침에 실패했어요');
-      else setFailed(true);
+      else if (mode === 'first') setFailed(true);
       return;
     }
     setFailed(false);
@@ -97,7 +97,7 @@ export default function NotificationsScreen() {
       Notifications.getPermissionsAsync().then((p) => setNotifyOff(!p.granted)).catch(() => {});
     }, [load]),
   );
-  useNotificationArrivals(() => void load('first'));
+  useNotificationArrivals(() => void load('quiet'));
 
   const open = (item: Item) => {
     if (read && item.unread) {
