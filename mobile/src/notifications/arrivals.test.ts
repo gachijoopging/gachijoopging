@@ -15,6 +15,8 @@ const mockAcquire = jest.fn(() => ({
   close: mockSocket.close,
 }));
 jest.mock('../realtime/crew-socket', () => ({ acquireCrewSocket: () => mockAcquire() }));
+let mockFocused = true;
+jest.mock('expo-router', () => ({ useIsFocused: () => mockFocused }));
 import { useNotificationArrivals } from './useNotificationArrivals';
 
 function Probe({ onArrive }: { onArrive: () => void }) {
@@ -26,6 +28,7 @@ beforeEach(() => {
   mockSocket.handler = null;
   mockSocket.status = null;
   mockSocket.initial = 'connecting';
+  mockFocused = true;
   mockSocket.close.mockClear();
   mockAcquire.mockClear();
 });
@@ -77,5 +80,21 @@ test('이미 붙어 있는 연결을 받았을 때는 부르지 않는다 — �
   let tree!: ReactTestRenderer;
   act(() => { tree = create(React.createElement(Probe, { onArrive })); });
   expect(onArrive).not.toHaveBeenCalled();
+  act(() => tree.unmount());
+});
+
+test('화면이 포커스가 아니면 부르지 않는다 — 채팅 한 건마다 가려진 홈·모이깅이 다시 받지 않고, 돌아올 때의 재조회가 메운다', () => {
+  mockFocused = false;
+  const onArrive = jest.fn();
+  let tree!: ReactTestRenderer;
+  act(() => { tree = create(React.createElement(Probe, { onArrive })); });
+  act(() => mockSocket.handler!({ type: 'NOTIFICATION', data: { id: 501 } }));
+  act(() => mockSocket.status!('open'));
+  expect(onArrive).not.toHaveBeenCalled();
+  mockFocused = true;
+  act(() => tree.update(React.createElement(Probe, { onArrive })));
+  act(() => mockSocket.handler!({ type: 'NOTIFICATION', data: { id: 502 } }));
+  expect(onArrive).toHaveBeenCalledTimes(1);
+  expect(mockAcquire).toHaveBeenCalledTimes(1);
   act(() => tree.unmount());
 });

@@ -3,7 +3,7 @@ import NotificationsScreen from '../../app/notifications';
 const { act, create } = require('react-test-renderer');
 const mockGet = jest.fn();
 let mockFocus: () => void;
-jest.mock('expo-router', () => ({ router: {}, useFocusEffect: (callback: () => void) => { mockFocus = callback; require('react').useEffect(callback, [callback]); } }));
+jest.mock('expo-router', () => ({ router: {}, useIsFocused: () => true, useFocusEffect: (callback: () => void) => { mockFocus = callback; require('react').useEffect(callback, [callback]); } }));
 jest.mock('expo-notifications', () => ({ getPermissionsAsync: async () => ({ granted: true }) }));
 jest.mock('../api/client', () => ({ createMockClient: () => ({ get: (...args: unknown[]) => mockGet(...args) }) }));
 jest.mock('design-system/src', () => new Proxy({ space: {} }, { get: (target, key) => key in target ? target[key as keyof typeof target] : String(key) }));

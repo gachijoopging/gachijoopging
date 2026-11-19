@@ -11,6 +11,7 @@ jest.mock('expo-router', () => ({
   router: { push: (...a: unknown[]) => mockPush(...a), setParams: (p: Record<string, undefined>) => { mockParams = { ...mockParams, ...p }; } },
   useLocalSearchParams: () => mockParams,
   useFocusEffect: (fn: () => void) => require('react').useEffect(fn, [fn]),
+  useIsFocused: () => true,
 }));
 jest.mock('react-native', () => ({ View: 'View', ScrollView: 'ScrollView', RefreshControl: 'RefreshControl' }));
 jest.mock('./CalendarPanel', () => ({ CalendarPanel: 'CalendarPanel' }));
