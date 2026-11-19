@@ -955,7 +955,8 @@ sudo journalctl -t gachijoopging-backend-1 --since -2h | tail -50  # 재배포�
 tail -50 /var/log/gachijoopging-watch.log
 ```
 
-되돌리는 것은 `./deploy.sh` (인자 없이) 로 직전 태그로 간다 — §롤백.
+되돌리는 것은 `./deploy.sh` (인자 없이) 로 직전 태그로 간다 — §롤백. 이미지와 설정이 함께 바뀐 배포를
+넘으면 인자 없이는 안 되고 §롤백 의 수동 절차를 따른다.
 
 > ⚠️ **호스트가 통째로 죽었다 살아났으면 DB 커넥션이 안 돌아온다.** Supabase pooler 가 죽은 세션을
 > 쥔 채로 상한을 채운다. 끊는 방법은 §서버를 교체할 때 의 ⚠️ 에 있다.
