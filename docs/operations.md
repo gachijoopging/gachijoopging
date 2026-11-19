@@ -293,9 +293,33 @@ cd /opt/gachijoopging && ./deploy.sh <태그>      # 특정 태그로
 다시 올린다. 이미지 태그가 곧 커밋 SHA 다:
 
 ```sh
-T=<되돌린 태그>
+T=<되돌릴 태그>
 git show "$T:infra/docker-compose.yml" | ssh <서버> 'cat > /opt/gachijoopging/docker-compose.yml'
 git show "$T:infra/nginx/nginx.conf"   | ssh <서버> 'cat > /opt/gachijoopging/nginx/nginx.conf'
+# media_link.js 가 없는 태그도 있다. 그 태그의 compose 는 이 파일을 마운트하지 않으므로 건너뛴다
+if git cat-file -e "$T:infra/nginx/media_link.js" 2>/dev/null; then
+  git show "$T:infra/nginx/media_link.js" | ssh <서버> 'cat > /opt/gachijoopging/nginx/media_link.js'
+fi
+```
+
+그다음은 서버 `.env` 의 `IMAGE_TAG` 가 지금 어느 태그냐에 따라 갈린다.
+
+**배포가 성공한 뒤에 사람이 되돌릴 때** — `IMAGE_TAG` 는 아직 새 태그다. 설정을 올린 뒤 서버에서
+`deploy.sh` 에 태그를 준다. `IMAGE_TAG` 를 바꾸고 기동을 기다리는 것까지 `deploy.sh` 가 한다.
+
+```sh
+# 뒤의 줄은 Nginx 를 다시 만든다. compose 는 nginx.conf 의 내용만 바뀐 것을 알아채지 못한다
+ssh <서버> "cd /opt/gachijoopging && ./deploy.sh $T && docker compose up -d --force-recreate nginx"
+```
+
+이 경우 **Actions 로 되돌리지 않는다.** deploy.yml 은 `deploy.sh` 를 부르기 전에 `main` 의 설정을 다시
+올린다. 옛 이미지가 새 설정을 받아 healthy 가 되지 못하고, `deploy.sh` 가 새 태그로 돌아간 채 실패로 끝난다.
+`docker compose up -d --force-recreate` 만 돌려도 안 된다 — `IMAGE_TAG` 가 그대로라 새 이미지에 옛 설정이 얹힌다.
+
+**배포 순간에 자동 롤백됐을 때** — `deploy.sh` 가 `IMAGE_TAG` 를 이미 직전 태그로 되돌렸고, `T` 는 그 태그다.
+`./deploy.sh $T` 는 "이미 … 할 것 없다" 로 끝나므로 컨테이너만 다시 만든다.
+
+```sh
 ssh <서버> 'cd /opt/gachijoopging && docker compose up -d --force-recreate'
 ```
 
