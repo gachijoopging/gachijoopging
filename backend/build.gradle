@@ -86,7 +86,7 @@ dependencies {
     implementation "com.google.firebase:firebase-admin:${firebaseAdminVersion}"
 
     // 계약 검증용이다 (02-conventions §12). -ui 가 아니라 -api 를 쓴다 — Swagger UI 를 띄울 이유가 없고,
-    // /v3/api-docs 는 SecurityConfig 의 anyRequest().authenticated() 에 걸려 운영에서 잠긴다.
+    // /v3/api-docs 는 application.yml 에서 꺼 두고 OpenApiContractTest 만 켠다.
     // 2.8.x 가 부트 3.0~3.5 대역이다. 3.x 는 부트 4 계열이라 올리지 않는다.
     implementation "org.springdoc:springdoc-openapi-starter-webmvc-api:${springdocVersion}"
 

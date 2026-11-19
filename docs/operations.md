@@ -100,7 +100,7 @@ printf '\nSPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE=3\n' >> .env
 docker compose up -d redis backend
 
 docker run --rm --network gachijoopging_default curlimages/curl \
-  -sS -o /dev/null -w '%{http_code}\n' http://backend:8080/actuator/health
+  -sS -o /dev/null -w '%{http_code}\n' http://backend:8081/actuator/health
 ```
 
 이 줄은 교체 중에만 쓴다. **11번에서 지운다** — 남겨 두면 운영이 커넥션 3개로 돈다.
@@ -182,7 +182,7 @@ Nginx 가 443 을 잡고 `/api/v1/...` 를 **경로 그대로** 백엔드로 넘
 | `https://gachijoopging.site` | 301 → `www` (apex 는 쓰지 않는다) |
 | `https://www.gachijoopging.site/api/v1/...` | 백엔드 |
 | `.../api/v1/ws` | STOMP 소켓. 유휴 타임아웃 1시간 — 기본 60초면 조용한 구간에서 끊긴다 |
-| `.../actuator/health` | 헬스체크만 연다. `/actuator` 전체를 열면 prometheus 지표가 같이 공개된다 |
+| `.../actuator/health` | 헬스체크만 연다(관리 포트 `backend:8081`). `/actuator` 전체를 열면 prometheus 지표가 같이 공개된다 |
 
 **upstream 을 변수로 쓴다.** `proxy_pass http://backend:8080` 처럼 고정 이름으로 적으면 Nginx 가
 **시작할 때** 이름을 해석하고, 백엔드가 아직 없으면 아예 뜨지 않는다. `resolver` + `set $upstream` 이면
@@ -213,7 +213,7 @@ sudo docker run --rm -p 80:80 \
 ```powershell
 powershell -ExecutionPolicy Bypass -File infra\dev-keys.ps1   # 최초 1회
 docker compose -f infra/docker-compose.dev.yml up -d
-curl http://localhost:8080/actuator/health                     # {"status":"UP"}
+curl http://localhost:8080/api/v1/health                       # {"data":{"status":"UP"}} — /actuator 는 관리 포트(8081)라 호스트에 없다
 ```
 
 `dev-keys.ps1` 은 JWT 키 한 쌍을 만들어 루트 `.env` 에 넣는다. 백엔드는 그 키가 없으면 기동에서 죽는다 —
@@ -259,7 +259,7 @@ curl http://localhost:8080/actuator/health                     # {"status":"UP"}
 |---|---|
 | `dev` 머지 → 이미지 | `.github/workflows/build.yml` → `yydd12/gachijoopging-backend:<커밋 SHA>` |
 | `main` 머지 → 배포 | `.github/workflows/deploy.yml` → 서버에서 `infra/deploy.sh` |
-| 서버의 파일 | `/opt/gachijoopging/` 에 `docker-compose.yml`·`nginx/nginx.conf`·`deploy.sh`·`.env`. 저장소를 두지 않는다 — deploy.yml 이 배포마다 올린다 |
+| 서버의 파일 | `/opt/gachijoopging/` 에 `docker-compose.yml`·`nginx/nginx.conf`·`nginx/media_link.js`·`deploy.sh`·`.env`. 저장소를 두지 않는다 — deploy.yml 이 배포마다 올린다 |
 
 **배포할 태그는 머지 커밋의 두 번째 부모다.** `dev → main` 은 merge commit 이라(`conventions.md`) `main`
 머리 SHA 로 만든 이미지는 없다. 이미지가 있는 것은 머지 당시 `dev` 머리, 즉 `git rev-parse HEAD^2` 다.
@@ -285,6 +285,43 @@ cd /opt/gachijoopging && ./deploy.sh <태그>      # 특정 태그로
 
 `deploy.sh` 는 기동을 3분까지 기다린다. healthy 가 안 되면 **스스로 직전 태그로 되돌리고** 실패로 끝난다.
 안 기다리면 깨진 배포가 초록으로 끝난다.
+
+**설정은 되돌아가지 않는다.** `deploy.sh` 는 자동 롤백을 포함해 `IMAGE_TAG` 만 되돌린다.
+`docker-compose.yml`·`nginx/` 는 deploy.yml 이 마지막에 올린 것이 그대로 남는다. 이미지와 설정이 함께
+바뀐 배포를 넘어 되돌리면 둘이 어긋난다 — 사진 서명을 HMAC 으로 바꾸고 Actuator 를 8081 로 옮긴 배포보다
+앞 태그로 가면 **모든 사진이 403** 이고 healthcheck 가 계속 unhealthy 다. 그때는 설정도 그 태그의 것으로
+다시 올린다. 이미지 태그가 곧 커밋 SHA 다:
+
+```sh
+T=<되돌릴 태그>
+git show "$T:infra/docker-compose.yml" | ssh <서버> 'cat > /opt/gachijoopging/docker-compose.yml'
+git show "$T:infra/nginx/nginx.conf"   | ssh <서버> 'cat > /opt/gachijoopging/nginx/nginx.conf'
+# media_link.js 가 없는 태그도 있다. 그 태그의 compose 는 이 파일을 마운트하지 않으므로 건너뛴다
+if git cat-file -e "$T:infra/nginx/media_link.js" 2>/dev/null; then
+  git show "$T:infra/nginx/media_link.js" | ssh <서버> 'cat > /opt/gachijoopging/nginx/media_link.js'
+fi
+```
+
+그다음은 서버 `.env` 의 `IMAGE_TAG` 가 지금 어느 태그냐에 따라 갈린다.
+
+**배포가 성공한 뒤에 사람이 되돌릴 때** — `IMAGE_TAG` 는 아직 새 태그다. 설정을 올린 뒤 서버에서
+`deploy.sh` 에 태그를 준다. `IMAGE_TAG` 를 바꾸고 기동을 기다리는 것까지 `deploy.sh` 가 한다.
+
+```sh
+# 뒤의 줄은 Nginx 를 다시 만든다. compose 는 nginx.conf 의 내용만 바뀐 것을 알아채지 못한다
+ssh <서버> "cd /opt/gachijoopging && ./deploy.sh ${T:?} && docker compose up -d --force-recreate nginx"
+```
+
+이 경우 **Actions 로 되돌리지 않는다.** deploy.yml 은 `deploy.sh` 를 부르기 전에 `main` 의 설정을 다시
+올린다. 옛 이미지가 새 설정을 받아 healthy 가 되지 못하고, `deploy.sh` 가 새 태그로 돌아간 채 실패로 끝난다.
+`docker compose up -d --force-recreate` 만 돌려도 안 된다 — `IMAGE_TAG` 가 그대로라 새 이미지에 옛 설정이 얹힌다.
+
+**배포 순간에 자동 롤백됐을 때** — `deploy.sh` 가 `IMAGE_TAG` 를 이미 직전 태그로 되돌렸고, `T` 는 그 태그다.
+`./deploy.sh $T` 는 "이미 … 할 것 없다" 로 끝나므로 컨테이너만 다시 만든다.
+
+```sh
+ssh <서버> 'cd /opt/gachijoopging && docker compose up -d --force-recreate'
+```
 
 필요한 GitHub Secret 은 §시크릿 에 있다. 여기 옮겨 적지 않는다 — 한쪽이 반드시 낡는다.
 
@@ -326,13 +363,15 @@ node infra/legal/build.mjs --check    # 어긋나면 1 로 끝난다 — legal.y
 
 ### 서명
 
-만료 6시간(`app.media.signed-url-ttl`). 만드는 쪽은 백엔드 `MediaSignedUrl`, 검증하는 쪽은 Nginx
-`secure_link_md5` 다. **식이 한 글자만 달라도 모든 사진이 403 이 되고, 그 사실은 배포한 뒤에야 드러난다.**
+만료 6시간(`app.media.signed-url-ttl`). 만드는 쪽은 백엔드 `MediaSignedUrl`, 검증하는 쪽은 Nginx 의
+njs 스크립트 `infra/nginx/media_link.js` 다. **식이 한 글자만 달라도 모든 사진이 403 이 되고, 그 사실은 배포한 뒤에야 드러난다.**
 
 ```
-raw = <만료><uri> <MEDIA_SECURE_LINK_SECRET>      ← uri 와 비밀 사이에 공백 한 칸
-서명 = base64url(MD5(raw)) · 패딩 없음
+서명 = base64url(HMAC-SHA256(<MEDIA_SECURE_LINK_SECRET>, <만료><uri>)) · 패딩 없음
 ```
+
+Nginx 내장 `secure_link_md5` 는 MD5 만 지원해서 쓰지 않는다. `media_link.js` 는 compose 가 마운트하고
+`deploy.yml` 이 `nginx.conf` 와 함께 올린다 — 서버에 없으면 Docker 가 그 자리에 빈 디렉터리를 만들어 Nginx 가 뜨지 않는다.
 
 Nginx 설정 파일은 그대로 쓰이지 않는다. 컨테이너가 `envsubst` 로 `${MEDIA_SECURE_LINK_SECRET}` 와
 `${MEDIA_ROOT}` **둘만** 바꿔 `/etc/nginx/nginx.conf` 를 만든다. 이름을 넘기지 않은 `$host`·`$uri` 는
@@ -480,17 +519,17 @@ Supabase Enforce SSL. 나머지는 한 겹이거나 그보다 약하고, 어디�
 
 | | |
 |---|---|
-| 백엔드 8080 | **호스트에 내지 않는다.** Nginx 가 compose 네트워크로 `backend:8080` 에 붙고, healthcheck 는 컨테이너 안에서 `localhost` 를 본다. 되살리면 Nginx 를 우회해 **`/actuator/prometheus` 가 인증 없이** 열리고, **`X-Real-IP` 를 위조**해 `login:ip:` 카운터를 피할 수 있다 |
+| 백엔드 8080 · 8081 | **호스트에 내지 않는다.** Nginx 가 compose 네트워크로 `backend:8080`(앱)과 `backend:8081`(관리 포트의 `/actuator/health` 하나)에 붙고, healthcheck 는 컨테이너 안에서 `localhost:8081` 을 본다. 8080 을 되살리면 **`X-Real-IP` 를 위조**해 `login:ip:` 카운터를 피할 수 있고, 8081 을 되살리면 **`/actuator/prometheus` 가 인증 없이** 열린다 |
 | Redis 6379 | 같다. `--requirepass` 까지 걸려 있다(§Redis) |
 | AI · DB | 이 서버에 없다. AI 는 담당자 맥, DB 는 Supabase |
 
 서버 안에서:
 
 ```sh
-sudo ss -tlnp | grep 8080          # 아무것도 안 나와야 한다
+sudo ss -tlnp | grep -E ':(8080|8081)\b'   # 아무것도 안 나와야 한다
 ```
 
-compose 가 8080 을 publish 하지 않으므로 **무언가 보이면 누가 `ports:` 를 되살린 것이다.**
+compose 가 8080·8081 을 publish 하지 않으므로 **무언가 보이면 누가 `ports:` 를 되살린 것이다.**
 
 밖에서는 전 포트를 센다. 주소는 §구성 의 공개 주소를 쓴다 — 서버를 새로 만들면 IP 가 바뀐다.
 
@@ -498,14 +537,14 @@ compose 가 8080 을 publish 하지 않으므로 **무언가 보이면 누가 `p
 nmap -Pn -p- www.gachijoopging.site
 ```
 
-`nmap` 이 없으면 아래로 대신하되 **범위를 좁힌다.** 위 표가 닫혀 있어야 한다고 적은 8080·6379 를
+`nmap` 이 없으면 아래로 대신하되 **범위를 좁힌다.** 위 표가 닫혀 있어야 한다고 적은 8080·8081·6379 를
 반드시 포함한다 — 빼면 누가 `ports:` 를 되살려도 이 확인이 그냥 통과한다.
 
 ```sh
 H=www.gachijoopging.site
 p() { timeout 3 bash -c "echo > /dev/tcp/$H/$1" 2>/dev/null && echo "$1"; }
 export H; export -f p
-{ seq 1 1024; echo 6379; echo 8080; } | xargs -P 100 -I{} bash -c 'p {}' | sort -n
+{ seq 1 1024; echo 6379; echo 8080; echo 8081; } | xargs -P 100 -I{} bash -c 'p {}' | sort -n
 # → 22 · 80 · 443 (약 40초)
 ```
 
@@ -916,7 +955,8 @@ sudo journalctl -t gachijoopging-backend-1 --since -2h | tail -50  # 재배포�
 tail -50 /var/log/gachijoopging-watch.log
 ```
 
-되돌리는 것은 `./deploy.sh` (인자 없이) 로 직전 태그로 간다 — §롤백.
+되돌리는 것은 `./deploy.sh` (인자 없이) 로 직전 태그로 간다 — §롤백. 이미지와 설정이 함께 바뀐 배포를
+넘으면 인자 없이는 안 되고 §롤백 의 수동 절차를 따른다.
 
 > ⚠️ **호스트가 통째로 죽었다 살아났으면 DB 커넥션이 안 돌아온다.** Supabase pooler 가 죽은 세션을
 > 쥔 채로 상한을 채운다. 끊는 방법은 §서버를 교체할 때 의 ⚠️ 에 있다.

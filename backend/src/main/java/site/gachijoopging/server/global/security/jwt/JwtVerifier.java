@@ -34,6 +34,20 @@ public class JwtVerifier {
   }
 
   public UUID verify(String token) {
+    Token verified = verifySignature(token);
+    boolean stale =
+        sessionVersionLoader
+            .sessionVersionOf(verified.userId())
+            .filter(verified::issuedBeforeCut)
+            .isPresent();
+    if (stale) {
+      throw reject("세션이 끊기기 전에 발급됐다");
+    }
+    return verified.userId();
+  }
+
+  /** 서명·만료만 대조한다. 세션은 호출자가 {@link Token#issuedBeforeCut} 로 대조해야 한다. */
+  public Token verifySignature(String token) {
     DecodedJWT decoded = decode(token);
 
     if (!REQUIRED_ALGORITHM.equals(decoded.getAlgorithm())) {
@@ -61,20 +75,15 @@ public class JwtVerifier {
       throw reject("만료됐다");
     }
 
-    UUID userId = subject(decoded);
-    if (staleSession(decoded, userId)) {
-      throw reject("세션이 끊기기 전에 발급됐다");
-    }
-    return userId;
+    return new Token(subject(decoded), decoded.getClaim(SESSION_VERSION_CLAIM).asInt());
   }
 
-  // 시각(iat)은 초 단위라 같은 초에 끊기 전·후 토큰을 가를 수 없다. 끊을 때마다 오르는 버전으로 대조한다
-  private boolean staleSession(DecodedJWT decoded, UUID userId) {
-    Integer tokenVersion = decoded.getClaim(SESSION_VERSION_CLAIM).asInt();
-    return sessionVersionLoader
-        .sessionVersionOf(userId)
-        .filter(current -> !current.equals(tokenVersion))
-        .isPresent();
+  public record Token(UUID userId, Integer sessionVersion) {
+
+    // 시각(iat)은 초 단위라 같은 초에 끊기 전·후 토큰을 가를 수 없다. 끊을 때마다 오르는 버전으로 대조한다
+    public boolean issuedBeforeCut(int currentSessionVersion) {
+      return !Integer.valueOf(currentSessionVersion).equals(sessionVersion);
+    }
   }
 
   private DecodedJWT decode(String token) {
