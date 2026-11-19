@@ -32,7 +32,7 @@ import 순서를 리뷰에서 언급하지 않는다.
 | 컨트롤러 | `{도메인}Controller` — 기본 도메인당 1개, 300줄 넘으면 리소스 단위 분리 | `ActivityController` |
 | 서비스 | `{도메인}Service` — 자기 도메인 데이터·트랜잭션 경계 | `UserService`, `CrewService` |
 | 파사드 | `{도메인}Facade` — 응답 조립·외부 호출 → 저장. 명령·조회 구분은 메서드 이름으로 한다. 필요한 곳만 만들고, **그 경로를 담당하는 도메인의 `facade/`** 에 둔다 | `MediaFacade`, `AuthFacade` |
-| 정리 작업 | `{대상}CleanupJob` — 스케줄러가 부르는 것. `service/` | `RefreshTokenCleanupJob` |
+| 정리 작업 | `{대상}CleanupJob` — 스케줄러가 부르는 것. `service/` (파일을 지우면 `facade/`) | `RefreshTokenCleanupJob` |
 | 정책·계산기 | 상태도 트랜잭션도 없는 규칙. 접미사를 강제하지 않고 하는 일로 이름 짓는다. `service/` | `OpaqueToken`, `MediaSignedUrl`, `MediaImageValidator` |
 | 도메인 이벤트 | `{사건}Event` + `{사건}Listener`. `event/` | `MediaQuarantineEvent`, `MediaQuarantineListener` |
 | 리포지토리 | `{엔티티}Repository` — Spring Data 인터페이스. `repository/` | `ActivityPhotoRepository` |
@@ -70,6 +70,7 @@ JSON 필드명은 openapi.yaml 이 정본이다 — camelCase, 철자 하나도 
   읽기라 트랜잭션 없이도 안전하다.
 - **`service/XxxCleanupJob`** — `@Scheduled` 가 부르는 정리 작업. 자기 데이터의
   bulk 삭제를 `BatchDelete`(`global/batch`)로 배치마다 따로 커밋하며, 리포지토리를 직접 쓰므로 `facade/` 가 아니라 서비스 옆이다.
+  예외: 디스크 파일(`client/`)을 지우는 정리 작업은 `facade/` 에 둔다 — `client/` 는 `service/` 에서 부를 수 없다(L3). 예: `MediaOrphanCleanupJob`
 - **`service/`(`XxxService`)** — **트랜잭션 경계**, 비즈니스 규칙, 권한 검사
   (소유자·크루장·크루원), 타 도메인 **서비스** 호출. 타 도메인 서비스 주입은
   `01-구조.md` §4 의 관계만, 순환하면 기동이 실패한다(§12). **HttpServletRequest·ResponseEntity 등 웹 타입을 모른다.**

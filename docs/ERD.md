@@ -422,3 +422,4 @@ meets · meet_members · meet_invites · meet_join_requests · friendships · ne
 | 서버 접속 로그 | 3개월 | 3개월 지난 로그 삭제 | infra 담당 (GAC-109). DB 행이 아니다 |
 | 사용자가 버린 활동 사진 | 버릴 때 (`DELETE /media/{mediaId}`) | `activity_photos`·`media` 행을 지우고 커밋 뒤 원본·썸네일 파일을 지운다. `deleted/` 를 거치지 않는다 | 있음 (GAC-89) |
 | 버리지 않았는데 줍기에 연결되지 않고 남은 활동 사진 | 활동 삭제 때 | 활동의 다른 사진과 같다 — 기록의 일부로 남는다 (`feature-scope.md` "줍기 없이 남은 활동 사진") | 있음 (GAC-88) |
+| DB 가 가리키지 않는 사진 파일 | 매일 04:30 KST | `media` 행의 `object_key`·`thumb_key` 어느 것도 가리키지 않고 수정 시각이 1시간 지난 파일을 삭제 — `deleted/` 는 양쪽에서 떼고 비교한다 (`MediaOrphanCleanupJob`) | 있음 |
