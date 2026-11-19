@@ -115,8 +115,10 @@ test('내 누적·크루 통계·달력·크루원 기록은 실서버 응답이
   await api.get('GET /crew/stats', { range: 'WEEK' });
   await api.get('GET /crew/calendar', { month: '2026-10' });
   await api.get('GET /crew/members/{userId}/activities', { userId: 'u2', cursor: undefined });
+  await api.get('GET /crew/export', { from: '2026-10-01', to: '2026-10-31' });
   expect(fetch.mock.calls.map(([url]) => url.replace('https://api.test/api/v1', ''))).toEqual([
     '/users/me/stats', '/crew/stats?range=WEEK', '/crew/calendar?month=2026-10', '/crew/members/u2/activities',
+    '/crew/export?from=2026-10-01&to=2026-10-31',
   ]);
 });
 

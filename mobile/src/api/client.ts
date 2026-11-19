@@ -29,9 +29,10 @@ type ContractResponse<K extends ContractKey> = K extends `${infer M} ${infer P e
 // 목도 계약을 만족해야 한다. example 이 계약과 어긋나면 여기서 타입 오류가 난다
 MOCKS satisfies { readonly [K in ContractKey]: ContractResponse<K> };
 
-export type QueryKey = MockKey;
+export type QueryKey = MockKey | 'GET /crew/export';
 export type ApiResponse<K extends QueryKey> =
   K extends ContractKey ? ContractResponse<K> :
+  K extends 'GET /crew/export' ? { fileName: string; text: string } :
   K extends 'GET /agreements' ? { data: { items: readonly AgreementDefinition[] } } :
   K extends 'GET /users/me/agreements' ? { data: AgreementState } :
   K extends 'GET /users/me' ? { data: Omit<MeData, 'membership'> & {
@@ -313,6 +314,10 @@ export function createHttpClient({ baseUrl, fetch: send = (...args) => globalThi
     let json: unknown = null;
     try { json = text ? JSON.parse(text) : null; } catch {}
     if (!response.ok) throw fromEnvelope(response.status, json);
+    if (response.headers?.get('content-type')?.startsWith('text/csv')) {
+      const encoded = /filename\*=UTF-8''([^;]+)/i.exec(response.headers.get('content-disposition') ?? '')?.[1] ?? '';
+      return { fileName: decodeURIComponent(encoded), text };
+    }
     return json ?? undefined;
   }
 

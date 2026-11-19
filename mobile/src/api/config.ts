@@ -26,7 +26,7 @@ const REAL_KEYS: ReadonlySet<MutationKey> = new Set<MutationKey>([
   'POST /activities', 'GET /activities/current', 'POST /activities/{id}/pause', 'POST /activities/{id}/resume',
   'POST /activities/{id}/items', 'PATCH /activities/{id}/items/{itemId}', 'DELETE /activities/{id}/items/{itemId}',
   'POST /activities/{id}/end', 'GET /activities/{id}', 'DELETE /activities/{id}', 'GET /users/me/activities',
-  'GET /crew/home', 'GET /users/me/stats', 'GET /crew/stats', 'GET /crew/calendar', 'GET /crew/members/{userId}/activities',
+  'GET /crew/home', 'GET /users/me/stats', 'GET /crew/stats', 'GET /crew/calendar', 'GET /crew/export', 'GET /crew/members/{userId}/activities',
   'DELETE /media/{mediaId}',
   'GET /crew/posts', 'POST /crew/posts', 'GET /posts/{postId}', 'DELETE /posts/{postId}',
   'PUT /posts/{postId}/like', 'DELETE /posts/{postId}/like', 'GET /posts/{postId}/comments', 'POST /posts/{postId}/comments',

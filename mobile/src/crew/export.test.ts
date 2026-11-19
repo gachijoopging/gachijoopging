@@ -1,4 +1,4 @@
-import { exportFileName, exportRangeError, formatDateInput } from './export';
+import { csvFileText, defaultExportRange, exportRangeError, formatDateInput } from './export';
 
 describe('CSV 내보내기 기간 검증', () => {
   test('시작일이 종료일보다 늦으면 막는다', () => {
@@ -17,9 +17,17 @@ describe('CSV 내보내기 기간 검증', () => {
   });
 });
 
-describe('CSV 파일 이름', () => {
-  test('크루 기록과 기간을 이름에 담는다', () => {
-    expect(exportFileName('2026-09-01', '2026-09-30')).toBe('crew-records_2026-09-01_2026-09-30.csv');
+describe('CSV 파일 본문', () => {
+  test('BOM 은 한 번만 붙는다 — 응답을 글자로 읽으면 BOM 이 떨어질 수도 남을 수도 있다', () => {
+    expect(csvFileText('날짜,크루원\r\n')).toBe('﻿날짜,크루원\r\n');
+    expect(csvFileText('﻿날짜,크루원\r\n')).toBe('﻿날짜,크루원\r\n');
+  });
+});
+
+describe('CSV 기본 기간', () => {
+  test('기본 기간은 이번 달 1일부터 오늘(KST)', () => {
+    expect(defaultExportRange(new Date('2026-10-17T03:00:00Z'))).toEqual({ from: '2026-10-01', to: '2026-10-17' });
+    expect(defaultExportRange(new Date('2026-10-31T15:30:00Z'))).toEqual({ from: '2026-11-01', to: '2026-11-01' });
   });
 });
 
