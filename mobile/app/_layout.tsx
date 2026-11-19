@@ -4,7 +4,7 @@ import { Stack, useRootNavigationState, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { ThemeProvider, useReduceMotion } from 'design-system/src';
 import { apiConfig, createApiClient } from '../src/api/config';
-import { launchDestination } from '../src/auth/launch';
+import { decideLaunch, launchDestination } from '../src/auth/launch';
 import { endIfExpired } from '../src/activity/actions';
 import { loadLastAccount } from '../src/activity/store';
 
@@ -17,6 +17,7 @@ function useLaunchRoute() {
   useEffect(() => {
     if (!mounted || !apiConfig.real) return;
     launchDestination(createApiClient()).then((destination) => {
+      decideLaunch(destination);
       if (destination && destination !== '/(tabs)') router.replace(destination);
     });
   }, [mounted, router]);
