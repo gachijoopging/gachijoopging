@@ -97,6 +97,15 @@ public interface MediaRepository extends JpaRepository<Media, UUID> {
       nativeQuery = true)
   void enqueuePurge(@Param("key") String key);
 
+  @Query(
+      value =
+          """
+          SELECT k FROM media, LATERAL (VALUES (object_key), (thumb_key)) AS v(k)
+          WHERE k LIKE :folder || '/%' OR k LIKE 'deleted/' || :folder || '/%'
+          """,
+      nativeQuery = true)
+  List<String> findKeysIn(@Param("folder") String folder);
+
   interface KeyRow {
     String getObjectKey();
 

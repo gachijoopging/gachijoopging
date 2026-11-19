@@ -163,6 +163,11 @@ public class MediaService {
     mediaRepository.quarantineThumbKey(fromKey, toKey);
   }
 
+  /** 월 폴더({@code yyyy/MM}) 와 그 격리 폴더 안을 가리키는 행 키. */
+  public List<String> referencedKeysIn(String monthFolder) {
+    return mediaRepository.findKeysIn(monthFolder);
+  }
+
   private static long secondsUntilMidnight(Instant now) {
     Instant nextMidnight = LocalDate.ofInstant(now, KST).plusDays(1).atStartOfDay(KST).toInstant();
     return Duration.between(now, nextMidnight).toSeconds();

@@ -1,6 +1,5 @@
 import Constants from 'expo-constants';
-import { createHttpClient, createMockClient, type ApiClient, type ApiResponse, type MockOptions, type MutationKey } from './client';
-import { MOCKS } from './mocks.generated';
+import { createHttpClient, createMockClient, type ApiClient, type MockOptions, type MutationKey } from './client';
 
 const extra = Constants.expoConfig?.extra ?? {};
 
@@ -19,6 +18,7 @@ const REAL_KEYS: ReadonlySet<MutationKey> = new Set<MutationKey>([
   'POST /auth/signup', 'POST /auth/login', 'POST /auth/kakao', 'POST /auth/google', 'POST /auth/refresh', 'POST /auth/logout',
   'POST /auth/password-reset', 'POST /auth/password-reset/confirm', 'PUT /users/me/social',
   'GET /users/me', 'PATCH /users/me', 'DELETE /users/me',
+  'GET /agreements', 'GET /users/me/agreements', 'PUT /users/me/agreements',
   'POST /crews', 'GET /crews', 'GET /crew', 'PATCH /crew', 'POST /crew/leave',
   'GET /crew/members', 'GET /crew/members/{userId}', 'DELETE /crew/members/{userId}', 'PUT /crew/leader',
   'POST /crews/join-requests', 'GET /crews/join-requests/mine', 'DELETE /crews/join-requests/mine',
@@ -46,11 +46,7 @@ export function createApiClient(options: MockOptions = {}): ApiClient {
   if (!apiConfig.real) return mock;
   const http = createHttpClient({ baseUrl: apiConfig.baseUrl });
   return {
-    get(key, query) {
-      // ponytail: 서버에 동의 API 가 없다. complete:false 를 주면 로그인마다 1-5 로 돌아간다. 항목은 미선택 그대로 둬야 1-4 가 동의를 받는다. 동의 API 가 생기면 REAL_KEYS 로 옮기고 지운다
-      if (key === 'GET /users/me/agreements') return Promise.resolve({ data: { ...MOCKS['GET /users/me/agreements'].data, complete: true } } as unknown as ApiResponse<typeof key>);
-      return REAL_KEYS.has(key) ? http.get(key, query) : mock.get(key, query);
-    },
+    get: (key, query) => (REAL_KEYS.has(key) ? http.get(key, query) : mock.get(key, query)),
     mutate: (key, body) => (REAL_KEYS.has(key) || isRealUpload(key, body) ? http.mutate(key, body) : mock.mutate(key, body)),
   };
 }
