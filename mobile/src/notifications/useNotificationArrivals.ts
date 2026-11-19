@@ -10,6 +10,12 @@ export function useNotificationArrivals(onArrive: () => void): void {
     const socket = acquireCrewSocket();
     if (!socket) return;
     socket.onNotification(() => latest.current());
+    // 끊긴 사이 생긴 알림은 소켓이 다시 보내 주지 않는다. 받는 순간 이미 붙어 있던 연결은 화면이 방금 스스로 받았으니 건너뛴다
+    let registered = false;
+    socket.onStatus((status) => {
+      if (registered && status === 'open') latest.current();
+    });
+    registered = true;
     return () => socket.close();
   }, []);
 }

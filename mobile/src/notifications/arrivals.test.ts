@@ -1,10 +1,15 @@
 import React from 'react';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 
-const mockSocket = { handler: null as null | ((event: unknown) => void), close: jest.fn() };
+const mockSocket = { handler: null as null | ((event: unknown) => void), status: null as null | ((status: unknown) => void), initial: 'connecting' as unknown, close: jest.fn() };
 const mockAcquire = jest.fn(() => ({
   onNotification: (handler: (event: unknown) => void) => {
     mockSocket.handler = handler;
+    return () => {};
+  },
+  onStatus: (listener: (status: unknown) => void) => {
+    mockSocket.status = listener;
+    listener(mockSocket.initial);
     return () => {};
   },
   close: mockSocket.close,
@@ -19,6 +24,8 @@ function Probe({ onArrive }: { onArrive: () => void }) {
 
 beforeEach(() => {
   mockSocket.handler = null;
+  mockSocket.status = null;
+  mockSocket.initial = 'connecting';
   mockSocket.close.mockClear();
   mockAcquire.mockClear();
 });
@@ -48,5 +55,27 @@ test('실서버 설정이 없으면(목) 소켓 없이 그냥 그린다', () => 
   mockAcquire.mockReturnValueOnce(null as never);
   let tree!: ReactTestRenderer;
   expect(() => act(() => { tree = create(React.createElement(Probe, { onArrive: () => {} })); })).not.toThrow();
+  act(() => tree.unmount());
+});
+
+test('연결이 붙을 때마다(처음·재연결) 부른다 — 끊긴 사이 생긴 알림은 소켓이 다시 보내 주지 않는다', () => {
+  const onArrive = jest.fn();
+  let tree!: ReactTestRenderer;
+  act(() => { tree = create(React.createElement(Probe, { onArrive })); });
+  expect(onArrive).not.toHaveBeenCalled();
+  act(() => mockSocket.status!('open'));
+  expect(onArrive).toHaveBeenCalledTimes(1);
+  act(() => mockSocket.status!('connecting'));
+  act(() => mockSocket.status!('open'));
+  expect(onArrive).toHaveBeenCalledTimes(2);
+  act(() => tree.unmount());
+});
+
+test('이미 붙어 있는 연결을 받았을 때는 부르지 않는다 — 화면이 방금 스스로 받았다', () => {
+  mockSocket.initial = 'open';
+  const onArrive = jest.fn();
+  let tree!: ReactTestRenderer;
+  act(() => { tree = create(React.createElement(Probe, { onArrive })); });
+  expect(onArrive).not.toHaveBeenCalled();
   act(() => tree.unmount());
 });
