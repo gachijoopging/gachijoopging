@@ -14,20 +14,13 @@ jest.mock('expo-secure-store', () => ({
   setItemAsync: async (k: string, v: string) => { await mockWriteGate; mockSecure.set(k, v); },
   deleteItemAsync: async (k: string) => { mockSecure.delete(k); },
 }));
-import { createMockClient, createHttpClient, ApiError, NetworkError, forget, peek } from './client';
+import { createHttpClient, ApiError, NetworkError, forget, forgetAll, peek } from './client';
+import { createMockClient } from '../../test-support/mock-client';
 import { currentAccount, forgetAccount, rememberAccount } from '../auth/account';
 import { getTokens, setTokens } from './tokens';
 import { MOCKS } from './mocks.generated';
 
 describe('목 클라이언트', () => {
-  test('재실행 뒤 종료 목도 기기에 남은 전체 합계를 사용한다', async () => {
-    const session = { itemCount: 2, byCategory: { CAN: 2 }, distanceM: 100, pausedSec: 0 };
-    const api = createMockClient({ activityTotals: () => session });
-    const body = { id: 'a1', endedAt: '2026-09-30T00:01:00Z', durationSec: 60, pausedSec: 20, distanceM: 10, steps: null, route: [] };
-    const response = await api.mutate('POST /activities/{id}/end', body);
-    expect(response.data).toEqual(expect.objectContaining({ ...body, itemCount: 2, byCategory: { CAN: 2 } }));
-  });
-
   test('openapi.yaml 의 example 을 그대로 돌려준다', async () => {
     const api = createMockClient();
     await expect(api.get('GET /crew/home')).resolves.toBe(MOCKS['GET /crew/home']);
@@ -182,6 +175,18 @@ describe('마지막 응답 기억', () => {
     expect(peek('GET /activities/{id}', { id: 'a100' })).toBeUndefined();
     expect(peek('GET /crew/home')).toBeDefined();
   });
+
+  test('forgetAll 뒤에는 어떤 응답도 다시 꺼내지 않는다 — 차단한 사람이 어느 응답에 들어 있는지 알 수 없다', async () => {
+    const api = createMockClient();
+    await api.get('GET /crew/home');
+    await api.get('GET /posts/{postId}', { postId: 'p1' });
+    const late = createMockClient({ delayMs: 10 }).get('GET /crew/posts', { scope: 'CREW' });
+    forgetAll();
+    await late;
+    expect(peek('GET /crew/home')).toBeUndefined();
+    expect(peek('GET /posts/{postId}', { postId: 'p1' })).toBeUndefined();
+    expect(peek('GET /crew/posts', { scope: 'CREW' })).toBeUndefined();
+  });
 });
 
 describe('실 API 클라이언트', () => {
@@ -217,6 +222,20 @@ describe('실 API 클라이언트', () => {
     expect(calls[0].url).toBe(`${BASE}/crew/members/u%209/posts?cursor=c1`);
     expect(calls[0].headers.Authorization).toBe('Bearer old');
     expect(calls[1]).toEqual(expect.objectContaining({ url: `${BASE}/notices/n1`, method: 'PATCH', body: '{"title":"t"}' }));
+  });
+
+  test('text/csv 응답은 파일명과 본문으로 돌려준다 — 서버가 정한 한글 파일명 그대로 공유한다', async () => {
+    const name = '줍깅 크루_활동기록_2026-10-01_2026-10-31.csv';
+    const headers: Record<string, string> = {
+      'content-type': 'text/csv; charset=utf-8',
+      'content-disposition': `attachment; filename="=?UTF-8?Q?=EC=A4=8D?="; filename*=UTF-8''${encodeURIComponent(name)}`,
+    };
+    const { calls, api } = server(() => ({
+      ok: true, status: 200, headers: { get: (key: string) => headers[key.toLowerCase()] ?? null }, text: async () => '날짜,크루원\r\n2026-10-01,관열\r\n',
+    }) as unknown as Response);
+    await expect(api.get('GET /crew/export', { from: '2026-10-01', to: '2026-10-31' })).resolves.toEqual({ fileName: name, text: '날짜,크루원\r\n2026-10-01,관열\r\n' });
+    expect(calls[0].url).toBe(`${BASE}/crew/export?from=2026-10-01&to=2026-10-31`);
+    expect(calls[0].headers.Authorization).toBe('Bearer old');
   });
 
   test('활동 합계가 바뀌는 변경이 성공해야만 합계를 담은 응답을 잊는다 — 다시 연 5-3·홈이 이전 합계를 그리면 안 된다', async () => {

@@ -21,9 +21,8 @@ import {
   space,
   useTheme,
 } from 'design-system/src';
-import { peek, type ApiClient } from '../../src/api/client';
+import { peek, type ApiClient, type ApiResponse } from '../../src/api/client';
 import { createApiClient } from '../../src/api/config';
-import type { MOCKS } from '../../src/api/mocks.generated';
 import { ExportSheet } from '../../src/crew/ExportSheet';
 import { LeaveCrew } from '../../src/crew/LeaveCrew';
 import { CREW_CAPACITY, JOIN_POLICY_LABEL, regionName } from '../../src/crew/region';
@@ -31,9 +30,9 @@ import { memberActionOutcome, memberMenu, type MemberAction } from '../../src/cr
 import { useFlash } from '../../src/ui/useFlash';
 import type { Crew } from '../(tabs)/crew';
 
-type Member = (typeof MOCKS)['GET /crew/members']['data'][number];
+type Member = ApiResponse<'GET /crew/members'>['data'][number];
 
-const api: ApiClient = createApiClient({ delayMs: 300 });
+const api: ApiClient = createApiClient();
 
 function joinedLabel(iso: string): string {
   const d = new Date(Date.parse(iso) + 9 * 60 * 60 * 1000);

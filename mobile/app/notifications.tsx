@@ -21,9 +21,8 @@ import {
   type IconName,
   characterEmpty,
 } from 'design-system/src';
-import { type ApiClient } from '../src/api/client';
+import { type ApiClient, type ApiResponse } from '../src/api/client';
 import { createApiClient } from '../src/api/config';
-import { MOCKS } from '../src/api/mocks.generated';
 import { resolveDestination, type Me } from '../src/auth/destination';
 import {
   markAllRead,
@@ -35,10 +34,10 @@ import {
 } from '../src/notifications/notifications';
 import { useNotificationArrivals } from '../src/notifications/useNotificationArrivals';
 
-type Page = (typeof MOCKS)['GET /notifications']['data'];
+type Page = ApiResponse<'GET /notifications'>['data'];
 type Item = Page['items'][number];
 
-const api: ApiClient = createApiClient({ delayMs: 300 });
+const api: ApiClient = createApiClient();
 
 const ICON: Record<string, IconName> = {
   JOIN_REQUEST: 'account-plus-outline',
@@ -210,7 +209,7 @@ export default function NotificationsScreen() {
                   />
                 ))}
               </View>
-              {/* ponytail: nextCursor 로 다음 장 받기는 목이 한 장뿐이라 백엔드 연결 때 붙인다 */}
+              {/* ponytail: 첫 장만 받는다. nextCursor 로 다음 장 받기는 아직 없다 */}
               <Txt variant="micro" tone="muted">
                 목록을 열어 보는 것만으로는 읽음 처리되지 않아요. 항목을 선택하거나 모두 읽음을 눌러 주세요.
               </Txt>

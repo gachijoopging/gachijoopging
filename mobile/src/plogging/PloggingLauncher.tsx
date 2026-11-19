@@ -12,7 +12,7 @@ import { ploggingEntry } from './entry';
 import { StartSheet } from './StartSheet';
 import type { StartResult } from './start';
 
-const api: ApiClient = createApiClient({ delayMs: 300 });
+const api: ApiClient = createApiClient();
 
 type Launcher = {
   /** 하단 가운데 줍깅 버튼. 진행 중이면 4-3, 그 밖에는 지금 탭 위에 시작 시트 */

@@ -3,12 +3,15 @@ import * as Sharing from 'expo-sharing';
 import { useState } from 'react';
 import { View } from 'react-native';
 import { BottomSheet, Button, Field, space } from 'design-system/src';
-import { exportFileName, exportRangeError, fetchCrewCsv, formatDateInput } from './export';
+import { createApiClient } from '../api/config';
+import { csvFileText, defaultExportRange, exportRangeError, formatDateInput } from './export';
+
+const api = createApiClient();
 
 /** 크루장 전용 CSV 기간 선택 시트. 3-11 크루원 관리에서 연다 */
 export function ExportSheet({ visible, onClose, onFailed }: { visible: boolean; onClose: () => void; onFailed: () => void }) {
-  const [from, setFrom] = useState('');
-  const [to, setTo] = useState('');
+  const [from, setFrom] = useState(() => defaultExportRange().from);
+  const [to, setTo] = useState(() => defaultExportRange().to);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -18,8 +21,9 @@ export function ExportSheet({ visible, onClose, onFailed }: { visible: boolean; 
     if (invalid) return;
     setBusy(true);
     try {
-      const file = new File(Paths.cache, exportFileName(from, to));
-      file.write(await fetchCrewCsv(from, to));
+      const { fileName, text } = await api.get('GET /crew/export', { from, to });
+      const file = new File(Paths.cache, fileName);
+      file.write(csvFileText(text));
       await Sharing.shareAsync(file.uri, { mimeType: 'text/csv', dialogTitle: '기록 내보내기' });
       onClose();
     } catch {

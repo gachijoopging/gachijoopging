@@ -16,16 +16,15 @@ import {
   Txt,
   space,
 } from 'design-system/src';
-import { type ApiClient } from '../api/client';
+import { type ApiClient, type ApiResponse } from '../api/client';
 import { createApiClient } from '../api/config';
-import type { MOCKS } from '../api/mocks.generated';
 import { RANGE_LABEL, categoryChips, chartSlots, seriesSummary, spokenDistance, totalsLabel, withCommas, type StatsRange } from './records';
 import { formatDistance, formatElapsed } from '../format';
 import { kstToday } from './calendar';
 
-type Stats = (typeof MOCKS)['GET /crew/stats']['data'];
+type Stats = ApiResponse<'GET /crew/stats'>['data'];
 
-const api: ApiClient = createApiClient({ delayMs: 300 });
+const api: ApiClient = createApiClient();
 const RANGES: StatsRange[] = ['WEEK', 'MONTH', 'ALL'];
 const RANGE_CHIP: Record<StatsRange, string> = { WEEK: '이번 주', MONTH: '이번 달', ALL: '전체' };
 

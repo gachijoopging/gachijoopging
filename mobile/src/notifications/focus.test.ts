@@ -7,7 +7,7 @@ jest.mock('expo-router', () => ({ router: {}, useIsFocused: () => true, useFocus
 let mockArrive: () => void;
 jest.mock('../realtime/crew-socket', () => ({ acquireCrewSocket: () => ({ onNotification: (handler: () => void) => { mockArrive = handler; return () => {}; }, onStatus: () => () => {}, close: () => {} }) }));
 jest.mock('expo-notifications', () => ({ getPermissionsAsync: async () => ({ granted: true }) }));
-jest.mock('../api/client', () => ({ createMockClient: () => ({ get: (...args: unknown[]) => mockGet(...args) }) }));
+jest.mock('../api/client', () => ({ createHttpClient: () => ({ get: (...args: unknown[]) => mockGet(...args) }) }));
 jest.mock('design-system/src', () => new Proxy({ space: {} }, { get: (target, key) => key in target ? target[key as keyof typeof target] : String(key) }));
 
 test('신고 처리에서 돌아오면 알림 화면의 대기 건수를 다시 받는다', async () => {

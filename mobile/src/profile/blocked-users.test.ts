@@ -10,7 +10,7 @@ jest.mock('expo-file-system', () => ({ Paths: { document: 'documents' }, File: c
   textSync() { return mockFiles.get(this.name); }
   write(value: string) { mockFiles.set(this.name, value); }
 } }));
-jest.mock('../api/client', () => ({ peek: () => undefined, forget: () => {}, ApiError: class extends Error {}, createMockClient: () => ({ get: (...args: unknown[]) => mockGet(...args), mutate: jest.fn() }) }));
+jest.mock('../api/client', () => ({ peek: () => undefined, forget: () => {}, ApiError: class extends Error {}, createHttpClient: () => ({ get: (...args: unknown[]) => mockGet(...args), mutate: jest.fn() }) }));
 jest.mock('expo-router', () => ({ router: { push: jest.fn(), back: jest.fn(), replace: jest.fn() }, useFocusEffect: (fn: () => void) => require('react').useEffect(fn, [fn]), useLocalSearchParams: () => ({ id: 'post' }), useNavigation: () => ({ addListener: () => () => {} }) }));
 jest.mock('react-native', () => new Proxy({ View: 'View', Pressable: 'Pressable', FlatList: 'FlatList', ScrollView: 'ScrollView', RefreshControl: 'RefreshControl', Image: 'Image', TextInput: 'TextInput' }, { get: (target, key) => key in target ? target[key as keyof typeof target] : jest.requireActual('react-native')[key] }));
 jest.mock('design-system/src', () => new Proxy({ space: { sm: 8, md: 16, xs: 4 }, size: { minTouch: 48 }, radius: {}, useRipple: () => undefined, useTheme: () => ({ colors: {} }), pressedOpacity: () => 1 }, { get: (target, key) => key in target ? target[key as keyof typeof target] : String(key) }));
@@ -18,7 +18,11 @@ jest.mock('../ui/useFlash', () => ({ useFlash: () => require('react').useState(n
 jest.mock('../notifications/notifications', () => ({ relativeTime: () => '방금' }));
 jest.mock('expo-constants', () => ({ default: { expoConfig: { extra: {} } } }));
 jest.mock('../../modules/kakao-map', () => ({ KakaoMapView: 'KakaoMapView' }));
+jest.mock('../notifications/useNotificationArrivals', () => ({ useNotificationArrivals: () => {} }));
 import { blockedUsers, reconcileBlockedUsers, setUserBlocked, useBlockedUsers } from './blocked-users';
+import { rememberAccount } from '../auth/account';
+import { MOCKS } from '../api/mocks.generated';
+import Home from '../../app/(tabs)/index';
 import Feed from '../../app/(tabs)/feed';
 import Detail from '../../app/posts/[id]';
 import Live from '../../app/crew/live';
@@ -85,4 +89,15 @@ test('subscribed chat-shaped cached items change immediately with account-specif
   expect(visible.map((item) => item.author.id)).toEqual(['other']);
   act(() => setUserBlocked('different-viewer', 'other', true));
   expect(visible.map((item) => item.author.id)).toEqual(['other']);
+});
+
+test('홈의 활동 중 얼굴에서 차단한 사람이 즉시 빠진다', async () => {
+  rememberAccount({ id: 'viewer', membership: { status: 'MEMBER' } });
+  const home = { ...MOCKS['GET /crew/home'].data, live: { count: 2, users: [user('target'), user('other')] } };
+  mockGet.mockImplementation((key: string) => Promise.resolve(key === 'GET /users/me' ? me : { data: home }));
+  await act(async () => { tree = create(React.createElement(Home)); });
+  const faces = () => tree.root.findAllByType('Avatar' as never).map((node) => node.props.name);
+  expect(faces()).toEqual(['target', 'other']);
+  act(() => setUserBlocked('viewer', 'target', true));
+  expect(faces()).toEqual(['other']);
 });

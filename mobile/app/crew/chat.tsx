@@ -66,13 +66,11 @@ import {
   type ChatState,
   type Receipt,
 } from '../../src/crew/chat';
-import { createMockChatSocket, type ChatSocket, type ChatSocketEvent } from '../../src/crew/chat-socket';
+import { type ChatSocket, type ChatSocketEvent } from '../../src/crew/chat-socket';
 import { acquireCrewSocket } from '../../src/realtime/crew-socket';
 import { useFlash } from '../../src/ui/useFlash';
 
-const api: ApiClient = createApiClient({ delayMs: 300 });
-/** 전송 실패·다시 보내기를 목으로 보려면 dropEcho 를 켠다 */
-const MOCK_SOCKET = { dropEcho: false };
+const api: ApiClient = createApiClient();
 const PAGE = 50;
 /** 문서가 정한 말풍선 최대 너비(260dp). 화면 폭과 무관하게 한 줄 길이를 읽기 좋게 묶는다 */
 const BUBBLE_MAX_WIDTH = 260;
@@ -221,7 +219,7 @@ export default function CrewChatScreen() {
       ]);
       const crew = user.membership.crew;
       const nextMe: Me = {
-        author: { id: user.id, nickname: user.nickname, photoUrl: user.photoUrl, withdrawn: false },
+        author: { id: user.id, nickname: user.nickname ?? '', photoUrl: user.photoUrl, withdrawn: false },
         isLeader: !!crew?.isLeader,
         crewId: crew?.id ?? '',
       };
@@ -232,7 +230,8 @@ export default function CrewChatScreen() {
       textRef.current = session.draft;
       setText(session.draft);
 
-      const socket = acquireCrewSocket() ?? createMockChatSocket({ ...MOCK_SOCKET, author: nextMe.author, lastSeq: lastSeqOf(chatRef.current.items) });
+      const socket = acquireCrewSocket();
+      if (!socket) return setPhase('error');
       socketRef.current = socket;
       socket.subscribe(onEvent);
       let wasConnecting = false;

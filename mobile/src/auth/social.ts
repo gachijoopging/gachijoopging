@@ -1,15 +1,11 @@
 import Constants from 'expo-constants';
 import { GoogleSignin, isCancelledResponse, isErrorWithCode, statusCodes } from '@react-native-google-signin/google-signin';
 import { login as kakaoLogin } from '@react-native-seoul/kakao-login';
-import { apiConfig } from '../api/config';
 
 export type Provider = 'kakao' | 'google';
 
 /** 계약의 provider 값. `PUT /users/me/social` 이 대문자로 받는다 */
 export const PROVIDER_KEY: Record<Provider, 'KAKAO' | 'GOOGLE'> = { kakao: 'KAKAO', google: 'GOOGLE' };
-
-/** 목 모드에서는 SDK 를 부르지 않는다 — 목 서버는 토큰을 검증하지 않고, 개발 빌드가 아니면 네이티브 모듈도 없다 */
-const MOCK_TOKEN = 'mock-provider-token';
 
 let googleConfigured = false;
 
@@ -18,7 +14,6 @@ let googleConfigured = false;
  * 카카오는 access token, 구글은 ID token 이다 — 백엔드가 각각 그것으로 검증한다(`KakaoAuthClient`·`GoogleAuthClient`)
  */
 export async function providerToken(provider: Provider): Promise<string | null> {
-  if (!apiConfig.real) return MOCK_TOKEN;
   return provider === 'kakao' ? kakaoToken() : googleToken();
 }
 

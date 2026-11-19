@@ -1,88 +1,28 @@
-import { MOCKS, type MockKey } from './mocks.generated';
 import type { components, paths } from './contract.generated';
-import type { MembershipStatus, Rejection } from '../auth/destination';
-import type { JoinRequestStatus } from '../auth/pending-request';
-import type { EndBody } from '../activity/outbox';
-import type { AgreementDefinition, AgreementState } from '../auth/agreements';
 import { currentAccount, forgetAccount, rememberAccount } from '../auth/account';
 import { ApiError, NetworkError, fromEnvelope } from './errors';
 import { clearTokens, getTokens, setTokens, type TokenPair } from './tokens';
-import { kstDate } from '../crew/calendar';
 
-type MeData = (typeof MOCKS)['GET /users/me']['data'];
-type JoinRequestData = (typeof MOCKS)['GET /crews/join-requests/mine']['data'];
 export type Activity = components['schemas']['Activity'];
 
-/** 응답 타입을 계약(docs/openapi.yaml)에서 가져오는 경로. 실서버로 옮긴 경로부터 늘린다 — 나머지는 아직 목 example 의 타입이다 */
-type ContractKey =
-  | 'POST /activities' | 'GET /activities/current' | 'POST /activities/{id}/items' | 'PATCH /activities/{id}/items/{itemId}'
-  | 'POST /activities/{id}/end' | 'GET /activities/{id}' | 'GET /users/me/activities' | 'POST /media'
-  | 'GET /crew/posts' | 'POST /crew/posts' | 'GET /posts/{postId}' | 'GET /posts/{postId}/comments' | 'POST /posts/{postId}/comments'
-  | 'GET /crew/members/{userId}/posts'
-  | 'GET /crew/notices' | 'POST /crew/notices' | 'GET /notices/{noticeId}' | 'POST /notices/{noticeId}/comments'
-  | 'GET /crew/chat/messages' | 'GET /crew/live';
+type Method = 'get' | 'put' | 'post' | 'delete' | 'patch';
+/** 계약(docs/openapi.yaml)에 있는 `METHOD /경로` */
+type KeyOf<M extends Method> = {
+  [P in keyof paths]: M extends unknown ? (paths[P][M] extends { responses: unknown } ? `${Uppercase<M>} ${P}` : never) : never;
+}[keyof paths];
 type JsonOf<R> = R extends { content: { 'application/json': infer B } } ? B : never;
-type ContractResponse<K extends ContractKey> = K extends `${infer M} ${infer P extends keyof paths}`
+/** 성공 응답의 JSON 본문. 본문이 없는 204 전용 경로는 never */
+type ContractResponse<K> = K extends `${infer M} ${infer P extends keyof paths}`
   ? paths[P][Lowercase<M> & keyof paths[P]] extends { responses: infer R } ? JsonOf<R[Extract<keyof R, 200 | 201>]> : never
   : never;
 
-// 목도 계약을 만족해야 한다. example 이 계약과 어긋나면 여기서 타입 오류가 난다
-MOCKS satisfies { readonly [K in ContractKey]: ContractResponse<K> };
-
-export type QueryKey = MockKey;
+export type QueryKey = KeyOf<'get'>;
 export type ApiResponse<K extends QueryKey> =
-  K extends ContractKey ? ContractResponse<K> :
-  K extends 'GET /agreements' ? { data: { items: readonly AgreementDefinition[] } } :
-  K extends 'GET /users/me/agreements' ? { data: AgreementState } :
-  K extends 'GET /users/me' ? { data: Omit<MeData, 'membership'> & {
-    membership: { status: MembershipStatus; crew: MeData['membership']['crew'] | null; rejection: Rejection | null };
-  } } : K extends 'GET /crews/join-requests/mine' ? {
-    data: (Omit<JoinRequestData, 'status'> & { status: JoinRequestStatus }) | null;
-  } : K extends MockKey ? (typeof MOCKS)[K] : never;
+  K extends 'GET /crew/export' ? { fileName: string; text: string } : ContractResponse<K>;
 
-/** 목에 example 이 없는 204 전용 경로. 성공해도 돌려줄 데이터가 없다 */
-export type VoidMutationKey =
-  | 'POST /auth/password-reset'
-  | 'POST /auth/password-reset/confirm'
-  | 'DELETE /crews/join-requests/mine'
-  | 'POST /crews/join-requests/{requestId}/read'
-  | 'POST /notifications/read'
-  | 'PUT /users/me/devices'
-  | 'DELETE /notices/{noticeId}'
-  | 'DELETE /notice-comments/{commentId}'
-  | 'POST /crew/join-requests/{requestId}'
-  | 'PUT /crew/leader'
-  | 'DELETE /crew/members/{userId}'
-  | 'PATCH /notices/{noticeId}'
-  | 'PUT /crew/chat/read'
-  | 'POST /reports'
-  | 'POST /crew/reports/{reportId}'
-  | 'PUT /users/{userId}/block'
-  | 'DELETE /users/{userId}/block'
-  | 'PUT /users/{userId}/follow'
-  | 'DELETE /users/{userId}/follow'
-  | 'POST /crew/leave'
-  | 'DELETE /users/me'
-  | 'PUT /users/me/social'
-  | 'POST /auth/logout'
-  | 'PUT /posts/{postId}/like'
-  | 'DELETE /posts/{postId}/like'
-  | 'DELETE /posts/{postId}'
-  | 'DELETE /comments/{commentId}'
-  | 'POST /activities/{id}/pause'
-  | 'POST /activities/{id}/resume'
-  | 'POST /activities/{id}/live'
-  | 'DELETE /activities/{id}/items/{itemId}'
-  | 'DELETE /activities/{id}'
-  | 'DELETE /media/{mediaId}';
-export type MutationKey = QueryKey | VoidMutationKey;
-/** 1-8 가입 응답. 공개 크루는 APPROVED, 비공개 크루는 PENDING 으로 온다 */
-export type JoinResult = { id: string; crew: { id: string; name: string }; status: JoinRequestStatus };
+export type MutationKey = KeyOf<Method>;
 export type MutationResponse<K extends MutationKey> =
-  K extends ContractKey ? ContractResponse<K> :
-  K extends 'PUT /users/me/agreements' ? { data: AgreementState } :
-  K extends 'POST /crews/join-requests' ? { data: JoinResult } :
-  K extends MockKey ? (typeof MOCKS)[K] : void;
+  K extends QueryKey ? ApiResponse<K> : [ContractResponse<K>] extends [never] ? void : ContractResponse<K>;
 
 export type ApiClient = {
   get<K extends QueryKey>(key: K, query?: unknown): Promise<ApiResponse<K>>;
@@ -91,34 +31,6 @@ export type ApiClient = {
 };
 
 export { ApiError, NetworkError, type ApiErrorField } from './errors';
-
-export type MockOptions = {
-  /** 응답 지연. 화면의 로딩 상태를 눈으로 보려면 올린다 */
-  delayMs?: number;
-  activityTotals?: () => { itemCount: number; byCategory: Record<string, number> } | null;
-  /** 이 키들은 항상 실패한다. 오류·재시도 UI 를 목으로 확인하는 수단 */
-  failing?: readonly MutationKey[];
-};
-
-const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
-function isMockKey(key: MutationKey): key is MockKey {
-  return key in MOCKS;
-}
-
-type PostsQuery = { scope?: 'CREW' | 'MINE'; from?: string; to?: string };
-
-/** 서버처럼 scope·기간을 적용한다. 전체 탭에는 나만 보기 글이 오지 않고, 내 게시물 탭에는 내 글만 온다 */
-function filterPosts({ scope = 'CREW', from, to }: PostsQuery = {}) {
-  const me = MOCKS['GET /users/me'].data.id;
-  const posts = MOCKS['GET /crew/posts'].data;
-  const items = posts.items.filter((post) => {
-    const day = kstDate(post.createdAt);
-    if (scope === 'MINE' ? post.author.id !== me : post.visibility === 'PRIVATE') return false;
-    return !(from && day < from) && !(to && day > to);
-  });
-  return { data: { ...posts, items } };
-}
 
 /**
  * 다시 연 화면이 받아 오는 동안 로딩 대신 바로 그리려고, 키·질의별 마지막 응답을 기억한다.
@@ -147,6 +59,12 @@ let forgets = 0;
 /** 삭제·차단처럼 기억한 응답이 틀려지는 변경 뒤에 부른다. 다시 열 때 지운 것이 보이면 안 된다 */
 export function forget(key: QueryKey, query?: unknown): void {
   lastResponses.delete(responseKey(key, query));
+  forgets += 1;
+}
+
+/** 차단·신고 삭제처럼 대상이 어느 응답에 들어 있는지 알 수 없는 변경 뒤에 부른다 */
+export function forgetAll(): void {
+  lastResponses.clear();
   forgets += 1;
 }
 
@@ -182,63 +100,13 @@ function remember(owner: string | null, sentAt: number, key: QueryKey, query: un
   if (lastResponses.size > MAX_RESPONSES) lastResponses.delete(lastResponses.keys().next().value!);
 }
 
-/** 실 API 가 붙기 전까지 화면이 쓰는 구현. */
-export function createMockClient({ delayMs = 0, failing = [], activityTotals }: MockOptions = {}): ApiClient {
-  let agreements: AgreementState | null = null;
-  let agreementsOwner: string | null = null;
-  const selectAgreementOwner = () => {
-    const owner = currentAccount()?.id ?? null;
-    if (agreementsOwner !== owner) { agreements = null; agreementsOwner = owner; }
-  };
-  async function load<K extends QueryKey>(key: K, query: unknown): Promise<ApiResponse<K>> {
-    if (delayMs > 0) await wait(delayMs);
-    if (failing.includes(key)) throw new ApiError('MOCK_FAILURE');
-    if (key === 'GET /users/me/agreements') {
-      selectAgreementOwner();
-      if (agreements) return { data: agreements } as ApiResponse<K>;
-    }
-    if (key === 'GET /crew/posts') return filterPosts(query as PostsQuery) as unknown as ApiResponse<K>;
-    return (MOCKS as unknown as Record<string, unknown>)[key] as ApiResponse<K>;
-  }
-  return {
-    async get(key, query) {
-      const owner = currentOwner();
-      const sentAt = forgets;
-      const response = await load(key, query);
-      remember(owner, sentAt, key, query, response);
-      return response;
-    },
-    async mutate(key, body) {
-      if (delayMs > 0) await wait(delayMs);
-      if (failing.includes(key)) throw new ApiError('MOCK_FAILURE');
-      if (key === 'PUT /users/me/agreements') {
-        selectAgreementOwner();
-        const current = agreements ?? (MOCKS as unknown as Record<string, { data: AgreementState }>)['GET /users/me/agreements']?.data;
-        if (!current) throw new ApiError('MOCK_FAILURE');
-        const selected = (body as { items: { type: string; version: string; agreed: boolean }[] }).items;
-        if (selected.some((choice) => !current.items.some((item) => item.type === choice.type && item.version === choice.version))) throw new ApiError('VALIDATION', [{ field: 'items', code: 'FORMAT' }]);
-        const items = current.items.map((item) => {
-          const choice = selected.find((value) => value.type === item.type);
-          return choice ? { ...item, agreed: choice.agreed, agreedAt: choice.agreed ? new Date().toISOString() : null } : item;
-        });
-        agreements = { items, complete: items.every((item) => !item.required || item.agreed) };
-        return { data: agreements } as never;
-      }
-      if (key === 'POST /activities') {
-        // 목의 startedAt 은 고정값이라 그대로 쓰면 시작하자마자 24시간 기한이 지난 활동이 된다
-        return { data: { ...MOCKS['POST /activities'].data, ...(body as object) } } as never;
-      }
-      if (key === 'POST /activities/{id}/end') {
-        const request = body as EndBody & { id: string };
-        const totals = activityTotals?.();
-        return { data: { ...MOCKS['POST /activities/{id}/end'].data, ...request,
-          ...(totals ? { itemCount: totals.itemCount, byCategory: totals.byCategory } : {}),
-        } } as never;
-      }
-      // 204 전용 경로는 example 이 없다 — 성공은 그냥 값 없이 끝난다.
-      return (isMockKey(key) ? MOCKS[key] : undefined) as never;
-    },
-  };
+/** load 를 보내기 직전의 계정·forget 을 기준으로 응답을 기억한다. 목 클라이언트도 이 입구로 실 클라이언트와 같은 기억 규칙을 쓴다 */
+export async function getAndRemember<K extends QueryKey>(key: K, query: unknown, load: () => Promise<ApiResponse<K>>): Promise<ApiResponse<K>> {
+  const owner = currentOwner();
+  const sentAt = forgets;
+  const response = await load();
+  remember(owner, sentAt, key, query, response);
+  return response;
 }
 
 const signOutListeners = new Set<() => void>();
@@ -313,6 +181,10 @@ export function createHttpClient({ baseUrl, fetch: send = (...args) => globalThi
     let json: unknown = null;
     try { json = text ? JSON.parse(text) : null; } catch {}
     if (!response.ok) throw fromEnvelope(response.status, json);
+    if (response.headers?.get('content-type')?.startsWith('text/csv')) {
+      const encoded = /filename\*=UTF-8''([^;]+)/i.exec(response.headers.get('content-disposition') ?? '')?.[1] ?? '';
+      return { fileName: decodeURIComponent(encoded), text };
+    }
     return json ?? undefined;
   }
 

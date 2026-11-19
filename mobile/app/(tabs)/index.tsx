@@ -25,17 +25,17 @@ import {
   characterStageNames,
   characterStages,
 } from 'design-system/src';
-import { ApiError, peek, type ApiClient } from '../../src/api/client';
+import { ApiError, peek, type ApiClient, type ApiResponse } from '../../src/api/client';
 import { createApiClient } from '../../src/api/config';
-import { MOCKS } from '../../src/api/mocks.generated';
 import { leaveForMembership } from '../../src/feed/leave';
 import { characterBubble, myCategorySummary } from '../../src/home/home';
 import { useNotificationArrivals } from '../../src/notifications/useNotificationArrivals';
+import { useBlockedUsers } from '../../src/profile/blocked-users';
 import { useFlash } from '../../src/ui/useFlash';
 
-type Home = (typeof MOCKS)['GET /crew/home']['data'];
+type Home = ApiResponse<'GET /crew/home'>['data'];
 
-const api: ApiClient = createApiClient({ delayMs: 300 });
+const api: ApiClient = createApiClient();
 const wordmark = require('../../../design-system/assets/logo-wordmark.png');
 const wordmarkDark = require('../../../design-system/assets/logo-wordmark-dark.png');
 const BUBBLE_MS = 3000;
@@ -119,6 +119,7 @@ export default function HomeScreen() {
 
 function HomeCards({ home }: { home: Home }) {
   const { last7d, character, live } = home;
+  const blocked = useBlockedUsers();
   return (
     <>
       <Card
@@ -157,7 +158,7 @@ function HomeCards({ home }: { home: Home }) {
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
             <Txt variant="display">{live.count}</Txt>
             <View style={{ flexDirection: 'row' }} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
-              {live.users.slice(0, 3).map((u, i) => (
+              {live.users.filter((u) => !blocked.has(u.id)).slice(0, 3).map((u, i) => (
                 <View key={u.id} style={{ marginLeft: i === 0 ? 0 : -space.sm }}>
                   <Avatar size="sm" name={u.nickname} uri={u.photoUrl ?? undefined} />
                 </View>

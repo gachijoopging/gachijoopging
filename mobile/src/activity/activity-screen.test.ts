@@ -22,7 +22,7 @@ jest.mock('react-native', () => ({ View: 'View', Pressable: 'Pressable', AppStat
 jest.mock('react-native-safe-area-context', () => ({ useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 }) }));
 jest.mock('../../modules/kakao-map', () => ({ KakaoMapView: 'KakaoMapView' }));
 const mockGet = jest.fn((_key: string): Promise<unknown> => new Promise(() => {}));
-jest.mock('../api/client', () => ({ createMockClient: () => ({ get: (k: string) => mockGet(k) }) }));
+jest.mock('../api/client', () => ({ createHttpClient: () => ({ get: (k: string) => mockGet(k) }) }));
 jest.mock('./store', () => ({
   getStored: () => mockStored,
   loadAccount: () => mockStored,

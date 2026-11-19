@@ -20,9 +20,8 @@ import {
   useRipple,
   useTheme,
 } from 'design-system/src';
-import { type ApiClient } from '../api/client';
+import { type ApiClient, type ApiResponse } from '../api/client';
 import { createApiClient } from '../api/config';
-import type { MOCKS } from '../api/mocks.generated';
 import {
   HEAT_OPACITY,
   canGoNextMonth,
@@ -41,16 +40,10 @@ import {
 import { formatDistance } from '../format';
 import { useBlockedUsers } from '../profile/blocked-users';
 
-type MockDay = (typeof MOCKS)['GET /crew/calendar']['data']['days'][number];
-/** 목의 example 은 리터럴 타입이라 수치를 number 로 넓힌다 */
-type Day = Omit<MockDay, 'items' | 'activityCount' | 'activities'> & {
-  items: number;
-  activityCount: number;
-  activities: readonly MockDay['activities'][number][];
-};
-type Calendar = { days: readonly Day[] };
+type Calendar = ApiResponse<'GET /crew/calendar'>['data'];
+type Day = Calendar['days'][number];
 
-const api: ApiClient = createApiClient({ delayMs: 300 });
+const api: ApiClient = createApiClient();
 const WEEK = ['일', '월', '화', '수', '목', '금', '토'];
 
 /** 3-1 모이깅의 달력 탭. refreshKey 가 바뀌면 보던 달을 다시 받는다(당겨서 새로고침) */

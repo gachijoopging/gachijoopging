@@ -35,7 +35,7 @@ import { ProfileTabList } from './ProfileTabList';
 type Me = { id: string; nickname: string; intro: string; photoUrl: string | null; crew: { name: string; isLeader: boolean } | null };
 type Tab = 'records' | 'posts';
 
-const api: ApiClient = createApiClient({ delayMs: 300 });
+const api: ApiClient = createApiClient();
 const TABS: { value: Tab; label: string }[] = [
   { value: 'records', label: '기록' },
   { value: 'posts', label: '게시물' },
@@ -72,7 +72,7 @@ export function MyProfile({ recordsOnly = false }: { recordsOnly?: boolean }) {
   const loadMe = useCallback(async () => {
     try {
       const { data } = await api.get('GET /users/me');
-      setMe({ id: data.id, nickname: data.nickname, intro: data.intro, photoUrl: data.photoUrl, crew: data.membership.crew });
+      setMe({ id: data.id, nickname: data.nickname ?? '', intro: data.intro, photoUrl: data.photoUrl, crew: data.membership.crew });
       setMeFailed(false);
       return true;
     } catch {

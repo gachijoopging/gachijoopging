@@ -30,7 +30,7 @@ import {
   type NoticeForm,
 } from '../../../src/crew/notice-edit';
 
-const api: ApiClient = createApiClient({ delayMs: 300 });
+const api: ApiClient = createApiClient();
 
 export default function EditNoticeScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>();

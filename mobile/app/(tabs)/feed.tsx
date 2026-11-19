@@ -34,7 +34,7 @@ import { leaveForMembership } from '../../src/feed/leave';
 import { useFlash } from '../../src/ui/useFlash';
 import { useBlockedUsers } from '../../src/profile/blocked-users';
 
-const api: ApiClient = createApiClient({ delayMs: 300 });
+const api: ApiClient = createApiClient();
 const SCOPES: { value: FeedScope; label: string }[] = [
   { value: 'CREW', label: '전체' },
   { value: 'MINE', label: '내 게시물' },

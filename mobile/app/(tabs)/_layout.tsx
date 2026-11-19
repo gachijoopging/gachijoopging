@@ -4,7 +4,6 @@ import { View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BottomNav, CONTENT_MAX_WIDTH, space, useReduceMotion, useTheme } from 'design-system/src';
 import { useActiveSession } from '../../src/activity/useActiveSession';
-import { apiConfig } from '../../src/api/config';
 import { subscribeTabsAllowed, tabsAllowed } from '../../src/auth/launch';
 import { PloggingLauncher, usePloggingLauncher } from '../../src/plogging/PloggingLauncher';
 import { TABS, tabValueOf, type TabValue } from '../../src/tabs';
@@ -40,7 +39,7 @@ export default function TabsLayout() {
   // 탭은 서로 같은 층이라 밀지 않고 짧게 겹쳐 바뀐다
   const reduce = useReduceMotion();
   const allowed = useSyncExternalStore(subscribeTabsAllowed, tabsAllowed);
-  if (apiConfig.real && !allowed) return null;
+  if (!allowed) return null;
   return (
     <PloggingLauncher>
       <Tabs tabBar={(props) => <TabBar {...props} />} screenOptions={{ headerShown: false, animation: reduce ? 'none' : 'fade' }}>

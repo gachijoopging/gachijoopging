@@ -14,7 +14,10 @@ jest.mock('../realtime/crew-socket', () => ({ acquireCrewSocket: () => ({
   onStatus: (handler: (status: unknown) => void) => { mockSocket.status = handler; },
   close: () => {},
 }) }));
+jest.mock('expo-file-system', () => ({ Paths: { document: 'documents' }, File: class { get exists() { return false; } textSync() { return '[]'; } write() {} } }));
+jest.mock('../auth/account', () => ({ currentAccount: () => ({ id: 'viewer', hasCrew: true }) }));
 
+import { setUserBlocked } from '../profile/blocked-users';
 import { useLiveEvents } from './useLiveEvents';
 
 let tree: ReactTestRenderer;
@@ -45,4 +48,17 @@ test('4403 은 소속을 다시 확인하고 4401 은 로그인으로 이동한�
   expect(mockLeave).toHaveBeenCalled();
   await act(async () => { mockSocket.status({ closed: 4401 }); });
   expect(mockDismiss).toHaveBeenCalledWith('/start');
+});
+
+test('차단 목록이 바뀌면 활동 중 크루원을 다시 받는다 — 차단 중에는 종료 이벤트가 오지 않아 해제한 사람의 낡은 위치가 되살아난다', async () => {
+  mockGet.mockResolvedValue({ data: [] });
+  const snapshots: unknown[] = [];
+  function Harness() { useLiveEvents(() => {}, (members) => snapshots.push(members)); return null; }
+  await act(async () => { tree = create(React.createElement(Harness)); });
+  expect(mockGet).not.toHaveBeenCalled();
+  await act(async () => { setUserBlocked('viewer', 'target', true); });
+  expect(mockGet.mock.calls).toEqual([['GET /crew/live']]);
+  expect(snapshots).toEqual([[]]);
+  await act(async () => { setUserBlocked('viewer', 'target', false); });
+  expect(mockGet).toHaveBeenCalledTimes(2);
 });

@@ -35,7 +35,7 @@ import {
   type ReportReason,
 } from '../src/report/report';
 
-const api: ApiClient = createApiClient({ delayMs: 300 });
+const api: ApiClient = createApiClient();
 
 type Params = {
   targetType: string;

@@ -198,6 +198,7 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [data]
                 properties:
                   data: { $ref: '#/components/schemas/Me' }
               example:
@@ -235,7 +236,7 @@ paths:
           description: OK
           content:
             application/json:
-              schema: { type: object, properties: { data: { $ref: '#/components/schemas/Me' } } }
+              schema: { type: object, required: [data], properties: { data: { $ref: '#/components/schemas/Me' } } }
               example:
                 data:
                   id: 9c2f…
@@ -272,7 +273,7 @@ paths:
           description: OK
           content:
             application/json:
-              schema: { type: object, properties: { data: { $ref: '#/components/schemas/AgreementCatalog' } } }
+              schema: { type: object, required: [data], properties: { data: { $ref: '#/components/schemas/AgreementCatalog' } } }
               example:
                 data:
                   items:
@@ -291,7 +292,7 @@ paths:
           description: OK
           content:
             application/json:
-              schema: { type: object, properties: { data: { $ref: '#/components/schemas/Agreements' } } }
+              schema: { type: object, required: [data], properties: { data: { $ref: '#/components/schemas/Agreements' } } }
               example:
                 data:
                   complete: false
@@ -326,7 +327,7 @@ paths:
           description: 저장 뒤 상태
           content:
             application/json:
-              schema: { type: object, properties: { data: { $ref: '#/components/schemas/Agreements' } } }
+              schema: { type: object, required: [data], properties: { data: { $ref: '#/components/schemas/Agreements' } } }
               example:
                 data:
                   complete: true
@@ -357,7 +358,7 @@ paths:
           description: OK
           content:
             application/json:
-              schema: { type: object, properties: { data: { $ref: '#/components/schemas/MemberStats' } } }
+              schema: { type: object, required: [data], properties: { data: { $ref: '#/components/schemas/MemberStats' } } }
               example:
                 data:
                   totalItems: 412
@@ -413,9 +414,11 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [data]
                 properties:
                   data:
                     type: object
+                    required: [items, nextCursor, total]
                     properties:
                       items: { type: array, items: { $ref: '#/components/schemas/UserBrief' } }
                       nextCursor: { type: string, nullable: true }
@@ -478,9 +481,11 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [data]
                 properties:
                   data:
                     type: object
+                    required: [items, nextCursor]
                     properties:
                       items: { type: array, items: { $ref: '#/components/schemas/CrewSummary' } }
                       nextCursor: { type: string, nullable: true }
@@ -517,7 +522,7 @@ paths:
           description: 생성
           content:
             application/json:
-              schema: { type: object, properties: { data: { $ref: '#/components/schemas/Crew' } } }
+              schema: { type: object, required: [data], properties: { data: { $ref: '#/components/schemas/Crew' } } }
               example: { data: { id: c001, name: 한강줍깅크루, intro: 매주 토요일 아침 여의도, photoUrl: null, region: SEOUL, joinPolicy: APPROVAL, leader: { id: u001, nickname: 관열, photoUrl: null, withdrawn: false }, memberCount: 1, goalCount: 300, pendingJoinRequests: 0, pinnedNotice: null, unreadChat: 0, isLeader: true } }
         '409': { $ref: '#/components/responses/Error' }
         '422': { $ref: '#/components/responses/Error' }
@@ -542,13 +547,13 @@ paths:
           description: 같은 비공개 크루에 대기 중인 신청을 그대로 돌려줌
           content:
             application/json:
-              schema: { type: object, properties: { data: { $ref: '#/components/schemas/JoinRequest' } } }
+              schema: { type: object, required: [data], properties: { data: { $ref: '#/components/schemas/JoinRequest' } } }
               example: { data: { id: jr001, crew: { id: c001, name: 한강줍깅크루 }, user: { id: u009, nickname: 지수, photoUrl: null, withdrawn: false }, status: PENDING, createdAt: 2026-09-15T10:00:00Z } }
         '201':
           description: 처리됨 — 공개 크루면 APPROVED(예 `crew` c002 한강망원줍깅, `status` APPROVED), 비공개 크루면 PENDING(아래 예시)
           content:
             application/json:
-              schema: { type: object, properties: { data: { $ref: '#/components/schemas/JoinRequest' } } }
+              schema: { type: object, required: [data], properties: { data: { $ref: '#/components/schemas/JoinRequest' } } }
               example: { data: { id: jr001, crew: { id: c001, name: 한강줍깅크루 }, user: { id: u009, nickname: 지수, photoUrl: null, withdrawn: false }, status: PENDING, createdAt: 2026-09-15T10:00:00Z } }
         '403': { $ref: '#/components/responses/Error' }
         '404': { $ref: '#/components/responses/Error' }
@@ -563,7 +568,7 @@ paths:
           description: OK
           content:
             application/json:
-              schema: { type: object, properties: { data: { anyOf: [{ $ref: '#/components/schemas/JoinRequest' }, { type: object, nullable: true, enum: [null] }] } } }
+              schema: { type: object, required: [data], properties: { data: { anyOf: [{ $ref: '#/components/schemas/JoinRequest' }, { type: object, nullable: true, enum: [null] }] } } }
               example: { data: { id: jr001, crew: { id: c001, name: 한강줍깅크루 }, user: { id: u001, nickname: 관열, photoUrl: null, withdrawn: false }, status: PENDING, createdAt: 2026-09-15T10:00:00Z } }
     delete:
       tags: [crew]
@@ -596,7 +601,7 @@ paths:
           description: OK
           content:
             application/json:
-              schema: { type: object, properties: { data: { $ref: '#/components/schemas/Crew' } } }
+              schema: { type: object, required: [data], properties: { data: { $ref: '#/components/schemas/Crew' } } }
               example:
                 data:
                   id: c001
@@ -638,7 +643,7 @@ paths:
           description: OK
           content:
             application/json:
-              schema: { type: object, properties: { data: { $ref: '#/components/schemas/Crew' } } }
+              schema: { type: object, required: [data], properties: { data: { $ref: '#/components/schemas/Crew' } } }
               example:
                 data:
                   id: c001
@@ -676,6 +681,7 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [data]
                 properties:
                   data: { type: array, items: { $ref: '#/components/schemas/Member' } }
               example:
@@ -693,7 +699,7 @@ paths:
           description: OK
           content:
             application/json:
-              schema: { type: object, properties: { data: { $ref: '#/components/schemas/MemberProfile' } } }
+              schema: { type: object, required: [data], properties: { data: { $ref: '#/components/schemas/MemberProfile' } } }
               example:
                 data:
                   id: 8a2d…
@@ -761,9 +767,11 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [data]
                 properties:
                   data:
                     type: object
+                    required: [items, nextCursor]
                     properties:
                       items: { type: array, items: { $ref: '#/components/schemas/JoinRequest' } }
                       nextCursor: { type: string, nullable: true }
@@ -1487,13 +1495,16 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [data]
                 properties:
                   data:
                     type: object
+                    required: [pending, items, nextCursor]
                     properties:
                       pending:
                         type: object
                         description: 크루장만. 크루원은 둘 다 0
+                        required: [joinRequests, reports]
                         properties:
                           joinRequests: { type: integer }
                           reports: { type: integer }
@@ -1524,7 +1535,7 @@ paths:
           description: OK
           content:
             application/json:
-              schema: { type: object, properties: { data: { type: object, properties: { count: { type: integer } } } } }
+              schema: { type: object, required: [data], properties: { data: { type: object, required: [count], properties: { count: { type: integer } } } } }
               example: { data: { count: 1 } }
 
   # ───────────────────────── reports ─────────────────────────
@@ -1563,9 +1574,11 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [data]
                 properties:
                   data:
                     type: object
+                    required: [items, nextCursor]
                     properties:
                       items: { type: array, items: { $ref: '#/components/schemas/Report' } }
                       nextCursor: { type: string, nullable: true }
@@ -1625,7 +1638,7 @@ paths:
           description: OK
           content:
             application/json:
-              schema: { type: object, properties: { data: { $ref: '#/components/schemas/Home' } } }
+              schema: { type: object, required: [data], properties: { data: { $ref: '#/components/schemas/Home' } } }
               example:
                 data:
                   crew: { id: c001, name: 한강줍깅크루 }
@@ -1655,7 +1668,7 @@ paths:
           description: OK
           content:
             application/json:
-              schema: { type: object, properties: { data: { $ref: '#/components/schemas/CrewStats' } } }
+              schema: { type: object, required: [data], properties: { data: { $ref: '#/components/schemas/CrewStats' } } }
               example:
                 data:
                   range: MONTH
@@ -1682,14 +1695,17 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [data]
                 properties:
                   data:
                     type: object
+                    required: [days]
                     properties:
                       days:
                         type: array
                         items:
                           type: object
+                          required: [date, items, activityCount, activities]
                           properties:
                             date: { type: string, format: date }
                             items: { type: integer }
@@ -1698,6 +1714,7 @@ paths:
                               type: array
                               items:
                                 type: object
+                                required: [activityId, startedAt, user, items, distanceM]
                                 properties:
                                   activityId: { type: string }
                                   startedAt: { type: string, format: date-time }
@@ -1711,13 +1728,13 @@ paths:
                       items: 12
                       activityCount: 1
                       activities:
-                        - { activityId: a098, user: { id: 8a2d…, nickname: 상혁, photoUrl: null, withdrawn: false }, items: 12, distanceM: 900 }
+                        - { activityId: a098, startedAt: 2026-09-02T09:02:00Z, user: { id: 8a2d…, nickname: 상혁, photoUrl: null, withdrawn: false }, items: 12, distanceM: 900 }
                     - date: 2026-09-05
                       items: 47
                       activityCount: 2
                       activities:
-                        - { activityId: a100, user: { id: 6f1c…, nickname: 관열, photoUrl: null, withdrawn: false }, items: 32, distanceM: 2100 }
-                        - { activityId: a101, user: { id: 8a2d…, nickname: 상혁, photoUrl: null, withdrawn: false }, items: 15, distanceM: 1300 }
+                        - { activityId: a100, startedAt: 2026-09-05T09:02:00Z, user: { id: 6f1c…, nickname: 관열, photoUrl: null, withdrawn: false }, items: 32, distanceM: 2100 }
+                        - { activityId: a101, startedAt: 2026-09-05T10:20:00Z, user: { id: 8a2d…, nickname: 상혁, photoUrl: null, withdrawn: false }, items: 15, distanceM: 1300 }
   /crew/export:
     get:
       tags: [stats]
@@ -1846,9 +1863,11 @@ components:
         application/json:
           schema:
             type: object
+            required: [data]
             properties:
               data:
                 type: object
+                required: [accessToken, refreshToken, isNew]
                 properties:
                   accessToken: { type: string }
                   refreshToken: { type: string }
@@ -1947,7 +1966,7 @@ components:
         JEONNAM 전라남도 · GYEONGBUK 경상북도 · GYEONGNAM 경상남도 · JEJU 제주특별자치도
     CrewSummary:
       type: object
-      required: [id, name, intro, region, joinPolicy, memberCount, leader]
+      required: [id, name, intro, photoUrl, region, joinPolicy, memberCount, leader]
       description: 크루 검색 결과 한 건. 가입 전 사람이 보는 정보만 담는다
       properties:
         id: { type: string }
@@ -1981,7 +2000,7 @@ components:
           type: array
           items:
             type: object
-            required: [type, version, required, url, agreed]
+            required: [type, version, required, url, agreed, agreedAt]
             properties:
               type: { type: string, enum: [TERMS, PRIVACY, MARKETING] }
               version: { type: string }
@@ -1991,7 +2010,7 @@ components:
               agreedAt: { type: string, format: date-time, nullable: true }
     Me:
       type: object
-      required: [profileComplete]
+      required: [id, profileComplete, nickname, intro, photoUrl, email, hasPassword, linked, settings, membership]
       properties:
         id: { type: string }
         profileComplete: { type: boolean, description: 닉네임 설정 완료 여부. false면 닉네임 화면 재개. 약관 동의 완료는 GET /users/me/agreements }
@@ -2002,19 +2021,23 @@ components:
         hasPassword: { type: boolean }
         linked:
           type: object
+          required: [kakao, google]
           properties: { kakao: { type: boolean }, google: { type: boolean } }
         settings:
           type: object
+          required: [shareLocationDefault, notifyActivityStart]
           properties:
             shareLocationDefault: { type: boolean }
             notifyActivityStart: { type: boolean }
         membership:
           type: object
+          required: [status, crew, rejection]
           properties:
             status: { type: string, enum: [NONE, PENDING, MEMBER], description: "NONE→1-6(rejection 이 있으면 1-9 거절 안내 먼저) · PENDING→1-9(비공개 크루 승인 대기, 크루원 아님. crew 는 신청한 크루) · MEMBER→탭. 승인 대기 중 승인됐으면 MEMBER 가 먼저다" }
             crew:
               type: object
               nullable: true
+              required: [id, name, isLeader]
               properties:
                 id: { type: string }
                 name: { type: string }
@@ -2023,12 +2046,14 @@ components:
               type: object
               nullable: true
               description: 내 가장 최근 가입 신청이 REJECTED 이고 아직 확인하지 않았을 때만 온다(그보다 오래된 미확인 거절은 다시 띄우지 않는다). status 가 NONE 일 때만. `POST /crews/join-requests/{requestId}/read` 로 확인하면 null
+              required: [requestId, crew, decidedAt]
               properties:
                 requestId: { type: string }
-                crew: { type: object, properties: { id: { type: string }, name: { type: string } } }
+                crew: { type: object, required: [id, name], properties: { id: { type: string }, name: { type: string } } }
                 decidedAt: { type: string, format: date-time }
     Crew:
       type: object
+      required: [id, name, intro, photoUrl, leader, region, joinPolicy, memberCount, goalCount, pendingJoinRequests, pinnedNotice, unreadChat, isLeader]
       properties:
         id: { type: string }
         name: { type: string }
@@ -2044,6 +2069,7 @@ components:
           description: 삭제되지 않은 최신 공지 한 건 자동 선택. 없으면 null
           type: object
           nullable: true
+          required: [id, title, createdAt]
           properties:
             id: { type: string }
             title: { type: string }
@@ -2052,9 +2078,10 @@ components:
         isLeader: { type: boolean }
     JoinRequest:
       type: object
+      required: [id, crew, user, status, createdAt]
       properties:
         id: { type: string }
-        crew: { type: object, properties: { id: { type: string }, name: { type: string } } }
+        crew: { type: object, required: [id, name], properties: { id: { type: string }, name: { type: string } } }
         user: { $ref: '#/components/schemas/UserBrief' }
         status:
           type: string
@@ -2065,6 +2092,7 @@ components:
       allOf:
         - $ref: '#/components/schemas/UserBrief'
         - type: object
+          required: [isLeader, totalItems, joinedAt, following]
           properties:
             isLeader: { type: boolean }
             totalItems: { type: integer }
@@ -2072,6 +2100,7 @@ components:
             following: { type: boolean }
     MemberStats:
       type: object
+      required: [totalItems, totalDistanceM, totalActivities, activeDays]
       properties:
         totalItems: { type: integer }
         totalDistanceM: { type: integer }
@@ -2085,6 +2114,7 @@ components:
         - $ref: '#/components/schemas/Member'
         - $ref: '#/components/schemas/MemberStats'
         - type: object
+          required: [intro, blocked]
           properties:
             intro: { type: string }
             blocked: { type: boolean }
@@ -2101,6 +2131,7 @@ components:
     Bbox:
       type: object
       nullable: true
+      required: [x, y, w, h]
       properties:
         x: { type: number }
         y: { type: number }
@@ -2263,6 +2294,7 @@ components:
         createdAt: { type: string, format: date-time }
     Notification:
       type: object
+      required: [id, type, title, detail, unread, target, createdAt]
       properties:
         id: { type: integer }
         type:
@@ -2274,12 +2306,14 @@ components:
         target:
           type: object
           description: 이동 대상. JOIN_REQUESTS→3-8 · MEMBERS→3-11 · REPORTS→6-2 · POST→5-2 · NOTICE→3-6 · CHAT→3-7 · LIVE→2-2 · CREW→1-6/탭 · NOTIFICATIONS→2-3 (신고 결과는 title/detail, 크루장 처리 화면으로 보내지 않음)
+          required: [type, id]
           properties:
             type: { type: string, enum: [JOIN_REQUESTS, MEMBERS, REPORTS, POST, NOTICE, CHAT, LIVE, CREW, NOTIFICATIONS] }
             id: { type: string, nullable: true }
         createdAt: { type: string, format: date-time }
     Report:
       type: object
+      required: [id, reporter, targetType, targetId, targetPreview, reason, memo, createdAt]
       properties:
         id: { type: string }
         reporter: { $ref: '#/components/schemas/UserBrief' }
@@ -2291,10 +2325,12 @@ components:
         createdAt: { type: string, format: date-time }
     Home:
       type: object
+      required: [crew, last7d, character, live, unreadNotifications]
       properties:
-        crew: { type: object, properties: { id: { type: string }, name: { type: string } } }
+        crew: { type: object, required: [id, name], properties: { id: { type: string }, name: { type: string } } }
         last7d:
           type: object
+          required: [crewItems, myItems, myByCategory, daily]
           properties:
             crewItems: { type: integer }
             myItems: { type: integer }
@@ -2302,6 +2338,7 @@ components:
             daily: { type: array, items: { type: integer }, minItems: 7, maxItems: 7, description: 6일 전 → 오늘 }
         character:
           type: object
+          required: [windowDays, items, goalCount, stage]
           properties:
             windowDays: { type: integer }
             items: { type: integer }
@@ -2309,16 +2346,19 @@ components:
             stage: { type: integer, minimum: 1, maximum: 5, description: 1 축 처짐 · 2 보통 · 3 신남 · 4 반짝 · 5 파티. 서버가 items/goalCount 로 계산 }
         live:
           type: object
+          required: [count, users]
           properties:
             count: { type: integer }
             users: { type: array, items: { $ref: '#/components/schemas/UserBrief' }, maxItems: 5 }
         unreadNotifications: { type: integer }
     CrewStats:
       type: object
+      required: [range, totals, byCategory, series, ranking]
       properties:
         range: { type: string }
         totals:
           type: object
+          required: [items, distanceM, durationSec, activities]
           properties:
             items: { type: integer }
             distanceM: { type: integer }
@@ -2327,11 +2367,12 @@ components:
         byCategory: { type: object, additionalProperties: { type: integer } }
         series:
           type: array
-          items: { type: object, properties: { date: { type: string, format: date }, items: { type: integer } } }
+          items: { type: object, required: [date, items], properties: { date: { type: string, format: date }, items: { type: integer } } }
         ranking:
           type: array
           items:
             type: object
+            required: [rank, user, items, distanceM]
             properties:
               rank: { type: integer }
               user: { $ref: '#/components/schemas/UserBrief' }

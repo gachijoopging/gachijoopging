@@ -21,16 +21,15 @@ import {
   space,
   useRipple,
 } from 'design-system/src';
-import { ApiError, type ApiClient } from '../../src/api/client';
+import { ApiError, forgetAll, type ApiClient, type ApiResponse } from '../../src/api/client';
 import { createApiClient } from '../../src/api/config';
-import type { MOCKS } from '../../src/api/mocks.generated';
 import { monthDay } from '../../src/crew/crew';
 import { memberActionOutcome } from '../../src/crew/manage';
 import { reasonLabel, reportActions, resolveOutcome, targetLabel, withoutKickedUser, type ReportAction } from '../../src/report/report';
 
-type Report = (typeof MOCKS)['GET /crew/reports']['data']['items'][number];
+type Report = ApiResponse<'GET /crew/reports'>['data']['items'][number];
 
-const api: ApiClient = createApiClient({ delayMs: 300 });
+const api: ApiClient = createApiClient();
 
 const CONFIRM: Record<ReportAction, { title: (r: Report) => string; body: string; label: string }> = {
   DISMISS: { title: () => '이 신고를 기각할까요?', body: '대상은 그대로 유지되고 신고만 처리돼요.', label: '기각' },
@@ -144,6 +143,7 @@ export default function ReviewReportScreen() {
     } catch (e) {
       error = e;
     }
+    if (action === 'DELETE' && !error) forgetAll();
     if (!mounted.current || request !== generation.current) return;
     setBusyId(null);
     acting.current = false;

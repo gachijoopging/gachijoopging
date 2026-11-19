@@ -31,7 +31,7 @@ import { activityGoneCode, applyEndedActivity, syncOutbox } from '../../../src/a
 import { leaveForMembership } from '../../../src/feed/leave';
 import { ShareCard, useShareImage } from '../../../src/activity/ShareCard';
 
-const api: ApiClient = createApiClient({ delayMs: 300 });
+const api: ApiClient = createApiClient();
 
 type Phase = 'saving' | 'saved' | 'offline' | 'error';
 

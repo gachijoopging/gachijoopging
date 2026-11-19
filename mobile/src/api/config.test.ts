@@ -10,10 +10,8 @@ jest.mock('expo-secure-store', () => ({
   setItemAsync: async (k: string, v: string) => { mockSecure.set(k, v); },
   deleteItemAsync: async (k: string) => { mockSecure.delete(k); },
 }));
-import { ApiError, createMockClient } from './client';
-
-process.env.EXPO_PUBLIC_API_MODE = 'real';
-const { apiConfig, createApiClient } = require('./config') as typeof import('./config');
+import { ApiError } from './client';
+import { createApiClient } from './config';
 
 const ok = (data: unknown) => ({ ok: true, status: 200, text: async () => JSON.stringify({ data }) });
 const fetch = jest.fn(async (_url: string, _init?: RequestInit) => ok({ ok: true }));
@@ -22,19 +20,26 @@ beforeEach(() => {
   globalThis.fetch = fetch as unknown as typeof globalThis.fetch;
 });
 
-test('실 모드에서 백엔드에 있는 경로는 실서버로 보낸다', async () => {
-  expect(apiConfig.real).toBe(true);
+test('API_MODE 가 없어도 실서버로 보낸다 — 목 응답으로 빠지는 경로가 없다', async () => {
+  expect(process.env.EXPO_PUBLIC_API_MODE).toBeUndefined();
   const api = createApiClient();
   await expect(api.get('GET /crews', { query: '줍' })).resolves.toEqual({ data: { ok: true } });
   await api.mutate('PUT /crew/leader', { userId: 'u2' });
   expect(fetch.mock.calls.map(([url]) => url)).toEqual(['https://api.test/api/v1/crews?query=%EC%A4%8D', 'https://api.test/api/v1/crew/leader']);
 });
 
-test('실 모드에서도 백엔드에 없는 경로는 목 응답을 준다', async () => {
+test('차단·신고는 실서버로 보낸다 — 목 차단 목록으로 맞추면 기기에 기억한 실제 차단이 지워진다', async () => {
   const api = createApiClient();
-  await expect(api.get('GET /users/me/blocked')).resolves.toEqual(await createMockClient().get('GET /users/me/blocked'));
-  await expect(api.mutate('PUT /users/{userId}/block', { userId: 'u2' })).resolves.toEqual(await createMockClient().mutate('PUT /users/{userId}/block', { userId: 'u2' }));
-  expect(fetch).not.toHaveBeenCalled();
+  await api.get('GET /users/me/blocked', { cursor: 'b' });
+  await api.mutate('PUT /users/{userId}/block', { userId: 'u2' });
+  await api.mutate('DELETE /users/{userId}/block', { userId: 'u2' });
+  await api.mutate('POST /reports', { id: 'r1', targetType: 'COMMENT', targetId: 'c1', reason: 'SPAM' });
+  await api.get('GET /crew/reports', { cursor: 'r' });
+  await api.mutate('POST /crew/reports/{reportId}', { reportId: 'r1', result: 'DELETE' });
+  expect(fetch.mock.calls.map(([url, init]) => `${init?.method} ${url.replace('https://api.test/api/v1', '')}`)).toEqual([
+    'GET /users/me/blocked?cursor=b', 'PUT /users/u2/block', 'DELETE /users/u2/block', 'POST /reports', 'GET /crew/reports?cursor=r', 'POST /crew/reports/r1',
+  ]);
+  expect(JSON.parse(String(fetch.mock.calls[5][1]?.body))).toEqual({ result: 'DELETE' });
 });
 
 test('게시물·댓글·좋아요와 크루원 게시물은 실서버로 보낸다 — 목 ID 로는 상세가 열리지 않는다', async () => {
@@ -108,8 +113,10 @@ test('내 누적·크루 통계·달력·크루원 기록은 실서버 응답이
   await api.get('GET /crew/stats', { range: 'WEEK' });
   await api.get('GET /crew/calendar', { month: '2026-10' });
   await api.get('GET /crew/members/{userId}/activities', { userId: 'u2', cursor: undefined });
+  await api.get('GET /crew/export', { from: '2026-10-01', to: '2026-10-31' });
   expect(fetch.mock.calls.map(([url]) => url.replace('https://api.test/api/v1', ''))).toEqual([
     '/users/me/stats', '/crew/stats?range=WEEK', '/crew/calendar?month=2026-10', '/crew/members/u2/activities',
+    '/crew/export?from=2026-10-01&to=2026-10-31',
   ]);
 });
 

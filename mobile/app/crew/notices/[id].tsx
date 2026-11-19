@@ -34,7 +34,7 @@ import { useFlash } from '../../../src/ui/useFlash';
 type Detail = ApiResponse<'GET /notices/{noticeId}'>['data'];
 type Comment = { id: string; author: { id: string; nickname: string; photoUrl: string | null }; text: string; createdAt: string };
 
-const api: ApiClient = createApiClient({ delayMs: 300 });
+const api: ApiClient = createApiClient();
 
 export default function NoticeDetailScreen() {
   const { id, flash } = useLocalSearchParams<{ id: string; flash?: string }>();

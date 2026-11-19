@@ -36,7 +36,7 @@ import { createApiClient } from '../../../src/api/config';
 import { discardPhoto } from '../../../src/activity/actions';
 import { getStored } from '../../../src/activity/store';
 
-const api: ApiClient = createApiClient({ delayMs: 600 });
+const api: ApiClient = createApiClient();
 
 type Perm = 'unknown' | 'granted' | 'denied' | 'blocked';
 type Shot = { uri: string; takenAt: string; mediaId: string; location: { lat: number; lng: number } | null };
@@ -149,7 +149,7 @@ export default function TakePhotoScreen() {
     setUploading(true);
     setProgress(0);
     try {
-      // ponytail: 목은 진행률이 없다. 실 업로드는 보낸 바이트 비율로 바꾼다
+      // ponytail: 진행률은 고정값이다. 필요해지면 보낸 바이트 비율로 바꾼다
       setProgress(0.4);
       const body = new FormData();
       body.append('mediaId', shot.mediaId);

@@ -22,8 +22,9 @@ npm run gen:mocks      # docs/openapi.yaml 의 example → src/api/mocks.generat
 
 ```
 app/            expo-router. app/(tabs)/ 가 탭 5개, 파일 이름이 곧 URL — 아래 §라우트
-src/api/        목 데이터 계층. 화면은 ApiClient 인터페이스만 본다
+src/api/        서버 호출 계층. 화면은 createApiClient() 가 주는 ApiClient 만 본다 — 언제나 실서버 HTTP 다
 src/tabs.ts     탭 구성. 가운데(줍깅)가 BottomNav 의 시작 버튼 자리다
+test-support/   테스트용 목 클라이언트. 앱 코드는 가져오지 않는다
 modules/        Expo Modules 로컬 네이티브 모듈 (배포하지 않는다)
 plugins/        config plugin — android/ 가 재생성되어도 살아남아야 하는 네이티브 설정
 android/        expo prebuild 산출물. 커밋하지 않고 직접 고치지도 않는다
@@ -54,15 +55,19 @@ import { Screen, Txt, useRipple } from 'design-system/src';
 
 ## 목 데이터
 
-`src/api/mocks.generated.ts` 는 생성물이다. 고치지 말고 `docs/openapi.yaml` 의 해당 응답에
-`example` 을 넣은 뒤 `npm run gen:mocks` 를 돌린다. 목에 없는 화면을 만들려면 계약에
-`example` 을 먼저 채우는 순서다.
+앱에는 목 모드가 없다. `createApiClient()` 는 언제나 실서버 HTTP 클라이언트이고, 서버 주소
+`API_BASE_URL`(`mobile/.env`) 없이는 앱이 동작하지 않는다.
 
-`src/api/contract.generated.ts` 도 같은 명령이 만드는 계약 타입이다. 실서버로 옮긴 경로는
-`client.ts` 의 `ContractKey` 에 넣어 응답 타입을 목이 아니라 계약에서 가져온다. 그 경로의 응답
-스키마에는 `required` 를 채운다 — 비어 있으면 모든 필드가 optional 로 생성된다.
+목은 테스트용이다. `src/api/mocks.generated.ts` 는 생성물이다. 고치지 말고 `docs/openapi.yaml` 의
+해당 응답에 `example` 을 넣은 뒤 `npm run gen:mocks` 를 돌린다. 이 예시를 돌려주는 목 클라이언트는
+`test-support/mock-client.ts` 에 있다. `app/` · `src/` 의 테스트가 아닌 파일은 둘 다 가져오지
+않는다 — `src/api/no-mock-imports.test.ts` 가 막는다.
 
-화면에서 로딩·오류 UI 를 확인할 때는 목 클라이언트에 지연과 실패를 준다.
+`src/api/contract.generated.ts` 도 같은 명령이 만드는 계약 타입이다. 응답 타입은 전부 여기서 온다
+(`client.ts` 의 `ApiResponse<'GET /crew/home'>`). 응답 스키마에는 `required` 를 채운다 — 비어 있으면
+모든 필드가 optional 로 생성된다.
+
+테스트에서 늦게 오는 응답이나 실패가 필요하면 목 클라이언트에 지연과 실패를 준다.
 
 ```ts
 createMockClient({ delayMs: 300, failing: ['GET /crew/home'] })

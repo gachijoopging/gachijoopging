@@ -19,15 +19,14 @@ import {
   space,
   useTheme,
 } from 'design-system/src';
-import { forget, type ApiClient } from '../../src/api/client';
+import { forgetAll, type ApiClient, type ApiResponse } from '../../src/api/client';
 import { createApiClient } from '../../src/api/config';
-import type { MOCKS } from '../../src/api/mocks.generated';
 import { blockedUsers, reconcileBlockedUsers, setUserBlocked } from '../../src/profile/blocked-users';
 import { currentAccount } from '../../src/auth/account';
 
-type Blocked = (typeof MOCKS)['GET /users/me/blocked']['data']['items'][number];
+type Blocked = ApiResponse<'GET /users/me/blocked'>['data']['items'][number];
 
-const api: ApiClient = createApiClient({ delayMs: 300 });
+const api: ApiClient = createApiClient();
 const ROW_DESC = '차단됨, 게시물, 댓글, 채팅, 위치에서 숨김';
 
 export default function ManageBlocksScreen() {
@@ -130,7 +129,7 @@ export default function ManageBlocksScreen() {
     setList((prev) => prev?.filter((u) => u.id !== user.id) ?? prev);
     try {
       await api.mutate('DELETE /users/{userId}/block', { userId: user.id });
-      forget('GET /crew/members/{userId}', { userId: user.id });
+      forgetAll();
       if (viewerId.current) setUserBlocked(viewerId.current, user.id, false);
       setTotal((n) => Math.max(0, n - 1));
       setSnackbar('차단을 해제했어요');

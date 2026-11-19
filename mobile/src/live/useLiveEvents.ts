@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createApiClient } from '../api/config';
 import { leaveForMembership } from '../feed/leave';
+import { useBlockedUsers } from '../profile/blocked-users';
 import { acquireCrewSocket } from '../realtime/crew-socket';
 import type { LiveEvent } from '../realtime/stomp';
 import type { CrewLive } from './live';
@@ -56,5 +57,13 @@ export function useLiveEvents(onEvent: (event: LiveEvent) => void, onSnapshot: (
     });
     return () => { alive.current = false; pending.current = null; socket.close(); };
   }, [refresh]);
+
+  const blocked = useBlockedUsers();
+  const refreshedFor = useRef(blocked);
+  useEffect(() => {
+    if (refreshedFor.current === blocked) return;
+    refreshedFor.current = blocked;
+    void refresh().catch(() => {});
+  }, [blocked, refresh]);
   return { refresh, connected };
 }
