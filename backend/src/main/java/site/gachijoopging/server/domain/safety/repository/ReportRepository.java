@@ -14,7 +14,7 @@ import site.gachijoopging.server.domain.safety.entity.ReportTargetType;
 
 public interface ReportRepository extends JpaRepository<Report, UUID> {
 
-  // 충돌 대상을 적지 않아 id 와 (신고자, 대상) UNIQUE 를 둘 다 삼킨다 — 하나만 적으면 다른 쪽이 예외로 트랜잭션을 깬다
+  // 충돌 대상을 적지 않아 id 와 대기 중 (신고자, 대상) UNIQUE 를 둘 다 삼킨다 — 하나만 적으면 다른 쪽이 예외로 트랜잭션을 깬다
   @Modifying
   @Query(
       value =

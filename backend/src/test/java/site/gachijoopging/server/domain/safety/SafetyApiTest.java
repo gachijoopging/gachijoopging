@@ -119,6 +119,33 @@ class SafetyApiTest extends IntegrationTest {
   }
 
   @Test
+  void 기각된_대상은_같은_사람이_다시_신고할_수_있고_그_신고가_대기_중이면_409_다() throws Exception {
+    TestAccount 크루장 = 크루를_만든다("safety-renew-leader@test.io");
+    TestAccount 나 = 크루원이_된다("safety-renew-me@test.io", 크루장);
+    UUID 글 = 쓴다(크루장, "다시 신고할 글");
+    UUID 첫_신고 = UUID.randomUUID();
+    mockMvc
+        .perform(신고(나, 첫_신고, "POST", 글.toString(), "SPAM", null))
+        .andExpect(status().isCreated());
+    mockMvc.perform(처리(크루장, 첫_신고, "DISMISS")).andExpect(status().isNoContent());
+
+    mockMvc
+        .perform(신고(나, UUID.randomUUID(), "POST", 글.toString(), "HATE", null))
+        .andExpect(status().isCreated());
+    mockMvc
+        .perform(신고(나, UUID.randomUUID(), "POST", 글.toString(), "SPAM", null))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.code").value("CONFLICT"));
+
+    assertThat(
+            jdbcTemplate.queryForList(
+                "SELECT status FROM reports WHERE reporter_id = ? ORDER BY created_at",
+                String.class,
+                나.id()))
+        .containsExactly("RESOLVED", "PENDING");
+  }
+
+  @Test
   void 기타_사유에_메모가_비면_422_고_다른_크루의_대상은_404_다() throws Exception {
     TestAccount 크루장 = 크루를_만든다("safety-memo-leader@test.io");
     TestAccount 나 = 크루원이_된다("safety-memo-me@test.io", 크루장);
