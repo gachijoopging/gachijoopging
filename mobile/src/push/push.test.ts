@@ -92,6 +92,24 @@ test('토큰을 못 얻으면(FCM 설정 없음) 등록하지 않고 던지지 �
   expect(mutate).not.toHaveBeenCalled();
 });
 
+test('토큰 리스너가 넘긴 토큰은 그대로 등록하고 토큰을 다시 가져오지 않는다 — 가져오면 리스너가 또 불려 끝없이 돈다', async () => {
+  await push.syncPushToken(api, 'fcm-rolled');
+  expect(mutate).toHaveBeenCalledTimes(1);
+  expect(mutate).toHaveBeenCalledWith('PUT /users/me/devices', { pushToken: 'fcm-rolled', platform: 'ANDROID' });
+  expect(mockGetToken).not.toHaveBeenCalled();
+});
+
+test('첫 등록이 끝나기 전에 리스너가 같은 토큰을 넘겨도 한 번만 보낸다 — 토큰을 가져오면 리스너도 그 토큰으로 불린다', async () => {
+  let finish = () => {};
+  mutate.mockImplementationOnce(() => new Promise<undefined>((resolve) => { finish = () => resolve(undefined); }));
+  const first = push.syncPushToken(api);
+  await flush();
+  await push.syncPushToken(api, 'fcm-1');
+  finish();
+  await first;
+  expect(mutate).toHaveBeenCalledTimes(1);
+});
+
 const router = { push: jest.fn(), dismissTo: jest.fn() };
 const tap = (data: Record<string, string>) => ({ notificationId: '500', ...data });
 const flush = () => new Promise((r) => setImmediate(r));

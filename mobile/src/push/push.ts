@@ -16,7 +16,7 @@ const opened = new Set<string>();
 type PushData = Partial<Record<'notificationId' | 'type' | 'targetType' | 'targetId', string>>;
 
 /** 로그인된 기기의 FCM 토큰을 서버에 등록한다. 등록을 못 해도 앱 사용은 막지 않고 다음 확인 때 다시 보낸다 */
-export async function syncPushToken(api: ApiClient): Promise<void> {
+export async function syncPushToken(api: ApiClient, token?: string): Promise<void> {
   try {
     const account = currentAccount();
     if (!account) return;
@@ -26,11 +26,15 @@ export async function syncPushToken(api: ApiClient): Promise<void> {
       wasAsked: () => notifyAsked.exists,
       markAsked: () => notifyAsked.create({ overwrite: true }),
     });
-    const { data: pushToken } = await Notifications.getDevicePushTokenAsync();
+    // 토큰을 가져오면 토큰 리스너가 다시 불린다. 리스너가 넘긴 토큰이 있으면 가져오지 않는다
+    const pushToken = token ?? (await Notifications.getDevicePushTokenAsync()).data;
     const key = `${account.id}:${account.since}:${pushToken}`;
     if (key === registered) return;
-    await api.mutate('PUT /users/me/devices', { pushToken, platform: 'ANDROID' });
     registered = key;
+    await api.mutate('PUT /users/me/devices', { pushToken, platform: 'ANDROID' }).catch((error) => {
+      registered = null;
+      throw error;
+    });
   } catch {}
 }
 
@@ -42,7 +46,7 @@ export function usePushTokenSync(): void {
   }, [pathname]);
   useEffect(() => {
     if (!apiConfig.real) return;
-    const sub = Notifications.addPushTokenListener(() => void syncPushToken(createApiClient()));
+    const sub = Notifications.addPushTokenListener(({ data }) => void syncPushToken(createApiClient(), data));
     return () => sub.remove();
   }, []);
 }
