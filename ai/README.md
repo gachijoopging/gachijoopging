@@ -349,8 +349,9 @@ AI 서버가 **담당자 개인 맥**이라 데모 당일 리스크가 구조적
   `launchctl list | grep gachijoopging` 에 둘 다 PID 가 있으면 떠 있는 것입니다.
   **멈출 때**는 `launchctl bootout gui/$(id -u)/site.gachijoopging.ai-serve` (터널은 `ai-ngrok`). `kill` 은 launchd 가 다시 띄웁니다
 - [ ] **재부팅 뒤 로그인 한 번.** 에이전트는 로그인해야 뜹니다. FileVault 가 켜져 있으면 자동 로그인을 쓸 수 없어 **재부팅 뒤 누군가 암호를 한 번 넣어야** 합니다. FileVault 는 끄지 않습니다 — `ai/.env` 의 시크릿이 디스크에 평문으로 있습니다
-- [ ] 잠자기 끄기 `sudo pmset -a sleep 0` · 정전 뒤 자동 켜짐 `sudo pmset -a autorestart 1`. 잠들면 터널과 uvicorn 이 함께 멈춥니다
-- [ ] **유선 랜** 연결, 전원 연결
+- [ ] 잠자기 끄기 `sudo pmset -a sleep 0` · 정전 뒤 자동 켜짐 `sudo pmset -a autorestart 1`. 잠들면 터널과 uvicorn 이 함께 멈춥니다. `pmset` 대신 Jolt of Caffeine 을 쓸 때는 "로그인 시 시작"을 켭니다 — 앱이 꺼지면 1분 뒤 잠듭니다
+- [ ] **유선 랜** 연결, 전원 연결. Wi-Fi 는 공유기까지 ping 이 수백 ms 로 튀어 터널 왕복에 그대로 얹힙니다 (progress.md §3.5 서빙 맥 네트워크)
+- [ ] **로컬 VPN·광고 차단 앱(Unicorn Pro 등)을 끕니다.** 전체 트래픽을 자기 터널로 가로채면 ngrok 세션이 끊기고 다시 붙지 못합니다(GAC-182, 10분 단절). `netstat -rn -f inet | grep utun` 에 `0/2`·`128.0/2` 같은 전체 경로가 없어야 합니다 — Tailscale 처럼 자기 대역만 잡는 것은 괜찮습니다
 
 **데모 당일**
 
