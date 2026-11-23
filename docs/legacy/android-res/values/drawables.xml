@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  드로어블 별칭.
+
+  이전에는 내용이 완전히 같은 드로어블 파일이 23개 있었습니다(10그룹). 예를 들어
+  bg_button_deep · bg_chip_deep · bg_chip_selected · bg_tab_selected · bg_toast 는
+  다섯 개가 바이트 단위로 동일했습니다. 이름이 여러 개인 것 자체는 문제가 아닙니다 —
+  호출부에서 bg_chip_selected 가 shape_pill_deep 보다 의도를 잘 드러내니까요.
+  문제는 그것들이 서로 독립된 '복사본' 이었다는 점입니다. 칩을 고치려고 bg_chip_deep 을
+  수정하면 bg_tab_selected 는 조용히 남아서, 탭과 칩이 어긋난 걸 아무도 모르게 됩니다.
+
+  그래서 시각 정의는 drawable/shape_*.xml 한 곳에만 두고, 의미 이름은 여기서 그것을
+  가리키게 했습니다. 호출부는 한 줄도 바뀌지 않습니다.
+
+  나중에 어느 하나가 정말 달라져야 하면, 그 별칭 한 줄을 지우고 같은 이름의
+  drawable/bg_*.xml 을 새로 만들면 됩니다.
+-->
+<resources>
+
+    <!-- 딥 채움 + 알약 -->
+    <item name="bg_button_deep" type="drawable">@drawable/shape_pill_deep</item>
+    <item name="bg_chip_deep" type="drawable">@drawable/shape_pill_deep</item>
+    <item name="bg_chip_selected" type="drawable">@drawable/shape_pill_deep</item>
+    <item name="bg_tab_selected" type="drawable">@drawable/shape_pill_deep</item>
+    <item name="bg_toast" type="drawable">@drawable/shape_pill_deep</item>
+
+    <!-- 서피스 채움 + 알약 -->
+    <item name="bg_bottom_nav" type="drawable">@drawable/shape_pill_surface</item>
+    <item name="bg_search_pill" type="drawable">@drawable/shape_pill_surface</item>
+
+    <!-- 서피스 채움 + 테두리 + 알약 -->
+    <item name="bg_button_ghost" type="drawable">@drawable/shape_pill_outlined</item>
+    <item name="bg_chip_default" type="drawable">@drawable/shape_pill_outlined</item>
+    <item name="bg_input_pill" type="drawable">@drawable/shape_pill_outlined</item>
+
+    <!-- 중립 채움 + 알약 -->
+    <item name="bg_button_primary_disabled" type="drawable">@drawable/shape_pill_neutral</item>
+    <item name="bg_chip_neutral" type="drawable">@drawable/shape_pill_neutral</item>
+
+    <!-- 위험 채움 + 알약 -->
+    <item name="bg_button_danger" type="drawable">@drawable/shape_pill_danger</item>
+    <item name="bg_chip_danger" type="drawable">@drawable/shape_pill_danger</item>
+
+    <!-- 반투명 서피스 + 알약 -->
+    <item name="bg_button_translucent" type="drawable">@drawable/shape_pill_translucent</item>
+    <item name="bg_tab_default" type="drawable">@drawable/shape_pill_translucent</item>
+
+    <!-- 서피스 채움 + 테두리 + 입력 라운드 -->
+    <item name="bg_input" type="drawable">@drawable/shape_field_outlined</item>
+    <item name="bg_search_field" type="drawable">@drawable/shape_field_outlined</item>
+
+    <!-- 서피스 채움 + 작은 카드 라운드 -->
+    <item name="bg_card_sm" type="drawable">@drawable/shape_card_surface</item>
+    <item name="bg_card_tight" type="drawable">@drawable/shape_card_surface</item>
+
+    <!-- 틴트 채움 + 타일 라운드 -->
+    <item name="bg_banner_tint" type="drawable">@drawable/shape_tile_tint</item>
+    <item name="bg_tile" type="drawable">@drawable/shape_tile_tint</item>
+
+    <!-- 틴트 채움 + 입력 라운드 -->
+    <item name="bg_reply_bubble" type="drawable">@drawable/shape_round_tint</item>
+    <item name="bg_thumb_square" type="drawable">@drawable/shape_round_tint</item>
+
+</resources>

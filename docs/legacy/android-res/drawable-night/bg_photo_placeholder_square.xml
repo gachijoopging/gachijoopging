@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- bg_photo_placeholder 의 정사각 버전 (라운드만 다름). 야간 변형 이유는 그쪽 주석 참고. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <gradient
+        android:angle="315"
+        android:centerColor="#FF2C3A1C"
+        android:centerX="0.6"
+        android:endColor="#FF243016"
+        android:startColor="#FF3A4A24"
+        android:type="linear" />
+    <corners android:radius="14dp" />
+</shape>

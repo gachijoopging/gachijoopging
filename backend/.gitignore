@@ -1,0 +1,8 @@
+build/
+.gradle/
+out/
+*.log
+
+# gradle/wrapper/gradle-wrapper.jar 는 반드시 커밋한다.
+# 없으면 클론한 사람이 ./gradlew 를 실행할 수 없다.
+# (*.jar 를 통째로 무시하는 규칙을 추가하지 말 것)

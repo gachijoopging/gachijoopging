@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Material 3 fade through — 탭 전환처럼 '나란한' 화면 사이의 이동.
+  방향이 없는 이동이라 좌우로 밀지 않고, 살짝 커지며 나타난다.
+  나가는 화면이 먼저 사라지고(90ms) 그 다음 들어온다.
+-->
+<set xmlns:android="http://schemas.android.com/apk/res/android">
+    <alpha
+        android:duration="210"
+        android:fromAlpha="0"
+        android:interpolator="@interpolator/standard_easing"
+        android:startOffset="90"
+        android:toAlpha="1" />
+    <scale
+        android:duration="210"
+        android:fromXScale="0.94"
+        android:fromYScale="0.94"
+        android:interpolator="@interpolator/emphasized_decelerate"
+        android:pivotX="50%p"
+        android:pivotY="50%p"
+        android:startOffset="90"
+        android:toXScale="1"
+        android:toYScale="1" />
+</set>

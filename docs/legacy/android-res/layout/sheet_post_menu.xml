@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- M18 게시글 관리 시트 -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingStart="@dimen/space_xl"
+    android:paddingTop="@dimen/space_lg"
+    android:paddingEnd="@dimen/space_xl"
+    android:paddingBottom="@dimen/space_2xl">
+
+    <View style="@style/Gachi.SheetHandle" />
+
+    <TextView
+        style="@style/Gachi.Text.Section.Lg"
+        android:layout_marginTop="@dimen/space_md"
+        android:text="@string/post_menu_title" />
+
+    <TextView
+        android:id="@+id/body"
+        style="@style/Gachi.Text.Body"
+        android:layout_width="match_parent"
+        android:layout_marginTop="@dimen/space_sm"
+        android:textColor="@color/gachi_ink_muted"
+        android:textSize="@dimen/text_label" />
+
+    <!-- 내 글 -->
+    <LinearLayout
+        android:id="@+id/mineRow"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_lg"
+        android:orientation="horizontal"
+        android:visibility="gone">
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/editButton"
+            style="@style/Gachi.Button.Primary"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:paddingTop="@dimen/space_lg"
+            android:paddingBottom="@dimen/space_lg"
+            android:text="@string/action_edit"
+            android:textSize="@dimen/text_body" />
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/deleteButton"
+            style="@style/Gachi.Button.Danger"
+            android:layout_width="0dp"
+            android:layout_marginStart="@dimen/space_sm"
+            android:layout_weight="1"
+            android:paddingTop="@dimen/space_lg"
+            android:paddingBottom="@dimen/space_lg"
+            android:text="@string/action_delete"
+            android:textSize="@dimen/text_body" />
+    </LinearLayout>
+
+    <!-- 남의 글 -->
+    <LinearLayout
+        android:id="@+id/otherRow"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_lg"
+        android:orientation="horizontal"
+        android:visibility="gone">
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/reportButton"
+            style="@style/Gachi.Button.Ghost"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:text="@string/action_report_short" />
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/hideButton"
+            style="@style/Gachi.Button.Ghost"
+            android:layout_width="0dp"
+            android:layout_marginStart="@dimen/space_sm"
+            android:layout_weight="1"
+            android:text="@string/action_hide" />
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/blockButton"
+            style="@style/Gachi.Button.Danger"
+            android:layout_width="0dp"
+            android:layout_marginStart="@dimen/space_sm"
+            android:layout_weight="1"
+            android:paddingTop="@dimen/space_lg"
+            android:paddingBottom="@dimen/space_lg"
+            android:text="@string/action_block_short"
+            android:textSize="@dimen/text_body" />
+    </LinearLayout>
+</LinearLayout>

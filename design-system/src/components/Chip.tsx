@@ -3,7 +3,7 @@ import { Pressable, View, type ViewStyle } from 'react-native';
 import { radius } from '../../tokens/radius.ts';
 import { space, size as sizes } from '../../tokens/spacing.ts';
 import { borderWidth } from '../../tokens/elevation.ts';
-import { useTheme, useRipple, pressedOpacity } from '../theme.tsx';
+import { useTheme, useRipple, pressedOpacity, disabledOpacity } from '../theme.tsx';
 import { Txt } from './Text.tsx';
 import { Icon, type IconName } from './Icon.tsx';
 
@@ -19,12 +19,15 @@ import { Icon, type IconName } from './Icon.tsx';
  */
 export type ChipTone =
   | 'lime'
+  | 'deep'
   | 'soft'
   | 'surface'
   | 'neutral'
   | 'info'
   | 'warn'
-  | 'danger';
+  | 'danger'
+  /** 사진 위에 얹는 어두운 반투명 알약 (원본 `bg_pill_overlay`) */
+  | 'overlay';
 
 export type ChipProps = {
   label: string;
@@ -32,23 +35,32 @@ export type ChipProps = {
   icon?: IconName;
   selected?: boolean;
   onPress?: () => void;
+  disabled?: boolean;
+  /** 아이콘을 글자 뒤에 둔다. 펼침·이동을 뜻하는 chevron 은 뒤가 맞다 */
+  iconEnd?: boolean;
+  /** 글자만으로 누른 결과를 알 수 없을 때 (예: "한강줍깅크루, 크루 정보 보기") */
+  accessibilityLabel?: string;
+  /** 하나만 고르는 칩 묶음이면 'radio'. 선택 상태는 checked 로 읽힙니다 */
+  accessibilityRole?: 'button' | 'radio';
 };
 
 const VISUAL_HEIGHT = 32;
 const SLOP = (sizes.minTouch - VISUAL_HEIGHT) / 2;
 
-function ChipBase({ label, tone = 'soft', icon, selected, onPress }: ChipProps) {
+function ChipBase({ label, tone = 'soft', icon, selected, onPress, disabled, iconEnd, accessibilityLabel, accessibilityRole = 'button' }: ChipProps) {
   const { colors } = useTheme();
   const ripple = useRipple();
 
   const tones: Record<ChipTone, { bg: string; ink: string; border?: string }> = {
     lime: { bg: colors.lime, ink: colors.onLime },
+    deep: { bg: colors.deep, ink: colors.onDark },
     soft: { bg: colors.softChip, ink: colors.ink },
     surface: { bg: colors.surface, ink: colors.ink, border: colors.border },
     neutral: { bg: colors.neutral, ink: colors.neutralInk },
     info: { bg: colors.infoBg, ink: colors.infoInk },
     warn: { bg: colors.warnBg, ink: colors.warnInk },
     danger: { bg: colors.dangerBg, ink: colors.dangerInk },
+    overlay: { bg: colors.photoBadge, ink: colors.onPhoto },
   };
 
   const t = selected ? { bg: colors.deep, ink: colors.onDark } : tones[tone];
@@ -70,25 +82,35 @@ function ChipBase({ label, tone = 'soft', icon, selected, onPress }: ChipProps) 
 
   const body = (
     <>
-      {icon ? <Icon name={icon} size={15} color={t.ink} /> : null}
-      <Txt variant="label" style={{ color: t.ink }}>
+      {icon && !iconEnd ? <Icon name={icon} size={15} color={t.ink} /> : null}
+      <Txt variant="label" numberOfLines={1} style={{ color: t.ink, flexShrink: 1 }}>
         {label}
       </Txt>
+      {icon && iconEnd ? <Icon name={icon} size={15} color={t.ink} /> : null}
     </>
   );
 
-  if (!onPress) return <View style={shell}>{body}</View>;
+  // 누를 수 없는 칩도 "캔 1" 처럼 글자만으로 뜻이 부족하면 라벨을 읽혀야 한다
+  if (!onPress) {
+    return (
+      <View style={shell} accessible={!!accessibilityLabel} accessibilityLabel={accessibilityLabel}>
+        {body}
+      </View>
+    );
+  }
 
   return (
     <Pressable
-      accessibilityRole="button"
-      accessibilityState={{ selected: !!selected }}
+      accessibilityLabel={accessibilityLabel}
+      accessibilityRole={accessibilityRole}
+      accessibilityState={accessibilityRole === 'radio' ? { checked: !!selected, disabled: !!disabled } : { selected: !!selected, disabled: !!disabled }}
       onPress={onPress}
+      disabled={disabled}
       hitSlop={{ top: SLOP, bottom: SLOP, left: space.xs, right: space.xs }}
-      android_ripple={ripple}
+      android_ripple={disabled ? undefined : ripple}
       style={({ pressed }) => [
         shell,
-        { opacity: pressedOpacity(pressed), overflow: 'hidden' },
+        { opacity: disabled ? disabledOpacity : pressedOpacity(pressed), overflow: 'hidden' },
       ]}
     >
       {body}

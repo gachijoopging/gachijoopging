@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 원시 도형: 서피스 70% + 알약. 사진·지도 위에 얹히는 컨트롤용. (bg_button_translucent · bg_tab_default) -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@color/gachi_surface_70" />
+    <corners android:radius="@dimen/radius_pill" />
+</shape>

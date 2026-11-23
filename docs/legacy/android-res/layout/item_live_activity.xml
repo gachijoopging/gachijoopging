@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- M06 '지금 활동' 카드 -->
+<LinearLayout
+    android:clipChildren="false"
+    android:clipToPadding="false" xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/row"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="@dimen/space_md"
+    android:background="@drawable/bg_card_tight"
+    android:elevation="3dp"
+    android:outlineAmbientShadowColor="@color/gachi_shadow"
+    android:outlineSpotShadowColor="@color/gachi_shadow"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:padding="@dimen/space_lg">
+
+    <TextView
+        android:id="@+id/face"
+        android:layout_width="46dp"
+        android:layout_height="46dp"
+        android:background="@drawable/bg_marker_soft"
+        android:gravity="center"
+        android:textSize="21sp" />
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/space_md"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/title"
+            style="@style/Gachi.Text.ItemName"
+            android:textSize="@dimen/text_body_lg" />
+
+        <TextView
+            android:id="@+id/meta"
+            style="@style/Gachi.Text.Caption"
+            android:layout_marginTop="@dimen/space_xs" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/statusChip"
+        style="@style/Gachi.Chip.Static"
+        android:layout_marginStart="@dimen/space_sm"
+        android:background="@drawable/bg_chip_neutral"
+        android:textColor="@color/gachi_neutral_ink"
+        android:textSize="@dimen/text_label"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/joinChip"
+        style="@style/Gachi.Chip.Static"
+        android:layout_marginStart="@dimen/space_sm"
+        android:background="@drawable/bg_button_primary"
+        android:elevation="3dp"
+        android:outlineAmbientShadowColor="@color/gachi_shadow_lime"
+        android:outlineSpotShadowColor="@color/gachi_shadow_lime"
+        android:paddingStart="@dimen/space_lg"
+        android:paddingTop="@dimen/space_md"
+        android:paddingEnd="@dimen/space_lg"
+        android:paddingBottom="@dimen/space_md"
+        android:text="@string/meet_join_request"
+        android:textColor="@color/gachi_on_lime"
+        android:textSize="@dimen/text_body" />
+</LinearLayout>

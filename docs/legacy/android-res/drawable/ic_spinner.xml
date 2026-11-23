@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  진행 중 표시용 원호. 270° 만 그려서 회전시켰을 때 도는 게 보이게 한다
+  (완전한 원은 아무리 돌려도 멈춰 있는 것처럼 보인다).
+  색은 버튼 글자색을 따라가도록 코드에서 tint 를 입힌다 (ViewExt.setBusy 참고).
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="18dp"
+    android:height="18dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+
+    <group
+        android:name="rot"
+        android:pivotX="12"
+        android:pivotY="12">
+        <path
+            android:fillColor="#00000000"
+            android:pathData="M12 3 a9 9 0 1 1 -6.36 2.64"
+            android:strokeColor="#FF262A0E"
+            android:strokeLineCap="round"
+            android:strokeWidth="2.6" />
+    </group>
+</vector>

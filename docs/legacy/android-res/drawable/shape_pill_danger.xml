@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 원시 도형: 위험 채움 + 알약. (bg_button_danger · bg_chip_danger) -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@color/gachi_danger_bg" />
+    <corners android:radius="@dimen/radius_pill" />
+</shape>

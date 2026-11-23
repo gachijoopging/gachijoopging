@@ -1,0 +1,90 @@
+{
+  "expo": {
+    "name": "가치줍깅",
+    "slug": "gachijoopging",
+    "scheme": "gachijoopging",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "platforms": [
+      "android"
+    ],
+    "android": {
+      "package": "site.gachijoopging.app",
+      "permissions": [
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.health.READ_STEPS"
+      ],
+      "adaptiveIcon": {
+        "backgroundColor": "#6DE78C",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": true
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-font",
+        {
+          "fonts": [
+            "../design-system/assets/fonts"
+          ]
+        }
+      ],
+      "expo-notifications",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "쓰레기 촬영과 AI 분류에 카메라를 사용해요.",
+          "recordAudioAndroid": false
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "isAndroidForegroundServiceEnabled": true,
+          "isAndroidBackgroundLocationEnabled": false
+        }
+      ],
+      "expo-dev-client",
+      "@react-native-vector-icons/material-design-icons",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#DCE6A6",
+          "dark": {
+            "backgroundColor": "#12160B"
+          }
+        }
+      ],
+      "./plugins/with-kakao-maven",
+      "./plugins/with-release-signing",
+      "react-native-health-connect",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "minSdkVersion": 26
+          }
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "쓰레기 촬영과 AI 분류, 크루 대표 사진 촬영에 카메라를 사용해요.",
+          "microphonePermission": false
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

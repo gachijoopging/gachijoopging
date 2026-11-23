@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 하단 알약 내비 — 가운데 '시작'은 위로 튀어나온 원형 버튼 -->
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/navRoot"
+    android:layout_width="match_parent"
+    android:layout_height="@dimen/bottom_nav_height"
+    android:background="@drawable/bg_bottom_nav"
+    android:clipChildren="false"
+    android:clipToPadding="false"
+    android:elevation="10dp"
+    android:outlineAmbientShadowColor="@color/gachi_shadow"
+    android:outlineSpotShadowColor="@color/gachi_shadow"
+    android:paddingStart="@dimen/space_md"
+    android:paddingEnd="@dimen/space_md">
+
+    <include
+        android:id="@+id/navHome"
+        layout="@layout/view_bottom_nav_item"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        app:layout_constraintEnd_toStartOf="@id/navFeed"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <include
+        android:id="@+id/navFeed"
+        layout="@layout/view_bottom_nav_item"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        app:layout_constraintEnd_toStartOf="@id/navStart"
+        app:layout_constraintStart_toEndOf="@id/navHome"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <LinearLayout
+        android:id="@+id/navStart"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:background="@drawable/ripple_pill"
+        android:clipChildren="false"
+        android:contentDescription="@string/nav_start"
+        android:gravity="center"
+        android:orientation="vertical"
+        app:layout_constraintEnd_toStartOf="@id/navMeet"
+        app:layout_constraintStart_toEndOf="@id/navFeed"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <ImageView
+            android:layout_width="52dp"
+            android:layout_height="52dp"
+            android:layout_marginTop="-18dp"
+            android:background="@drawable/bg_circle_lime"
+            android:elevation="8dp"
+            android:importantForAccessibility="no"
+            android:outlineAmbientShadowColor="@color/gachi_shadow_lime"
+            android:outlineSpotShadowColor="@color/gachi_shadow_lime"
+            android:padding="@dimen/space_lg"
+            android:src="@drawable/ic_sprout"
+            app:tint="@color/gachi_on_lime" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_xs"
+            android:text="@string/nav_start"
+            android:textColor="@color/gachi_deep"
+            android:textSize="@dimen/text_micro"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <include
+        android:id="@+id/navMeet"
+        layout="@layout/view_bottom_nav_item"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        app:layout_constraintEnd_toStartOf="@id/navProfile"
+        app:layout_constraintStart_toEndOf="@id/navStart"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <include
+        android:id="@+id/navProfile"
+        layout="@layout/view_bottom_nav_item"
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@id/navMeet"
+        app:layout_constraintTop_toTopOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 원시 도형: 중립 채움 + 알약. (bg_button_primary_disabled · bg_chip_neutral) -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@color/gachi_neutral" />
+    <corners android:radius="@dimen/radius_pill" />
+</shape>

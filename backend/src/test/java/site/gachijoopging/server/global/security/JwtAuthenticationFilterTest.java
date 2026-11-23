@@ -1,0 +1,212 @@
+package site.gachijoopging.server.global.security;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.time.Clock;
+import java.time.Duration;
+import java.util.Base64;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
+import site.gachijoopging.server.global.config.WebConfig;
+import site.gachijoopging.server.global.error.BusinessException;
+import site.gachijoopging.server.global.error.ErrorCode;
+import site.gachijoopging.server.global.error.GlobalExceptionHandler;
+import site.gachijoopging.server.global.security.jwt.JwtIssuer;
+import site.gachijoopging.server.global.security.jwt.JwtProperties;
+import site.gachijoopging.server.global.security.jwt.JwtVerifier;
+
+@WebMvcTest(controllers = JwtAuthenticationFilterTest.탐침_컨트롤러.class)
+@Import({
+  WebConfig.class,
+  SecurityConfig.class,
+  JwtAuthenticationFilter.class,
+  GlobalExceptionHandler.class,
+  JwtAuthenticationFilterTest.키_설정.class,
+  JwtAuthenticationFilterTest.탐침_컨트롤러.class
+})
+class JwtAuthenticationFilterTest {
+
+  @Autowired private MockMvc mockMvc;
+  @Autowired private JwtIssuer issuer;
+
+  @Test
+  void 유효한_토큰이면_CurrentUser_로_사용자_id_가_들어온다() throws Exception {
+    UUID 사용자 = UUID.randomUUID();
+
+    mockMvc
+        .perform(get("/api/v1/probe/me").header("Authorization", "Bearer " + issuer.issue(사용자)))
+        .andExpect(status().isOk())
+        .andExpect(content().string(사용자.toString()));
+  }
+
+  @Test
+  void 토큰이_없으면_401_에러봉투다() throws Exception {
+    mockMvc
+        .perform(get("/api/v1/probe/me"))
+        .andExpect(status().isUnauthorized())
+        .andExpect(jsonPath("$.code").value("TOKEN_EXPIRED"));
+  }
+
+  @Test
+  void 망가진_토큰이면_401_에러봉투다() throws Exception {
+    mockMvc
+        .perform(get("/api/v1/probe/me").header("Authorization", "Bearer not-a-jwt"))
+        .andExpect(status().isUnauthorized())
+        .andExpect(jsonPath("$.code").value("TOKEN_EXPIRED"));
+  }
+
+  @Test
+  void Bearer_가_아니면_401_이다() throws Exception {
+    mockMvc
+        .perform(get("/api/v1/probe/me").header("Authorization", "Basic abcdef"))
+        .andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  void 개방_경로는_토큰_없이도_통과한다() throws Exception {
+    mockMvc.perform(get("/api/v1/auth/probe")).andExpect(status().isOk());
+  }
+
+  @Test
+  void 만료된_토큰이면_401_이다() throws Exception {
+    String 토큰 =
+        new JwtIssuer(키_설정.짧은_수명(), Clock.systemUTC(), 키_설정.끊긴_적_없음()).issue(UUID.randomUUID());
+    Thread.sleep(1100);
+
+    mockMvc
+        .perform(get("/api/v1/probe/me").header("Authorization", "Bearer " + 토큰))
+        .andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  void 인증된_요청_하나는_계정을_한_번만_읽는다() throws Exception {
+    키_설정.계정_조회.set(0);
+
+    mockMvc
+        .perform(
+            get("/api/v1/probe/me")
+                .header("Authorization", "Bearer " + issuer.issue(UUID.randomUUID())))
+        .andExpect(status().isOk());
+
+    assertThat(키_설정.계정_조회).hasValue(1);
+  }
+
+  @Test
+  void 세션_버전이_지금과_다른_토큰이면_401_이다() throws Exception {
+    String 끊기_전_토큰 =
+        new JwtIssuer(키_설정.PROPERTIES, Clock.systemUTC(), userId -> Optional.of(키_설정.지금_세션_버전 + 1))
+            .issue(UUID.randomUUID());
+
+    mockMvc
+        .perform(get("/api/v1/probe/me").header("Authorization", "Bearer " + 끊기_전_토큰))
+        .andExpect(status().isUnauthorized())
+        .andExpect(jsonPath("$.code").value("TOKEN_EXPIRED"));
+  }
+
+  @TestConfiguration
+  static class 키_설정 {
+
+    static final int 지금_세션_버전 = 0;
+    static final AtomicInteger 계정_조회 = new AtomicInteger();
+
+    private static final JwtProperties PROPERTIES = 새_설정();
+
+    static JwtProperties 짧은_수명() {
+      return new JwtProperties(
+          PROPERTIES.activeKid(),
+          PROPERTIES.privateKeyPem(),
+          PROPERTIES.publicKeyPem(),
+          PROPERTIES.previousKid(),
+          PROPERTIES.previousPublicKeyPem(),
+          Duration.ofSeconds(1));
+    }
+
+    static SessionVersionLoader 끊긴_적_없음() {
+      return userId -> Optional.of(0);
+    }
+
+    @Bean
+    AccountAuthorityLoader accountAuthorityLoader() {
+      return token -> {
+        계정_조회.incrementAndGet();
+        if (token.issuedBeforeCut(지금_세션_버전)) {
+          throw new BusinessException(ErrorCode.TOKEN_EXPIRED, "세션이 끊기기 전에 발급됐다");
+        }
+        return List.of();
+      };
+    }
+
+    @Bean
+    JwtIssuer jwtIssuer() {
+      return new JwtIssuer(PROPERTIES, Clock.systemUTC(), 끊긴_적_없음());
+    }
+
+    @Bean
+    JwtVerifier jwtVerifier() {
+      return new JwtVerifier(
+          PROPERTIES,
+          Clock.systemUTC(),
+          userId -> {
+            throw new AssertionError("필터는 세션 버전을 AccountAuthorityLoader 와 함께 읽어야 한다");
+          });
+    }
+
+    private static JwtProperties 새_설정() {
+      try {
+        KeyPairGenerator generator = KeyPairGenerator.getInstance("RSA");
+        generator.initialize(2048);
+        KeyPair pair = generator.generateKeyPair();
+        return new JwtProperties(
+            "test-kid",
+            pem("PRIVATE KEY", pair.getPrivate().getEncoded()),
+            pem("PUBLIC KEY", pair.getPublic().getEncoded()),
+            null,
+            null,
+            Duration.ofSeconds(60));
+      } catch (Exception e) {
+        throw new IllegalStateException(e);
+      }
+    }
+
+    private static String pem(String label, byte[] der) {
+      return "-----BEGIN "
+          + label
+          + "-----\n"
+          + Base64.getMimeEncoder(64, new byte[] {'\n'}).encodeToString(der)
+          + "\n-----END "
+          + label
+          + "-----";
+    }
+  }
+
+  @RestController
+  static class 탐침_컨트롤러 {
+
+    @GetMapping("/probe/me")
+    String me(@CurrentUser UUID userId) {
+      return userId.toString();
+    }
+
+    @GetMapping("/auth/probe")
+    String open() {
+      return "ok";
+    }
+  }
+}

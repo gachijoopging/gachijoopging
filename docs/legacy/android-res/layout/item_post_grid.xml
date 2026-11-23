@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 프로필 피드 탭 3열 그리드 셀 -->
+<site.gachijoopging.app.ui.common.ClipOutlineFrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/cell"
+    android:layout_width="match_parent"
+    android:layout_height="108dp"
+    android:background="@drawable/bg_photo_placeholder_square">
+
+    <ImageView
+        android:id="@+id/emoji"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:layout_gravity="center"
+        android:importantForAccessibility="no"
+        android:src="@drawable/ic_photo"
+        app:tint="@color/gachi_ink_65" />
+
+    <TextView
+        android:id="@+id/text"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:ellipsize="end"
+        android:gravity="center"
+        android:lineSpacingMultiplier="1.45"
+        android:maxLines="5"
+        android:padding="@dimen/space_sm"
+        android:textColor="@color/gachi_ink_muted"
+        android:textSize="@dimen/text_micro"
+        android:visibility="gone" />
+
+    <TextView
+        android:id="@+id/lockBadge"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|start"
+        android:layout_margin="@dimen/space_sm"
+        android:background="@drawable/bg_pill_overlay"
+        android:paddingStart="@dimen/space_sm"
+        android:paddingTop="@dimen/space_xs"
+        android:paddingEnd="@dimen/space_sm"
+        android:paddingBottom="@dimen/space_xs"
+        android:text="@string/profile_lock_badge"
+        android:textColor="@color/gachi_on_dark"
+        android:textSize="@dimen/text_label"
+        android:textStyle="bold"
+        android:visibility="gone" />
+</site.gachijoopging.app.ui.common.ClipOutlineFrameLayout>

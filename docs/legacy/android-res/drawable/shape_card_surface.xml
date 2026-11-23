@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 원시 도형: 서피스 채움 + 작은 카드 라운드. (bg_card_sm · bg_card_tight) -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@color/gachi_surface" />
+    <corners android:radius="@dimen/radius_card_sm" />
+</shape>

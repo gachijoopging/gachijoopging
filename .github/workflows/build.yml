@@ -1,0 +1,36 @@
+# dev 머지 → 이미지를 만들어 레지스트리에 올린다. 배포하지 않는다(GAC-107).
+#
+# 경로 필터를 걸지 않는다. 문서만 바뀐 커밋에 이미지가 없으면, 그 커밋이 머리인 채로
+# main 에 머지됐을 때 배포할 태그가 사라진다. 캐시가 있어 그런 빌드는 1분 남짓이다.
+
+name: build
+
+on:
+  push:
+    branches: [dev]
+  workflow_dispatch:
+
+jobs:
+  backend-image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          username: yydd12
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # 태그는 커밋 SHA 하나뿐이다. latest 같은 움직이는 태그를 두면
+      # "지금 운영에 뭐가 떠 있나" 를 이미지 이름으로 답할 수 없게 된다.
+      - uses: docker/build-push-action@v6
+        with:
+          context: backend
+          push: true
+          tags: yydd12/gachijoopging-backend:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - run: echo "yydd12/gachijoopging-backend:${{ github.sha }}" >> "$GITHUB_STEP_SUMMARY"

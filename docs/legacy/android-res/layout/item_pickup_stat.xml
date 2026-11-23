@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 분류별 수거 개수 타일 -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg_tile"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingStart="@dimen/space_lg"
+    android:paddingTop="@dimen/space_md"
+    android:paddingEnd="@dimen/space_lg"
+    android:paddingBottom="@dimen/space_md">
+
+    <TextView
+        android:id="@+id/emoji"
+        android:layout_width="34dp"
+        android:layout_height="34dp"
+        android:background="@drawable/bg_circle_surface"
+        android:gravity="center"
+        android:textSize="@dimen/text_subtitle" />
+
+    <TextView
+        android:id="@+id/name"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/space_md"
+        android:layout_weight="1"
+        android:textColor="@color/gachi_ink"
+        android:textSize="@dimen/text_body"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/count"
+        style="@style/Gachi.Text.Section" />
+</LinearLayout>

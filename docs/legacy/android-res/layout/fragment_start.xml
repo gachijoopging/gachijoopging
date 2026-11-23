@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- M01 시작 -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <ImageView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:contentDescription="@null"
+        android:scaleType="centerCrop"
+        android:src="@drawable/img_start_bg" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@drawable/bg_start_scrim" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:padding="@dimen/space_xl">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <!-- 원본 워드마크(assets/logo.png). 배경 위에서 묻히지 않게 광원을 깔았다. -->
+            <ImageView
+                android:layout_width="270dp"
+                android:layout_height="wrap_content"
+                android:adjustViewBounds="true"
+                android:background="@drawable/bg_logo_glow"
+                android:contentDescription="@string/cd_logo"
+                android:paddingHorizontal="@dimen/space_3xl"
+                android:paddingVertical="@dimen/space_3xl"
+                android:src="@drawable/img_logo_wordmark" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/space_lg"
+                android:gravity="center"
+                android:lineSpacingMultiplier="1.6"
+                android:shadowColor="@color/gachi_surface_40"
+                android:shadowDx="0"
+                android:shadowDy="1"
+                android:shadowRadius="8"
+                android:text="@string/start_tagline"
+                android:textColor="@color/gachi_ink"
+                android:textSize="@dimen/text_body"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/socialError"
+            style="@style/Gachi.Banner"
+            android:layout_marginBottom="@dimen/space_md"
+            android:background="@drawable/bg_banner_danger"
+            android:visibility="gone">
+
+            <TextView
+                style="@style/Gachi.Banner.Text"
+                android:text="@string/start_social_error"
+                android:textColor="@color/gachi_danger_ink" />
+        </LinearLayout>
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/kakaoButton"
+            style="@style/Gachi.Button.Primary"
+            android:background="@drawable/bg_button_kakao"
+            android:text="@string/start_kakao"
+            android:textColor="@color/gachi_kakao_ink" />
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/googleButton"
+            style="@style/Gachi.Button.Ghost"
+            android:layout_marginTop="@dimen/space_md"
+            android:paddingTop="@dimen/space_lg"
+            android:paddingBottom="@dimen/space_lg"
+            android:text="@string/start_google"
+            android:textColor="@color/gachi_ink"
+            android:textSize="@dimen/text_section" />
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/emailButton"
+            style="@style/Gachi.Button.Primary"
+            android:layout_marginTop="@dimen/space_md"
+            android:background="@drawable/bg_button_translucent"
+            android:elevation="0dp"
+            android:paddingTop="@dimen/space_lg"
+            android:paddingBottom="@dimen/space_lg"
+            android:text="@string/start_email"
+            android:textColor="@color/gachi_ink_muted"
+            android:textSize="@dimen/text_body" />
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/signupButton"
+            style="@style/Gachi.Button.Link"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="@dimen/space_sm"
+            android:layout_marginBottom="@dimen/space_sm"
+            android:shadowColor="@color/gachi_ink_shadow_70"
+            android:shadowDy="1"
+            android:shadowRadius="8"
+            android:text="@string/start_signup_prompt"
+            android:textColor="@color/gachi_on_photo"
+            android:textSize="@dimen/text_body" />
+    </LinearLayout>
+</FrameLayout>

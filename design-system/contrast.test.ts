@@ -36,6 +36,17 @@ export function contrast(a: string, b: string): number {
 
 const round = (n: number) => Math.round(n * 100) / 100;
 
+/** 반투명 rgba() 토큰을 불투명 바탕 위에 얹었을 때 실제로 보이는 #RRGGBB */
+function over(rgba: string, bg: string): string {
+  const m = /^rgba\((\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\)$/.exec(rgba);
+  if (!m) throw new Error(`rgba() 가 아닙니다: ${rgba}`);
+  const a = Number(m[4]);
+  const b = parseInt(bg.slice(1), 16);
+  const mix = (c: number, shift: number) => Math.round(c * a + ((b >> shift) & 0xff) * (1 - a));
+  const hex = (n: number) => n.toString(16).padStart(2, '0');
+  return `#${hex(mix(+m[1], 16))}${hex(mix(+m[2], 8))}${hex(mix(+m[3], 0))}`;
+}
+
 function atLeast(fg: string, bg: string, min: number, label: string) {
   const ratio = contrast(fg, bg);
   assert.ok(
@@ -136,11 +147,25 @@ for (const [name, p] of themes) {
     atLeast(p.onDark, p.deep, 4.5, `${name} Badge deep`);
     atLeast(p.onLime, p.lime, 4.5, `${name} Badge lime`);
     atLeast(p.neutralInk, p.neutral, 4.5, `${name} Badge neutral`);
+    atLeast(p.warnInk, p.warnBg, 4.5, `${name} Badge warn`);
+
+    // Banner neutral
+    atLeast(p.neutralInk, p.neutral, 4.5, `${name} Banner neutral`);
+
+    // Chip overlay · 사진 위. 가장 밝은 사진(흰색)이 최악입니다
+    atLeast(p.onPhoto, over(p.photoBadge, p.white), 4.5, `${name} Chip overlay`);
 
     // Button
     atLeast(p.ink, p.softChip, 4.5, `${name} Button soft`);
     atLeast(p.kakaoInk, p.kakao, 4.5, `${name} Button kakao`);
+    // Button translucent · 시작 화면 사진 위. 어두운 스크림 아래 검은 사진이 최악, 흰 사진도 함께 본다
+    atLeast(p.ink, over(p.surface85, over(p.inkShadow, '#000000')), 4.5, `${name} Button translucent 어두운 사진`);
+    atLeast(p.ink, over(p.surface85, p.white), 4.5, `${name} Button translucent 밝은 사진`);
     atLeast(p.inkMuted, p.track, 4.5, `${name} Button primary 비활성`);
+
+    // Switch 꺼짐 · 손잡이 위치가 상태를 말하므로 손잡이가 트랙·바탕 위에서 보여야 합니다(1.4.11)
+    atLeast(p.inkFaint, p.track, 3, `${name} Switch 꺼짐 손잡이/트랙`);
+    atLeast(p.inkFaint, p.surface, 3, `${name} Switch 꺼짐 손잡이/바탕`);
 
     // Tabs · 비선택 라벨은 트랙 위에 얹힙니다
     atLeast(p.inkMuted, p.track, 4.5, `${name} Tabs 비선택`);
@@ -153,6 +178,11 @@ for (const [name, p] of themes) {
     atLeast(p.onDark, p.deep, 4.5, `${name} Snackbar 본문`);
     atLeast(p.onDark, p.deep, 4.5, `${name} Snackbar 액션`);
 
+    // Dot · 글자 없는 상태 점. 서피스·배경, 선택된 달력 칸(deep) 위
+    atLeast(p.deep, p.surface, 3, `${name} Dot 서피스`);
+    atLeast(p.deep, p.bg, 3, `${name} Dot 배경`);
+    atLeast(p.onDark, p.deep, 3, `${name} Dot onDeep`);
+
     // Tile dark
     atLeast(p.onDark, p.deep, 4.5, `${name} Tile dark`);
   });
@@ -164,7 +194,21 @@ for (const [name, p] of themes) {
     atLeast(p.deep, p.surface, 3, `${name} 선택 채움 · 라디오 채운 점`);
     atLeast(p.inkHint, p.surface, 3, `${name} 라디오 미선택 윤곽`);
     atLeast(p.error, p.surface, 3, `${name} Field 오류 테두리`);
+    // Button ghost · 채움이 없어 테두리만이 버튼 경계다. 화면 배경과 카드 양쪽에 놓인다
+    atLeast(p.inkHint, p.bg, 3, `${name} Button ghost 테두리 (배경)`);
+    atLeast(p.inkHint, p.surface, 3, `${name} Button ghost 테두리 (카드)`);
     atLeast(p.border, p.surface, 1.2, `${name} 카드 테두리 (층 신호)`);
+
+    // IconCircle · 아이콘은 비텍스트라 3:1. tint 는 반투명이라 서피스 위에 얹어 봅니다
+    atLeast(p.ink, over(p.tint, p.surface), 3, `${name} IconCircle tint`);
+    atLeast(p.neutralInk, p.neutral, 3, `${name} IconCircle neutral`);
+    atLeast(p.ink, p.surface, 3, `${name} IconCircle surface`);
+    atLeast(p.onDeep, p.deep, 3, `${name} IconCircle deep`);
+    atLeast(p.onLime, p.lime, 3, `${name} IconCircle lime`);
+    atLeast(p.onLime, p.orange, 3, `${name} IconCircle orange`);
+
+    // 리플 · 눌림이 서피스 위에서 보여야 합니다
+    atLeast(over(p.ripple, p.surface), p.surface, 1.1, `${name} 리플`);
 
     // SelectRow 의 라임 테두리는 일부러 검사하지 않습니다. 밝은 서피스 위에서
     // 1.41:1 이라 3:1 에 구조적으로 닿을 수 없고, 상태는 위의 라디오가 집니다.

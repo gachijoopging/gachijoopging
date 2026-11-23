@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- AI 분류 후보 한 줄 (신뢰도 막대 포함) -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/row"
+    style="@style/Gachi.SelectRow"
+    android:layout_marginBottom="@dimen/space_sm"
+    android:gravity="top">
+
+    <TextView
+        android:id="@+id/thumb"
+        android:layout_width="42dp"
+        android:layout_height="42dp"
+        android:background="@drawable/bg_circle_avatar"
+        android:gravity="center"
+        android:importantForAccessibility="no"
+        android:textSize="@dimen/text_metric" />
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/space_md"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="bottom"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/name"
+                style="@style/Gachi.Text.ItemName"
+                android:textSize="@dimen/text_body" />
+
+            <TextView
+                android:id="@+id/confidence"
+                style="@style/Gachi.Text.Section.Sm"
+                android:layout_marginStart="@dimen/space_sm"
+                android:textColor="@color/gachi_green_text" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/detail"
+            style="@style/Gachi.Text.Caption"
+            android:layout_marginTop="1dp"
+            android:layout_marginBottom="@dimen/space_sm" />
+
+        <ProgressBar
+            android:id="@+id/bar"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="6dp"
+            android:max="100"
+            android:progressDrawable="@drawable/bg_progress_track" />
+    </LinearLayout>
+
+    <View
+        android:id="@+id/dot"
+        style="@style/Gachi.RadioDot"
+        android:layout_marginStart="@dimen/space_md" />
+</LinearLayout>

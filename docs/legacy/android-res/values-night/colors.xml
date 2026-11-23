@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  야간 팔레트.
+
+  라이트 팔레트와 같은 올리브 색상(H≈70~75°)을 유지하되 명도만 뒤집었습니다.
+  브랜드가 연두 단색 기반이라 색상까지 건드리면 다른 앱이 되어 버립니다.
+
+  설계에서 실제로 어려웠던 지점은 gachi_deep 입니다. 라이트에서는 '어두운 강조 채움'
+  (선택된 탭·칩·하단 내비 알약)이라 이름 그대로 어두운 색인데, 어두운 배경 위에서
+  그 값을 그대로 쓰면 서피스와 1.57:1 밖에 안 나옵니다 — 라이트에서 고쳤던 그 결함이
+  다크에서 그대로 재현됩니다. 그래서 야간에는 딥을 '밝은 쪽'으로 보내고(#7FA018),
+  그 위 글자(gachi_on_dark)를 어둡게 뒤집어 쌍으로 반전시켰습니다.
+
+  주요 대비 (서피스 #262C18 / 배경 #12160B):
+    ink       12.24 / 15.75
+    ink_muted  7.07 /  9.09
+    ink_hint   5.26 /  6.77
+    deep(내비 활성 알약) 대 서피스        4.71   ← WCAG SC 1.4.11 의 3:1 통과
+    on_dark(활성 라벨) 대 deep            5.88
+    카드(서피스) 대 배경                  1.29   ← 라이트와 같은 층 간격
+-->
+<resources>
+
+    <!-- 배경 -->
+    <color name="gachi_bg">#12160B</color>
+    <color name="gachi_surface">#262C18</color>
+    <color name="gachi_surface_85">#D9262C18</color>
+    <color name="gachi_surface_70">#B3262C18</color>
+    <color name="gachi_surface_40">#66262C18</color>
+    <color name="gachi_tint">#99323A1E</color>
+    <!-- 카메라 화면은 원래 어두워서 라이트와 같은 값을 유지합니다. -->
+    <color name="gachi_camera_bg">#22260F</color>
+    <color name="gachi_camera_frame">#1F2410</color>
+    <color name="gachi_camera_scrim_28">#47141808</color>
+
+    <color name="gachi_white">#FFFFFF</color>
+
+    <!-- 텍스트. 라이트와 같은 4.5:1 불변식을 서피스·배경 양쪽에서 지킵니다. -->
+    <color name="gachi_ink">#EDF0DC</color>
+    <color name="gachi_ink_muted">#B4BA9C</color>
+    <color name="gachi_ink_faint">#A7AD8F</color>
+    <color name="gachi_ink_hint">#9AA083</color>
+    <color name="gachi_ink_65">#A6EDF0DC</color>
+    <!-- 딥 채움 위에 얹히는 글자 — 야간에는 어둡게 뒤집힙니다 (위 주석 참고) -->
+    <color name="gachi_on_dark">#16190F</color>
+    <color name="gachi_on_photo">#F4F7E6</color>
+    <color name="gachi_ink_shadow_70">#B3000000</color>
+
+    <!-- 브랜드 -->
+    <color name="gachi_deep">#7FA018</color>
+    <color name="gachi_lime">#C9E345</color>
+    <color name="gachi_lime_35">#59C9E345</color>
+    <color name="gachi_lime_28">#47C9E345</color>
+    <color name="gachi_yellow">#F4F04B</color>
+    <!-- 딥 채움 위의 아이콘. 라이트는 노랑, 야간은 딥이 밝아지므로 어두운 잉크. -->
+    <color name="gachi_on_deep">#16190F</color>
+    <!--
+      라임 채움 위의 글자 — 라이트와 같은 값입니다.
+      라임은 야간에도 밝게 남으므로 그 위 글자는 뒤집으면 안 됩니다.
+    -->
+    <color name="gachi_on_lime">#262A0E</color>
+    <color name="gachi_green_text">#B7D64A</color>
+    <color name="gachi_green_strong">#C6E356</color>
+
+    <color name="gachi_route">#9ABF22</color>
+    <color name="gachi_kakao">#FEE500</color>
+    <color name="gachi_kakao_ink">#3A1D1D</color>
+
+    <!-- 그림자. 어두운 배경에서는 거의 보이지 않지만 값은 유지합니다. -->
+    <color name="gachi_shadow">#000000</color>
+    <color name="gachi_shadow_lime">#5E7A18</color>
+    <color name="gachi_shadow_deep">#000000</color>
+
+    <!-- 선 / 구분 -->
+    <color name="gachi_border">#3A4226</color>
+    <color name="gachi_border_dashed">#333A22</color>
+    <color name="gachi_border_dotted">#4A5330</color>
+    <color name="gachi_handle">#3A4226</color>
+    <color name="gachi_track">#333A22</color>
+
+    <!-- 중립 칩 -->
+    <color name="gachi_neutral">#2E3327</color>
+    <color name="gachi_neutral_ink">#B0B4A6</color>
+    <color name="gachi_soft_chip">#2A3119</color>
+
+    <!-- 상태. 배경은 어둡게, 잉크는 밝게 뒤집습니다. -->
+    <color name="gachi_warn_bg">#3B2C13</color>
+    <color name="gachi_warn_bg_soft">#2C2314</color>
+    <color name="gachi_warn_border">#4C3A19</color>
+    <color name="gachi_warn_ink">#F0BC76</color>
+    <color name="gachi_danger_bg">#40221D</color>
+    <color name="gachi_danger_ink">#F5A398</color>
+    <color name="gachi_info_bg">#16303B</color>
+    <color name="gachi_info_ink">#8AD2ED</color>
+    <color name="gachi_error">#E8897C</color>
+    <color name="gachi_orange">#F0A85A</color>
+
+    <!-- 아바타 배경 팔레트 — 채도를 낮추고 어둡게 -->
+    <color name="gachi_avatar_me">#39441F</color>
+    <color name="gachi_avatar_pink">#462932</color>
+    <color name="gachi_avatar_sky">#1B3743</color>
+    <color name="gachi_avatar_sand">#43331C</color>
+    <color name="gachi_avatar_lilac">#332E4A</color>
+    <color name="gachi_avatar_leaf">#2E3A19</color>
+
+    <!-- 오버레이 -->
+    <color name="gachi_black_50">#80000000</color>
+    <color name="gachi_scrim">#A6000000</color>
+    <color name="gachi_photo_badge">#C4000000</color>
+
+    <color name="gachi_transparent">#00000000</color>
+</resources>

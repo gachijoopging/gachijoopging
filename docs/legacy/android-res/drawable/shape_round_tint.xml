@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  원시 도형: 틴트 채움 + 입력 라운드. (bg_reply_bubble · bg_thumb_square)
+
+  원래 14dp 리터럴이었습니다. 라운드 스케일에 없는 값이라 radius_field(16dp)로 흡수했습니다 —
+  2dp 차이는 눈에 띄지 않으면서 라운드 단계가 하나 줄어듭니다.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@color/gachi_tint" />
+    <corners android:radius="@dimen/radius_field" />
+</shape>

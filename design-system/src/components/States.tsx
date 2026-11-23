@@ -1,8 +1,9 @@
-import type { ReactNode } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { useEffect, useState, type ReactNode } from 'react';
+import { ActivityIndicator, Image, View, type ImageSourcePropType } from 'react-native';
 import { radius } from '../../tokens/radius.ts';
-import { space } from '../../tokens/spacing.ts';
+import { size, space } from '../../tokens/spacing.ts';
 import { borderWidth } from '../../tokens/elevation.ts';
+import { LOADING_SHOW_AFTER_MS } from '../../tokens/motion.ts';
 import { useTheme } from '../theme.tsx';
 import { Txt } from './Text.tsx';
 import { Icon, type IconName } from './Icon.tsx';
@@ -36,14 +37,27 @@ export function DashedBox({ children }: { children: ReactNode }) {
   );
 }
 
+/** 글자 옆에 서는 작은 진행 표시. 옆 글자가 무엇을 하는지 말하므로 읽지 않습니다 */
+export function Spinner() {
+  const { colors } = useTheme();
+  return <ActivityIndicator size="small" color={colors.deep} importantForAccessibility="no-hide-descendants" />;
+}
+
 /** 불러오는 중. 화면 전체를 덮지 말고 바뀌는 영역에만 두세요. */
 export function Loading({ label = '불러오는 중' }: { label?: string }) {
   const { colors } = useTheme();
+  const [shown, setShown] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setShown(true), LOADING_SHOW_AFTER_MS);
+    return () => clearTimeout(timer);
+  }, []);
+  // 짧은 불러오기에는 같은 높이의 빈 자리만 둔다. 나타날 때 아래 내용이 밀리지 않는다
   return (
     <View
-      accessibilityRole="progressbar"
-      accessibilityLabel={label}
-      style={{ alignItems: 'center', gap: space.md, paddingVertical: space['3xl'] }}
+      accessibilityRole={shown ? 'progressbar' : undefined}
+      accessibilityLabel={shown ? label : undefined}
+      importantForAccessibility={shown ? 'auto' : 'no-hide-descendants'}
+      style={{ alignItems: 'center', gap: space.md, paddingVertical: space['3xl'], opacity: shown ? 1 : 0 }}
     >
       <ActivityIndicator color={colors.deep} />
       <Txt variant="caption" tone="hint">
@@ -59,12 +73,15 @@ export function Loading({ label = '불러오는 중' }: { label?: string }) {
  */
 export function EmptyState({
   icon = 'inbox-outline',
+  image,
   title,
   description,
   actionLabel,
   onAction,
 }: {
   icon?: IconName;
+  /** 캐릭터 그림. 있으면 아이콘 대신 그린다 */
+  image?: ImageSourcePropType;
   title: string;
   description?: string;
   actionLabel?: string;
@@ -73,7 +90,11 @@ export function EmptyState({
   const { colors } = useTheme();
   return (
     <DashedBox>
-      <Icon name={icon} size={34} color={colors.inkHint} />
+      {image ? (
+        <Image source={image} accessible={false} resizeMode="contain" style={{ width: size.character, height: size.character }} />
+      ) : (
+        <Icon name={icon} size={34} color={colors.inkHint} />
+      )}
       <Txt variant="section" bold style={{ textAlign: 'center' }}>
         {title}
       </Txt>
@@ -97,10 +118,17 @@ export function ErrorState({
   title = '불러오지 못했어요',
   description = '연결 상태를 확인하고 다시 시도해 주세요.',
   onRetry,
+  actionLabel = '다시 시도',
+  icon = 'cloud-off-outline',
 }: {
   title?: string;
-  description?: string;
+  /** null 이면 설명 줄을 그리지 않습니다. 기본값은 연결 문제 안내입니다 */
+  description?: string | null;
   onRetry?: () => void;
+  /** 연결이 아닌 이유(권한 등)로 막혔을 때 바꿉니다 */
+  icon?: IconName;
+  /** 권한 거부처럼 다시 시도가 아니라 다른 화면으로 보내야 할 때 바꿉니다 */
+  actionLabel?: string;
 }) {
   const { colors } = useTheme();
   return (
@@ -115,14 +143,16 @@ export function ErrorState({
         alignSelf: 'stretch',
       }}
     >
-      <Icon name="cloud-off-outline" size={34} color={colors.dangerInk} />
+      <Icon name={icon} size={34} color={colors.dangerInk} />
       <Txt variant="section" bold style={{ color: colors.dangerInk, textAlign: 'center' }}>
         {title}
       </Txt>
-      <Txt variant="caption" style={{ color: colors.dangerInk, textAlign: 'center' }}>
-        {description}
-      </Txt>
-      {onRetry ? <Button label="다시 시도" variant="soft" size="md" onPress={onRetry} /> : null}
+      {description ? (
+        <Txt variant="caption" style={{ color: colors.dangerInk, textAlign: 'center' }}>
+          {description}
+        </Txt>
+      ) : null}
+      {onRetry ? <Button label={actionLabel} variant="soft" size="md" onPress={onRetry} /> : null}
     </View>
   );
 }

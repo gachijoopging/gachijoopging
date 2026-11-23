@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- M13 사진 선택 타일 -->
+<site.gachijoopging.app.ui.common.ClipOutlineFrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/tile"
+    android:layout_width="match_parent"
+    android:layout_height="76dp"
+    android:background="@drawable/bg_select_row">
+
+    <!-- 실제 사진. 없거나 아직 안 왔으면 아래 자리표시자가 그대로 보인다 -->
+    <ImageView
+        android:id="@+id/thumbImage"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:importantForAccessibility="no"
+        android:scaleType="centerCrop"
+        android:visibility="gone" />
+
+    <LinearLayout
+        android:id="@+id/placeholder"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="@dimen/space_xs">
+
+        <ImageView
+            android:layout_width="22dp"
+            android:layout_height="22dp"
+            android:importantForAccessibility="no"
+            android:src="@drawable/ic_photo"
+            app:tint="@color/gachi_ink_65" />
+
+        <TextView
+            android:id="@+id/label"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/space_xs"
+            android:ellipsize="end"
+            android:gravity="center"
+            android:maxLines="2"
+            android:textColor="@color/gachi_ink_muted"
+            android:textSize="@dimen/text_label"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/order"
+        android:layout_width="20dp"
+        android:layout_height="20dp"
+        android:layout_gravity="top|end"
+        android:layout_margin="@dimen/space_sm"
+        android:background="@drawable/bg_circle_deep"
+        android:gravity="center"
+        android:textColor="@color/gachi_yellow"
+        android:textSize="@dimen/text_micro"
+        android:visibility="gone" />
+</site.gachijoopging.app.ui.common.ClipOutlineFrameLayout>

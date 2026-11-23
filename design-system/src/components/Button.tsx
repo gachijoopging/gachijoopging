@@ -10,11 +10,11 @@ import { gradient } from '../../tokens/colors.ts';
 import { radius } from '../../tokens/radius.ts';
 import { space, size as sizes } from '../../tokens/spacing.ts';
 import { borderWidth } from '../../tokens/elevation.ts';
-import { useTheme, useRipple, pressedOpacity, depth } from '../theme.tsx';
+import { useTheme, useRipple, pressedOpacity, disabledOpacity, depth } from '../theme.tsx';
 import { Txt, type TextVariant } from './Text.tsx';
 import { Icon, type IconName } from './Icon.tsx';
 
-export type ButtonVariant = 'primary' | 'soft' | 'kakao' | 'ghost';
+export type ButtonVariant = 'primary' | 'soft' | 'kakao' | 'ghost' | 'deep' | 'danger' | 'ghostDanger' | 'translucent';
 export type ButtonSize = 'lg' | 'md' | 'sm';
 
 /**
@@ -67,7 +67,7 @@ export function Button({
     flexDirection: 'row',
     gap: space.sm,
     alignSelf: fullWidth ? 'stretch' : 'flex-start',
-    opacity: disabled ? 0.55 : 1,
+    opacity: disabled ? disabledOpacity : 1,
   };
 
   const fill: Record<ButtonVariant, ViewStyle> = {
@@ -77,8 +77,17 @@ export function Button({
     ghost: {
       backgroundColor: colors.transparent,
       borderWidth: borderWidth.hairline,
-      borderColor: colors.border,
+      // border 는 카드 층 신호용(배경 위 1.01:1)이라 채움 없는 버튼의 경계로는 안 보인다
+      borderColor: colors.inkHint,
     },
+    deep: { backgroundColor: colors.deep },
+    danger: { backgroundColor: colors.error },
+    ghostDanger: {
+      backgroundColor: colors.transparent,
+      borderWidth: borderWidth.hairline,
+      borderColor: colors.error,
+    },
+    translucent: { backgroundColor: colors.surface85 },
   };
 
   const inkFor: Record<ButtonVariant, string> = {
@@ -86,6 +95,10 @@ export function Button({
     soft: colors.ink,
     kakao: colors.kakaoInk,
     ghost: colors.ink,
+    deep: colors.onDark,
+    danger: colors.onError,
+    ghostDanger: colors.error,
+    translucent: colors.ink,
   };
   // 원본에는 비활성 드로어블이 없습니다(bg_button_cta 가 존재하지 않는 파일을
   // 가리킵니다). track 채움 + muted 잉크로 새로 정의합니다.
@@ -108,10 +121,12 @@ export function Button({
   return (
     <Pressable
       accessibilityRole="button"
+      // 라벨 없이 busy 만 주면 RN Android 가 끝난 뒤에도 "처리 중" 설명을 지우지 않는다
+      accessibilityLabel={label}
       accessibilityState={{ disabled: !!off, busy: loading }}
       disabled={off}
       hitSlop={s.slop}
-      android_ripple={off ? undefined : ripple}
+      android_ripple={ripple}
       style={({ pressed }) => [
         {
           opacity: off ? 1 : pressedOpacity(pressed),
@@ -123,9 +138,9 @@ export function Button({
       ]}
       {...rest}
     >
-      {variant === 'primary' && !off ? (
+      {variant === 'primary' ? (
         <LinearGradient
-          colors={gradient.primary.colors}
+          colors={off ? [colors.track, colors.track] : gradient.primary.colors}
           start={gradient.primary.start}
           end={gradient.primary.end}
           style={shell}
@@ -133,7 +148,7 @@ export function Button({
           {inner}
         </LinearGradient>
       ) : (
-        <View style={[shell, variant === 'primary' ? { backgroundColor: colors.track } : fill[variant]]}>
+        <View style={[shell, fill[variant]]}>
           {inner}
         </View>
       )}
@@ -148,9 +163,12 @@ export function Button({
 export function CaptureButton({
   onPress,
   disabled,
+  accessibilityLabel = '촬영',
 }: {
   onPress?: () => void;
   disabled?: boolean;
+  /** 무엇을 찍는지까지 말해야 하는 자리 (예: "쓰레기 촬영") */
+  accessibilityLabel?: string;
 }) {
   const { colors, shadows } = useTheme();
   const ripple = useRipple(undefined, true);
@@ -158,7 +176,7 @@ export function CaptureButton({
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel="촬영"
+      accessibilityLabel={accessibilityLabel}
       disabled={disabled}
       onPress={onPress}
       android_ripple={disabled ? undefined : ripple}
@@ -171,7 +189,7 @@ export function CaptureButton({
         alignItems: 'center',
         justifyContent: 'center',
         overflow: 'hidden',
-        opacity: disabled ? 0.55 : pressedOpacity(pressed),
+        opacity: disabled ? disabledOpacity : pressedOpacity(pressed),
         ...depth('lime', shadows.lime),
       })}
     >

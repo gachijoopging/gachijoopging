@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  리스트가 처음 그려질 때 항목이 순차로 나타나게 한다.
+  delay 12% — 항목 하나 애니메이션 길이의 12%씩 밀려서, 빠르게 훑히되 순서가 읽힌다.
+  값을 더 키우면 항목이 많을 때 마지막 항목까지 너무 오래 걸린다.
+-->
+<layoutAnimation xmlns:android="http://schemas.android.com/apk/res/android"
+    android:animation="@anim/item_enter"
+    android:animationOrder="normal"
+    android:delay="12%" />

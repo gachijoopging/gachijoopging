@@ -1,0 +1,61 @@
+taco_name,category,role,note
+Cigarette,CIGARETTE,,꽁초 몸통만. 담배갑은 PAPER · 셀로판은 VINYL · 은박은 GENERAL
+Drink can,CAN,body,
+Food Can,CAN,body,
+Aerosol,CAN,body,스프레이 캔 — 캡을 가진다
+Metal bottle cap,CAN,part,단독 89%
+Metal lid,CAN,part,
+Pop tab,CAN,part,81%가 캔에 붙어 있다
+Clear plastic bottle,PLASTIC,body,투명 페트병 (API §0.4 "플라스틱(페트병 포함)")
+Other plastic bottle,PLASTIC,body,
+Disposable plastic cup,PLASTIC,body,
+Other plastic cup,PLASTIC,body,
+Spread tub,PLASTIC,body,
+Tupperware,PLASTIC,body,
+Disposable food container,PLASTIC,body,
+Other plastic container,PLASTIC,body,
+Squeezable tube,PLASTIC,body,형태를 유지하는 성형 튜브. 캡을 가진다
+Plastic utensils,PLASTIC,,
+Plastic straw,PLASTIC,,컵 뚜껑을 관통해 겹치는 일이 있으나 본체가 아니다
+Six pack rings,PLASTIC,,얇지만 형태를 유지한다 — TACO는 wrapper로 묶지만 판정 문장을 따른다
+Other plastic,PLASTIC,,재질이 판정된 조각 — Unlabeled litter와 다르다
+Plastic bottle cap,PLASTIC,part,
+Plastic lid,PLASTIC,part,
+Paper cup,PAPER,body,코팅 여부는 사진으로 판정 불가 — 규정상 별도 품목인 것은 각주
+Drink carton,PAPER,body,종이팩. 내부 알루미늄이지만 겉보기 종이 — 규정 차이는 각주
+Normal paper,PAPER,,
+Magazine paper,PAPER,,
+Tissues,PAPER,,
+Wrapping paper,PAPER,,
+Paper bag,PAPER,,
+Plastified paper bag,PAPER,,겉보기 종이. TACO 주석 0건이라 학습 기여는 없다
+Paper straw,PAPER,,
+Other carton,PAPER,,
+Corrugated carton,PAPER,,
+Meal carton,PAPER,,
+Egg carton,PAPER,,
+Pizza box,PAPER,,기름이 배어도 PAPER — 규정상 일반쓰레기인 것은 각주
+Toilet tube,PAPER,,휴지심. 닫개가 없으므로 본체가 아니다
+Glass bottle,GLASS,body,
+Glass jar,GLASS,body,
+Glass cup,GLASS,body,
+Broken glass,GLASS,,GLASS의 54% · 중앙 12.3px 극소물체 — 유리병 타깃 보강 필요
+Plastic film,VINYL,,
+Other plastic wrapper,VINYL,,
+Single-use carrier bag,VINYL,,
+Garbage bag,VINYL,,
+Crisp packet,VINYL,,
+Polypropylene bag,VINYL,,
+Plastic glooves,VINYL,,얇은 비닐 — 판정 문장을 따른다 (TACO 철자 오타 그대로)
+Foam cup,GENERAL,body,스티로폼 계열 — Paper cup·Disposable plastic cup과 재질이 다르다
+Foam food container,GENERAL,body,스티로폼 계열
+Styrofoam piece,GENERAL,,GENERAL의 41% · 7종에 자리가 없다 — ⑫ A/B 판단에 필요
+Aluminium foil,GENERAL,,금속이지만 음료·식품 캔이 아니다
+Aluminium blister pack,GENERAL,,약 포장 — 은박+플라스틱
+Carded blister pack,GENERAL,,
+Battery,GENERAL,,
+Food waste,GENERAL,,규정상 음식물쓰레기 별도 — 7종에 자리가 없다
+Rope & strings,GENERAL,,
+Shoe,GENERAL,,
+Scrap metal,GENERAL,,고철 — 음료·식품 캔이 아니다
+Unlabeled litter,EXCLUDE,,정체불명 · 중앙 20.3px로 담배꽁초(10.8px)와 크기대역이 겹쳐 CIGARETTE와 경쟁한다

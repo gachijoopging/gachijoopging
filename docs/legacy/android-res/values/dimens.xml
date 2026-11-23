@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      간격 스케일 (4dp 그리드).
+
+      이전에는 간격 토큰이 아예 없어서 레이아웃마다 숫자를 직접 박았고, 실사용 값이 2dp
+      간격으로 흩어져 있었습니다 — marginTop 만 해도 2·4·6·8·10·12dp 여섯 단계였습니다.
+      2dp 차이는 눈으로 구분되지 않으므로 그 여섯 단계는 위계 정보를 전혀 전달하지 못했고,
+      이것이 화면이 층 없이 한 겹으로 읽히던 원인 중 하나입니다.
+
+      그래서 역할별로 세 단계씩만 남겼습니다. 실제 사용 분포를 보면 2/6/10dp 는
+      marginTop 이 지배적(요소 사이 간격)이고 14/18dp 는 padding 이 지배적(컨테이너 안쪽
+      여백)이라, 원래부터 두 축이 섞여 있던 것을 분리한 것입니다.
+
+        요소 사이 간격   xs 4  — 붙어 있음 (제목 바로 아래 캡션)
+                        sm 8  — 관련됨   (아이콘과 라벨, 나란한 칩)
+                        md 12 — 분리됨   (카드와 카드, 섹션과 섹션)
+
+        컨테이너 여백    md 12 — 조밀한 컨테이너 (칩, 좁은 행)
+                        lg 16 — 카드 안쪽
+                        xl 20 — 화면 가장자리, 넓은 서피스
+
+      흡수 방향은 전부 올림입니다(2->4 · 6->8 · 10->12 · 14->16 · 18->20). 내림은 191곳에서
+      답답해질 위험이 있고, 올림은 텍스트가 잘릴 위험이 없으면서 화면이 트입니다.
+
+      2xl/3xl 은 큰 섹션 구분용이라 사용처가 적습니다.
+    -->
+    <dimen name="space_xs">4dp</dimen>
+    <dimen name="space_sm">8dp</dimen>
+    <dimen name="space_md">12dp</dimen>
+    <dimen name="space_lg">16dp</dimen>
+    <dimen name="space_xl">20dp</dimen>
+    <dimen name="space_2xl">24dp</dimen>
+    <dimen name="space_3xl">32dp</dimen>
+
+    <!--
+      화면 가장자리 여백. 프로토타입의 18px 를 그대로 쓰다가 스케일에 맞춰 20dp(space_xl)로
+      올렸습니다. 값은 space_xl 과 같지만, 화면 여백은 조판 결정이라 따로 바꿀 수 있게
+      이름을 유지합니다.
+    -->
+    <dimen name="screen_h_padding">20dp</dimen>
+    <dimen name="screen_top_padding">20dp</dimen>
+
+    <!-- 하단 내비 회피용 스크롤 여백 -->
+    <dimen name="nav_scroll_padding">110dp</dimen>
+    <dimen name="plain_scroll_padding">26dp</dimen>
+
+    <!-- 라운드 -->
+    <dimen name="radius_card">26dp</dimen>
+    <dimen name="radius_card_sm">22dp</dimen>
+    <dimen name="radius_tile">18dp</dimen>
+    <dimen name="radius_field">16dp</dimen>
+    <dimen name="radius_sheet">30dp</dimen>
+    <dimen name="radius_pill">999dp</dimen>
+
+    <!-- 컨트롤 -->
+    <!-- 최소 터치 영역 48dp. 보이는 원(46dp)은 bg_circle_surface_46 인셋으로 유지. -->
+    <dimen name="icon_button">48dp</dimen>
+    <dimen name="avatar_lg">74dp</dimen>
+    <dimen name="avatar_md">42dp</dimen>
+    <dimen name="avatar_sm">30dp</dimen>
+    <dimen name="bottom_nav_height">68dp</dimen>
+    <dimen name="capture_fab">76dp</dimen>
+
+    <!--
+      타이포. 프로토타입 px 직역(0.5 단위)을 실사용 분포 기준 정수 스케일로 정리.
+
+      본문은 13sp 였는데, Material 3 bodyMedium 이 14sp 이고 본문 하한으로 통용되는 값도
+      14sp 라 레이아웃들이 이 토큰을 버리고 14·15·17sp 를 직접 박아 쓰고 있었습니다
+      (하드코딩 74건 중 54건이 이 셋). 토큰이 현실과 안 맞아 우회당한 경우라
+      본문을 14sp 로 올리고, 실제로 쓰이던 15·17sp 에 이름을 붙여 흡수했습니다.
+
+      12sp 는 가독성 하한 — label 과 micro 는 같은 크기이고 색·굵기로만 구분합니다
+      (label: 굵은 UI 라벨·배지, micro: 힌트색 타임스탬프류).
+      caption(설명 텍스트)은 13sp 로 분리해 본문과 한 단계 차이를 둡니다.
+    -->
+
+    <dimen name="text_counter">42sp</dimen>
+    <dimen name="text_display">26sp</dimen>
+    <dimen name="text_title">20sp</dimen>
+    <dimen name="text_metric">19sp</dimen>
+    <dimen name="text_subtitle">17sp</dimen>
+    <dimen name="text_section">16sp</dimen>
+    <dimen name="text_body_lg">15sp</dimen>
+    <dimen name="text_body">14sp</dimen>
+    <dimen name="text_caption">13sp</dimen>
+    <dimen name="text_label">12sp</dimen>
+    <dimen name="text_micro">12sp</dimen>
+</resources>

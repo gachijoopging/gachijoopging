@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- M01 시작 화면: 아래로 갈수록 어두워져 버튼/문구 가독성을 확보 -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <gradient
+        android:angle="270"
+        android:centerColor="#1F1E280A"
+        android:centerY="0.5"
+        android:endColor="#8C141A06"
+        android:startColor="#B8E9F0CD"
+        android:type="linear" />
+</shape>

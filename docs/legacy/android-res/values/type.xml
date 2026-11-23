@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  폰트 지정은 이 두 스타일에만 모여 있습니다.
+  Pretendard 는 OFL 라이선스로 APK 동봉이 허용됩니다.
+-->
+<resources>
+
+    <!-- 제목/숫자 강조 — Pretendard Bold (700) -->
+    <style name="Font.Gachi.Display" parent="">
+        <item name="android:fontFamily">@font/pretendard</item>
+        <item name="fontFamily">@font/pretendard</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <!-- 본문 — Pretendard (400/700) -->
+    <style name="Font.Gachi.Body" parent="">
+        <item name="android:fontFamily">@font/pretendard</item>
+        <item name="fontFamily">@font/pretendard</item>
+    </style>
+</resources>

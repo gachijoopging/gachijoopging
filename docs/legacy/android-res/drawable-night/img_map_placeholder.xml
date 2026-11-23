@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 야간 변형: 색상은 유지하고 명도만 낮춘 지도 자리표시. 원본은 drawable/img_map_placeholder.xml -->
+<!--
+  assets/neighborhood-map.png 자리를 대신하는 벡터 지도 플레이스홀더.
+  프로토타입에서 지도 이미지에 걸던 sepia/hue-rotate 필터 결과와 같은 색조로 그렸습니다.
+
+  실제 지도 이미지를 쓰려면 이 파일을 지우고
+  res/drawable-nodpi/img_map_placeholder.png 를 넣으세요.
+  카카오맵을 붙일 때는 MapPlaceholderView 를 KakaoMap 뷰로 교체하면 됩니다.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="390dp"
+    android:height="260dp"
+    android:viewportWidth="390"
+    android:viewportHeight="260">
+
+    <!-- 바탕 -->
+    <path
+        android:fillColor="#FF283018"
+        android:pathData="M0,0 h390 v260 h-390 z" />
+
+    <!-- 블록 (건물 밀집 구역) -->
+    <path
+        android:fillColor="#FF2E381C"
+        android:pathData="M14,16 h96 v70 h-96 z M132,16 h108 v70 h-108 z M262,16 h114 v52 h-114 z M14,108 h96 v58 h-96 z M262,90 h114 v76 h-114 z M14,188 h140 v58 h-140 z M176,188 h96 v58 h-96 z M294,188 h82 v58 h-82 z" />
+
+    <!-- 공원 -->
+    <path
+        android:fillColor="#FF35431F"
+        android:pathData="M132,108 h108 v58 h-108 z" />
+    <path
+        android:fillColor="#FF3D4E22"
+        android:pathData="M150,120 a14,14 0 1 0 28,0 a14,14 0 1 0 -28,0 M196,138 a11,11 0 1 0 22,0 a11,11 0 1 0 -22,0" />
+
+    <!-- 하천 -->
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M-4,236 C60,220 96,244 150,236 S268,208 330,224 S392,240 396,236"
+        android:strokeColor="#FF2A4450"
+        android:strokeWidth="9"
+        android:strokeLineCap="round" />
+
+    <!-- 간선도로 -->
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M0,96 H390 M0,176 H390 M120,0 V260 M250,0 V260"
+        android:strokeColor="#FF1C2212"
+        android:strokeWidth="10" />
+
+    <!-- 이면도로 -->
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M0,54 H390 M0,220 H390 M60,0 V260 M186,0 V260 M320,0 V260"
+        android:strokeColor="#FF222915"
+        android:strokeWidth="5" />
+
+    <!-- 도로 외곽선 -->
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M0,96 H390 M0,176 H390 M120,0 V260 M250,0 V260"
+        android:strokeColor="#33566040"
+        android:strokeWidth="1" />
+</vector>

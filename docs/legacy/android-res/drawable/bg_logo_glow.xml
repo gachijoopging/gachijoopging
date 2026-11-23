@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  M01 시작 화면 로고 뒤에 까는 부드러운 광원.
+  프로토타입의 filter:drop-shadow(0 3px 14px rgba(253,253,243,0.6)) 를 대체합니다.
+  배경(언덕 일러스트) 위에서 초록 워드마크가 묻히지 않게 밝은 바탕을 깔아 줍니다.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="oval">
+    <gradient
+        android:centerX="0.5"
+        android:centerY="0.5"
+        android:endColor="#00FDFDF3"
+        android:gradientRadius="50%p"
+        android:startColor="#B3FDFDF3"
+        android:type="radial" />
+</shape>

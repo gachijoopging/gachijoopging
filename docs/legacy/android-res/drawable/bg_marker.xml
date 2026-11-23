@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 수거 지점 마커 (이웃) -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@color/gachi_deep" />
+    <stroke android:width="3dp" android:color="@color/gachi_surface" />
+    <corners
+        android:bottomLeftRadius="10dp"
+        android:bottomRightRadius="@dimen/radius_pill"
+        android:topLeftRadius="@dimen/radius_pill"
+        android:topRightRadius="@dimen/radius_pill" />
+</shape>

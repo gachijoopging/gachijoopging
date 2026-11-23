@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Material 3 standard easing — cubic-bezier(0.2, 0.0, 0.0, 1.0).
+  대부분의 전환에 쓰는 기본 커브. 시작은 빠르게, 끝은 부드럽게 멈춘다.
+-->
+<pathInterpolator xmlns:android="http://schemas.android.com/apk/res/android"
+    android:controlX1="0.2"
+    android:controlY1="0"
+    android:controlX2="0"
+    android:controlY2="1" />

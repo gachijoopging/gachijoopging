@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/row"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="@dimen/space_md"
+    android:orientation="horizontal"
+    android:padding="@dimen/space_sm">
+
+    <TextView
+        android:id="@+id/face"
+        style="@style/Gachi.Avatar.Small"
+        android:textSize="@dimen/text_body" />
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/space_sm"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/name"
+            style="@style/Gachi.Text.ItemName"
+            android:textSize="@dimen/text_label" />
+
+        <TextView
+            android:id="@+id/text"
+            style="@style/Gachi.Text.Body"
+            android:layout_width="match_parent"
+            android:layout_marginTop="@dimen/space_xs"
+            android:layout_marginBottom="@dimen/space_xs"
+            android:lineSpacingMultiplier="1.5"
+            android:textSize="@dimen/text_label" />
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/replyButton"
+            style="@style/Gachi.Button.Link"
+            android:padding="0dp"
+            android:text="@string/post_reply" />
+
+        <LinearLayout
+            android:id="@+id/replyList"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
+    </LinearLayout>
+</LinearLayout>

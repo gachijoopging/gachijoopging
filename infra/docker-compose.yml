@@ -1,0 +1,125 @@
+# 운영 — 백엔드 + Redis. 서버 한 대에 이것만 올린다(ADR-0005).
+#
+# Postgres 가 없다. DB 는 Supabase 이고 서버 밖이다(ADR-0001) — PostGIS 를 안 쓴다는 뜻이 아니라
+# 우리가 돌리지 않는다는 뜻이다. 로컬 개발용 DB 는 docker-compose.dev.yml 에 있다.
+#
+#
+# 이미지는 여기서 빌드하지 않는다. CI 가 만들어 레지스트리에 올린 것을 태그로 가져온다 —
+# 다시 빌드하면 CI 가 검증한 것과 다른 물건이 올라간다(GAC-107).
+#
+#   docker compose -f infra/docker-compose.yml up -d
+
+name: gachijoopging
+
+# 로그는 호스트 journald 로 간다. 보존 기간(90일)은 journald 가 지킨다 — provision.sh §로그 보존.
+# 컨테이너를 다시 만들어도 남으므로 재배포 직전 로그를 볼 수 있다. Nginx 접속 로그도 stdout 이라 여기로 온다.
+x-logging: &logging
+  driver: journald
+  options:
+    tag: "{{.Name}}"
+
+services:
+  backend:
+    image: ${DOCKERHUB_USER}/gachijoopging-backend:${IMAGE_TAG}
+    restart: unless-stopped
+    logging: *logging
+    # 오류 응답의 requestId 로 그 요청의 로그 줄을 찾으려면 줄마다 그 값이 찍혀야 한다.
+    # Spring 기본 패턴은 MDC 를 찍지 않는다.
+    environment:
+      LOGGING_PATTERN_LEVEL: "%5p [%X{requestId:-}]"
+    # 호스트에 포트를 열지 않는다. Nginx 가 compose 네트워크 안에서 backend:8080 으로 붙고,
+    # healthcheck 는 컨테이너 안에서 localhost:8081(관리 포트)을 본다 — 바깥에 낼 이유가 없다.
+    #
+    # 되살리면 Nginx 를 우회해 두 가지가 열린다(operations.md §보안):
+    #   8081 이면 /actuator/prometheus 가 인증 없이 — SecurityConfig 가 /actuator/** 를 permitAll 하고
+    #     Nginx 만 health 하나로 좁히고 있다
+    #   X-Real-IP 위조 — AuthController.clientIp() 가 헤더를 무검증으로 믿어
+    #     login:ip:·pwreset:ip: 카운터를 피하거나 남의 IP 를 막을 수 있다
+    env_file:
+      - .env
+    volumes:
+      # 사진은 로컬 디스크에 두고 Nginx 가 직접 서빙한다(결정 33).
+      # 호스트 쪽 소유자를 컨테이너 UID 로 맞춰야 업로드가 된다 — backend/Dockerfile 주석 참고.
+      - ${MEDIA_ROOT}:${MEDIA_ROOT}
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8081/actuator/health/readiness"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
+    stop_grace_period: 45s
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    logging: *logging
+    # 바깥에 열지 않는다. 백엔드만 compose 네트워크 안에서 붙는다.
+    env_file:
+      - .env
+    # 비밀번호를 compose 가 펼치지 않게 $$ 로 적는다 — 펼치면 Cmd 에까지 평문으로 박힌다.
+    # (env_file 로 들어간 값은 어차피 docker inspect 의 Env 에 보인다. DB 비밀번호·JWT 키와 같다)
+    #
+    # 스냅샷을 끈다(--save ""). 들어 있는 것은 TTL 걸린 레이트리밋 카운터뿐이고 영속 데이터는
+    # 전부 Postgres 다. 2GB 한 대에 JVM 이 같이 사는데 BGSAVE 는 fork 로 순간 RSS 를 키우고,
+    # 그때 죽는 것은 OOM Killer 기준 가장 큰 프로세스 — 즉 백엔드다.
+    command: >
+      sh -c 'exec redis-server
+      --requirepass "$$REDIS_PASSWORD"
+      --maxmemory 128mb
+      --maxmemory-policy allkeys-lru
+      --save ""'
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" --no-auth-warning ping | grep -q PONG"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+  # 앱이 붙는 단일 입구. 백엔드·Redis 는 바깥에 포트를 열지 않는다.
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    logging: *logging
+    ports:
+      - "80:80"
+      - "443:443"
+    env_file:
+      - .env
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf.template:ro
+      # 사진 URL 서명 검증. 없으면 Docker 가 그 자리에 빈 디렉터리를 만들어 Nginx 가 뜨지 않는다 — deploy.yml 이 함께 올린다
+      - ./nginx/media_link.js:/etc/nginx/media_link.js:ro
+      # 약관 전문. 바뀌는 일이 드물고 백엔드를 거칠 이유가 없어 Nginx 가 직접 보낸다.
+      - ./legal:/srv/legal:ro
+      - certbot-conf:/etc/letsencrypt:ro
+      - certbot-www:/var/www/certbot:ro
+      # 사진을 백엔드를 거치지 않고 직접 보낸다. 쓰지는 않으므로 읽기 전용이다.
+      - ${MEDIA_ROOT}:${MEDIA_ROOT}:ro
+    # envsubst 에 바꿀 이름 둘만 넘긴다. 안 넘기면 $host·$uri 까지 빈 값으로 밀어 버린다.
+    #
+    # 이미지의 기본 템플릿 기능(/etc/nginx/templates)은 쓰지 못한다 — 그쪽은 명령이 nginx 로
+    # 시작할 때만 도는데, 아래처럼 sh 로 감싸면 건너뛴다. 그래서 여기서 직접 부른다.
+    #
+    # 인증서가 갱신돼도 Nginx 는 모른다. 주기적으로 설정을 다시 읽게 한다.
+    command: >
+      sh -c "envsubst '$$MEDIA_SECURE_LINK_SECRET $$MEDIA_ROOT'
+      < /etc/nginx/nginx.conf.template > /etc/nginx/nginx.conf || exit 1;
+      while :; do sleep 6h & wait $${!}; nginx -s reload; done &
+      nginx -g 'daemon off;'"
+
+  # 인증서 자동 갱신. 발급은 최초 1회 손으로 한다(docs/operations.md §HTTPS).
+  certbot:
+    image: certbot/certbot:latest
+    restart: unless-stopped
+    logging: *logging
+    volumes:
+      - certbot-conf:/etc/letsencrypt
+      - certbot-www:/var/www/certbot
+    entrypoint: >
+      sh -c "while :; do certbot renew --webroot -w /var/www/certbot --quiet; sleep 12h & wait $${!}; done"
+
+volumes:
+  certbot-conf:
+  certbot-www:

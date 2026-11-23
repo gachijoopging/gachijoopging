@@ -1,7 +1,7 @@
 # 가치줍깅 디자인 토큰 (React Native)
 
 안드로이드 `mobile/app/src/main/res/values{,-night}/` 의 토큰을 React Native 로 이식한 것입니다.
-**시험용입니다** — 배포 산출물이 아니고, 마음에 들면 통째로 새 저장소로 옮깁니다.
+앱이 의존하는 디자인 시스템 패키지입니다. 카탈로그는 확인용이며 화면 설계는 `../docs/screens/`에 있습니다.
 
 ```
 tokens/colors.ts        색 (라이트 · 다크) · 주 채움 그라데이션
@@ -52,6 +52,14 @@ Expo SDK 57 · React Native 0.86 · React 19.2. New Architecture 가 기본이�
 | `ListRow.tsx` | `ListRow` · `SelectRow` | `bg_select_row_*` |
 | `Progress.tsx` | `Progress` | `bg_progress_track` |
 | `States.tsx` | `Loading` · `EmptyState` · `ErrorState` · `DashedBox` | `bg_dashed_box` |
+| `IconCircle.tsx` | `IconCircle` | `bg_circle_tint` · `_neutral` · `_deep` · `_lime` · `_surface` |
+| `MetricSplit.tsx` | `MetricSplit` | `view_record_metrics` · `view_metric_row` · `divider_dashed_vertical` |
+| `LinkText.tsx` | `LinkText` | `Gachi.Button.Link` |
+
+### 이름 규칙
+
+모양·크기·구조가 바뀌면 `variant`, 채움·글자 색만 바뀌면 `tone` 입니다.
+`Button` 은 알약·필드 모서리·테두리 유무가 달라 `variant`, `Chip`·`Badge`·`Banner`·`IconButton`·`IconCircle`·`Tile` 은 `tone` 입니다.
 
 원본 드로어블 88개가 컴포넌트 88개는 아닙니다 — `bg_circle_*` 22개는 대부분 같은
 원의 크기 변형이고 `bg_chip_*` 9종은 채움 색만 다릅니다. prop 으로 접었습니다.
@@ -67,6 +75,8 @@ Expo SDK 57 · React Native 0.86 · React 19.2. New Architecture 가 기본이�
 - 원본 입력창은 여러 줄에 반경 18, 오류에 16 을 써서 같은 입력창이 상태에 따라
   모서리가 바뀌었습니다. 상태는 색으로만 말하도록 `radius.field` 로 통일했습니다.
 - `bg_select_row_on` 의 테두리 2.5 는 토큰 스케일에 맞춰 2 로 내렸습니다.
+- Android 12 의 동적 색(Material You)은 쓰지 않습니다. 라임·딥 그린이 브랜드 색이고,
+  배경화면에서 뽑은 색으로 바꾸면 `contrast.test.ts` 가 지키는 대비 쌍이 기기마다 달라집니다.
 - 점선 상자의 대시 패턴(8/5)은 재현하지 않았습니다. RN 은 대시 길이를 지정할 수
   없고, 정확한 패턴을 얻으려면 react-native-svg 가 필요한데 그만한 값은 아닙니다.
 
@@ -144,13 +154,15 @@ const depth =
 
 ## 폰트
 
-Pretendard (OFL — 앱 동봉 허용). `mobile/app/src/main/res/font/` 에 있습니다.
+Pretendard (OFL — 앱 동봉 허용). `mobile/app.json` 의 `expo-font` 플러그인이 이 폴더의 `assets/fonts/` 를 앱 빌드에 넣습니다.
 
 굵기는 `fontWeight` 가 아니라 패밀리 이름으로 고릅니다. 안드로이드 RN 은 `fontWeight` 로
 굵기를 합성하지 못해서, 같은 코드가 iOS 에서만 굵어집니다. 파일 이름을 맞추세요:
 
 ```
 assets/fonts/Pretendard-Regular.ttf
+assets/fonts/Pretendard-Medium.ttf
+assets/fonts/Pretendard-SemiBold.ttf
 assets/fonts/Pretendard-Bold.ttf
 ```
 
@@ -189,6 +201,14 @@ assets/fonts/Pretendard-Bold.ttf
 
 ## 아직 없는 것
 
+화면 공통 적용 규칙:
+
+- 핵심 정보·글자·48dp 터치 영역을 줄이지 않습니다. 캐릭터와 반복 설명부터 줄이고 부족하면 `Screen`의 세로 스크롤을 사용합니다. 프로필 소개는 2줄과 더 보기로 표시합니다.
+- AI 확인과 빠른 줍기의 카테고리는 2열입니다. 수량은 48dp 이상의 −/+와 직접 숫자 입력을 함께 제공합니다. 공유 수량 부품의 구현·카탈로그 검증은 아직 필요합니다.
+- 입력 오류는 `Field` 아래, 요청 실패는 입력을 유지하고 재시도하도록 표시합니다. 메뉴는 `BottomSheet`, 위험 행동 확인은 `Dialog`를 재사용합니다.
+- 사진 선택은 OS 기본 선택기를 쓰며, 순서 변경에는 드래그와 앞·뒤 버튼을 함께 제공합니다.
+- 캐릭터는 기존 새싹의 형태·팔레트를 유지합니다. 홈 5단계와 빈 상태 3종의 누락 그림은 제작 대상입니다. 단계 결정은 `../docs/feature-scope.md`를 따릅니다.
+
 - 모션 토큰 — 지속시간·이징. 화면 전환을 붙일 때 정합니다
 - 지도 마커 · 말풍선 — 화면 전용이라 그 화면을 만들 때 뽑습니다
 - 아이콘 이름 대조표 — 기존 59개를 Material Design Icons 의 어느 이름으로 옮길지
@@ -216,3 +236,36 @@ pyftsubset assets/fonts/Pretendard-Regular.ttf   --unicodes-file=tools/pretendar
 ```
 
 소스에 쓰인 한글이 전부 들어 있는지 확인하고 교체하세요.
+
+## 화면 조합 레시피
+
+화면 설계의 정본은 `../docs/screens/`이다. 아래 레시피는 화면이 그 문서를 구현할 때
+재사용하는 배치 규칙이며, 기능·도메인 동작을 대신 정의하지 않는다.
+
+| 레시피 | 소유 영역 | 조합 규칙 |
+|---|---|---|
+| Root tab | `Screen` 안전 영역과 `BottomNav` | 본문만 스크롤하고 하단 내비는 고정한다. 5개 목적지를 넘기면 가운데 항목을 `startAction`으로 표시하며 선택 상태와 `onChange`를 보존한다. |
+| Sub-screen | `Screen` + `AppHeader` | 헤더는 고정, 본문은 스크롤한다. 뒤로·제목·선택 액션은 `AppHeader` 슬롯에 넣는다. |
+| Form | `AppHeader` + `Field` + `Button` | 필드 오류는 바로 아래, primary action은 문서가 정한 고정/스크롤 위치에 둔다. 키보드가 포커스 필드를 가리지 않게 한다. |
+| List/detail | `List`/`ListRow`/`Card` | 목록 행의 좌·우 슬롯에 상태와 조작을 합성한다. 상세의 사진·지도·댓글은 기능 레이어가 소유한다. |
+| Overlay | `BottomSheet` 또는 `Dialog` | 선택·보조 조작은 시트, 파괴적이거나 흐름을 멈추는 결정은 대화상자를 쓴다. |
+| Metrics | `Card`/`Tile`/`Progress` | 수치 위계는 `Txt` 토큰으로, 차트·경로·활동 달력은 기능 레이어로 둔다. |
+
+## UX 계약
+
+- 모든 독립 조작은 48dp 이상의 터치 영역을 가진다. 작게 보이는 `Chip`은 hitSlop으로 이를 만족한다.
+- 각 화면은 설계서의 로딩·빈·오류·오프라인·권한 거부·부분 실패 상태를 모두 구현한다. 공통 상태 표현은 `Loading`, `EmptyState`, `ErrorState`, `Banner`, `Snackbar`를 우선 사용한다.
+- 제출 중에는 같은 요청을 다시 보내지 않도록 제출 조작을 잠그고, 실패한 폼 값은 보존한다.
+- 필드 오류는 해당 필드 아래에 보이며, 서버 오류는 화면 설계서가 정한 `Banner` 또는 `Snackbar`로 보인다.
+- 삭제·탈퇴·변경 버리기처럼 되돌리기 어려운 조작은 설계서에 정한 `Dialog` 확인을 거친다.
+- 활동 달력·지도·경로·카메라·미디어·채팅 말풍선·홈의 캐릭터/그래프는 디자인 시스템 컴포넌트가 아니다. 토큰과 레시피만 공유하고 기능 화면에서 소유한다.
+
+## 추가 공개 컴포넌트
+
+- `IconButton`, `AppHeader`: 독립 아이콘 조작과 서브 화면 헤더. 요청 중에는 `backDisabled`로 뒤로가기를 비활성으로 알린다.
+- `Switch`, `Checkbox`, `Field.endAdornment`, `NumberStepper`: 반복되는 폼 조작. 스테퍼는 직접 정수 입력과 0.3초 간격 길게 누르기를 제공한다.
+- `BottomNav.startAction`, `Button`의 `deep`/`danger`/`ghostDanger`/`translucent`, `Chip`의 `deep`, `Avatar`의 `xl`(96dp)
+- `Card.onPress`·`disabled`: 카드 전체가 하나의 버튼. 안쪽에 다른 조작을 두지 않는다.
+- `Chip` 의 `overlay`(사진 위 알약)·`disabled`, `Badge` 의 `warn`, `Banner` 의 `neutral`(늘 떠 있는 안내문, `alert` 로 끼어들지 않음)
+- `ListRow`·`SelectRow` 의 `disabled`. 비활성 불투명도는 모든 조작이 `disabledOpacity` 하나를 쓴다.
+- `IconButton` 은 `variant` 대신 `tone` 을 받는다(위 이름 규칙).

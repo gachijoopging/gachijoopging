@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 48dp 터치 높이 안에 28dp 칩만 보이게 하는 인셋 배경 (비밀번호 표시 칩) -->
+<inset xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/bg_chip_neutral"
+    android:insetTop="10dp"
+    android:insetBottom="10dp" />

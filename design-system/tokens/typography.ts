@@ -46,17 +46,45 @@ export const lineHeight = {
 } as const;
 
 /**
+ * 자간(px). 크기마다 다르다. 큰 글자는 글자 사이가 벌어져 보여 좁히고, 12 크기는 조금 띄워 읽기 쉽게 한다.
+ * 본문은 Pretendard 기본값 그대로 둔다. code 는 비밀번호 재설정 6자리 코드처럼 한 글자씩 읽는 문자열이다
+ */
+export const tracking = {
+  counter: -0.8,
+  display: -0.4,
+  title: -0.2,
+  metric: -0.2,
+  subtitle: -0.1,
+  section: 0,
+  bodyLg: 0,
+  body: 0,
+  caption: 0,
+  label: 0.2,
+  micro: 0.2,
+  code: 6,
+} as const;
+
+/**
  * Pretendard (OFL — 앱 동봉 허용).
  *
  * 굵기는 `fontWeight` 가 아니라 패밀리 이름으로 고릅니다. 안드로이드 RN 은
  * fontWeight 로 굵기를 합성하지 못해서, 같은 코드가 iOS 에서는 굵고
  * 안드로이드에서는 안 굵은 상태로 갈립니다. 파일 이름과 이 문자열을 일치시키세요:
  *   assets/fonts/Pretendard-Regular.ttf
+ *   assets/fonts/Pretendard-Medium.ttf
+ *   assets/fonts/Pretendard-SemiBold.ttf
  *   assets/fonts/Pretendard-Bold.ttf
+ *
+ * 파일은 Regular·Bold 와 같은 글리프 집합(5,425자)으로 줄인 서브셋입니다. 원본 TTF 는
+ * 굵기마다 2.7MB 라, 새 굵기를 넣을 때도 같은 코드포인트로 잘라야 앱이 불지 않습니다.
  */
 export const fontFamily = {
   /** 본문 */
   regular: 'Pretendard-Regular',
+  /** 강조가 아닌 구분 — 목록 제목, 선택 안 된 라벨 */
+  medium: 'Pretendard-Medium',
+  /** 작은 UI 라벨. 12px 에서 Bold 는 획이 뭉개집니다 */
+  semibold: 'Pretendard-SemiBold',
   /** 제목·숫자 강조 */
   bold: 'Pretendard-Bold',
 } as const;

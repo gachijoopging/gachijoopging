@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 수거 개수 / 활동 시간 / 이동 거리 3분할 카드 -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/metricRoot"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg_card_sm"
+    android:elevation="3dp"
+    android:outlineAmbientShadowColor="@color/gachi_shadow"
+    android:outlineSpotShadowColor="@color/gachi_shadow"
+    android:orientation="horizontal"
+    android:paddingStart="@dimen/space_sm"
+    android:paddingTop="@dimen/space_lg"
+    android:paddingEnd="@dimen/space_sm"
+    android:paddingBottom="@dimen/space_lg">
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:gravity="center_horizontal"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/metric1"
+            style="@style/Gachi.Text.Metric"
+            tools:text="17" />
+
+        <TextView
+            android:id="@+id/metric1Key"
+            style="@style/Gachi.Text.Micro"
+            android:layout_marginTop="@dimen/space_xs"
+            android:textColor="@color/gachi_ink_muted"
+            android:text="@string/act_metric_count" />
+    </LinearLayout>
+
+    <View
+        android:layout_width="2dp"
+        android:layout_height="match_parent"
+        android:background="@drawable/divider_dashed_vertical" />
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:gravity="center_horizontal"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/metric2"
+            style="@style/Gachi.Text.Metric"
+            tools:text="42분" />
+
+        <TextView
+            android:id="@+id/metric2Key"
+            style="@style/Gachi.Text.Micro"
+            android:layout_marginTop="@dimen/space_xs"
+            android:textColor="@color/gachi_ink_muted"
+            android:text="@string/act_metric_time" />
+    </LinearLayout>
+
+    <View
+        android:layout_width="2dp"
+        android:layout_height="match_parent"
+        android:background="@drawable/divider_dashed_vertical" />
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:gravity="center_horizontal"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/metric3"
+            style="@style/Gachi.Text.Metric"
+            tools:text="2.1km" />
+
+        <TextView
+            android:id="@+id/metric3Key"
+            style="@style/Gachi.Text.Micro"
+            android:layout_marginTop="@dimen/space_xs"
+            android:textColor="@color/gachi_ink_muted"
+            android:text="@string/act_metric_distance" />
+    </LinearLayout>
+</LinearLayout>

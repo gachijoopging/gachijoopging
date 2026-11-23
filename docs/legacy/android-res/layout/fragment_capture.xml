@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- M10 쓰레기 촬영 -->
+<LinearLayout
+    android:clipChildren="false"
+    android:clipToPadding="false" xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/gachi_camera_bg"
+    android:orientation="vertical"
+    android:padding="@dimen/space_xl">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <ImageButton
+            android:id="@+id/backButton"
+            style="@style/Gachi.IconButton"
+            android:background="@drawable/bg_circle_translucent"
+            android:contentDescription="@string/cd_back"
+            android:elevation="0dp"
+            android:src="@drawable/ic_back"
+            app:tint="@color/gachi_on_dark" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/space_md"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                style="@style/Gachi.Text.ScreenTitle"
+                android:text="@string/cap_title"
+                android:textColor="@color/gachi_on_dark" />
+
+            <!-- 어두운 카메라 배경 위라 밝은 계열 토큰 사용 (하단 팁 문구와 동일) -->
+            <TextView
+                style="@style/Gachi.Text.ScreenSubtitle"
+                android:text="@string/cap_sub"
+                android:textColor="@color/gachi_handle" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- 카메라 프리뷰 자리 -->
+    <site.gachijoopging.app.ui.common.ClipOutlineFrameLayout
+        android:id="@+id/previewFrame"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="@dimen/space_lg"
+        android:layout_weight="1"
+        android:background="@drawable/bg_capture_frame">
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@color/gachi_camera_scrim_28" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:shadowColor="@color/gachi_black_50"
+            android:shadowDy="1"
+            android:shadowRadius="4"
+            android:text="@string/cap_guide"
+            android:textColor="@color/gachi_on_dark"
+            android:textSize="@dimen/text_body"
+            android:textStyle="bold" />
+
+        <View
+            android:layout_width="26dp"
+            android:layout_height="26dp"
+            android:layout_gravity="top|start"
+            android:layout_margin="@dimen/space_lg"
+            android:background="@drawable/bg_corner_tl" />
+
+        <View
+            android:layout_width="26dp"
+            android:layout_height="26dp"
+            android:layout_gravity="top|end"
+            android:layout_margin="@dimen/space_lg"
+            android:background="@drawable/bg_corner_tr" />
+
+        <View
+            android:layout_width="26dp"
+            android:layout_height="26dp"
+            android:layout_gravity="bottom|start"
+            android:layout_margin="@dimen/space_lg"
+            android:background="@drawable/bg_corner_bl" />
+
+        <View
+            android:layout_width="26dp"
+            android:layout_height="26dp"
+            android:layout_gravity="bottom|end"
+            android:layout_margin="@dimen/space_lg"
+            android:background="@drawable/bg_corner_br" />
+    </site.gachijoopging.app.ui.common.ClipOutlineFrameLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_lg"
+        android:background="@drawable/bg_tile_dark"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="@dimen/space_lg"
+        android:paddingTop="@dimen/space_md"
+        android:paddingEnd="@dimen/space_lg"
+        android:paddingBottom="@dimen/space_md">
+
+        <ImageView
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:importantForAccessibility="no"
+            android:src="@drawable/ic_sparkle"
+            app:tint="@color/gachi_yellow" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/space_sm"
+            android:layout_weight="1"
+            android:text="@string/cap_tip"
+            android:textColor="@color/gachi_handle"
+            android:textSize="@dimen/text_label" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:clipChildren="false"
+        android:clipToPadding="false"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="@dimen/space_lg"
+        android:gravity="center_horizontal"
+        android:orientation="vertical"
+        android:paddingBottom="@dimen/space_sm">
+
+        <ImageView
+            android:id="@+id/shootButton"
+            android:layout_width="78dp"
+            android:layout_height="78dp"
+            android:background="@drawable/bg_shoot_button"
+            android:contentDescription="@string/cd_shoot"
+            android:elevation="8dp"
+            android:outlineAmbientShadowColor="@color/gachi_shadow_lime"
+            android:outlineSpotShadowColor="@color/gachi_shadow_lime"
+            android:padding="@dimen/space_2xl"
+            android:src="@drawable/ic_camera"
+            app:tint="@color/gachi_on_lime" />
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/permDemo"
+            style="@style/Gachi.Button.Link.Faint"
+            android:layout_marginTop="@dimen/space_md"
+            android:text="@string/cap_demo_perm" />
+    </LinearLayout>
+</LinearLayout>

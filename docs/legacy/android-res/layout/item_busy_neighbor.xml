@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="@dimen/space_sm"
+    android:background="@drawable/bg_tile_translucent"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingStart="@dimen/space_lg"
+    android:paddingTop="@dimen/space_md"
+    android:paddingEnd="@dimen/space_lg"
+    android:paddingBottom="@dimen/space_md">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:importantForAccessibility="no"
+        android:text="🤫"
+        android:textSize="@dimen/text_body_lg" />
+
+    <TextView
+        android:id="@+id/name"
+        style="@style/Gachi.Text.ItemName"
+        android:layout_width="0dp"
+        android:layout_marginStart="@dimen/space_md"
+        android:layout_weight="1" />
+
+    <TextView
+        android:id="@+id/status"
+        style="@style/Gachi.Text.Caption" />
+</LinearLayout>

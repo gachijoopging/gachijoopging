@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  빈 목록 안내 (피드/모이깅/친구/알림 공통).
+  아이콘은 이모지를 담은 TextView 였는데, OS 버전마다 모양이 달라지고 다른 화면의
+  벡터 아이콘과 톤이 어긋나서 ImageView + 벡터로 바꿨습니다 (설정 화면과 같은 처리).
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/emptyRoot"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="center_horizontal"
+    android:orientation="vertical"
+    android:paddingStart="@dimen/space_2xl"
+    android:paddingTop="48dp"
+    android:paddingEnd="@dimen/space_2xl"
+    android:paddingBottom="@dimen/space_2xl">
+
+    <ImageView
+        android:id="@+id/emptyIcon"
+        android:layout_width="60dp"
+        android:layout_height="60dp"
+        android:background="@drawable/bg_circle_surface"
+        android:importantForAccessibility="no"
+        android:padding="@dimen/space_lg"
+        android:src="@drawable/ic_sprout"
+        app:tint="@color/gachi_ink_hint" />
+
+    <TextView
+        android:id="@+id/emptyTitle"
+        style="@style/Gachi.Text.Section"
+        android:layout_marginTop="@dimen/space_md"
+        android:gravity="center"
+        android:textSize="@dimen/text_subtitle" />
+
+    <TextView
+        android:id="@+id/emptyDesc"
+        style="@style/Gachi.Text.Caption"
+        android:layout_width="match_parent"
+        android:layout_marginTop="@dimen/space_sm"
+        android:gravity="center" />
+
+    <androidx.appcompat.widget.AppCompatButton
+        android:id="@+id/emptyCta"
+        style="@style/Gachi.Button.Primary.Compact"
+        android:layout_marginTop="@dimen/space_lg"
+        android:visibility="gone" />
+</LinearLayout>

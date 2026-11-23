@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_screen"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:paddingStart="@dimen/screen_h_padding"
+    android:paddingEnd="@dimen/screen_h_padding">
+
+    <ProgressBar
+        android:id="@+id/progress"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:indeterminate="true" />
+
+    <TextView
+        android:id="@+id/statusText"
+        style="@style/Gachi.Text.PageTitle"
+        android:layout_marginTop="@dimen/space_lg"
+        android:gravity="center"
+        android:text="@string/invite_redeeming" />
+
+    <androidx.appcompat.widget.AppCompatButton
+        android:id="@+id/retryButton"
+        style="@style/Gachi.Button.Primary"
+        android:layout_marginTop="@dimen/space_lg"
+        android:text="@string/action_retry"
+        android:visibility="gone" />
+
+    <androidx.appcompat.widget.AppCompatButton
+        android:id="@+id/cancelButton"
+        style="@style/Gachi.Button.Ghost"
+        android:layout_marginTop="@dimen/space_sm"
+        android:text="@string/action_cancel"
+        android:visibility="gone" />
+</LinearLayout>

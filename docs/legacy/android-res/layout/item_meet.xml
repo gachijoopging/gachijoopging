@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 예정 모임 / 모임 구하기 카드 -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/row"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="@dimen/space_md"
+    android:background="@drawable/bg_card_tight"
+    android:elevation="3dp"
+    android:outlineAmbientShadowColor="@color/gachi_shadow"
+    android:outlineSpotShadowColor="@color/gachi_shadow"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingStart="@dimen/space_lg"
+    android:paddingTop="@dimen/space_lg"
+    android:paddingEnd="@dimen/space_lg"
+    android:paddingBottom="@dimen/space_lg">
+
+    <ImageView
+        android:layout_width="44dp"
+        android:layout_height="44dp"
+        android:background="@drawable/bg_marker_soft"
+        android:importantForAccessibility="no"
+        android:padding="@dimen/space_md"
+        android:src="@drawable/ic_calendar" />
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/space_md"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/title"
+            style="@style/Gachi.Text.ItemName"
+            tools:text="토요일 아침 한강 줍깅" />
+
+        <TextView
+            android:id="@+id/meta"
+            style="@style/Gachi.Text.Caption"
+            android:layout_marginTop="@dimen/space_xs"
+            tools:text="7/26(토) 오전 8시 · 뚝섬한강공원 · 3/6명" />
+    </LinearLayout>
+
+    <androidx.appcompat.widget.AppCompatButton
+        android:id="@+id/joinButton"
+        style="@style/Gachi.Button.Primary.Compact"
+        android:layout_marginStart="@dimen/space_sm"
+        android:paddingStart="@dimen/space_lg"
+        android:paddingTop="@dimen/space_md"
+        android:paddingEnd="@dimen/space_lg"
+        android:paddingBottom="@dimen/space_md"
+        android:text="@string/meet_join_apply"
+        android:textSize="@dimen/text_label" />
+
+    <TextView
+        android:id="@+id/fullChip"
+        style="@style/Gachi.Chip.Static"
+        android:layout_marginStart="@dimen/space_sm"
+        android:background="@drawable/bg_chip_neutral"
+        android:paddingStart="@dimen/space_md"
+        android:paddingEnd="@dimen/space_md"
+        android:text="@string/meet_full"
+        android:textColor="@color/gachi_neutral_ink"
+        android:textSize="@dimen/text_label"
+        android:visibility="gone" />
+
+    <ImageView
+        android:id="@+id/arrow"
+        android:layout_width="20dp"
+        android:layout_height="20dp"
+        android:layout_marginStart="@dimen/space_sm"
+        android:importantForAccessibility="no"
+        android:src="@drawable/ic_chevron_right"
+        android:visibility="gone"
+        app:tint="@color/gachi_ink_hint" />
+</LinearLayout>

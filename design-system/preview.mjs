@@ -108,11 +108,12 @@ const samples = {
   label: '진행 중',
   micro: '3분 전',
 };
-const boldKeys = ['counter', 'display', 'title', 'metric', 'label'];
+const boldKeys = ['counter', 'display', 'title', 'metric'];
+const semiboldKeys = ['label'];
 const typeRows = Object.keys(fontSize).map((k) => `
       <div class="ty">
         <div class="ty-meta"><code>${k}</code><span>${fontSize[k]} / ${lineHeight[k]}</span></div>
-        <div class="ty-s" style="font-size:${fontSize[k]}px;line-height:${lineHeight[k]}px;font-weight:${boldKeys.includes(k) ? 700 : 400}">${samples[k]}</div>
+        <div class="ty-s" style="font-size:${fontSize[k]}px;line-height:${lineHeight[k]}px;font-weight:${boldKeys.includes(k) ? 700 : semiboldKeys.includes(k) ? 600 : 400}">${samples[k]}</div>
       </div>`).join('');
 
 // ── 간격 ───────────────────────────────────────────────────────────
@@ -364,7 +365,7 @@ const html = `<title>가치줍깅 디자인 토큰</title>
 
   <section class="block" id="type">
     <h2>글꼴과 텍스트 크기</h2>
-    <p class="note">본문은 원래 13 이었는데 레이아웃들이 토큰을 버리고 14·15·17 을 직접 박아 쓰고 있었습니다(하드코딩 74건 중 54건). 토큰이 현실과 안 맞아 우회당한 경우라 body 를 14 로 올리고, 실제로 쓰이던 크기에 이름을 붙여 흡수했습니다. 행간은 XML 에 없던 값이라 이식하면서 새로 정했습니다 — RN <code>Text</code> 는 안드로이드 <code>TextView</code> 와 달리 알아서 벌려주지 않아 한글 본문이 답답해집니다. 실물은 Pretendard(<code>${fontFamily.regular}</code> / <code>${fontFamily.bold}</code>)이고, 아래 견본은 웹에서 대신 세운 글꼴이라 자간이 조금 다릅니다.</p>
+    <p class="note">본문은 원래 13 이었는데 레이아웃들이 토큰을 버리고 14·15·17 을 직접 박아 쓰고 있었습니다(하드코딩 74건 중 54건). 토큰이 현실과 안 맞아 우회당한 경우라 body 를 14 로 올리고, 실제로 쓰이던 크기에 이름을 붙여 흡수했습니다. 행간은 XML 에 없던 값이라 이식하면서 새로 정했습니다 — RN <code>Text</code> 는 안드로이드 <code>TextView</code> 와 달리 알아서 벌려주지 않아 한글 본문이 답답해집니다. 실물은 Pretendard(<code>${fontFamily.regular}</code> / <code>${fontFamily.medium}</code> / <code>${fontFamily.semibold}</code> / <code>${fontFamily.bold}</code>)이고, 아래 견본은 웹에서 대신 세운 글꼴이라 자간이 조금 다릅니다.</p>
     ${typeRows}
   </section>
 

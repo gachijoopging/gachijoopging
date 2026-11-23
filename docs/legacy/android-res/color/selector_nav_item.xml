@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  활성 항목은 딥 필(bg_nav_item_selected) 위에 얹히므로 밝은 잉크로 뒤집습니다.
+  selector_tab_text 과 같은 규칙 — 선택 = 딥 배경 + on_dark 글자.
+-->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:color="@color/gachi_on_dark" android:state_selected="true" />
+    <item android:color="@color/gachi_ink_hint" />
+</selector>

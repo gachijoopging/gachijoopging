@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  48dp 터치 영역의 오른쪽 위에 20dp 원만 보이게 하는 인셋 배경.
+  썸네일 모서리 삭제 배지의 시각 위치를 그대로 두고 터치 영역만 안쪽으로 넓힌다.
+-->
+<inset xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/bg_circle_danger"
+    android:insetLeft="28dp"
+    android:insetTop="0dp"
+    android:insetRight="0dp"
+    android:insetBottom="28dp" />

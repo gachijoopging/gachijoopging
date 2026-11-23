@@ -109,6 +109,8 @@ export type Palette = {
   black50: string;
   scrim: string;
   photoBadge: string;
+  /** 안드로이드 터치 리플. 서피스 위에서 눌림이 보일 만큼만 ink 를 얹습니다 */
+  ripple: string;
 
   transparent: string;
 };
@@ -190,6 +192,7 @@ export const light: Palette = {
   black50: 'rgba(0, 0, 0, 0.50)',
   scrim: 'rgba(38, 42, 14, 0.45)',
   photoBadge: 'rgba(38, 42, 14, 0.72)',
+  ripple: 'rgba(38, 42, 14, 0.12)',
 
   transparent: 'transparent',
 };
@@ -274,6 +277,7 @@ export const dark: Palette = {
   black50: 'rgba(0, 0, 0, 0.50)',
   scrim: 'rgba(0, 0, 0, 0.65)',
   photoBadge: 'rgba(0, 0, 0, 0.77)',
+  ripple: 'rgba(237, 240, 220, 0.16)',
 
   transparent: 'transparent',
 };

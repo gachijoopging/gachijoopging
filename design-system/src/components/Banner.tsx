@@ -5,41 +5,51 @@ import { borderWidth } from '../../tokens/elevation.ts';
 import { useTheme } from '../theme.tsx';
 import { Txt } from './Text.tsx';
 import { Icon, type IconName } from './Icon.tsx';
+import { Button } from './Button.tsx';
 
 /**
  * 배너. 원본 `bg_banner_info` · `bg_banner_warn` · `bg_banner_danger`.
  *
  * `info`(하늘색 H≈197°)는 브랜드 밖 색이라 "알려주는 상태" 전용입니다.
  * 액션이나 장식에 쓰면 이유 없이 튑니다.
+ * `neutral` 은 상태가 아니라 "미리 알려 두는 규칙"(승인 대기 안내, 위치 공유 조건 등)에 씁니다.
  */
-export type BannerTone = 'info' | 'warn' | 'danger';
+export type BannerTone = 'info' | 'warn' | 'danger' | 'neutral';
 
 const ICONS: Record<BannerTone, IconName> = {
   info: 'information',
   warn: 'alert',
   danger: 'alert-circle',
+  neutral: 'information-outline',
 };
 
 export function Banner({
   tone = 'info',
   title,
   children,
+  action,
 }: {
   tone?: BannerTone;
   title?: string;
   children: string;
+  /** 배너가 알린 문제를 바로 푸는 한 가지 행동 (예: 설정 열기) */
+  action?: { label: string; onPress: () => void; accessibilityLabel?: string };
 }) {
   const { colors } = useTheme();
   const tones: Record<BannerTone, { bg: string; ink: string; border?: string }> = {
     info: { bg: colors.infoBg, ink: colors.infoInk },
     warn: { bg: colors.warnBg, ink: colors.warnInk, border: colors.warnBorder },
     danger: { bg: colors.dangerBg, ink: colors.dangerInk },
+    neutral: { bg: colors.neutral, ink: colors.neutralInk },
   };
   const t = tones[tone];
 
   return (
     <View
-      accessibilityRole="alert"
+      // neutral 은 늘 떠 있는 안내문이라, 화면에 올 때마다 끼어들어 읽히면 소음입니다.
+      accessibilityRole={tone === 'neutral' ? undefined : 'alert'}
+      // 안드로이드는 alert 역할만으로는 나타날 때 읽지 않는다
+      accessibilityLiveRegion={tone === 'neutral' ? 'none' : 'polite'}
       style={{
         flexDirection: 'row',
         gap: space.md,
@@ -61,6 +71,16 @@ export function Banner({
         <Txt variant="body" style={{ color: t.ink }}>
           {children}
         </Txt>
+        {action ? (
+          <Button
+            label={action.label}
+            accessibilityLabel={action.accessibilityLabel}
+            variant="ghost"
+            size="sm"
+            style={{ alignSelf: 'flex-start' }}
+            onPress={action.onPress}
+          />
+        ) : null}
       </View>
     </View>
   );

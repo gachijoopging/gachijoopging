@@ -1,0 +1,1357 @@
+// 생성물이다. 고치지 말고 `npm run gen:mocks` 를 돌린다. 원본은 docs/openapi.yaml 의 example.
+export const MOCKS = {
+  "GET /activities/{id}": {
+    "data": {
+      "id": "a100",
+      "user": {
+        "id": "8a2d…",
+        "nickname": "상혁",
+        "photoUrl": null,
+        "withdrawn": false
+      },
+      "status": "ENDED",
+      "startedAt": "2026-09-05T09:02:00Z",
+      "endedAt": "2026-09-05T09:48:00Z",
+      "durationSec": 2520,
+      "pausedSec": 240,
+      "paused": false,
+      "pausedAt": null,
+      "distanceM": 3120,
+      "steps": 4100,
+      "locationShared": true,
+      "itemCount": 27,
+      "byCategory": {
+        "CIGARETTE": 14,
+        "PLASTIC": 6,
+        "CAN": 3,
+        "PAPER": 2,
+        "VINYL": 2
+      },
+      "route": [
+        [
+          126.93,
+          37.52
+        ],
+        [
+          126.931,
+          37.521
+        ]
+      ],
+      "photos": [
+        {
+          "id": "p1",
+          "url": "https://cdn.example.com/a100/p1.jpg",
+          "thumbUrl": "https://cdn.example.com/a100/p1_t.jpg",
+          "takenAt": "2026-09-05T09:10:00Z"
+        }
+      ],
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000001",
+          "photoId": "p1",
+          "category": "PLASTIC",
+          "quantity": 2,
+          "source": "AI",
+          "aiConfidence": 0.91,
+          "unclassified": false,
+          "bbox": {
+            "x": 0.2,
+            "y": 0.3,
+            "w": 0.2,
+            "h": 0.25
+          }
+        },
+        {
+          "id": "00000000-0000-4000-8000-000000000002",
+          "photoId": null,
+          "category": "CIGARETTE",
+          "quantity": 5,
+          "source": "MANUAL",
+          "aiConfidence": null,
+          "unclassified": false,
+          "bbox": null
+        }
+      ]
+    }
+  },
+  "GET /activities/current": {
+    "data": null
+  },
+  "GET /agreements": {
+    "data": {
+      "items": [
+        {
+          "type": "TERMS",
+          "version": "2026-10",
+          "required": true,
+          "url": "https://www.gachijoopging.site/terms"
+        },
+        {
+          "type": "PRIVACY",
+          "version": "2026-10",
+          "required": true,
+          "url": "https://www.gachijoopging.site/privacy"
+        },
+        {
+          "type": "MARKETING",
+          "version": "2026-10",
+          "required": false,
+          "url": "https://www.gachijoopging.site/marketing"
+        }
+      ]
+    }
+  },
+  "GET /crew": {
+    "data": {
+      "id": "c001",
+      "name": "한강줍깅크루",
+      "intro": "매주 토요일 아침 여의도",
+      "photoUrl": null,
+      "leader": {
+        "id": "6f1c…",
+        "nickname": "관열",
+        "photoUrl": null,
+        "withdrawn": false
+      },
+      "memberCount": 18,
+      "region": "SEOUL",
+      "joinPolicy": "APPROVAL",
+      "goalCount": 300,
+      "pendingJoinRequests": 2,
+      "pinnedNotice": {
+        "id": "n01",
+        "title": "9월 정기 활동 안내",
+        "createdAt": "2026-09-01T09:00:00Z"
+      },
+      "unreadChat": 5,
+      "isLeader": true
+    }
+  },
+  "GET /crew/calendar": {
+    "data": {
+      "days": [
+        {
+          "date": "2026-09-02",
+          "items": 12,
+          "activityCount": 1,
+          "activities": [
+            {
+              "activityId": "a098",
+              "startedAt": "2026-09-02T09:02:00Z",
+              "user": {
+                "id": "8a2d…",
+                "nickname": "상혁",
+                "photoUrl": null,
+                "withdrawn": false
+              },
+              "items": 12,
+              "distanceM": 900
+            }
+          ]
+        },
+        {
+          "date": "2026-09-05",
+          "items": 47,
+          "activityCount": 2,
+          "activities": [
+            {
+              "activityId": "a100",
+              "startedAt": "2026-09-05T09:02:00Z",
+              "user": {
+                "id": "6f1c…",
+                "nickname": "관열",
+                "photoUrl": null,
+                "withdrawn": false
+              },
+              "items": 32,
+              "distanceM": 2100
+            },
+            {
+              "activityId": "a101",
+              "startedAt": "2026-09-05T10:20:00Z",
+              "user": {
+                "id": "8a2d…",
+                "nickname": "상혁",
+                "photoUrl": null,
+                "withdrawn": false
+              },
+              "items": 15,
+              "distanceM": 1300
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "GET /crew/chat/messages": {
+    "data": {
+      "items": [
+        {
+          "seq": 101,
+          "id": "00000000-0000-4000-8000-000000000101",
+          "author": {
+            "id": "8a2d…",
+            "nickname": "상혁",
+            "photoUrl": null,
+            "withdrawn": false
+          },
+          "text": "내일 여의도 9시 어때요?",
+          "createdAt": "2026-09-06T06:24:00Z"
+        },
+        {
+          "seq": 102,
+          "id": "00000000-0000-4000-8000-000000000102",
+          "author": {
+            "id": "8a2d…",
+            "nickname": "상혁",
+            "photoUrl": null,
+            "withdrawn": false
+          },
+          "text": "봉투는 제가 챙길게요.",
+          "createdAt": "2026-09-06T06:24:30Z"
+        },
+        {
+          "seq": 103,
+          "id": "00000000-0000-4000-8000-000000000103",
+          "author": {
+            "id": "6f1c…",
+            "nickname": "관열",
+            "photoUrl": null,
+            "withdrawn": false
+          },
+          "text": "좋아요, 갈게요!",
+          "createdAt": "2026-09-06T06:25:00Z"
+        }
+      ],
+      "hasMore": false
+    }
+  },
+  "GET /crew/home": {
+    "data": {
+      "crew": {
+        "id": "c001",
+        "name": "한강줍깅크루"
+      },
+      "last7d": {
+        "crewItems": 168,
+        "myItems": 23,
+        "myByCategory": {
+          "CIGARETTE": 14,
+          "PLASTIC": 6,
+          "CAN": 3
+        },
+        "daily": [
+          12,
+          30,
+          0,
+          41,
+          25,
+          38,
+          22
+        ]
+      },
+      "character": {
+        "windowDays": 14,
+        "items": 312,
+        "goalCount": 300,
+        "stage": 5
+      },
+      "live": {
+        "count": 2,
+        "users": [
+          {
+            "id": "8a2d…",
+            "nickname": "상혁",
+            "photoUrl": null,
+            "withdrawn": false
+          },
+          {
+            "id": "9b3e…",
+            "nickname": "지수",
+            "photoUrl": null,
+            "withdrawn": false
+          }
+        ]
+      },
+      "unreadNotifications": 3
+    }
+  },
+  "GET /crew/join-requests": {
+    "data": {
+      "items": [
+        {
+          "id": "jr003",
+          "crew": {
+            "id": "c001",
+            "name": "한강줍깅크루"
+          },
+          "user": {
+            "id": "7c4f…",
+            "nickname": "민수",
+            "photoUrl": null,
+            "withdrawn": false
+          },
+          "status": "PENDING",
+          "createdAt": "2026-09-01T09:00:00Z"
+        },
+        {
+          "id": "jr002",
+          "crew": {
+            "id": "c001",
+            "name": "한강줍깅크루"
+          },
+          "user": {
+            "id": "9b3e…",
+            "nickname": "지수",
+            "photoUrl": null,
+            "withdrawn": false
+          },
+          "status": "PENDING",
+          "createdAt": "2026-09-02T09:00:00Z"
+        }
+      ],
+      "nextCursor": null
+    }
+  },
+  "GET /crew/live": {
+    "data": [
+      {
+        "user": {
+          "id": "8a2d…",
+          "nickname": "상혁",
+          "photoUrl": null,
+          "withdrawn": false
+        },
+        "activityId": "a101",
+        "startedAt": "2026-09-07T08:30:00Z",
+        "elapsedSec": 900,
+        "distanceM": 1200,
+        "itemCount": 9,
+        "paused": false,
+        "locationShared": true,
+        "location": {
+          "lng": 126.93,
+          "lat": 37.52
+        }
+      },
+      {
+        "user": {
+          "id": "9b3e…",
+          "nickname": "지수",
+          "photoUrl": null,
+          "withdrawn": false
+        },
+        "activityId": "a102",
+        "startedAt": "2026-09-07T08:40:00Z",
+        "elapsedSec": 300,
+        "distanceM": 400,
+        "itemCount": 2,
+        "paused": true,
+        "locationShared": false,
+        "location": null
+      }
+    ]
+  },
+  "GET /crew/members": {
+    "data": [
+      {
+        "id": "6f1c…",
+        "nickname": "관열",
+        "photoUrl": null,
+        "withdrawn": false,
+        "isLeader": true,
+        "totalItems": 412,
+        "joinedAt": "2026-09-01T00:00:00Z",
+        "following": false
+      },
+      {
+        "id": "8a2d…",
+        "nickname": "상혁",
+        "photoUrl": null,
+        "withdrawn": false,
+        "isLeader": false,
+        "totalItems": 380,
+        "joinedAt": "2026-09-02T00:00:00Z",
+        "following": true
+      }
+    ]
+  },
+  "GET /crew/members/{userId}": {
+    "data": {
+      "id": "8a2d…",
+      "nickname": "상혁",
+      "photoUrl": null,
+      "withdrawn": false,
+      "isLeader": false,
+      "joinedAt": "2026-09-02T00:00:00Z",
+      "following": true,
+      "intro": "여의도 저녁 줍깅",
+      "blocked": false,
+      "totalItems": 380,
+      "totalDistanceM": 31200,
+      "totalActivities": 10,
+      "activeDays": [
+        "2026-09-06",
+        "2026-09-04",
+        "2026-08-30"
+      ]
+    }
+  },
+  "GET /crew/members/{userId}/activities": {
+    "data": {
+      "items": [
+        {
+          "id": "a100",
+          "startedAt": "2026-09-04T09:02:00Z",
+          "durationSec": 2520,
+          "distanceM": 3100,
+          "itemCount": 27,
+          "thumbUrl": "https://cdn.example.com/a100/p1_t.jpg"
+        },
+        {
+          "id": "a099",
+          "startedAt": "2026-09-02T22:10:00Z",
+          "durationSec": 1080,
+          "distanceM": 1200,
+          "itemCount": 0,
+          "thumbUrl": null
+        }
+      ],
+      "nextCursor": null
+    }
+  },
+  "GET /crew/members/{userId}/posts": {
+    "data": {
+      "items": [
+        {
+          "id": "po77",
+          "author": {
+            "id": "8a2d…",
+            "nickname": "상혁",
+            "photoUrl": null,
+            "withdrawn": false
+          },
+          "text": "오늘 여의도 3km. 꽁초가 유난히 많았다",
+          "visibility": "CREW",
+          "media": [
+            {
+              "url": "https://cdn.example.com/po77/1.jpg",
+              "thumbUrl": "https://cdn.example.com/po77/1_t.jpg"
+            }
+          ],
+          "likeCount": 6,
+          "liked": true,
+          "commentCount": 2,
+          "createdAt": "2026-09-06T11:00:00Z"
+        },
+        {
+          "id": "po78",
+          "author": {
+            "id": "6f1c…",
+            "nickname": "관열",
+            "photoUrl": null,
+            "withdrawn": false
+          },
+          "text": "다음 주엔 망원 쪽을 돌아볼 생각. 같이 갈 사람?",
+          "visibility": "PRIVATE",
+          "media": [],
+          "likeCount": 0,
+          "liked": false,
+          "commentCount": 0,
+          "createdAt": "2026-09-05T02:00:00Z"
+        }
+      ],
+      "nextCursor": null
+    }
+  },
+  "GET /crew/notices": {
+    "data": {
+      "items": [
+        {
+          "id": "n01",
+          "title": "9월 정기 활동 안내",
+          "preview": "9월 첫째 주 토요일, 여의도에서 모여요.",
+          "pinned": true,
+          "commentCount": 2,
+          "createdAt": "2026-09-01T09:00:00Z"
+        },
+        {
+          "id": "n00",
+          "title": "새 크루원 환영합니다",
+          "preview": "소개를 확인해 주세요.",
+          "pinned": false,
+          "commentCount": 0,
+          "createdAt": "2026-08-28T09:00:00Z"
+        }
+      ],
+      "nextCursor": null
+    }
+  },
+  "GET /crew/posts": {
+    "data": {
+      "items": [
+        {
+          "id": "po77",
+          "author": {
+            "id": "8a2d…",
+            "nickname": "상혁",
+            "photoUrl": null,
+            "withdrawn": false
+          },
+          "text": "오늘 여의도 3km. 꽁초가 유난히 많았다",
+          "visibility": "CREW",
+          "media": [
+            {
+              "url": "https://cdn.example.com/po77/1.jpg",
+              "thumbUrl": "https://cdn.example.com/po77/1_t.jpg"
+            }
+          ],
+          "likeCount": 6,
+          "liked": true,
+          "commentCount": 2,
+          "createdAt": "2026-09-06T11:00:00Z"
+        },
+        {
+          "id": "po78",
+          "author": {
+            "id": "6f1c…",
+            "nickname": "관열",
+            "photoUrl": null,
+            "withdrawn": false
+          },
+          "text": "다음 주엔 망원 쪽을 돌아볼 생각. 같이 갈 사람?",
+          "visibility": "PRIVATE",
+          "media": [],
+          "likeCount": 0,
+          "liked": false,
+          "commentCount": 0,
+          "createdAt": "2026-09-05T02:00:00Z"
+        }
+      ],
+      "nextCursor": null
+    }
+  },
+  "GET /crew/reports": {
+    "data": {
+      "items": [
+        {
+          "id": "r001",
+          "reporter": {
+            "id": "3c9e…",
+            "nickname": "지수",
+            "photoUrl": null,
+            "withdrawn": false
+          },
+          "targetType": "POST",
+          "targetId": "p001",
+          "targetPreview": "오늘 여의도 3km. 꽁초가 유난히 많았다",
+          "reason": "INAPPROPRIATE_PHOTO",
+          "memo": null,
+          "createdAt": "2026-09-02T05:10:00Z"
+        },
+        {
+          "id": "r002",
+          "reporter": {
+            "id": "5f1a…",
+            "nickname": "민수",
+            "photoUrl": null,
+            "withdrawn": false
+          },
+          "targetType": "USER",
+          "targetId": "8a2d…",
+          "targetPreview": "상혁",
+          "reason": "OTHER",
+          "memo": "채팅에서 계속 광고 링크를 올려요",
+          "createdAt": "2026-09-03T11:40:00Z"
+        },
+        {
+          "id": "r003",
+          "reporter": {
+            "id": "3c9e…",
+            "nickname": "지수",
+            "photoUrl": null,
+            "withdrawn": false
+          },
+          "targetType": "CHAT_MESSAGE",
+          "targetId": "00000000-0000-4000-8000-000000000101",
+          "targetPreview": "내일 여의도 9시 어때요?",
+          "reason": "SPAM",
+          "memo": null,
+          "createdAt": "2026-09-04T02:00:00Z"
+        }
+      ],
+      "nextCursor": null
+    }
+  },
+  "GET /crew/stats": {
+    "data": {
+      "range": "MONTH",
+      "totals": {
+        "items": 1430,
+        "distanceM": 128000,
+        "durationSec": 96000,
+        "activities": 62
+      },
+      "byCategory": {
+        "CIGARETTE": 620,
+        "PLASTIC": 310,
+        "CAN": 190,
+        "PAPER": 120,
+        "VINYL": 110,
+        "GLASS": 40,
+        "GENERAL": 40
+      },
+      "series": [
+        {
+          "date": "2026-09-01",
+          "items": 40
+        },
+        {
+          "date": "2026-09-02",
+          "items": 0
+        },
+        {
+          "date": "2026-09-03",
+          "items": 77
+        }
+      ],
+      "ranking": [
+        {
+          "rank": 1,
+          "user": {
+            "id": "6f1c…",
+            "nickname": "관열",
+            "photoUrl": null,
+            "withdrawn": false
+          },
+          "items": 412,
+          "distanceM": 30100
+        },
+        {
+          "rank": 2,
+          "user": {
+            "id": "8a2d…",
+            "nickname": "상혁",
+            "photoUrl": null,
+            "withdrawn": false
+          },
+          "items": 380,
+          "distanceM": 28800
+        }
+      ]
+    }
+  },
+  "GET /crews": {
+    "data": {
+      "items": [
+        {
+          "id": "c001",
+          "name": "한강줍깅크루",
+          "intro": "매주 토요일 아침 여의도",
+          "photoUrl": null,
+          "region": "SEOUL",
+          "joinPolicy": "APPROVAL",
+          "memberCount": 18,
+          "leader": {
+            "id": "u001",
+            "nickname": "관열",
+            "photoUrl": null,
+            "withdrawn": false
+          }
+        },
+        {
+          "id": "c002",
+          "name": "한강망원줍깅",
+          "intro": "",
+          "photoUrl": null,
+          "region": "SEOUL",
+          "joinPolicy": "OPEN",
+          "memberCount": 50,
+          "leader": {
+            "id": "u002",
+            "nickname": "상혁",
+            "photoUrl": null,
+            "withdrawn": false
+          }
+        },
+        {
+          "id": "c003",
+          "name": "여의도아침줍깅",
+          "intro": "평일 아침 30분",
+          "photoUrl": null,
+          "region": "SEOUL",
+          "joinPolicy": "OPEN",
+          "memberCount": 12,
+          "leader": {
+            "id": "u003",
+            "nickname": "도윤",
+            "photoUrl": null,
+            "withdrawn": false
+          }
+        }
+      ],
+      "nextCursor": null
+    }
+  },
+  "GET /crews/join-requests/mine": {
+    "data": {
+      "id": "jr001",
+      "crew": {
+        "id": "c001",
+        "name": "한강줍깅크루"
+      },
+      "user": {
+        "id": "u001",
+        "nickname": "관열",
+        "photoUrl": null,
+        "withdrawn": false
+      },
+      "status": "PENDING",
+      "createdAt": "2026-09-15T10:00:00Z"
+    }
+  },
+  "GET /notices/{noticeId}": {
+    "data": {
+      "id": "n01",
+      "title": "9월 정기 활동 안내",
+      "preview": "9월 첫째 주 토요일, 여의도에서 모여요.",
+      "pinned": true,
+      "commentCount": 2,
+      "createdAt": "2026-09-01T09:00:00Z",
+      "body": "9월 첫째 주 토요일, 여의도에서 모여요.\n오전 8시 여의나루역 2번 출구 앞입니다. 집게와 봉투는 크루에서 준비해요.",
+      "comments": [
+        {
+          "id": "nc1",
+          "author": {
+            "id": "8a2d…",
+            "nickname": "상혁",
+            "photoUrl": null,
+            "withdrawn": false
+          },
+          "text": "확인했습니다!",
+          "createdAt": "2026-09-01T10:00:00Z"
+        },
+        {
+          "id": "nc2",
+          "author": {
+            "id": "6f1c…",
+            "nickname": "관열",
+            "photoUrl": null,
+            "withdrawn": false
+          },
+          "text": "비 오면 일요일로 미뤄요.",
+          "createdAt": "2026-09-01T11:00:00Z"
+        }
+      ]
+    }
+  },
+  "GET /notifications": {
+    "data": {
+      "pending": {
+        "joinRequests": 2,
+        "reports": 1
+      },
+      "items": [
+        {
+          "id": 501,
+          "type": "ACTIVITY_STARTED",
+          "title": "상혁 님이 줍깅을 시작했어요",
+          "detail": "여의도 근처",
+          "unread": true,
+          "target": {
+            "type": "LIVE",
+            "id": "a101"
+          },
+          "createdAt": "2026-09-07T08:30:05Z"
+        },
+        {
+          "id": 500,
+          "type": "COMMENT",
+          "title": "지수 님이 댓글을 남겼어요",
+          "detail": "오늘 많이 주우셨네요!",
+          "unread": false,
+          "target": {
+            "type": "POST",
+            "id": "po77"
+          },
+          "createdAt": "2026-09-06T21:10:00Z"
+        }
+      ],
+      "nextCursor": null
+    }
+  },
+  "GET /notifications/unread-count": {
+    "data": {
+      "count": 1
+    }
+  },
+  "GET /posts/{postId}": {
+    "data": {
+      "id": "po77",
+      "author": {
+        "id": "8a2d…",
+        "nickname": "상혁",
+        "photoUrl": null,
+        "withdrawn": false
+      },
+      "text": "오늘 여의도 3km. 꽁초가 유난히 많았다",
+      "visibility": "CREW",
+      "media": [
+        {
+          "url": "https://cdn.example.com/po77/1.jpg",
+          "thumbUrl": "https://cdn.example.com/po77/1_t.jpg"
+        },
+        {
+          "url": "https://cdn.example.com/po77/2.jpg",
+          "thumbUrl": "https://cdn.example.com/po77/2_t.jpg"
+        }
+      ],
+      "likeCount": 6,
+      "liked": true,
+      "commentCount": 2,
+      "createdAt": "2026-09-06T11:00:00Z",
+      "comments": [
+        {
+          "id": "c1",
+          "author": {
+            "id": "9b3e…",
+            "nickname": "지수",
+            "photoUrl": null,
+            "withdrawn": false
+          },
+          "text": "오늘 많이 주우셨네요!",
+          "createdAt": "2026-09-06T12:00:00Z"
+        },
+        {
+          "id": "c2",
+          "author": {
+            "id": "0c4f…",
+            "nickname": "탈퇴한 크루원",
+            "photoUrl": null,
+            "withdrawn": true
+          },
+          "text": "다음엔 같이 가요",
+          "createdAt": "2026-09-06T13:00:00Z"
+        }
+      ],
+      "commentsNextCursor": null
+    }
+  },
+  "GET /posts/{postId}/comments": {
+    "data": {
+      "items": [
+        {
+          "id": "c0",
+          "author": {
+            "id": "9b3e…",
+            "nickname": "지수",
+            "photoUrl": null,
+            "withdrawn": false
+          },
+          "text": "사진 좋네요",
+          "createdAt": "2026-09-06T11:30:00Z"
+        }
+      ],
+      "nextCursor": null
+    }
+  },
+  "GET /users/me": {
+    "data": {
+      "id": "6f1c…",
+      "nickname": "관열",
+      "intro": "한강 서쪽 담당",
+      "photoUrl": "https://cdn.example.com/p/6f1c.jpg",
+      "email": "kwan@example.com",
+      "profileComplete": true,
+      "hasPassword": true,
+      "linked": {
+        "kakao": true,
+        "google": false
+      },
+      "settings": {
+        "shareLocationDefault": true,
+        "notifyActivityStart": true
+      },
+      "membership": {
+        "status": "MEMBER",
+        "crew": {
+          "id": "c001",
+          "name": "한강줍깅크루",
+          "isLeader": true
+        },
+        "rejection": null
+      }
+    }
+  },
+  "GET /users/me/activities": {
+    "data": {
+      "items": [
+        {
+          "id": "a100",
+          "startedAt": "2026-09-04T09:02:00Z",
+          "durationSec": 2520,
+          "distanceM": 3100,
+          "itemCount": 27,
+          "thumbUrl": "https://cdn.example.com/a100/p1_t.jpg"
+        },
+        {
+          "id": "a099",
+          "startedAt": "2026-09-02T22:10:00Z",
+          "durationSec": 1080,
+          "distanceM": 1200,
+          "itemCount": 0,
+          "thumbUrl": null
+        }
+      ],
+      "nextCursor": null
+    }
+  },
+  "GET /users/me/agreements": {
+    "data": {
+      "complete": false,
+      "items": [
+        {
+          "type": "TERMS",
+          "version": "2026-10",
+          "required": true,
+          "url": "https://www.gachijoopging.site/terms",
+          "agreed": false,
+          "agreedAt": null
+        },
+        {
+          "type": "PRIVACY",
+          "version": "2026-10",
+          "required": true,
+          "url": "https://www.gachijoopging.site/privacy",
+          "agreed": false,
+          "agreedAt": null
+        },
+        {
+          "type": "MARKETING",
+          "version": "2026-10",
+          "required": false,
+          "url": "https://www.gachijoopging.site/marketing",
+          "agreed": false,
+          "agreedAt": null
+        }
+      ]
+    }
+  },
+  "GET /users/me/blocked": {
+    "data": {
+      "items": [
+        {
+          "id": "3b7e…",
+          "nickname": "지수",
+          "photoUrl": null,
+          "withdrawn": false
+        },
+        {
+          "id": "0d4a…",
+          "nickname": "탈퇴한 크루원",
+          "photoUrl": null,
+          "withdrawn": true
+        }
+      ],
+      "nextCursor": null,
+      "total": 2
+    }
+  },
+  "GET /users/me/stats": {
+    "data": {
+      "totalItems": 412,
+      "totalDistanceM": 38400,
+      "totalActivities": 12,
+      "activeDays": [
+        "2026-09-05",
+        "2026-09-03",
+        "2026-08-28"
+      ]
+    }
+  },
+  "PATCH /activities/{id}/items/{itemId}": {
+    "data": {
+      "itemCount": 27,
+      "byCategory": {
+        "CIGARETTE": 14,
+        "PLASTIC": 6,
+        "CAN": 3,
+        "PAPER": 2,
+        "VINYL": 2
+      },
+      "items": []
+    }
+  },
+  "PATCH /crew": {
+    "data": {
+      "id": "c001",
+      "name": "한강줍깅크루",
+      "intro": "매주 토요일 아침 여의도",
+      "photoUrl": null,
+      "leader": {
+        "id": "6f1c…",
+        "nickname": "관열",
+        "photoUrl": null,
+        "withdrawn": false
+      },
+      "memberCount": 18,
+      "region": "SEOUL",
+      "joinPolicy": "APPROVAL",
+      "goalCount": 300,
+      "pendingJoinRequests": 2,
+      "pinnedNotice": {
+        "id": "n01",
+        "title": "9월 정기 활동 안내",
+        "createdAt": "2026-09-01T09:00:00Z"
+      },
+      "unreadChat": 5,
+      "isLeader": true
+    }
+  },
+  "PATCH /users/me": {
+    "data": {
+      "id": "9c2f…",
+      "nickname": "새싹줍깅러",
+      "intro": "",
+      "photoUrl": null,
+      "email": null,
+      "profileComplete": true,
+      "hasPassword": false,
+      "linked": {
+        "kakao": true,
+        "google": false
+      },
+      "settings": {
+        "shareLocationDefault": true,
+        "notifyActivityStart": true
+      },
+      "membership": {
+        "status": "NONE",
+        "crew": null,
+        "rejection": null
+      }
+    }
+  },
+  "POST /activities": {
+    "data": {
+      "id": "2b7e4c1a-9f3d-4e8b-a6c2-5d1f0e9b8a73",
+      "user": {
+        "id": "8a2d…",
+        "nickname": "상혁",
+        "photoUrl": null,
+        "withdrawn": false
+      },
+      "status": "IN_PROGRESS",
+      "startedAt": "2026-09-29T09:00:00+09:00",
+      "endedAt": null,
+      "durationSec": 0,
+      "pausedSec": 0,
+      "paused": false,
+      "pausedAt": null,
+      "distanceM": 0,
+      "steps": null,
+      "locationShared": true,
+      "itemCount": 0,
+      "byCategory": {},
+      "route": [],
+      "photos": [],
+      "items": []
+    }
+  },
+  "POST /activities/{id}/end": {
+    "data": {
+      "id": "2b7e4c1a-9f3d-4e8b-a6c2-5d1f0e9b8a73",
+      "status": "ENDED",
+      "startedAt": "2026-09-29T09:00:00+09:00",
+      "endedAt": "2026-09-29T09:42:10+09:00",
+      "durationSec": 2530,
+      "pausedSec": 0,
+      "paused": false,
+      "pausedAt": null,
+      "distanceM": 2100,
+      "steps": null,
+      "locationShared": true,
+      "itemCount": 17,
+      "byCategory": {
+        "CIGARETTE": 9,
+        "PLASTIC": 5,
+        "CAN": 3
+      },
+      "user": {
+        "id": "8a2d…",
+        "nickname": "상혁",
+        "photoUrl": null,
+        "withdrawn": false
+      },
+      "route": [
+        [
+          126.93,
+          37.52
+        ],
+        [
+          126.931,
+          37.521
+        ]
+      ],
+      "photos": [],
+      "items": [
+        {
+          "id": "6f1c2d3e-4a5b-4c6d-8e7f-9a0b1c2d3e4f",
+          "photoId": null,
+          "category": "CIGARETTE",
+          "quantity": 9,
+          "source": "MANUAL",
+          "aiConfidence": null,
+          "unclassified": false,
+          "bbox": null
+        },
+        {
+          "id": "7a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d",
+          "photoId": null,
+          "category": "PLASTIC",
+          "quantity": 5,
+          "source": "MANUAL",
+          "aiConfidence": null,
+          "unclassified": false,
+          "bbox": null
+        },
+        {
+          "id": "8b3c4d5e-6f7a-4b8c-9d0e-1f2a3b4c5d6e",
+          "photoId": null,
+          "category": "CAN",
+          "quantity": 3,
+          "source": "MANUAL",
+          "aiConfidence": null,
+          "unclassified": false,
+          "bbox": null
+        }
+      ]
+    }
+  },
+  "POST /activities/{id}/items": {
+    "data": {
+      "itemCount": 3,
+      "byCategory": {
+        "CIGARETTE": 3
+      },
+      "items": [
+        {
+          "id": "00000000-0000-4000-8000-000000000001",
+          "photoId": null,
+          "category": "CIGARETTE",
+          "quantity": 3,
+          "source": "MANUAL",
+          "aiConfidence": null,
+          "unclassified": false,
+          "bbox": null
+        }
+      ]
+    }
+  },
+  "POST /auth/google": {
+    "data": {
+      "accessToken": "eyJhbGciOiJIUzI1NiJ9.mock…",
+      "refreshToken": "8f2a9c1e-mock-refresh…",
+      "isNew": false
+    }
+  },
+  "POST /auth/kakao": {
+    "data": {
+      "accessToken": "eyJhbGciOiJIUzI1NiJ9.mock…",
+      "refreshToken": "8f2a9c1e-mock-refresh…",
+      "isNew": false
+    }
+  },
+  "POST /auth/login": {
+    "data": {
+      "accessToken": "eyJhbGciOiJIUzI1NiJ9.mock…",
+      "refreshToken": "8f2a9c1e-mock-refresh…",
+      "isNew": false
+    }
+  },
+  "POST /auth/refresh": {
+    "data": {
+      "accessToken": "eyJhbGciOiJIUzI1NiJ9.mock…",
+      "refreshToken": "8f2a9c1e-mock-refresh…",
+      "isNew": false
+    }
+  },
+  "POST /auth/signup": {
+    "data": {
+      "accessToken": "eyJhbGciOiJIUzI1NiJ9.mock…",
+      "refreshToken": "8f2a9c1e-mock-refresh…",
+      "isNew": false
+    }
+  },
+  "POST /crew/notices": {
+    "data": {
+      "id": "n02",
+      "title": "10월 정기 활동 안내",
+      "preview": "10월 첫째 주 토요일에 모여요.",
+      "pinned": true,
+      "commentCount": 0,
+      "createdAt": "2026-09-28T09:00:00Z"
+    }
+  },
+  "POST /crew/posts": {
+    "data": {
+      "id": "5d0e…",
+      "author": {
+        "id": "6f1c…",
+        "nickname": "관열",
+        "photoUrl": null,
+        "withdrawn": false
+      },
+      "text": "오늘도 한강 한 바퀴",
+      "visibility": "CREW",
+      "media": [],
+      "likeCount": 0,
+      "liked": false,
+      "commentCount": 0,
+      "createdAt": "2026-09-06T12:00:00Z"
+    }
+  },
+  "POST /crews": {
+    "data": {
+      "id": "c001",
+      "name": "한강줍깅크루",
+      "intro": "매주 토요일 아침 여의도",
+      "photoUrl": null,
+      "region": "SEOUL",
+      "joinPolicy": "APPROVAL",
+      "leader": {
+        "id": "u001",
+        "nickname": "관열",
+        "photoUrl": null,
+        "withdrawn": false
+      },
+      "memberCount": 1,
+      "goalCount": 300,
+      "pendingJoinRequests": 0,
+      "pinnedNotice": null,
+      "unreadChat": 0,
+      "isLeader": true
+    }
+  },
+  "POST /crews/join-requests": {
+    "data": {
+      "id": "jr001",
+      "crew": {
+        "id": "c001",
+        "name": "한강줍깅크루"
+      },
+      "user": {
+        "id": "u009",
+        "nickname": "지수",
+        "photoUrl": null,
+        "withdrawn": false
+      },
+      "status": "PENDING",
+      "createdAt": "2026-09-15T10:00:00Z"
+    }
+  },
+  "POST /media": {
+    "data": {
+      "mediaId": "m001",
+      "photoId": "p1",
+      "url": "https://cdn.example.com/a100/p1.jpg",
+      "thumbUrl": "https://cdn.example.com/a100/p1_t.jpg",
+      "inference": {
+        "status": "OK",
+        "modelVersion": "yolo26s-1024-v1",
+        "inferenceMs": 180,
+        "items": [
+          {
+            "category": "PLASTIC",
+            "aiConfidence": 0.91,
+            "bbox": {
+              "x": 0.2,
+              "y": 0.3,
+              "w": 0.2,
+              "h": 0.25
+            }
+          },
+          {
+            "category": "PLASTIC",
+            "aiConfidence": 0.62,
+            "bbox": {
+              "x": 0.6,
+              "y": 0.4,
+              "w": 0.15,
+              "h": 0.2
+            }
+          },
+          {
+            "category": "CAN",
+            "aiConfidence": 0.88,
+            "bbox": {
+              "x": 0.1,
+              "y": 0.7,
+              "w": 0.1,
+              "h": 0.15
+            }
+          }
+        ]
+      }
+    }
+  },
+  "POST /notices/{noticeId}/comments": {
+    "data": {
+      "id": "00000000-0000-4000-8000-0000000000c3",
+      "author": {
+        "id": "6f1c…",
+        "nickname": "관열",
+        "photoUrl": null,
+        "withdrawn": false
+      },
+      "text": "저도 참여할게요.",
+      "createdAt": "2026-09-01T12:00:00Z"
+    }
+  },
+  "POST /posts/{postId}/comments": {
+    "data": {
+      "id": "c3",
+      "author": {
+        "id": "6f1c…",
+        "nickname": "관열",
+        "photoUrl": null,
+        "withdrawn": false
+      },
+      "text": "저도 다음엔 갈게요",
+      "createdAt": "2026-09-06T14:00:00Z"
+    }
+  },
+  "PUT /users/me/agreements": {
+    "data": {
+      "complete": true,
+      "items": [
+        {
+          "type": "TERMS",
+          "version": "2026-10",
+          "required": true,
+          "url": "https://www.gachijoopging.site/terms",
+          "agreed": true,
+          "agreedAt": "2026-10-10T00:00:00Z"
+        },
+        {
+          "type": "PRIVACY",
+          "version": "2026-10",
+          "required": true,
+          "url": "https://www.gachijoopging.site/privacy",
+          "agreed": true,
+          "agreedAt": "2026-10-10T00:00:00Z"
+        },
+        {
+          "type": "MARKETING",
+          "version": "2026-10",
+          "required": false,
+          "url": "https://www.gachijoopging.site/marketing",
+          "agreed": false,
+          "agreedAt": null
+        }
+      ]
+    }
+  },
+} as const;
+
+export type MockKey = keyof typeof MOCKS;

@@ -1,5 +1,5 @@
-import { createContext, useContext, type ReactNode } from 'react';
-import { Platform, useColorScheme, type PressableAndroidRippleConfig } from 'react-native';
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { AccessibilityInfo, Platform, useColorScheme, type PressableAndroidRippleConfig } from 'react-native';
 import { light, dark, type Palette } from '../tokens/colors.ts';
 import { shadow, androidElevation, type ShadowLevel } from '../tokens/elevation.ts';
 
@@ -51,10 +51,10 @@ export function useRipple(
   color?: string,
   borderless = false,
 ): PressableAndroidRippleConfig | undefined {
-  const { colors, scheme } = useTheme();
+  const { colors } = useTheme();
   if (Platform.OS !== 'android') return undefined;
   return {
-    color: color ?? (scheme === 'dark' ? 'rgba(237, 240, 220, 0.16)' : 'rgba(38, 42, 14, 0.12)'),
+    color: color ?? colors.ripple,
     borderless,
     foreground: !borderless,
   };
@@ -67,6 +67,12 @@ export function pressedOpacity(pressed: boolean): number {
 }
 
 /**
+ * 비활성 조작의 불투명도. 색을 따로 두지 않고 흐리게만 해서, 어떤 채움 위에서도
+ * "원래 무엇이었는지"는 읽히되 누를 수 없다는 것이 보이게 합니다.
+ */
+export const disabledOpacity = 0.55;
+
+/**
  * Android 8.1(API 27) 이하에서는 `boxShadow` 가 아무것도 그리지 않습니다.
  * 그 구간에서만 검정 elevation 으로 대신합니다 — 둘을 함께 주면 그림자가
  * 두 번 그려지므로 반드시 배타적으로 씁니다.
@@ -76,4 +82,22 @@ export function depth(level: ShadowLevel, boxShadow: string) {
     return { elevation: androidElevation[level] };
   }
   return { boxShadow };
+}
+
+/**
+ * 시스템의 '애니메이션 제거' 설정. 켜져 있으면 미끄러짐·스프링 대신 즉시 바뀝니다.
+ * 앱을 켜 둔 채 설정을 바꿔도 따라가도록 변경을 구독합니다.
+ */
+export function useReduceMotion(): boolean {
+  const [reduce, setReduce] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    AccessibilityInfo.isReduceMotionEnabled().then((v) => alive && setReduce(v));
+    const sub = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduce);
+    return () => {
+      alive = false;
+      sub.remove();
+    };
+  }, []);
+  return reduce;
 }

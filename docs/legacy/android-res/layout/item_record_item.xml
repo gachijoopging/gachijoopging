@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- M25 수거 항목 한 줄 — 분류 칩을 누르면 수정, 삭제 버튼은 오탐 제거 -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="@dimen/space_sm"
+    android:background="@drawable/bg_select_row"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingStart="@dimen/space_lg"
+    android:paddingTop="@dimen/space_md"
+    android:paddingEnd="@dimen/space_md"
+    android:paddingBottom="@dimen/space_md">
+
+    <TextView
+        android:id="@+id/emoji"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:importantForAccessibility="no"
+        android:textSize="20sp" />
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/space_md"
+        android:layout_weight="1"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/category"
+            style="@style/Gachi.Text.Body"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/origin"
+            style="@style/Gachi.Text.Micro"
+            android:layout_marginTop="@dimen/space_xs"
+            android:textColor="@color/gachi_ink_faint" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/deleteButton"
+        style="@style/Gachi.Text.Micro"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@drawable/ripple_pill"
+        android:paddingStart="@dimen/space_md"
+        android:paddingTop="@dimen/space_sm"
+        android:paddingEnd="@dimen/space_md"
+        android:paddingBottom="@dimen/space_sm"
+        android:text="@string/rd_item_delete"
+        android:textColor="@color/gachi_danger_ink"
+        android:textStyle="bold" />
+</LinearLayout>
